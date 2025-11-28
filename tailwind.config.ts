@@ -50,7 +50,7 @@ export default {
         "key-white": "hsl(var(--key-white))",
         "key-white-shadow": "hsl(var(--key-white-shadow))",
         "key-black": "hsl(var(--key-black))",
-        "key-black-lihjt": "hsl(var(--key-black))",
+        "key-black-light": "hsl(var(--key-black-light))",
         "key-active-user": "hsl(var(--key-active-user))",
         "key-active-ai": "hsl(var(--key-active-ai))",
       },
