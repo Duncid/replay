@@ -39,32 +39,26 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pressedKeysRef = useRef<Set<string>>(new Set());
 
-  // AZERTY keyboard mapping
+  // AZERTY keyboard mapping - C4 centered on 'e'
   const keyboardMap: { [key: string]: string } = {
-    // White keys (first row)
-    'a': 'C3', 'z': 'D3', 'e': 'E3', 'r': 'F3', 't': 'G3',
-    'y': 'A3', 'u': 'B3', 'i': 'C4', 'o': 'D4', 'p': 'E4',
-    // Continue with next octave
-    'q': 'F4', 's': 'G4', 'd': 'A4', 'f': 'B4',
-    'g': 'C5', 'h': 'D5', 'j': 'E5', 'k': 'F5',
-    'l': 'G5', 'm': 'A5', 'w': 'B5', 'x': 'C6',
+    // White keys (main row)
+    'a': 'A3', 'z': 'B3', 
+    'e': 'C4', 'r': 'D4', 't': 'E4', 'y': 'F4', 'u': 'G4',
+    'i': 'A4', 'o': 'B4', 
+    'p': 'C5', 'q': 'D5', 's': 'E5', 'd': 'F5', 'f': 'G5',
+    'g': 'A5', 'h': 'B5', 'j': 'C6',
     
-    // Black keys (number row) - positioned correctly
-    '&': 'C#3', 'é': 'C#3', // C#3
-    '"': 'D#3', // D#3
-    "'": 'F#3', '(': 'F#3', // F#3
-    '-': 'G#3', // G#3
-    'è': 'A#3', // A#3
-    '_': 'C#4', // C#4
-    'ç': 'D#4', // D#4
-    '1': 'F#4', // F#4
-    '2': 'G#4', // G#4
-    '3': 'A#4', // A#4
-    '4': 'C#5', // C#5
-    '5': 'D#5', // D#5
-    '6': 'F#5', // F#5
-    '7': 'G#5', // G#5
-    '8': 'A#5', // A#5
+    // Black keys (number row) - positioned between correct notes
+    '&': 'A#3', 'é': 'A#3', '1': 'A#3', // Between A3-B3
+    '"': 'C#4', '2': 'C#4', // Between C4-D4
+    "'": 'D#4', '3': 'D#4', // Between D4-E4
+    '(': 'F#4', '4': 'F#4', // Between F4-G4
+    '-': 'G#4', '5': 'G#4', // Between G4-A4
+    'è': 'A#4', '6': 'A#4', // Between A4-B4
+    '_': 'C#5', '7': 'C#5', // Between C5-D5
+    'ç': 'D#5', '8': 'D#5', // Between D5-E5
+    '9': 'F#5', // Between F5-G5
+    '0': 'G#5', // Between G5-A5
   };
 
   // 37 keys: C3 to C6 (3 octaves + 1 key)
