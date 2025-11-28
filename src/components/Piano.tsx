@@ -32,6 +32,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
   const audioContextRef = useRef<AudioContext | null>(null);
   const recordingRef = useRef<NoteWithDuration[]>([]);
   const notePressTimesRef = useRef<Map<string, number>>(new Map());
+  const activeOscillatorsRef = useRef<Map<string, { oscillator: OscillatorNode; gainNode: GainNode }>>(new Map());
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -98,8 +99,52 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
     oscillator.stop(now + duration);
   };
 
+  const startNote = (noteKey: string, frequency: number) => {
+    if (!audioContextRef.current || activeOscillatorsRef.current.has(noteKey)) return;
+
+    const audioContext = audioContextRef.current;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.value = frequency;
+    oscillator.type = "sine";
+
+    // Quick attack envelope
+    const now = audioContext.currentTime;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Attack
+    gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05); // Decay to sustain
+
+    oscillator.start(now);
+    
+    // Store the oscillator and gain node
+    activeOscillatorsRef.current.set(noteKey, { oscillator, gainNode });
+  };
+
+  const stopNote = (noteKey: string) => {
+    const nodes = activeOscillatorsRef.current.get(noteKey);
+    if (!nodes || !audioContextRef.current) return;
+
+    const { oscillator, gainNode } = nodes;
+    const now = audioContextRef.current.currentTime;
+    
+    // Release envelope
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+    
+    oscillator.stop(now + 0.1);
+    activeOscillatorsRef.current.delete(noteKey);
+  };
+
   const handleKeyPress = (noteKey: string, frequency: number) => {
     if (aiPlaying) return;
+
+    // Start playing the note immediately
+    startNote(noteKey, frequency);
 
     // Record press time
     notePressTimesRef.current.set(noteKey, Date.now());
@@ -166,6 +211,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
   const handleKeyRelease = (noteKey: string, frequency: number) => {
     if (aiPlaying) return;
     
+    // Stop the note
+    stopNote(noteKey);
+    
     const pressTime = notePressTimesRef.current.get(noteKey);
     if (!pressTime) return;
     
@@ -182,9 +230,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
     
     recordingRef.current.push({ note: noteKey, duration: roundedDuration });
     notePressTimesRef.current.delete(noteKey);
-    
-    // Play note with actual duration
-    playNote(frequency, roundedDuration * 0.5);
     
     const newKeys = new Set(userPressedKeys);
     newKeys.delete(noteKey);
