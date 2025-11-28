@@ -53,7 +53,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
     "'": 'C#4', '4': 'C#4', // Between C4-D4 (above 'e'/'r' gap)
     '(': 'D#4', '5': 'D#4', // Between D4-E4 (above 'r'/'t' gap)
     'è': 'F#4', '7': 'F#4', // Between F4-G4 (above 'y'/'u' gap)
-    '_': 'G#4', '8': 'G#4', // Between G4-A4 (above 'u'/'i' gap)
+    '!': 'G#4', '_': 'G#4', '8': 'G#4', // Between G4-A4 (above 'u'/'i' gap)
     'ç': 'A#4', '9': 'A#4', // Between A4-B4 (above 'i'/'o' gap)
     'à': 'C#5', '0': 'C#5', // Between C5-D5 (above 'p'/'q' gap)
     '"': 'D#5', '2': 'D#5', // Between D5-E5
