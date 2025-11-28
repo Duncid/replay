@@ -37,7 +37,6 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
               : "bg-key-active-user/20"
             : "bg-key-white hover:bg-key-white-shadow",
         disabled && "cursor-not-allowed opacity-50",
-        isActive && "scale-95",
       )}
       style={{
         transition: "var(--transition-smooth)",
