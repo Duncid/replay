@@ -107,7 +107,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
     const newKeys = new Set(userPressedKeys);
     newKeys.add(noteKey);
     setUserPressedKeys(newKeys);
-  };
 
     // If countdown was active, cancel it
     const wasCountdownActive = showProgress;
@@ -162,6 +161,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
         }, 16); // ~60fps
       }
     }, 1000);
+  };
 
   const handleKeyRelease = (noteKey: string, frequency: number) => {
     if (aiPlaying) return;
