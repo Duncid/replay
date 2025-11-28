@@ -74,9 +74,15 @@ const Index = () => {
 
       console.log("AI response:", data, "Session:", sessionId);
 
-      // Store the response only if this session is still current
-      if (data.notes && data.notes.length > 0 && currentSessionIdRef.current === sessionId) {
-        pendingResponseRef.current = { sessionId, notes: data.notes };
+      // Always store the response with its session ID - let countdown decide if it should play
+      if (data.notes && data.notes.length > 0) {
+        // Only update if this is still the latest session or no response is pending
+        if (!pendingResponseRef.current || pendingResponseRef.current.sessionId <= sessionId) {
+          pendingResponseRef.current = { sessionId, notes: data.notes };
+          console.log("Stored AI response for session:", sessionId);
+        } else {
+          console.log("Ignored older AI response for session:", sessionId);
+        }
       }
     } catch (error) {
       console.error("Error getting AI response:", error);
@@ -89,11 +95,15 @@ const Index = () => {
   };
 
   const handleCountdownComplete = async (sessionId: number) => {
+    console.log("Countdown complete for session:", sessionId, "Pending:", pendingResponseRef.current?.sessionId);
     // Play the pending AI response only if it matches this session
     if (pendingResponseRef.current && pendingResponseRef.current.sessionId === sessionId) {
       const notes = pendingResponseRef.current.notes;
       pendingResponseRef.current = null;
+      console.log("Playing AI response for session:", sessionId);
       await playAiResponse(notes);
+    } else {
+      console.log("No matching AI response to play for session:", sessionId);
     }
   };
 
