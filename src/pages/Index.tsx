@@ -11,8 +11,8 @@ const Index = () => {
   const [isEnabled, setIsEnabled] = useState(true);
   const { toast } = useToast();
   const pianoRef = useRef<PianoHandle>(null);
-  const pendingResponseRef = useRef<NoteWithDuration[] | null>(null);
-  const isCancelledRef = useRef(false);
+  const pendingResponseRef = useRef<{ sessionId: number; notes: NoteWithDuration[] } | null>(null);
+  const currentSessionIdRef = useRef(0);
 
   const playAiResponse = async (notes: NoteWithDuration[]) => {
     setAiPlaying(true);
@@ -58,11 +58,10 @@ const Index = () => {
     setAiPlaying(false);
   };
 
-  const handleUserPlay = async (userNotes: NoteWithDuration[]) => {
+  const handleUserPlay = async (userNotes: NoteWithDuration[], sessionId: number) => {
     if (!isEnabled || aiPlaying) return;
 
-    console.log("User played:", userNotes);
-    isCancelledRef.current = false;
+    console.log("User played:", userNotes, "Session:", sessionId);
 
     try {
       const { data, error } = await supabase.functions.invoke("jazz-improvise", {
@@ -73,11 +72,11 @@ const Index = () => {
         throw error;
       }
 
-      console.log("AI response:", data);
+      console.log("AI response:", data, "Session:", sessionId);
 
-      // Store the response to play later when countdown completes
-      if (data.notes && data.notes.length > 0 && !isCancelledRef.current) {
-        pendingResponseRef.current = data.notes;
+      // Store the response only if this session is still current
+      if (data.notes && data.notes.length > 0 && currentSessionIdRef.current === sessionId) {
+        pendingResponseRef.current = { sessionId, notes: data.notes };
       }
     } catch (error) {
       console.error("Error getting AI response:", error);
@@ -89,19 +88,26 @@ const Index = () => {
     }
   };
 
-  const handleCountdownComplete = async () => {
-    // Play the pending AI response when countdown finishes
-    if (pendingResponseRef.current && !isCancelledRef.current) {
-      const notes = pendingResponseRef.current;
+  const handleCountdownComplete = async (sessionId: number) => {
+    // Play the pending AI response only if it matches this session
+    if (pendingResponseRef.current && pendingResponseRef.current.sessionId === sessionId) {
+      const notes = pendingResponseRef.current.notes;
       pendingResponseRef.current = null;
       await playAiResponse(notes);
     }
   };
 
-  const handleCountdownCancelled = () => {
-    // Cancel any pending AI response
-    isCancelledRef.current = true;
-    pendingResponseRef.current = null;
+  const handleCountdownCancelled = (sessionId: number) => {
+    // Clear pending response only if it matches this session
+    if (pendingResponseRef.current && pendingResponseRef.current.sessionId === sessionId) {
+      pendingResponseRef.current = null;
+    }
+  };
+
+  const handleNewSession = () => {
+    // Increment session ID for new recording
+    currentSessionIdRef.current += 1;
+    return currentSessionIdRef.current;
   };
 
   return (
@@ -123,6 +129,7 @@ const Index = () => {
         onUserPlay={handleUserPlay} 
         onCountdownComplete={handleCountdownComplete}
         onCountdownCancelled={handleCountdownCancelled}
+        onNewSession={handleNewSession}
         activeKeys={activeKeys} 
         aiPlaying={aiPlaying} 
       />
