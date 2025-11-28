@@ -10,6 +10,8 @@ const Index = () => {
   const [isEnabled, setIsEnabled] = useState(true);
   const { toast } = useToast();
   const pianoRef = useRef<PianoHandle>(null);
+  const pendingResponseRef = useRef<string[] | null>(null);
+  const isCancelledRef = useRef(false);
 
   const playAiResponse = async (notes: string[]) => {
     setAiPlaying(true);
@@ -59,13 +61,9 @@ const Index = () => {
     if (!isEnabled || aiPlaying) return;
 
     console.log("User played:", userNotes);
+    isCancelledRef.current = false;
 
     try {
-      toast({
-        title: "AI is thinking...",
-        description: "Creating a jazz response to your melody",
-      });
-
       const { data, error } = await supabase.functions.invoke("jazz-improvise", {
         body: { userNotes },
       });
@@ -76,15 +74,9 @@ const Index = () => {
 
       console.log("AI response:", data);
 
-      if (data.notes && data.notes.length > 0) {
-        toast({
-          title: "AI Response",
-          description: `Playing ${data.notes.length} notes`,
-        });
-        
-        // Small delay before AI starts playing
-        await new Promise(resolve => setTimeout(resolve, 300));
-        await playAiResponse(data.notes);
+      // Store the response to play later when countdown completes
+      if (data.notes && data.notes.length > 0 && !isCancelledRef.current) {
+        pendingResponseRef.current = data.notes;
       }
     } catch (error) {
       console.error("Error getting AI response:", error);
@@ -93,8 +85,22 @@ const Index = () => {
         description: error instanceof Error ? error.message : "Failed to get AI response",
         variant: "destructive",
       });
-      setAiPlaying(false);
     }
+  };
+
+  const handleCountdownComplete = async () => {
+    // Play the pending AI response when countdown finishes
+    if (pendingResponseRef.current && !isCancelledRef.current) {
+      const notes = pendingResponseRef.current;
+      pendingResponseRef.current = null;
+      await playAiResponse(notes);
+    }
+  };
+
+  const handleCountdownCancelled = () => {
+    // Cancel any pending AI response
+    isCancelledRef.current = true;
+    pendingResponseRef.current = null;
   };
 
   return (
@@ -120,7 +126,14 @@ const Index = () => {
           </Button>
         </div>
 
-        <Piano ref={pianoRef} onUserPlay={handleUserPlay} activeKeys={activeKeys} aiPlaying={aiPlaying} />
+        <Piano 
+          ref={pianoRef} 
+          onUserPlay={handleUserPlay} 
+          onCountdownComplete={handleCountdownComplete}
+          onCountdownCancelled={handleCountdownCancelled}
+          activeKeys={activeKeys} 
+          aiPlaying={aiPlaying} 
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto text-sm">
           <div className="p-4 bg-card rounded-lg border border-border space-y-2">
