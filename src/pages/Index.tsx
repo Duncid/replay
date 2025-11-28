@@ -138,7 +138,7 @@ const Index = () => {
           id="ai-toggle"
         />
         <Label htmlFor="ai-toggle" className="text-foreground cursor-pointer">
-          AI enabled
+          {isEnabled ? "AI enabled" : "AI disabled"}
         </Label>
       </div>
 
@@ -148,7 +148,8 @@ const Index = () => {
         onCountdownCancelled={handleCountdownCancelled}
         onNewSession={handleNewSession}
         activeKeys={activeKeys} 
-        aiPlaying={aiPlaying} 
+        aiPlaying={aiPlaying}
+        isAiEnabled={isEnabled}
       />
     </div>
   );
