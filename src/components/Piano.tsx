@@ -19,6 +19,7 @@ interface PianoProps {
   onNewSession: () => number;
   activeKeys: Set<string>;
   aiPlaying: boolean;
+  isAiEnabled: boolean;
 }
 
 export interface PianoHandle {
@@ -26,7 +27,7 @@ export interface PianoHandle {
   hideProgress: () => void;
 }
 
-const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCancelled, onNewSession, activeKeys, aiPlaying }, ref) => {
+const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCancelled, onNewSession, activeKeys, aiPlaying, isAiEnabled }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -248,7 +249,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
 
     // After 1 second of silence, trigger AI with progress bar
     recordingTimeoutRef.current = setTimeout(() => {
-      if (recordingRef.current.length > 0) {
+      if (recordingRef.current.length > 0 && isAiEnabled) {
         // Start new session
         const sessionId = onNewSession();
         currentSessionIdRef.current = sessionId;
@@ -275,6 +276,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
             }
           }
         }, 16); // ~60fps
+      } else if (recordingRef.current.length > 0) {
+        // Clear recording if AI is disabled
+        recordingRef.current = [];
       }
     }, 1000);
   };
