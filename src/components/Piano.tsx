@@ -48,17 +48,16 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
     'p': 'C5', 'q': 'D5', 's': 'E5', 'd': 'F5', 'f': 'G5',
     'g': 'A5', 'h': 'B5', 'j': 'C6',
     
-    // Black keys (number row) - shifted one key left
-    '&': 'C#4', 'é': 'C#4', '1': 'C#4', // Between C4-D4
-    '"': 'D#4', '2': 'D#4', // Between D4-E4
-    "'": 'F#4', '3': 'F#4', // Between F4-G4
-    '(': 'G#4', '4': 'G#4', // Between G4-A4
-    '-': 'A#4', '5': 'A#4', // Between A4-B4
-    'è': 'C#5', '6': 'C#5', // Between C5-D5
-    '_': 'D#5', '7': 'D#5', // Between D5-E5
-    'ç': 'F#5', '8': 'F#5', // Between F5-G5
-    'à': 'G#5', '9': 'G#5', // Between G5-A5
-    '0': 'A#5', // Between A5-B5
+    // Black keys (number row) - positioned above the gaps between white keys
+    '&': 'A#3', '1': 'A#3', // Between A3-B3 (above 'a'/'z' gap)
+    "'": 'C#4', '4': 'C#4', // Between C4-D4 (above 'e'/'r' gap)
+    '(': 'D#4', '5': 'D#4', // Between D4-E4 (above 'r'/'t' gap)
+    'è': 'F#4', '7': 'F#4', // Between F4-G4 (above 'y'/'u' gap)
+    '_': 'G#4', '8': 'G#4', // Between G4-A4 (above 'u'/'i' gap)
+    'ç': 'A#4', '9': 'A#4', // Between A4-B4 (above 'i'/'o' gap)
+    'à': 'C#5', '0': 'C#5', // Between C5-D5 (above 'p'/'q' gap)
+    '"': 'D#5', '2': 'D#5', // Between D5-E5
+    '°': 'F#5', ')': 'F#5', // Between F5-G5
   };
 
   // 37 keys: C3 to C6 (3 octaves + 1 key)
