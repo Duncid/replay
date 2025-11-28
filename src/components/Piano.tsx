@@ -117,36 +117,34 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiP
     setShowProgress(false);
     setProgress(100);
 
-    // After 1 second of silence, start showing the countdown
+    // After 1 second of silence, start showing the countdown AND trigger AI
     progressTimeoutRef.current = setTimeout(() => {
-      setShowProgress(true);
-      setProgress(100);
-      
-      // Animate progress bar emptying over 1 second
-      const startTime = Date.now();
-      const duration = 1000;
-      
-      progressIntervalRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const newProgress = Math.max(0, 100 - (elapsed / duration) * 100);
-        setProgress(newProgress);
-        
-        if (newProgress === 0) {
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-          }
-        }
-      }, 16); // ~60fps
-    }, 1000);
-
-    // Set timeout to send recording after 2 seconds total (1s + 1s)
-    recordingTimeoutRef.current = setTimeout(() => {
       if (recordingRef.current.length > 0) {
-        setShowProgress(false);
+        setShowProgress(true);
+        setProgress(100);
+        
+        // Trigger AI immediately when countdown starts
         onUserPlay([...recordingRef.current]);
         recordingRef.current = [];
+        
+        // Animate progress bar emptying over 1 second
+        const startTime = Date.now();
+        const duration = 1000;
+        
+        progressIntervalRef.current = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const newProgress = Math.max(0, 100 - (elapsed / duration) * 100);
+          setProgress(newProgress);
+          
+          if (newProgress === 0) {
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+            }
+            setShowProgress(false);
+          }
+        }, 16); // ~60fps
       }
-    }, 2000);
+    }, 1000);
 
     // Visual feedback
     setTimeout(() => {
