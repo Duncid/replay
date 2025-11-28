@@ -14,9 +14,10 @@ export interface NoteWithDuration {
 }
 
 interface PianoProps {
-  onUserPlay: (notes: NoteWithDuration[]) => void;
-  onCountdownComplete: () => void;
-  onCountdownCancelled: () => void;
+  onUserPlay: (notes: NoteWithDuration[], sessionId: number) => void;
+  onCountdownComplete: (sessionId: number) => void;
+  onCountdownCancelled: (sessionId: number) => void;
+  onNewSession: () => number;
   activeKeys: Set<string>;
   aiPlaying: boolean;
 }
@@ -25,7 +26,7 @@ export interface PianoHandle {
   playNote: (frequency: number, duration?: number) => void;
 }
 
-const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComplete, onCountdownCancelled, activeKeys, aiPlaying }, ref) => {
+const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComplete, onCountdownCancelled, onNewSession, activeKeys, aiPlaying }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -33,6 +34,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
   const recordingRef = useRef<NoteWithDuration[]>([]);
   const notePressTimesRef = useRef<Map<string, number>>(new Map());
   const activeOscillatorsRef = useRef<Map<string, { oscillator: OscillatorNode; gainNode: GainNode }>>(new Map());
+  const currentSessionIdRef = useRef<number>(0);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -155,6 +157,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
 
     // If countdown was active, cancel it
     const wasCountdownActive = showProgress;
+    const oldSessionId = currentSessionIdRef.current;
     
     // Clear existing timeouts and intervals
     if (recordingTimeoutRef.current) {
@@ -173,17 +176,21 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
     
     // Notify parent that countdown was cancelled
     if (wasCountdownActive) {
-      onCountdownCancelled();
+      onCountdownCancelled(oldSessionId);
     }
 
     // After 1 second of silence, start showing the countdown AND trigger AI
     progressTimeoutRef.current = setTimeout(() => {
       if (recordingRef.current.length > 0) {
+        // Start new session
+        const sessionId = onNewSession();
+        currentSessionIdRef.current = sessionId;
+        
         setShowProgress(true);
         setProgress(100);
         
         // Trigger AI immediately when countdown starts
-        onUserPlay([...recordingRef.current]);
+        onUserPlay([...recordingRef.current], sessionId);
         recordingRef.current = [];
         
         // Animate progress bar emptying over 1 second
@@ -201,7 +208,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
             }
             setShowProgress(false);
             // Notify parent that countdown is complete
-            onCountdownComplete();
+            onCountdownComplete(sessionId);
           }
         }, 16); // ~60fps
       }
