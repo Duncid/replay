@@ -8,8 +8,13 @@ interface Note {
   isBlack: boolean;
 }
 
+export interface NoteWithDuration {
+  note: string;
+  duration: number; // in beats: 0.25 = quarter, 0.5 = half, 1.0 = full
+}
+
 interface PianoProps {
-  onUserPlay: (notes: string[]) => void;
+  onUserPlay: (notes: NoteWithDuration[]) => void;
   onCountdownComplete: () => void;
   onCountdownCancelled: () => void;
   activeKeys: Set<string>;
@@ -25,7 +30,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState(100);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const recordingRef = useRef<string[]>([]);
+  const recordingRef = useRef<NoteWithDuration[]>([]);
+  const notePressTimesRef = useRef<Map<string, number>>(new Map());
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,16 +99,15 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
   };
 
   const handleKeyPress = (noteKey: string, frequency: number) => {
-    if (aiPlaying) return; // Don't allow user input while AI is playing
+    if (aiPlaying) return;
 
-    playNote(frequency);
+    // Record press time
+    notePressTimesRef.current.set(noteKey, Date.now());
     
     const newKeys = new Set(userPressedKeys);
     newKeys.add(noteKey);
     setUserPressedKeys(newKeys);
-
-    // Add to recording
-    recordingRef.current.push(noteKey);
+  };
 
     // If countdown was active, cancel it
     const wasCountdownActive = showProgress;
@@ -158,12 +163,32 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
       }
     }, 1000);
 
-    // Visual feedback
-    setTimeout(() => {
-      const newKeys = new Set(userPressedKeys);
-      newKeys.delete(noteKey);
-      setUserPressedKeys(newKeys);
-    }, 200);
+  const handleKeyRelease = (noteKey: string, frequency: number) => {
+    if (aiPlaying) return;
+    
+    const pressTime = notePressTimesRef.current.get(noteKey);
+    if (!pressTime) return;
+    
+    const duration = Date.now() - pressTime;
+    // Convert milliseconds to beats (quarter note = 500ms base)
+    const durationInBeats = duration / 500;
+    // Round to nearest valid duration: 0.25, 0.5, or 1.0
+    let roundedDuration = 0.25;
+    if (durationInBeats >= 0.75) {
+      roundedDuration = 1.0;
+    } else if (durationInBeats >= 0.375) {
+      roundedDuration = 0.5;
+    }
+    
+    recordingRef.current.push({ note: noteKey, duration: roundedDuration });
+    notePressTimesRef.current.delete(noteKey);
+    
+    // Play note with actual duration
+    playNote(frequency, roundedDuration * 0.5);
+    
+    const newKeys = new Set(userPressedKeys);
+    newKeys.delete(noteKey);
+    setUserPressedKeys(newKeys);
   };
 
   return (
@@ -183,6 +208,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownComp
               isActive={isActive}
               isAiActive={isAiActive}
               onPress={() => handleKeyPress(noteKey, note.frequency)}
+              onRelease={() => handleKeyRelease(noteKey, note.frequency)}
               disabled={aiPlaying}
             />
           );

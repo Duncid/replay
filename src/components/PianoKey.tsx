@@ -7,6 +7,7 @@ interface PianoKeyProps {
   isActive: boolean;
   isAiActive: boolean;
   onPress: () => void;
+  onRelease: () => void;
   disabled?: boolean;
 }
 
@@ -16,11 +17,16 @@ export const PianoKey = ({
   isActive,
   isAiActive,
   onPress,
+  onRelease,
   disabled,
 }: PianoKeyProps) => {
   return (
     <button
-      onClick={onPress}
+      onMouseDown={onPress}
+      onMouseUp={onRelease}
+      onMouseLeave={onRelease}
+      onTouchStart={onPress}
+      onTouchEnd={onRelease}
       disabled={disabled}
       className={cn(
         "relative transition-all duration-150 ease-out",
