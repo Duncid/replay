@@ -117,7 +117,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiP
     setShowProgress(false);
     setProgress(100);
 
-    // After 0.5s of silence, start showing the countdown
+    // After 1 second of silence, start showing the countdown
     progressTimeoutRef.current = setTimeout(() => {
       setShowProgress(true);
       setProgress(100);
@@ -137,16 +137,16 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiP
           }
         }
       }, 16); // ~60fps
-    }, 500);
+    }, 1000);
 
-    // Set timeout to send recording after 1.5 seconds total (0.5s + 1s)
+    // Set timeout to send recording after 2 seconds total (1s + 1s)
     recordingTimeoutRef.current = setTimeout(() => {
       if (recordingRef.current.length > 0) {
         setShowProgress(false);
         onUserPlay([...recordingRef.current]);
         recordingRef.current = [];
       }
-    }, 1500);
+    }, 2000);
 
     // Visual feedback
     setTimeout(() => {
@@ -186,15 +186,17 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiP
       )}
       
       {showProgress && !aiPlaying && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-64 space-y-1">
-          <div className="px-3 py-1 bg-card/90 backdrop-blur rounded-full text-xs font-medium text-center text-muted-foreground">
-            AI preparing response...
-          </div>
-          <div className="h-1 bg-card/50 rounded-full overflow-hidden backdrop-blur">
-            <div 
-              className="h-full bg-gradient-to-r from-key-active-user to-accent transition-all duration-[16ms] ease-linear"
-              style={{ width: `${progress}%` }}
-            />
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="bg-card border border-border shadow-lg rounded-lg p-4 min-w-[300px]">
+            <div className="text-sm font-medium text-center text-foreground mb-3">
+              AI preparing response...
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-key-active-user to-accent transition-all duration-[16ms] ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
         </div>
       )}
