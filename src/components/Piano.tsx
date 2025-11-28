@@ -37,6 +37,35 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
   const currentSessionIdRef = useRef<number>(0);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pressedKeysRef = useRef<Set<string>>(new Set());
+
+  // AZERTY keyboard mapping
+  const keyboardMap: { [key: string]: string } = {
+    // White keys (first row)
+    'a': 'C3', 'z': 'D3', 'e': 'E3', 'r': 'F3', 't': 'G3',
+    'y': 'A3', 'u': 'B3', 'i': 'C4', 'o': 'D4', 'p': 'E4',
+    // Continue with next octave
+    'q': 'F4', 's': 'G4', 'd': 'A4', 'f': 'B4',
+    'g': 'C5', 'h': 'D5', 'j': 'E5', 'k': 'F5',
+    'l': 'G5', 'm': 'A5', 'w': 'B5', 'x': 'C6',
+    
+    // Black keys (number row) - positioned correctly
+    '&': 'C#3', 'é': 'C#3', // C#3
+    '"': 'D#3', // D#3
+    "'": 'F#3', '(': 'F#3', // F#3
+    '-': 'G#3', // G#3
+    'è': 'A#3', // A#3
+    '_': 'C#4', // C#4
+    'ç': 'D#4', // D#4
+    '1': 'F#4', // F#4
+    '2': 'G#4', // G#4
+    '3': 'A#4', // A#4
+    '4': 'C#5', // C#5
+    '5': 'D#5', // D#5
+    '6': 'F#5', // F#5
+    '7': 'G#5', // G#5
+    '8': 'A#5', // A#5
+  };
 
   // 37 keys: C3 to C6 (3 octaves + 1 key)
   const notes: Note[] = [];
@@ -64,12 +93,54 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     
+    // Keyboard event handlers
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (aiPlaying) return;
+      
+      const key = e.key.toLowerCase();
+      const noteKey = keyboardMap[key];
+      
+      if (noteKey && !pressedKeysRef.current.has(key)) {
+        pressedKeysRef.current.add(key);
+        
+        // Find the note in our notes array
+        const note = notes.find(n => `${n.note}${n.octave}` === noteKey);
+        if (note) {
+          const fullNoteKey = `${note.note}${note.octave}`;
+          handleKeyPress(fullNoteKey, note.frequency);
+        }
+      }
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (aiPlaying) return;
+      
+      const key = e.key.toLowerCase();
+      const noteKey = keyboardMap[key];
+      
+      if (noteKey && pressedKeysRef.current.has(key)) {
+        pressedKeysRef.current.delete(key);
+        
+        // Find the note in our notes array
+        const note = notes.find(n => `${n.note}${n.octave}` === noteKey);
+        if (note) {
+          const fullNoteKey = `${note.note}${note.octave}`;
+          handleKeyRelease(fullNoteKey, note.frequency);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [aiPlaying]);
 
   useImperativeHandle(ref, () => ({
     playNote,
