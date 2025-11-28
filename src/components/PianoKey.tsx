@@ -23,7 +23,7 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
       className={cn(
         "relative transition-all duration-150 ease-out",
         isBlack
-          ? "w-12 h-40 -mx-4 z-10 rounded-b-md shadow-lg"
+          ? "w-12 h-40 -mx-6 z-10 rounded-b-md shadow-lg"
           : "w-16 h-full rounded-b-lg border-2 border-border shadow-md",
         isBlack
           ? isActive
