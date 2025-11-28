@@ -20,9 +20,13 @@ export interface PianoHandle {
 
 const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiPlaying }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
+  const [showProgress, setShowProgress] = useState(false);
+  const [progress, setProgress] = useState(100);
   const audioContextRef = useRef<AudioContext | null>(null);
   const recordingRef = useRef<string[]>([]);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // 37 keys: C3 to C6 (3 octaves + 1 key)
   const notes: Note[] = [];
@@ -98,18 +102,51 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiP
     // Add to recording
     recordingRef.current.push(noteKey);
 
-    // Clear existing timeout
+    // Clear existing timeouts and intervals
     if (recordingTimeoutRef.current) {
       clearTimeout(recordingTimeoutRef.current);
     }
+    if (progressTimeoutRef.current) {
+      clearTimeout(progressTimeoutRef.current);
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    
+    // Hide progress bar and reset
+    setShowProgress(false);
+    setProgress(100);
 
-    // Set new timeout to send recording after 1 second of no input
+    // After 0.5s of silence, start showing the countdown
+    progressTimeoutRef.current = setTimeout(() => {
+      setShowProgress(true);
+      setProgress(100);
+      
+      // Animate progress bar emptying over 1 second
+      const startTime = Date.now();
+      const duration = 1000;
+      
+      progressIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const newProgress = Math.max(0, 100 - (elapsed / duration) * 100);
+        setProgress(newProgress);
+        
+        if (newProgress === 0) {
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+          }
+        }
+      }, 16); // ~60fps
+    }, 500);
+
+    // Set timeout to send recording after 1.5 seconds total (0.5s + 1s)
     recordingTimeoutRef.current = setTimeout(() => {
       if (recordingRef.current.length > 0) {
+        setShowProgress(false);
         onUserPlay([...recordingRef.current]);
         recordingRef.current = [];
       }
-    }, 1000);
+    }, 1500);
 
     // Visual feedback
     setTimeout(() => {
@@ -145,6 +182,20 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiP
       {aiPlaying && (
         <div className="absolute top-2 right-2 px-4 py-2 bg-secondary/80 backdrop-blur rounded-full text-sm font-medium animate-pulse">
           AI Playing...
+        </div>
+      )}
+      
+      {showProgress && !aiPlaying && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-64 space-y-1">
+          <div className="px-3 py-1 bg-card/90 backdrop-blur rounded-full text-xs font-medium text-center text-muted-foreground">
+            AI preparing response...
+          </div>
+          <div className="h-1 bg-card/50 rounded-full overflow-hidden backdrop-blur">
+            <div 
+              className="h-full bg-gradient-to-r from-key-active-user to-accent transition-all duration-[16ms] ease-linear"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
       )}
     </div>
