@@ -79,7 +79,7 @@ const Index = () => {
         pendingResponseRef.current = { sessionId, notes: data.notes };
         console.log("Stored AI response for session:", sessionId);
         
-        // Trigger countdown completion to play the response
+        // Trigger playback
         handleCountdownComplete(sessionId);
       }
     } catch (error) {
@@ -89,11 +89,21 @@ const Index = () => {
         description: error instanceof Error ? error.message : "Failed to get AI response",
         variant: "destructive",
       });
+      // Hide progress indicator on error
+      if (pianoRef.current) {
+        (pianoRef.current as any).hideProgress?.();
+      }
     }
   };
 
   const handleCountdownComplete = async (sessionId: number) => {
     console.log("Countdown complete for session:", sessionId, "Pending:", pendingResponseRef.current?.sessionId);
+    
+    // Hide the progress indicator
+    if (pianoRef.current) {
+      pianoRef.current.hideProgress();
+    }
+    
     // Play the pending AI response only if it matches this session
     if (pendingResponseRef.current?.sessionId === sessionId && currentSessionIdRef.current === sessionId) {
       const notes = pendingResponseRef.current.notes;
