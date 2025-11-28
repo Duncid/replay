@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { PianoKey } from "./PianoKey";
 
 interface Note {
@@ -14,7 +14,11 @@ interface PianoProps {
   aiPlaying: boolean;
 }
 
-const Piano = ({ onUserPlay, activeKeys, aiPlaying }: PianoProps) => {
+export interface PianoHandle {
+  playNote: (frequency: number, duration?: number) => void;
+}
+
+const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, activeKeys, aiPlaying }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const audioContextRef = useRef<AudioContext | null>(null);
   const recordingRef = useRef<string[]>([]);
@@ -52,6 +56,10 @@ const Piano = ({ onUserPlay, activeKeys, aiPlaying }: PianoProps) => {
       }
     };
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    playNote,
+  }));
 
   const playNote = (frequency: number, duration: number = 0.3) => {
     if (!audioContextRef.current) return;
@@ -141,6 +149,8 @@ const Piano = ({ onUserPlay, activeKeys, aiPlaying }: PianoProps) => {
       )}
     </div>
   );
-};
+});
+
+Piano.displayName = "Piano";
 
 export default Piano;
