@@ -1,5 +1,5 @@
-import { useState } from "react";
-import Piano from "@/components/Piano";
+import { useState, useRef } from "react";
+import Piano, { PianoHandle } from "@/components/Piano";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ const Index = () => {
   const [aiPlaying, setAiPlaying] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const { toast } = useToast();
+  const pianoRef = useRef<PianoHandle>(null);
 
   const playAiResponse = async (notes: string[]) => {
     setAiPlaying(true);
@@ -16,10 +17,27 @@ const Index = () => {
     // Jazz timing: approximately 120 BPM = 500ms per beat
     const noteDuration = 500;
     
+    // Map note names to frequencies (same logic as Piano component)
+    const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    
     for (let i = 0; i < notes.length; i++) {
       const note = notes[i];
       
-      // Add note to active keys
+      // Parse note (e.g., "C4" -> note: "C", octave: 4)
+      const noteName = note.slice(0, -1);
+      const octave = parseInt(note.slice(-1));
+      
+      // Calculate frequency
+      const noteIndex = noteNames.indexOf(noteName);
+      const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - 9);
+      const frequency = 440 * Math.pow(2, semitonesFromA4 / 12);
+      
+      // Play audio
+      if (pianoRef.current) {
+        pianoRef.current.playNote(frequency, noteDuration / 1000);
+      }
+      
+      // Add note to active keys for visual feedback
       setActiveKeys(new Set([note]));
       
       // Wait for note duration
@@ -102,7 +120,7 @@ const Index = () => {
           </Button>
         </div>
 
-        <Piano onUserPlay={handleUserPlay} activeKeys={activeKeys} aiPlaying={aiPlaying} />
+        <Piano ref={pianoRef} onUserPlay={handleUserPlay} activeKeys={activeKeys} aiPlaying={aiPlaying} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto text-sm">
           <div className="p-4 bg-card rounded-lg border border-border space-y-2">
