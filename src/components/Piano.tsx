@@ -23,17 +23,20 @@ interface PianoProps {
 
 export interface PianoHandle {
   playNote: (frequency: number, duration?: number) => void;
+  hideProgress: () => void;
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCancelled, onNewSession, activeKeys, aiPlaying }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const [showProgress, setShowProgress] = useState(false);
+  const [progress, setProgress] = useState(100);
   const audioContextRef = useRef<AudioContext | null>(null);
   const recordingRef = useRef<NoteWithDuration[]>([]);
   const notePressTimesRef = useRef<Map<string, number>>(new Map());
   const activeOscillatorsRef = useRef<Map<string, { oscillator: OscillatorNode; gainNode: GainNode }>>(new Map());
   const currentSessionIdRef = useRef<number>(0);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // 37 keys: C3 to C6 (3 octaves + 1 key)
   const notes: Note[] = [];
@@ -70,6 +73,13 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
 
   useImperativeHandle(ref, () => ({
     playNote,
+    hideProgress: () => {
+      setShowProgress(false);
+      setProgress(100);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    },
   }));
 
   const playNote = (frequency: number, duration: number = 0.3) => {
@@ -155,20 +165,24 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
     const wasCountdownActive = showProgress;
     const oldSessionId = currentSessionIdRef.current;
     
-    // Clear existing timeouts
+    // Clear existing timeouts and intervals
     if (recordingTimeoutRef.current) {
       clearTimeout(recordingTimeoutRef.current);
     }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
     
-    // Hide progress indicator
+    // Hide progress bar
     setShowProgress(false);
+    setProgress(100);
     
     // Notify parent that countdown was cancelled
     if (wasCountdownActive) {
       onCountdownCancelled(oldSessionId);
     }
 
-    // After 1 second of silence, trigger AI
+    // After 1 second of silence, trigger AI with progress bar
     recordingTimeoutRef.current = setTimeout(() => {
       if (recordingRef.current.length > 0) {
         // Start new session
@@ -176,10 +190,27 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
         currentSessionIdRef.current = sessionId;
         
         setShowProgress(true);
+        setProgress(100);
         
-        // Trigger AI - it will play when response arrives
+        // Trigger AI
         onUserPlay([...recordingRef.current], sessionId);
         recordingRef.current = [];
+        
+        // Start countdown animation - fills as we wait for AI
+        const startTime = Date.now();
+        const duration = 2000; // 2 second countdown
+        
+        progressIntervalRef.current = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const newProgress = Math.max(0, 100 - (elapsed / duration) * 100);
+          setProgress(newProgress);
+          
+          if (newProgress === 0) {
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+            }
+          }
+        }, 16); // ~60fps
       }
     }, 1000);
   };
@@ -245,8 +276,14 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
       {showProgress && !aiPlaying && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
           <div className="bg-card border border-border shadow-lg rounded-lg p-4 min-w-[300px]">
-            <div className="text-sm font-medium text-center text-foreground">
+            <div className="text-sm font-medium text-center text-foreground mb-3">
               AI preparing response...
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-key-active-user to-accent transition-all duration-[16ms] ease-linear"
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </div>
         </div>
