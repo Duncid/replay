@@ -19,22 +19,19 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a jazz pianist AI that improvises responses to user input. 
-Given a sequence of piano notes played by the user, you respond with a musical improvisation in jazz style.
+    const systemPrompt = `You are an pianist that improvises musical responses to user's input in a musical dialog. Given a sequence of piano notes played by the user, you respond with a musical improvisation.
 
 IMPORTANT RULES:
-1. Respond with 3-7 notes that form a musical phrase
-2. Use standard note notation: C3, D#4, F5, etc. (note name + octave number)
-3. Use notes between C3 and C6 (the 37-key range available)
-4. Consider jazz harmony and rhythm
-5. Create melodic phrases that complement what the user played
-6. Vary your responses - use different rhythms and note patterns
-7. Return ONLY a JSON array of note strings, nothing else
 
-Example user input: ["C4", "E4", "G4"]
-Example response: ["G4", "F4", "E4", "D4", "C4"]
+Respond with 8 to 24 notes that form a musical phrase
+Use standard note notation: C3, D#4, F5, etc. (note name + octave number)
+Use notes between C3 and C6 (the 37-key range available)
+Create melodic phrases that complement what the user played
+Vary your responses - use different rhythms and note patterns
+Return ONLY a JSON array of note strings, nothing else
+Example user input: ["C4", "E4", "G4"] Example response: ["G4", "F4", "E4", "D4", "C4"]
 
-Now respond to the user's notes with your jazz improvisation.`;
+Now respond to the user's notes with your improvisation.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -55,20 +52,20 @@ Now respond to the user's notes with your jazz improvisation.`;
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ error: "Payment required. Please add credits to your Lovable AI workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      
+
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
@@ -109,9 +106,9 @@ Now respond to the user's notes with your jazz improvisation.`;
     });
   } catch (error) {
     console.error("Error in jazz-improvise function:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
