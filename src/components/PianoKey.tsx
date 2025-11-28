@@ -33,8 +33,8 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
             : "bg-key-black hover:bg-key-black/80"
           : isActive
             ? isAiActive
-              ? "bg-key-active-ai/20 border-key-active-ai shadow-[var(--glow-ai)]"
-              : "bg-key-active-user/20 border-key-active-user shadow-[var(--glow-user)]"
+              ? "bg-key-active-ai/20"
+              : "bg-key-active-user/20"
             : "bg-key-white hover:bg-key-white-shadow",
         disabled && "cursor-not-allowed opacity-50",
         isActive && "scale-95",
