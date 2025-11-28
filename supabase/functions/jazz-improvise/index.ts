@@ -19,17 +19,19 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an pianist that improvises musical responses to user's input in a musical dialog. Given a sequence of piano notes played by the user, you respond with a musical improvisation.
+    const systemPrompt = `You are a pianist that improvises musical responses with rhythm and duration. Given a sequence of piano notes with durations played by the user, you respond with a musical improvisation.
 
 IMPORTANT RULES:
 
-Respond with 8 to 24 notes that form a musical phrase
-Use standard note notation: C3, D#4, F5, etc. (note name + octave number)
-Use notes between C3 and C6 (the 37-key range available)
-Create melodic phrases that complement what the user played
-Vary your responses - use different rhythms and note patterns
-Return ONLY a JSON array of note strings, nothing else
-Example user input: ["C4", "E4", "G4"] Example response: ["G4", "F4", "E4", "D4", "C4"]
+- Respond with 8 to 24 notes that form a musical phrase
+- Each note must have a duration property: 0.25 (quarter), 0.5 (half), or 1.0 (full note)
+- Use standard note notation: C3, D#4, F5, etc. (note name + octave number)
+- Use notes between C3 and C6 (the 37-key range available)
+- Create melodic phrases that complement what the user played
+- Vary rhythms - use different note durations to create interesting patterns
+- Return ONLY a JSON array of objects with "note" and "duration" properties
+- Example input: [{"note": "C4", "duration": 0.5}, {"note": "E4", "duration": 0.25}]
+- Example response: [{"note": "G4", "duration": 0.5}, {"note": "F4", "duration": 0.25}, {"note": "E4", "duration": 1.0}]
 
 Now respond to the user's notes with your improvisation.`;
 
@@ -73,30 +75,39 @@ Now respond to the user's notes with your improvisation.`;
     const aiMessage = data.choices[0].message.content;
     console.log("AI response:", aiMessage);
 
-    // Parse the AI response to extract notes
-    let aiNotes: string[];
+    // Parse the AI response to extract notes with durations
+    let aiNotes: Array<{note: string, duration: number}>;
     try {
       // Try to parse as JSON
       aiNotes = JSON.parse(aiMessage);
     } catch {
-      // If not valid JSON, try to extract notes using regex
+      // Fallback: extract notes and assign default durations
       const noteRegex = /[A-G]#?\d/g;
-      aiNotes = aiMessage.match(noteRegex) || [];
+      const noteMatches = aiMessage.match(noteRegex) || [];
+      aiNotes = noteMatches.map((note: string) => ({ note, duration: 0.5 }));
     }
 
     console.log("Parsed AI notes:", aiNotes);
 
-    // Validate notes are in the correct range (C3 to C6)
-    const validNotes = aiNotes.filter((note) => {
-      const match = note.match(/([A-G]#?)(\d)/);
+    // Validate notes are in the correct range (C3 to C6) and have valid durations
+    const validNotes = aiNotes.filter((item) => {
+      if (!item.note || typeof item.duration !== 'number') return false;
+      const match = item.note.match(/([A-G]#?)(\d)/);
       if (!match) return false;
       const octave = parseInt(match[2]);
-      return octave >= 3 && octave <= 6;
+      const validOctave = octave >= 3 && octave <= 6;
+      const validDuration = [0.25, 0.5, 1.0].includes(item.duration);
+      return validOctave && validDuration;
     });
 
     if (validNotes.length === 0) {
-      // Fallback to a simple jazz response if AI didn't provide valid notes
-      validNotes.push("G4", "F4", "E4", "D4");
+      // Fallback to a simple jazz response with durations
+      validNotes.push(
+        { note: "G4", duration: 0.5 },
+        { note: "F4", duration: 0.25 },
+        { note: "E4", duration: 0.25 },
+        { note: "D4", duration: 1.0 }
+      );
     }
 
     console.log("Final valid notes:", validNotes);
