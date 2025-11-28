@@ -1,0 +1,4 @@
+project_id = "mmlizntmpbriyumsunsh"
+
+[functions.jazz-improvise]
+verify_jwt = false
