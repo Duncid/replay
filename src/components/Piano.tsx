@@ -312,8 +312,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
   };
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto">
-      <div className="relative flex h-64 bg-card rounded-lg shadow-2xl p-4 overflow-x-auto">
+    <div className="relative w-full max-w-6xl mx-auto select-none">
+      <div className="relative flex h-64 bg-card rounded-lg shadow-2xl p-4 overflow-x-auto touch-pan-x">
         {notes.map((note, index) => {
           const noteKey = `${note.note}${note.octave}`;
           const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
