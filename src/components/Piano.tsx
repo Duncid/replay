@@ -16,7 +16,6 @@ export interface NoteWithDuration {
 interface PianoProps {
   onUserPlayStart: () => void;
   onUserPlay: (notes: NoteWithDuration[]) => void;
-  onCountdownCancelled: () => void;
   activeKeys: Set<string>;
   isAiEnabled: boolean;
   allowInput: boolean;
@@ -27,7 +26,7 @@ export interface PianoHandle {
   hideProgress: () => void;
 }
 
-const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay, onCountdownCancelled, activeKeys, isAiEnabled, allowInput }, ref) => {
+const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay, activeKeys, isAiEnabled, allowInput }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -231,9 +230,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
     const newKeys = new Set(userPressedKeys);
     newKeys.add(noteKey);
     setUserPressedKeys(newKeys);
-
-    // If countdown was active, cancel it
-    const wasCountdownActive = showProgress;
     
     // Clear existing timeouts and intervals
     if (recordingTimeoutRef.current) {
@@ -246,11 +242,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
     // Hide progress bar
     setShowProgress(false);
     setProgress(100);
-    
-    // Notify parent that countdown was cancelled
-    if (wasCountdownActive) {
-      onCountdownCancelled();
-    }
 
     // After 1 second of silence, trigger AI with progress bar
     recordingTimeoutRef.current = setTimeout(() => {
