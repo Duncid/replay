@@ -256,7 +256,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
         
         // Start countdown animation - fills as we wait for AI
         const startTime = Date.now();
-        const duration = 2000; // 2 second countdown
+        const duration = 1000; // 1 second countdown
         
         progressIntervalRef.current = setInterval(() => {
           const elapsed = Date.now() - startTime;

@@ -20,7 +20,7 @@ const Index = () => {
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shouldStopAiRef = useRef<boolean>(false);
 
-  const MIN_WAIT_TIME_MS = 2000; // Match the progress bar duration
+  const MIN_WAIT_TIME_MS = 1000; // Match the progress bar duration
 
   const stopAiPlayback = () => {
     // Signal AI playback to stop
