@@ -305,32 +305,79 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
     setUserPressedKeys(newKeys);
   };
 
+  // Separate white and black keys with grid positions
+  const whiteKeys = notes.filter(n => !n.isBlack);
+  const blackKeys = notes.filter(n => n.isBlack);
+  
+  // Calculate grid column for each black key (between white keys)
+  const getBlackKeyColumn = (blackNote: Note) => {
+    const noteKey = `${blackNote.note}${blackNote.octave}`;
+    // Find position relative to white keys
+    const whiteIndex = whiteKeys.findIndex(w => {
+      const whiteKey = `${w.note}${w.octave}`;
+      // Black key C# goes between C and D, D# between D and E, etc.
+      return notes.findIndex(n => `${n.note}${n.octave}` === whiteKey) > 
+             notes.findIndex(n => `${n.note}${n.octave}` === noteKey);
+    });
+    return whiteIndex; // This gives us the column where the black key should align
+  };
+
   return (
-    <div className="relative w-full max-w-6xl mx-auto select-none">
-      <div className="relative flex h-64 bg-card rounded-lg shadow-2xl p-4 overflow-x-auto touch-pan-x">
-        {notes.map((note, index) => {
-          const noteKey = `${note.note}${note.octave}`;
-          const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
-          const isAiActive = activeKeys.has(noteKey) && !allowInput;
-          
-          return (
-            <PianoKey
-              key={noteKey}
-              note={noteKey}
-              frequency={note.frequency}
-              isBlack={note.isBlack}
-              isActive={isActive}
-              isAiActive={isAiActive}
-              onPress={() => handleKeyPress(noteKey, note.frequency)}
-              onRelease={() => handleKeyRelease(noteKey, note.frequency)}
-              disabled={!allowInput}
-            />
-          );
-        })}
+    <div className="relative w-full h-screen select-none flex flex-col">
+      {/* Piano container - centered vertically */}
+      <div className="relative h-64 bg-card shadow-2xl my-auto">
+        {/* White keys grid */}
+        <div className="absolute inset-0 grid grid-cols-[0.5fr_repeat(20,1fr)_0.5fr] gap-0.5">
+          {whiteKeys.map((note, index) => {
+            const noteKey = `${note.note}${note.octave}`;
+            const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
+            const isAiActive = activeKeys.has(noteKey) && !allowInput;
+            
+            return (
+              <PianoKey
+                key={noteKey}
+                note={noteKey}
+                frequency={note.frequency}
+                isBlack={false}
+                isActive={isActive}
+                isAiActive={isAiActive}
+                onPress={() => handleKeyPress(noteKey, note.frequency)}
+                onRelease={() => handleKeyRelease(noteKey, note.frequency)}
+                disabled={!allowInput}
+                gridColumn={index + 1}
+              />
+            );
+          })}
+        </div>
+        
+        {/* Black keys layer - absolute positioned on top */}
+        <div className="absolute inset-0 grid grid-cols-[0.5fr_repeat(20,1fr)_0.5fr] gap-0.5 pointer-events-none">
+          {blackKeys.map((note) => {
+            const noteKey = `${note.note}${note.octave}`;
+            const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
+            const isAiActive = activeKeys.has(noteKey) && !allowInput;
+            const column = getBlackKeyColumn(note);
+            
+            return (
+              <PianoKey
+                key={noteKey}
+                note={noteKey}
+                frequency={note.frequency}
+                isBlack={true}
+                isActive={isActive}
+                isAiActive={isAiActive}
+                onPress={() => handleKeyPress(noteKey, note.frequency)}
+                onRelease={() => handleKeyRelease(noteKey, note.frequency)}
+                disabled={!allowInput}
+                gridColumn={column}
+              />
+            );
+          })}
+        </div>
       </div>
       
       {!allowInput && (
-        <div className="absolute top-2 right-2 px-4 py-2 bg-secondary/80 backdrop-blur rounded-full text-sm font-medium animate-pulse">
+        <div className="absolute top-4 right-4 px-4 py-2 bg-secondary/80 backdrop-blur rounded-full text-sm font-medium animate-pulse">
           AI Playing...
         </div>
       )}

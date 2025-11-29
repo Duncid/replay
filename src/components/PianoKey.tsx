@@ -9,9 +9,10 @@ interface PianoKeyProps {
   onPress: () => void;
   onRelease: () => void;
   disabled?: boolean;
+  gridColumn?: number;
 }
 
-export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelease, disabled }: PianoKeyProps) => {
+export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelease, disabled, gridColumn }: PianoKeyProps) => {
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault(); // Prevent ghost clicks and scrolling
     onPress();
@@ -34,8 +35,8 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
       className={cn(
         "relative transition-all duration-150 ease-out select-none touch-none",
         isBlack
-          ? "w-12 h-40 -mx-5 z-10 rounded-b-md shadow-lg"
-          : "w-16 h-full rounded-b-lg border-2 border-border shadow-md",
+          ? "h-32 rounded-b-md shadow-lg z-20 pointer-events-auto col-span-1"
+          : "h-full rounded-b-lg border-2 border-border shadow-md",
         isBlack
           ? isActive
             ? isAiActive
@@ -52,6 +53,11 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
       style={{
         transition: "var(--transition-smooth)",
         WebkitTapHighlightColor: "transparent",
+        ...(isBlack && gridColumn ? { 
+          gridColumnStart: gridColumn,
+          marginLeft: '60%',
+          width: '80%',
+        } : {}),
       }}
     >
       <span
