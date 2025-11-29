@@ -14,12 +14,12 @@ export interface NoteWithDuration {
 }
 
 interface PianoProps {
-  onUserPlay: (notes: NoteWithDuration[], sessionId: number) => void;
-  onCountdownCancelled: (sessionId: number) => void;
-  onNewSession: () => number;
+  onUserPlayStart: () => void;
+  onUserPlay: (notes: NoteWithDuration[]) => void;
+  onCountdownCancelled: () => void;
   activeKeys: Set<string>;
-  aiPlaying: boolean;
   isAiEnabled: boolean;
+  allowInput: boolean;
 }
 
 export interface PianoHandle {
@@ -27,7 +27,7 @@ export interface PianoHandle {
   hideProgress: () => void;
 }
 
-const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCancelled, onNewSession, activeKeys, aiPlaying, isAiEnabled }, ref) => {
+const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay, onCountdownCancelled, activeKeys, isAiEnabled, allowInput }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -35,10 +35,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
   const recordingRef = useRef<NoteWithDuration[]>([]);
   const notePressTimesRef = useRef<Map<string, number>>(new Map());
   const activeOscillatorsRef = useRef<Map<string, { oscillator: OscillatorNode; gainNode: GainNode }>>(new Map());
-  const currentSessionIdRef = useRef<number>(0);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pressedKeysRef = useRef<Set<string>>(new Set());
+  const hasNotifiedPlayStartRef = useRef(false);
 
   // AZERTY keyboard mapping - C4 centered on 'e'
   const keyboardMap: { [key: string]: string } = {
@@ -89,7 +89,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
     
     // Keyboard event handlers
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (aiPlaying) return;
+      if (!allowInput) return;
       
       const key = e.key.toLowerCase();
       const noteKey = keyboardMap[key];
@@ -107,7 +107,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (aiPlaying) return;
+      if (!allowInput) return;
       
       const key = e.key.toLowerCase();
       const noteKey = keyboardMap[key];
@@ -134,7 +134,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [aiPlaying]);
+  }, [allowInput]);
 
   useImperativeHandle(ref, () => ({
     playNote,
@@ -214,7 +214,13 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
   };
 
   const handleKeyPress = (noteKey: string, frequency: number) => {
-    if (aiPlaying) return;
+    if (!allowInput) return;
+
+    // Notify parent that user started playing (only once per recording session)
+    if (!hasNotifiedPlayStartRef.current) {
+      onUserPlayStart();
+      hasNotifiedPlayStartRef.current = true;
+    }
 
     // Start playing the note immediately
     startNote(noteKey, frequency);
@@ -228,7 +234,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
 
     // If countdown was active, cancel it
     const wasCountdownActive = showProgress;
-    const oldSessionId = currentSessionIdRef.current;
     
     // Clear existing timeouts and intervals
     if (recordingTimeoutRef.current) {
@@ -244,22 +249,19 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
     
     // Notify parent that countdown was cancelled
     if (wasCountdownActive) {
-      onCountdownCancelled(oldSessionId);
+      onCountdownCancelled();
     }
 
     // After 1 second of silence, trigger AI with progress bar
     recordingTimeoutRef.current = setTimeout(() => {
       if (recordingRef.current.length > 0 && isAiEnabled) {
-        // Start new session
-        const sessionId = onNewSession();
-        currentSessionIdRef.current = sessionId;
-        
         setShowProgress(true);
         setProgress(100);
         
         // Trigger AI
-        onUserPlay([...recordingRef.current], sessionId);
+        onUserPlay([...recordingRef.current]);
         recordingRef.current = [];
+        hasNotifiedPlayStartRef.current = false;
         
         // Start countdown animation - fills as we wait for AI
         const startTime = Date.now();
@@ -279,12 +281,13 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
       } else if (recordingRef.current.length > 0) {
         // Clear recording if AI is disabled
         recordingRef.current = [];
+        hasNotifiedPlayStartRef.current = false;
       }
     }, 1000);
   };
 
   const handleKeyRelease = (noteKey: string, frequency: number) => {
-    if (aiPlaying) return;
+    if (!allowInput) return;
     
     // Stop the note
     stopNote(noteKey);
@@ -317,7 +320,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
         {notes.map((note, index) => {
           const noteKey = `${note.note}${note.octave}`;
           const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
-          const isAiActive = activeKeys.has(noteKey) && aiPlaying;
+          const isAiActive = activeKeys.has(noteKey) && !allowInput;
           
           return (
             <PianoKey
@@ -329,19 +332,19 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlay, onCountdownCanc
               isAiActive={isAiActive}
               onPress={() => handleKeyPress(noteKey, note.frequency)}
               onRelease={() => handleKeyRelease(noteKey, note.frequency)}
-              disabled={aiPlaying}
+              disabled={!allowInput}
             />
           );
         })}
       </div>
       
-      {aiPlaying && (
+      {!allowInput && (
         <div className="absolute top-2 right-2 px-4 py-2 bg-secondary/80 backdrop-blur rounded-full text-sm font-medium animate-pulse">
           AI Playing...
         </div>
       )}
       
-      {showProgress && !aiPlaying && (
+      {showProgress && allowInput && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
           <div className="bg-card border border-border shadow-lg rounded-lg p-4 min-w-[300px]">
             <div className="text-sm font-medium text-center text-foreground mb-3">
