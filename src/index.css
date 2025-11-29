@@ -60,5 +60,16 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    /* Optimize for touch interactions */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+
+  /* Prevent text selection on interactive elements */
+  button, [role="button"] {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }
