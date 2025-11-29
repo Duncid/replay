@@ -305,29 +305,23 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
     setUserPressedKeys(newKeys);
   };
 
-  // Separate white and black keys with grid positions
+  // Separate white and black keys
   const whiteKeys = notes.filter(n => !n.isBlack);
   const blackKeys = notes.filter(n => n.isBlack);
   
-  // Calculate grid column for each black key (between white keys)
+  // Calculate grid column for each black key (positioned between white keys)
   const getBlackKeyColumn = (blackNote: Note) => {
-    const noteKey = `${blackNote.note}${blackNote.octave}`;
-    // Find position relative to white keys
-    const whiteIndex = whiteKeys.findIndex(w => {
-      const whiteKey = `${w.note}${w.octave}`;
-      // Black key C# goes between C and D, D# between D and E, etc.
-      return notes.findIndex(n => `${n.note}${n.octave}` === whiteKey) > 
-             notes.findIndex(n => `${n.note}${n.octave}` === noteKey);
-    });
-    return whiteIndex; // This gives us the column where the black key should align
+    const noteIndex = notes.findIndex(n => `${n.note}${n.octave}` === `${blackNote.note}${blackNote.octave}`);
+    const whiteKeysBefore = notes.slice(0, noteIndex).filter(n => !n.isBlack).length;
+    return whiteKeysBefore; // Position between this white key and the next
   };
 
   return (
     <div className="relative w-full h-screen select-none flex flex-col">
       {/* Piano container - centered vertically */}
       <div className="relative h-64 bg-card shadow-2xl my-auto">
-        {/* White keys grid */}
-        <div className="absolute inset-0 grid grid-cols-[0.5fr_repeat(20,1fr)_0.5fr] gap-0.5">
+        {/* White keys grid - 22 full columns */}
+        <div className="absolute inset-0 grid grid-cols-22 gap-0.5">
           {whiteKeys.map((note, index) => {
             const noteKey = `${note.note}${note.octave}`;
             const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
@@ -344,14 +338,13 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
                 onPress={() => handleKeyPress(noteKey, note.frequency)}
                 onRelease={() => handleKeyRelease(noteKey, note.frequency)}
                 disabled={!allowInput}
-                gridColumn={index + 1}
               />
             );
           })}
         </div>
         
-        {/* Black keys layer - absolute positioned on top */}
-        <div className="absolute inset-0 grid grid-cols-[0.5fr_repeat(20,1fr)_0.5fr] gap-0.5 pointer-events-none">
+        {/* Black keys layer - 44 half-columns (0.5fr each) for positioning */}
+        <div className="absolute inset-0 grid grid-cols-44 gap-0 pointer-events-none">
           {blackKeys.map((note) => {
             const noteKey = `${note.note}${note.octave}`;
             const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);

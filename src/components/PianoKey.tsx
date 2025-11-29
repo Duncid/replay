@@ -35,7 +35,7 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
       className={cn(
         "relative transition-all duration-150 ease-out select-none touch-none",
         isBlack
-          ? "h-32 rounded-b-md shadow-lg z-20 pointer-events-auto col-span-1"
+          ? "h-32 rounded-b-md shadow-lg z-20 pointer-events-auto col-span-2"
           : "h-full rounded-b-lg border-2 border-border shadow-md",
         isBlack
           ? isActive
@@ -53,10 +53,8 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
       style={{
         transition: "var(--transition-smooth)",
         WebkitTapHighlightColor: "transparent",
-        ...(isBlack && gridColumn ? { 
-          gridColumnStart: gridColumn,
-          marginLeft: '60%',
-          width: '80%',
+        ...(isBlack && gridColumn !== undefined ? { 
+          gridColumnStart: gridColumn * 2 + 2, // Convert to half-column grid position
         } : {}),
       }}
     >
