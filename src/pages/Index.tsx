@@ -116,12 +116,12 @@ const Index = () => {
       
       const { data, error } = await supabase.functions.invoke("jazz-improvise", {
         body: { userNotes, model: selectedModel },
-        // Note: Supabase client doesn't support signal directly, but we can check abort status
       });
 
       // Check if request was aborted
       if (abortControllerRef.current.signal.aborted) {
         console.log("Request was aborted");
+        setAppState('idle');
         return;
       }
 
@@ -131,18 +131,20 @@ const Index = () => {
 
       console.log("AI response received:", data);
 
-      // Store response and check if we should play it
-      if (data.notes && data.notes.length > 0 && appState === 'waiting_for_ai') {
+      // Store response - don't check state here since it's async
+      if (data.notes && data.notes.length > 0) {
         pendingResponseRef.current = data.notes;
+        console.log("Playing AI response");
         handleAiResponseReady();
       } else {
-        console.log("Not playing AI response - state changed or no notes");
+        console.log("No notes in response");
         setAppState('idle');
       }
     } catch (error) {
       // Ignore abort errors
       if (error instanceof Error && error.name === 'AbortError') {
         console.log("Request aborted");
+        setAppState('idle');
         return;
       }
       
@@ -167,13 +169,21 @@ const Index = () => {
       pianoRef.current.hideProgress();
     }
     
-    // Play the response if we still have it and are in the right state
-    if (pendingResponseRef.current && appState === 'waiting_for_ai') {
+    // Check if we were cancelled via abort controller
+    if (abortControllerRef.current?.signal.aborted) {
+      console.log("Playback cancelled");
+      pendingResponseRef.current = null;
+      setAppState('idle');
+      return;
+    }
+    
+    // Play the response if we have it
+    if (pendingResponseRef.current) {
       const notes = pendingResponseRef.current;
       pendingResponseRef.current = null;
       await playAiResponse(notes);
     } else {
-      console.log("Not playing - response cancelled or state changed");
+      console.log("No pending response");
       setAppState('idle');
     }
   };
