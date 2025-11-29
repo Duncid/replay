@@ -132,7 +132,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
-      <div className="fixed top-8 left-8 flex items-center gap-4">
+      <div className="fixed top-8 left-8 flex items-center gap-4 h-10">
         <div className="flex items-center gap-3">
           <Switch
             checked={isEnabled}
@@ -150,7 +150,7 @@ const Index = () => {
               Model:
             </Label>
             <Select value={selectedModel} onValueChange={setSelectedModel} disabled={aiPlaying}>
-              <SelectTrigger id="model-select" className="w-[200px]">
+              <SelectTrigger id="model-select" className="w-[200px] h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
