@@ -36,10 +36,6 @@ const Index = () => {
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     
     for (let i = 0; i < notes.length; i++) {
-      // Check if we should stop (user interrupted)
-      if (appState !== 'ai_playing') {
-        break;
-      }
 
       const noteWithDuration = notes[i];
       
