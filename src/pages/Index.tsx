@@ -18,8 +18,12 @@ const Index = () => {
   const pendingResponseRef = useRef<NoteWithDuration[] | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shouldStopAiRef = useRef<boolean>(false);
 
   const stopAiPlayback = () => {
+    // Signal AI playback to stop
+    shouldStopAiRef.current = true;
+    
     // Clear any active AI playback
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
@@ -30,12 +34,18 @@ const Index = () => {
   };
 
   const playAiResponse = async (notes: NoteWithDuration[]) => {
+    shouldStopAiRef.current = false;
     setAppState('ai_playing');
     
     // Map note names to frequencies (same logic as Piano component)
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     
     for (let i = 0; i < notes.length; i++) {
+      // Check if we should stop (user interrupted)
+      if (shouldStopAiRef.current) {
+        console.log("AI playback interrupted");
+        break;
+      }
 
       const noteWithDuration = notes[i];
       
@@ -76,7 +86,7 @@ const Index = () => {
     }
     
     // Only return to idle if we weren't interrupted
-    if (appState === 'ai_playing') {
+    if (!shouldStopAiRef.current) {
       setAppState('idle');
     }
   };
@@ -229,7 +239,7 @@ const Index = () => {
         onCountdownCancelled={handleCountdownCancelled}
         activeKeys={activeKeys} 
         isAiEnabled={isEnabled}
-        allowInput={appState !== 'ai_playing'}
+        allowInput={true}
       />
     </div>
   );
