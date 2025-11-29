@@ -11,8 +11,8 @@ serve(async (req) => {
   }
 
   try {
-    const { userNotes } = await req.json();
-    console.log("Received user notes:", userNotes);
+    const { userNotes, model = "google/gemini-2.5-flash" } = await req.json();
+    console.log("Received user notes:", userNotes, "Model:", model);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -42,7 +42,7 @@ Now respond to the user's notes with your improvisation.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `User played: ${JSON.stringify(userNotes)}` },
