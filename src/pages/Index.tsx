@@ -6,23 +6,41 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+type AppState = 'idle' | 'user_playing' | 'waiting_for_ai' | 'ai_playing';
+
 const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
-  const [aiPlaying, setAiPlaying] = useState(false);
+  const [appState, setAppState] = useState<AppState>('idle');
   const [isEnabled, setIsEnabled] = useState(true);
   const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
   const { toast } = useToast();
   const pianoRef = useRef<PianoHandle>(null);
-  const pendingResponseRef = useRef<{ sessionId: number; notes: NoteWithDuration[] } | null>(null);
-  const currentSessionIdRef = useRef(0);
+  const pendingResponseRef = useRef<NoteWithDuration[] | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopAiPlayback = () => {
+    // Clear any active AI playback
+    if (aiPlaybackTimeoutRef.current) {
+      clearTimeout(aiPlaybackTimeoutRef.current);
+      aiPlaybackTimeoutRef.current = null;
+    }
+    setActiveKeys(new Set());
+    setAppState('idle');
+  };
 
   const playAiResponse = async (notes: NoteWithDuration[]) => {
-    setAiPlaying(true);
+    setAppState('ai_playing');
     
     // Map note names to frequencies (same logic as Piano component)
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     
     for (let i = 0; i < notes.length; i++) {
+      // Check if we should stop (user interrupted)
+      if (appState !== 'ai_playing') {
+        break;
+      }
+
       const noteWithDuration = notes[i];
       
       // Parse note (e.g., "C4" -> note: "C", octave: 4)
@@ -46,88 +64,123 @@ const Index = () => {
       setActiveKeys(new Set([noteWithDuration.note]));
       
       // Wait for note duration
-      await new Promise(resolve => setTimeout(resolve, noteDuration));
+      await new Promise(resolve => {
+        aiPlaybackTimeoutRef.current = setTimeout(resolve, noteDuration);
+      });
       
       // Clear active keys
       setActiveKeys(new Set());
       
       // Small pause between notes
       if (i < notes.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => {
+          aiPlaybackTimeoutRef.current = setTimeout(resolve, 100);
+        });
       }
     }
     
-    setAiPlaying(false);
+    // Only return to idle if we weren't interrupted
+    if (appState === 'ai_playing') {
+      setAppState('idle');
+    }
   };
 
-  const handleUserPlay = async (userNotes: NoteWithDuration[], sessionId: number) => {
-    if (!isEnabled || aiPlaying) return;
+  const handleUserPlayStart = () => {
+    console.log("User started playing, current state:", appState);
+    
+    // Cancel any pending AI operations
+    if (appState === 'waiting_for_ai') {
+      console.log("Cancelling pending AI request");
+      abortControllerRef.current?.abort();
+      pendingResponseRef.current = null;
+      if (pianoRef.current) {
+        pianoRef.current.hideProgress();
+      }
+    } else if (appState === 'ai_playing') {
+      console.log("Interrupting AI playback");
+      stopAiPlayback();
+    }
+    
+    setAppState('user_playing');
+  };
 
-    console.log("User played:", userNotes, "Session:", sessionId);
+  const handleUserPlay = async (userNotes: NoteWithDuration[]) => {
+    if (!isEnabled) return;
+
+    console.log("User finished playing:", userNotes);
+    setAppState('waiting_for_ai');
 
     try {
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+      
       const { data, error } = await supabase.functions.invoke("jazz-improvise", {
         body: { userNotes, model: selectedModel },
+        // Note: Supabase client doesn't support signal directly, but we can check abort status
       });
+
+      // Check if request was aborted
+      if (abortControllerRef.current.signal.aborted) {
+        console.log("Request was aborted");
+        return;
+      }
 
       if (error) {
         throw error;
       }
 
-      console.log("AI response:", data, "Session:", sessionId);
+      console.log("AI response received:", data);
 
-      // Store and immediately play the response if it's for the current session
-      if (data.notes && data.notes.length > 0) {
-        pendingResponseRef.current = { sessionId, notes: data.notes };
-        console.log("Stored AI response for session:", sessionId);
-        
-        // Trigger playback
-        handleCountdownComplete(sessionId);
+      // Store response and check if we should play it
+      if (data.notes && data.notes.length > 0 && appState === 'waiting_for_ai') {
+        pendingResponseRef.current = data.notes;
+        handleAiResponseReady();
+      } else {
+        console.log("Not playing AI response - state changed or no notes");
+        setAppState('idle');
       }
     } catch (error) {
+      // Ignore abort errors
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log("Request aborted");
+        return;
+      }
+      
       console.error("Error getting AI response:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to get AI response",
         variant: "destructive",
       });
-      // Hide progress indicator on error
+      setAppState('idle');
       if (pianoRef.current) {
-        (pianoRef.current as any).hideProgress?.();
+        pianoRef.current.hideProgress();
       }
     }
   };
 
-  const handleCountdownComplete = async (sessionId: number) => {
-    console.log("Countdown complete for session:", sessionId, "Pending:", pendingResponseRef.current?.sessionId);
+  const handleAiResponseReady = async () => {
+    console.log("AI response ready to play");
     
-    // Hide the progress indicator
+    // Hide progress indicator
     if (pianoRef.current) {
       pianoRef.current.hideProgress();
     }
     
-    // Play the pending AI response only if it matches this session
-    if (pendingResponseRef.current?.sessionId === sessionId && currentSessionIdRef.current === sessionId) {
-      const notes = pendingResponseRef.current.notes;
+    // Play the response if we still have it and are in the right state
+    if (pendingResponseRef.current && appState === 'waiting_for_ai') {
+      const notes = pendingResponseRef.current;
       pendingResponseRef.current = null;
-      console.log("Playing AI response for session:", sessionId);
       await playAiResponse(notes);
     } else {
-      console.log("No matching AI response to play for session:", sessionId, "Current session:", currentSessionIdRef.current);
+      console.log("Not playing - response cancelled or state changed");
+      setAppState('idle');
     }
   };
 
-  const handleCountdownCancelled = (sessionId: number) => {
-    // Clear pending response only if it matches this session
-    if (pendingResponseRef.current && pendingResponseRef.current.sessionId === sessionId) {
-      pendingResponseRef.current = null;
-    }
-  };
-
-  const handleNewSession = () => {
-    // Increment session ID for new recording
-    currentSessionIdRef.current += 1;
-    return currentSessionIdRef.current;
+  const handleCountdownCancelled = () => {
+    // This is called when user starts playing during the countdown
+    pendingResponseRef.current = null;
   };
 
   return (
@@ -137,7 +190,7 @@ const Index = () => {
           <Switch
             checked={isEnabled}
             onCheckedChange={setIsEnabled}
-            disabled={aiPlaying}
+            disabled={appState === 'ai_playing'}
             id="ai-toggle"
           />
           <Label htmlFor="ai-toggle" className="text-foreground cursor-pointer">
@@ -149,7 +202,7 @@ const Index = () => {
             <Label htmlFor="model-select" className="text-foreground whitespace-nowrap">
               Model:
             </Label>
-            <Select value={selectedModel} onValueChange={setSelectedModel} disabled={aiPlaying}>
+            <Select value={selectedModel} onValueChange={setSelectedModel} disabled={appState === 'ai_playing'}>
               <SelectTrigger id="model-select" className="w-[200px] h-10">
                 <SelectValue />
               </SelectTrigger>
@@ -165,12 +218,12 @@ const Index = () => {
 
       <Piano 
         ref={pianoRef} 
+        onUserPlayStart={handleUserPlayStart}
         onUserPlay={handleUserPlay} 
         onCountdownCancelled={handleCountdownCancelled}
-        onNewSession={handleNewSession}
         activeKeys={activeKeys} 
-        aiPlaying={aiPlaying}
         isAiEnabled={isEnabled}
+        allowInput={appState !== 'ai_playing'}
       />
     </div>
   );
