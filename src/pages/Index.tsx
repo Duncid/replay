@@ -132,7 +132,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
-      <div className="fixed top-8 left-8 flex flex-col gap-4">
+      <div className="fixed top-8 left-8 flex items-center gap-4">
         <div className="flex items-center gap-3">
           <Switch
             checked={isEnabled}
@@ -141,24 +141,26 @@ const Index = () => {
             id="ai-toggle"
           />
           <Label htmlFor="ai-toggle" className="text-foreground cursor-pointer">
-            {isEnabled ? "AI enabled" : "AI disabled"}
+            AI mode
           </Label>
         </div>
-        <div className="flex items-center gap-3">
-          <Label htmlFor="model-select" className="text-foreground whitespace-nowrap">
-            AI Model:
-          </Label>
-          <Select value={selectedModel} onValueChange={setSelectedModel} disabled={aiPlaying}>
-            <SelectTrigger id="model-select" className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="google/gemini-2.5-flash">Gemini Flash</SelectItem>
-              <SelectItem value="google/gemini-2.5-pro">Gemini Pro</SelectItem>
-              <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {isEnabled && (
+          <div className="flex items-center gap-3">
+            <Label htmlFor="model-select" className="text-foreground whitespace-nowrap">
+              Model:
+            </Label>
+            <Select value={selectedModel} onValueChange={setSelectedModel} disabled={aiPlaying}>
+              <SelectTrigger id="model-select" className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="google/gemini-2.5-flash">Gemini Flash</SelectItem>
+                <SelectItem value="google/gemini-2.5-pro">Gemini Pro</SelectItem>
+                <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <Piano 
