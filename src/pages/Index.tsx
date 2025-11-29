@@ -15,10 +15,12 @@ const Index = () => {
   const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
   const { toast } = useToast();
   const pianoRef = useRef<PianoHandle>(null);
-  const pendingResponseRef = useRef<NoteWithDuration[] | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentRequestIdRef = useRef<string | null>(null);
+  const requestStartTimeRef = useRef<number>(0);
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shouldStopAiRef = useRef<boolean>(false);
+
+  const MIN_WAIT_TIME_MS = 2000; // Match the progress bar duration
 
   const stopAiPlayback = () => {
     // Signal AI playback to stop
@@ -33,7 +35,13 @@ const Index = () => {
     setAppState('idle');
   };
 
-  const playAiResponse = async (notes: NoteWithDuration[]) => {
+  const playAiResponse = async (notes: NoteWithDuration[], requestId: string) => {
+    // Final check before playing
+    if (currentRequestIdRef.current !== requestId) {
+      console.log("Request invalidated before playback started");
+      return;
+    }
+    
     shouldStopAiRef.current = false;
     setAppState('ai_playing');
     
@@ -94,15 +102,14 @@ const Index = () => {
   const handleUserPlayStart = () => {
     console.log("User started playing, current state:", appState);
     
-    // Cancel any pending AI operations
-    if (appState === 'waiting_for_ai') {
-      console.log("Cancelling pending AI request");
-      abortControllerRef.current?.abort();
-      pendingResponseRef.current = null;
-      if (pianoRef.current) {
-        pianoRef.current.hideProgress();
-      }
-    } else if (appState === 'ai_playing') {
+    // Invalidate any pending AI request by clearing the request ID
+    currentRequestIdRef.current = null;
+    
+    // Hide progress bar
+    pianoRef.current?.hideProgress();
+    
+    // Stop any AI playback
+    if (appState === 'ai_playing') {
       console.log("Interrupting AI playback");
       stopAiPlayback();
     }
@@ -113,91 +120,71 @@ const Index = () => {
   const handleUserPlay = async (userNotes: NoteWithDuration[]) => {
     if (!isEnabled) return;
 
-    console.log("User finished playing:", userNotes);
+    // Generate unique request ID
+    const requestId = crypto.randomUUID();
+    currentRequestIdRef.current = requestId;
+    requestStartTimeRef.current = Date.now();
+    
+    console.log("User finished playing, request ID:", requestId);
     setAppState('waiting_for_ai');
 
     try {
-      // Create new abort controller for this request
-      abortControllerRef.current = new AbortController();
-      
       const { data, error } = await supabase.functions.invoke("jazz-improvise", {
         body: { userNotes, model: selectedModel },
       });
 
-      // Check if request was aborted
-      if (abortControllerRef.current.signal.aborted) {
-        console.log("Request was aborted");
-        setAppState('idle');
-        return;
+      // Check 1: Is this request still valid?
+      if (currentRequestIdRef.current !== requestId) {
+        console.log("Request invalidated (ID mismatch), discarding response");
+        return; // Don't change state - user is already doing something else
       }
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log("AI response received:", data);
+      console.log("AI response received for request:", requestId);
 
-      // Store response - don't check state here since it's async
       if (data.notes && data.notes.length > 0) {
-        pendingResponseRef.current = data.notes;
-        console.log("Playing AI response");
-        handleAiResponseReady();
+        // Check 2: Enforce minimum wait time
+        const elapsed = Date.now() - requestStartTimeRef.current;
+        const remainingWait = MIN_WAIT_TIME_MS - elapsed;
+        
+        if (remainingWait > 0) {
+          console.log(`Waiting ${remainingWait}ms before playing`);
+          await new Promise(resolve => setTimeout(resolve, remainingWait));
+        }
+        
+        // Check 3: Is this request STILL valid after waiting?
+        if (currentRequestIdRef.current !== requestId) {
+          console.log("Request invalidated during wait, discarding response");
+          return;
+        }
+        
+        // Hide progress and play
+        pianoRef.current?.hideProgress();
+        await playAiResponse(data.notes, requestId);
       } else {
         console.log("No notes in response");
-        setAppState('idle');
+        if (currentRequestIdRef.current === requestId) {
+          setAppState('idle');
+          pianoRef.current?.hideProgress();
+        }
       }
     } catch (error) {
-      // Ignore abort errors
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log("Request aborted");
-        setAppState('idle');
-        return;
-      }
-      
       console.error("Error getting AI response:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to get AI response",
-        variant: "destructive",
-      });
-      setAppState('idle');
-      if (pianoRef.current) {
-        pianoRef.current.hideProgress();
+      
+      // Only show error if this request is still valid
+      if (currentRequestIdRef.current === requestId) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to get AI response",
+          variant: "destructive",
+        });
+        setAppState('idle');
+        pianoRef.current?.hideProgress();
       }
     }
   };
 
-  const handleAiResponseReady = async () => {
-    console.log("AI response ready to play");
-    
-    // Hide progress indicator
-    if (pianoRef.current) {
-      pianoRef.current.hideProgress();
-    }
-    
-    // Check if we were cancelled via abort controller
-    if (abortControllerRef.current?.signal.aborted) {
-      console.log("Playback cancelled");
-      pendingResponseRef.current = null;
-      setAppState('idle');
-      return;
-    }
-    
-    // Play the response if we have it
-    if (pendingResponseRef.current) {
-      const notes = pendingResponseRef.current;
-      pendingResponseRef.current = null;
-      await playAiResponse(notes);
-    } else {
-      console.log("No pending response");
-      setAppState('idle');
-    }
-  };
-
-  const handleCountdownCancelled = () => {
-    // This is called when user starts playing during the countdown
-    pendingResponseRef.current = null;
-  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
@@ -235,8 +222,7 @@ const Index = () => {
       <Piano 
         ref={pianoRef} 
         onUserPlayStart={handleUserPlayStart}
-        onUserPlay={handleUserPlay} 
-        onCountdownCancelled={handleCountdownCancelled}
+        onUserPlay={handleUserPlay}
         activeKeys={activeKeys} 
         isAiEnabled={isEnabled}
         allowInput={true}
