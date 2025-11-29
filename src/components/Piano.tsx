@@ -321,7 +321,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
       {/* Piano container - centered vertically */}
       <div className="relative h-64 bg-card shadow-2xl my-auto">
         {/* White keys grid - 22 full columns */}
-        <div className="absolute inset-0 grid grid-cols-22 gap-0.5">
+        <div className="absolute inset-0 grid grid-cols-22 gap-px">
           {whiteKeys.map((note, index) => {
             const noteKey = `${note.note}${note.octave}`;
             const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
@@ -344,7 +344,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ onUserPlayStart, onUserPlay
         </div>
         
         {/* Black keys layer - 44 half-columns (0.5fr each) for positioning */}
-        <div className="absolute inset-0 grid grid-cols-44 gap-0 pointer-events-none">
+        <div className="absolute inset-0 grid grid-cols-44 gap-1 pointer-events-none">
           {blackKeys.map((note) => {
             const noteKey = `${note.note}${note.octave}`;
             const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
