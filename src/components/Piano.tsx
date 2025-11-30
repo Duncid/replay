@@ -305,7 +305,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
             }
           }, 16); // ~60fps
         } else if (recordingRef.current.length > 0) {
-          // Clear recording if AI is disabled
+          // Save recording even if AI is disabled
+          onUserPlay([...recordingRef.current]);
           recordingRef.current = [];
           hasNotifiedPlayStartRef.current = false;
         }
