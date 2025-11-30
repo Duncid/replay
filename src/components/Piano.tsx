@@ -367,7 +367,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           </div>
 
           {/* Black keys layer - 44 half-columns (0.5fr each) for positioning */}
-          <div className="absolute inset-0 grid grid-cols-44 gap-1 pointer-events-none">
+          <div className="absolute inset-0 grid grid-cols-44 gap-2 pointer-events-none">
             {blackKeys.map((note) => {
               const noteKey = `${note.note}${note.octave}`;
               const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);

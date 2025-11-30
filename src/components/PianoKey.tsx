@@ -12,7 +12,16 @@ interface PianoKeyProps {
   gridColumn?: number;
 }
 
-export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelease, disabled, gridColumn }: PianoKeyProps) => {
+export const PianoKey = ({
+  note,
+  isBlack,
+  isActive,
+  isAiActive,
+  onPress,
+  onRelease,
+  disabled,
+  gridColumn,
+}: PianoKeyProps) => {
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault(); // Prevent ghost clicks and scrolling
     onPress();
@@ -36,7 +45,7 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
         "relative transition-all duration-150 ease-out select-none touch-none",
         isBlack
           ? "h-[60%] rounded-b-md shadow-lg z-20 pointer-events-auto col-span-2"
-          : "h-full rounded-b-lg border-2 border-border shadow-md",
+          : "h-full rounded-b-lg shadow-md",
         isBlack
           ? isActive
             ? isAiActive
@@ -53,9 +62,11 @@ export const PianoKey = ({ note, isBlack, isActive, isAiActive, onPress, onRelea
       style={{
         transition: "var(--transition-smooth)",
         WebkitTapHighlightColor: "transparent",
-        ...(isBlack && gridColumn !== undefined ? { 
-          gridColumnStart: gridColumn * 2 + 2, // Convert to half-column grid position
-        } : {}),
+        ...(isBlack && gridColumn !== undefined
+          ? {
+              gridColumnStart: gridColumn * 2 + 2, // Convert to half-column grid position
+            }
+          : {}),
       }}
     >
       <span
