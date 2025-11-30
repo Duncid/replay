@@ -35,20 +35,28 @@ IMPORTANT RULES:
 
 Now respond to the user's notes with your improvisation.`;
 
+    // Prepare request body - only include temperature for legacy models that support it
+    const requestBody: any = {
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `User played: ${JSON.stringify(userNotes)}` },
+      ],
+    };
+
+    // Only add temperature for legacy OpenAI models (gpt-4o, gpt-4o-mini)
+    // Newer models (gpt-5, gpt-4.1+) don't support custom temperature
+    if (model === "gpt-4o" || model === "gpt-4o-mini") {
+      requestBody.temperature = 0.9;
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `User played: ${JSON.stringify(userNotes)}` },
-        ],
-        temperature: 0.9, // Higher temperature for more creative improvisation
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
