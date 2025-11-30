@@ -5,14 +5,28 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SheetMusic } from "@/components/SheetMusic";
+import { notesToAbc, abcToNotes } from "@/utils/abcConverter";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 type AppState = 'idle' | 'user_playing' | 'waiting_for_ai' | 'ai_playing';
+
+interface SessionEntry {
+  userNotes: NoteWithDuration[];
+  aiNotes: NoteWithDuration[];
+  userAbc: string;
+  aiAbc: string;
+}
 
 const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>('idle');
   const [isEnabled, setIsEnabled] = useState(true);
   const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
+  const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { toast } = useToast();
   const pianoRef = useRef<PianoHandle>(null);
   const currentRequestIdRef = useRef<string | null>(null);
@@ -35,9 +49,9 @@ const Index = () => {
     setAppState('idle');
   };
 
-  const playAiResponse = async (notes: NoteWithDuration[], requestId: string) => {
-    // Final check before playing
-    if (currentRequestIdRef.current !== requestId) {
+  const playNotes = async (notes: NoteWithDuration[], requestId?: string, isReplay: boolean = false) => {
+    // Check if request is still valid (skip for replay)
+    if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
       console.log("Request invalidated before playback started");
       return;
     }
@@ -160,9 +174,19 @@ const Index = () => {
           return;
         }
         
+        // Convert to ABC and save to history
+        const userAbc = notesToAbc(userNotes, "User Input");
+        const aiAbc = notesToAbc(data.notes, "AI Response");
+        setSessionHistory(prev => [...prev, {
+          userNotes,
+          aiNotes: data.notes,
+          userAbc,
+          aiAbc,
+        }]);
+        
         // Hide progress and play
         pianoRef.current?.hideProgress();
-        await playAiResponse(data.notes, requestId);
+        await playNotes(data.notes, requestId);
       } else {
         console.log("No notes in response");
         if (currentRequestIdRef.current === requestId) {
@@ -187,8 +211,22 @@ const Index = () => {
   };
 
 
+  const handleReplayNotes = async (notes: NoteWithDuration[]) => {
+    // Stop any ongoing activity
+    stopAiPlayback();
+    await playNotes(notes, undefined, true);
+  };
+
+  const clearHistory = () => {
+    setSessionHistory([]);
+    toast({
+      title: "History cleared",
+      description: "Session history has been cleared",
+    });
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background gap-8">
       <div className="fixed top-8 left-8 flex items-center gap-4 h-10">
         <div className="flex items-center gap-3">
           <Switch
@@ -226,8 +264,59 @@ const Index = () => {
         onUserPlay={handleUserPlay}
         activeKeys={activeKeys} 
         isAiEnabled={isEnabled}
-        allowInput={true}
+        allowInput={appState === 'idle' || appState === 'user_playing'}
       />
+
+      {sessionHistory.length > 0 && (
+        <div className="w-full max-w-4xl">
+          <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+            <div className="flex items-center justify-between mb-4">
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  {isHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  Session History ({sessionHistory.length})
+                </Button>
+              </CollapsibleTrigger>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearHistory}
+                className="gap-2 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear History
+              </Button>
+            </div>
+            
+            <CollapsibleContent className="space-y-4">
+              {sessionHistory.map((entry, index) => (
+                <div key={index} className="space-y-3">
+                  <div className="text-sm font-medium text-muted-foreground">
+                    Session {index + 1}
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <SheetMusic
+                      abc={entry.userAbc}
+                      label="You played:"
+                      isUserNotes={true}
+                      onReplay={() => handleReplayNotes(entry.userNotes)}
+                    />
+                    <SheetMusic
+                      abc={entry.aiAbc}
+                      label="AI responded:"
+                      isUserNotes={false}
+                      onReplay={() => handleReplayNotes(entry.aiNotes)}
+                    />
+                  </div>
+                  {index < sessionHistory.length - 1 && (
+                    <div className="border-t border-border mt-4" />
+                  )}
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
     </div>
   );
 };
