@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SheetMusic } from "@/components/SheetMusic";
 import { notesToAbc, abcToNotes } from "@/utils/abcConverter";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Brain } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 
@@ -331,8 +331,8 @@ const Index = () => {
           </div>
           {isEnabled && (
             <Select value={selectedModel} onValueChange={setSelectedModel} disabled={appState === "ai_playing"}>
-              <SelectTrigger id="model-select" className="w-[200px] h-8">
-                <SelectValue />
+              <SelectTrigger id="model-select" className="w-10 h-8">
+                <Brain className="w-4 h-4" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="google/gemini-2.5-flash">Gemini Flash</SelectItem>
