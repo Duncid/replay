@@ -65,11 +65,11 @@ const Index = () => {
     // Map note names to frequencies (same logic as Piano component)
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
+    // Calculate total playback time for precise timing
+    let currentTime = 0;
+    const pauseBetweenNotes = 0.1; // 100ms pause
+
     for (let i = 0; i < notes.length; i++) {
-      // Small delay before first note to ensure AudioContext is fully ready
-      if (i === 0) {
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
       // Check if we should stop (user interrupted)
       if (shouldStopAiRef.current) {
         console.log("AI playback interrupted");
@@ -87,41 +87,37 @@ const Index = () => {
       const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - 9);
       const frequency = 440 * Math.pow(2, semitonesFromA4 / 12);
 
-      // Convert beats to milliseconds (quarter note = 500ms)
-      const noteDuration = noteWithDuration.duration * 500;
+      // Convert beats to seconds (quarter note = 0.5s)
+      const noteDuration = noteWithDuration.duration * 0.5;
 
-      console.log(`[Playback] Note ${i}: ${noteWithDuration.note}, freq: ${frequency.toFixed(2)}Hz, duration: ${noteDuration}ms`);
+      console.log(`[Playback] Note ${i}: ${noteWithDuration.note}, freq: ${frequency.toFixed(2)}Hz, duration: ${noteDuration}s, startTime: ${currentTime}s`);
 
-      // Play audio
-      if (pianoRef.current) {
-        pianoRef.current.playNote(frequency, noteDuration / 1000);
-      } else {
-        console.warn(`[Playback] pianoRef.current is null at note ${i}`);
-      }
+      // Schedule note at precise time
+      setTimeout(() => {
+        if (!shouldStopAiRef.current && pianoRef.current) {
+          pianoRef.current.playNote(frequency, noteDuration);
+          setActiveKeys(new Set([noteWithDuration.note]));
+        }
+      }, currentTime * 1000);
 
-      // Add note to active keys for visual feedback
-      setActiveKeys(new Set([noteWithDuration.note]));
+      // Schedule visual clear
+      setTimeout(() => {
+        if (!shouldStopAiRef.current) {
+          setActiveKeys(new Set());
+        }
+      }, (currentTime + noteDuration) * 1000);
 
-      // Wait for note duration
-      await new Promise((resolve) => {
-        aiPlaybackTimeoutRef.current = setTimeout(resolve, noteDuration);
-      });
-
-      // Clear active keys
-      setActiveKeys(new Set());
-
-      // Small pause between notes
-      if (i < notes.length - 1) {
-        await new Promise((resolve) => {
-          aiPlaybackTimeoutRef.current = setTimeout(resolve, 100);
-        });
-      }
+      // Update time for next note
+      currentTime += noteDuration + pauseBetweenNotes;
     }
 
-    // Only return to idle if we weren't interrupted
-    if (!shouldStopAiRef.current) {
-      setAppState("idle");
-    }
+    // Schedule return to idle
+    const totalDuration = currentTime * 1000;
+    aiPlaybackTimeoutRef.current = setTimeout(() => {
+      if (!shouldStopAiRef.current) {
+        setAppState("idle");
+      }
+    }, totalDuration);
   };
 
   const handleUserPlayStart = () => {
