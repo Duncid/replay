@@ -66,6 +66,10 @@ const Index = () => {
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
     for (let i = 0; i < notes.length; i++) {
+      // Small delay before first note to ensure AudioContext is fully ready
+      if (i === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
       // Check if we should stop (user interrupted)
       if (shouldStopAiRef.current) {
         console.log("AI playback interrupted");
@@ -225,6 +229,9 @@ const Index = () => {
     
     // Stop any ongoing activity
     stopAiPlayback();
+    
+    // Ensure AudioContext is ready BEFORE any playback
+    await pianoRef.current?.ensureAudioReady();
     
     // Small delay to let state settle and avoid race conditions
     await new Promise(resolve => setTimeout(resolve, 50));

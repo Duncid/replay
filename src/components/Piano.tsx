@@ -24,6 +24,7 @@ interface PianoProps {
 export interface PianoHandle {
   playNote: (frequency: number, duration?: number) => void;
   hideProgress: () => void;
+  ensureAudioReady: () => Promise<void>;
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
@@ -167,12 +168,23 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           clearInterval(progressIntervalRef.current);
         }
       },
+      ensureAudioReady: async () => {
+        if (audioContextRef.current?.state === 'suspended') {
+          await audioContextRef.current.resume();
+        }
+      },
     }));
 
-    const playNote = (frequency: number, duration: number = 0.3) => {
+    const playNote = async (frequency: number, duration: number = 0.3) => {
       if (!audioContextRef.current) return;
 
       const audioContext = audioContextRef.current;
+      
+      // Ensure context is running
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
