@@ -340,9 +340,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     };
 
     return (
-      <div className="relative w-full h-screen select-none flex flex-col">
-        {/* Piano container - centered vertically */}
-        <div className="relative h-[25vw] min-h-64 bg-card shadow-2xl my-auto">
+      <div className="relative w-full select-none">
+        {/* Piano container */}
+        <div className="relative h-[25vw] min-h-64 max-h-[350px] bg-card shadow-2xl">
           {/* White keys grid - 22 full columns */}
           <div className="absolute inset-0 grid grid-cols-22 gap-px">
             {whiteKeys.map((note, index) => {
