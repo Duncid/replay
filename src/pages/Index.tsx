@@ -216,6 +216,10 @@ const Index = () => {
   const handleReplayNotes = async (notes: NoteWithDuration[]) => {
     // Stop any ongoing activity
     stopAiPlayback();
+    
+    // Small delay to let state settle and avoid race conditions
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     await playNotes(notes, undefined, true);
   };
 
