@@ -64,7 +64,7 @@ export const PianoKey = ({
         WebkitTapHighlightColor: "transparent",
         ...(isBlack && gridColumn !== undefined
           ? {
-              gridColumnStart: gridColumn * 2 + 2, // Convert to half-column grid position
+              gridColumnStart: gridColumn * 2,
             }
           : {}),
       }}
