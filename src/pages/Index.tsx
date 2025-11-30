@@ -316,7 +316,7 @@ const Index = () => {
         allowInput={appState === "idle" || appState === "user_playing"}
       />
 
-      <div className="w-full max-w-4xl flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-card rounded-lg border border-border">
+      <div className="w-full flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-card rounded-lg border border-border">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
             <Switch
