@@ -19,21 +19,38 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a pianist that improvises musical responses with rhythm and duration. Given a sequence of piano notes with durations played by the user, you respond with a musical improvisation.
+    const systemPrompt = `You are a jazz improvisation assistant. The user will provide you with a sequence of musical notes they played, and you should respond with a creative jazz improvisation that complements their input.
 
-IMPORTANT RULES:
+The user's notes will be in this format:
+[
+  {"note": "C4", "duration": 1.0, "startTime": 0},
+  {"note": "E4", "duration": 0.5, "startTime": 1.0},
+  {"note": "G4", "duration": 0.5, "startTime": 1.0},
+  ...
+]
 
-- Respond with 8 to 24 notes that form a musical phrase
-- Each note must have a duration property: 0.25 (quarter), 0.5 (half), or 1.0 (full note)
-- Use standard note notation: C3, D#4, F5, etc. (note name + octave number)
-- Use notes between C3 and C6 (the 37-key range available)
-- Create melodic phrases that complement what the user played
-- Vary rhythms - use different note durations to create interesting patterns
-- Return ONLY a JSON array of objects with "note" and "duration" properties
-- Example input: [{"note": "C4", "duration": 0.5}, {"note": "E4", "duration": 0.25}]
-- Example response: [{"note": "G4", "duration": 0.5}, {"note": "F4", "duration": 0.25}, {"note": "E4", "duration": 1.0}]
+Where:
+- "note" is the musical note (e.g., "C4", "C#4", "D4", etc.) ranging from C3 to C6
+- "duration" is in beats (0.25 = sixteenth note, 0.5 = eighth note, 1.0 = quarter note, 2.0 = half note, 4.0 = whole note)
+- "startTime" is the beat position when the note starts (0 = beginning of recording). Notes with the same startTime are played simultaneously (chords).
 
-Now respond to the user's notes with your improvisation.`;
+You should respond with a JSON array in EXACTLY this format:
+[
+  {"note": "E4", "duration": 0.5, "startTime": 0},
+  {"note": "G4", "duration": 0.5, "startTime": 0.5},
+  {"note": "B4", "duration": 1.0, "startTime": 1.0},
+  {"note": "D5", "duration": 1.0, "startTime": 1.0},
+  ...
+]
+
+Guidelines:
+- Create a musically coherent response that complements the user's input
+- Stay in the C3-C6 range
+- Use only these durations: 0.25, 0.5, 1.0, 2.0, 4.0
+- Aim for 4-12 notes in your response (you can include chords by using the same startTime)
+- Consider jazz theory: use chord tones, passing notes, neighbor notes, and harmonies
+- You can create chords by giving multiple notes the same startTime
+- Respond with ONLY the JSON array, no other text or markdown formatting`;
 
     // Prepare request body - only include temperature for legacy models that support it
     const requestBody: any = {
@@ -89,8 +106,8 @@ Now respond to the user's notes with your improvisation.`;
     const aiMessage = data.choices[0].message.content;
     console.log("AI response:", aiMessage);
 
-    // Parse the AI response to extract notes with durations
-    let aiNotes: Array<{note: string, duration: number}>;
+    // Parse the AI response to extract notes with durations and startTime
+    let aiNotes: Array<{note: string, duration: number, startTime?: number}>;
     try {
       // Try to parse as JSON
       aiNotes = JSON.parse(aiMessage);
@@ -98,29 +115,62 @@ Now respond to the user's notes with your improvisation.`;
       // Fallback: extract notes and assign default durations
       const noteRegex = /[A-G]#?\d/g;
       const noteMatches = aiMessage.match(noteRegex) || [];
-      aiNotes = noteMatches.map((note: string) => ({ note, duration: 0.5 }));
+      aiNotes = noteMatches.map((note: string) => ({ note, duration: 0.5, startTime: 0 }));
     }
 
     console.log("Parsed AI notes:", aiNotes);
 
-    // Validate notes are in the correct range (C3 to C6) and have valid durations
-    const validNotes = aiNotes.filter((item) => {
-      if (!item.note || typeof item.duration !== 'number') return false;
+    // Validate notes are in the correct range (C3 to C6) and have valid durations and startTime
+    const validNotes: Array<{note: string, duration: number, startTime: number}> = [];
+    
+    for (let i = 0; i < aiNotes.length; i++) {
+      const item = aiNotes[i];
+      
+      if (!item.note || typeof item.duration !== 'number') {
+        console.log(`Skipping invalid note at index ${i}:`, item);
+        continue;
+      }
+      
       const match = item.note.match(/([A-G]#?)(\d)/);
-      if (!match) return false;
+      if (!match) {
+        console.log(`Invalid note format at index ${i}:`, item.note);
+        continue;
+      }
+      
       const octave = parseInt(match[2]);
-      const validOctave = octave >= 3 && octave <= 6;
-      const validDuration = [0.25, 0.5, 1.0].includes(item.duration);
-      return validOctave && validDuration;
-    });
+      if (octave < 3 || octave > 6) {
+        console.log(`Note ${item.note} is outside valid range (C3-C6)`);
+        continue;
+      }
+      
+      const validDurations = [0.25, 0.5, 1.0, 2.0, 4.0];
+      if (!validDurations.includes(item.duration)) {
+        console.log(`Invalid duration ${item.duration} for note ${item.note}, rounding to nearest valid duration`);
+        // Round to nearest valid duration
+        item.duration = validDurations.reduce((prev, curr) => 
+          Math.abs(curr - item.duration) < Math.abs(prev - item.duration) ? curr : prev
+        );
+      }
+      
+      // Validate startTime (must be non-negative number)
+      const startTime = typeof item.startTime === 'number' && item.startTime >= 0 
+        ? item.startTime 
+        : 0;
+      
+      validNotes.push({
+        note: item.note,
+        duration: item.duration,
+        startTime,
+      });
+    }
 
     if (validNotes.length === 0) {
-      // Fallback to a simple jazz response with durations
+      // Fallback to a simple jazz response with durations and startTime
       validNotes.push(
-        { note: "G4", duration: 0.5 },
-        { note: "F4", duration: 0.25 },
-        { note: "E4", duration: 0.25 },
-        { note: "D4", duration: 1.0 }
+        { note: "G4", duration: 0.5, startTime: 0 },
+        { note: "F4", duration: 0.25, startTime: 0.5 },
+        { note: "E4", duration: 0.25, startTime: 0.75 },
+        { note: "D4", duration: 1.0, startTime: 1.0 }
       );
     }
 

@@ -12,47 +12,75 @@ export function notesToAbc(notes: NoteWithDuration[], title: string = "Jazz Impr
   // ABC header
   let abc = `X:1\nT:${title}\nM:4/4\nL:1/4\nK:C\n`;
 
-  // Convert notes
-  const abcNotes = notes.map(note => {
-    const noteName = note.note.slice(0, -1); // e.g., "C#" from "C#4"
-    const octave = parseInt(note.note.slice(-1)); // e.g., 4 from "C#4"
-    
-    // Convert note name and accidentals
-    let abcNote = noteName.replace("#", "^").replace("b", "_");
-    
-    // Convert octave notation
-    // ABC: C, = octave 3, C = octave 4, c = octave 5, c' = octave 6
-    if (octave === 3) {
-      abcNote = abcNote.toUpperCase() + ",";
-    } else if (octave === 4) {
-      abcNote = abcNote.toUpperCase();
-    } else if (octave === 5) {
-      abcNote = abcNote.toLowerCase();
-    } else if (octave === 6) {
-      abcNote = abcNote.toLowerCase() + "'";
+  // Group notes by start time to identify chords
+  const notesByStartTime = new Map<number, NoteWithDuration[]>();
+  notes.forEach(note => {
+    const startTime = note.startTime || 0;
+    if (!notesByStartTime.has(startTime)) {
+      notesByStartTime.set(startTime, []);
     }
-    
-    // Convert duration (our format: 0.25 = sixteenth, 0.5 = eighth, 1.0 = quarter, 2.0 = half, 4.0 = whole)
-    // ABC: /2 = eighth, no number = quarter note, 2 = half, 4 = whole, 8 = double whole
-    let durationStr = "";
-    if (note.duration === 0.25) {
-      durationStr = "/2"; // eighth note
-    } else if (note.duration === 0.5) {
-      durationStr = ""; // quarter note (default)
-    } else if (note.duration === 1.0) {
-      durationStr = "2"; // half note
-    } else if (note.duration === 2.0) {
-      durationStr = "4"; // whole note
-    } else if (note.duration === 4.0) {
-      durationStr = "8"; // double whole note
-    }
-    
-    return abcNote + durationStr;
+    notesByStartTime.get(startTime)!.push(note);
   });
 
-  abc += abcNotes.join(" ");
+  // Sort by start time
+  const sortedStartTimes = Array.from(notesByStartTime.keys()).sort((a, b) => a - b);
+
+  // Convert each group to ABC notation
+  const abcElements: string[] = [];
+  
+  sortedStartTimes.forEach(startTime => {
+    const simultaneousNotes = notesByStartTime.get(startTime)!;
+    
+    if (simultaneousNotes.length === 1) {
+      // Single note
+      const note = simultaneousNotes[0];
+      abcElements.push(convertNoteToAbc(note));
+    } else {
+      // Chord - use the shortest duration among the notes
+      const minDuration = Math.min(...simultaneousNotes.map(n => n.duration));
+      const abcChord = "[" + simultaneousNotes.map(note => convertNoteToAbc(note, true)).join("") + "]";
+      const durationStr = getDurationString(minDuration);
+      abcElements.push(abcChord + durationStr);
+    }
+  });
+
+  abc += abcElements.join(" ");
   
   return abc;
+}
+
+function convertNoteToAbc(note: NoteWithDuration, skipDuration: boolean = false): string {
+  const noteName = note.note.slice(0, -1); // e.g., "C#" from "C#4"
+  const octave = parseInt(note.note.slice(-1)); // e.g., 4 from "C#4"
+  
+  // Convert note name and accidentals
+  let abcNote = noteName.replace("#", "^").replace("b", "_");
+  
+  // Convert octave notation
+  if (octave === 3) {
+    abcNote = abcNote.toUpperCase() + ",";
+  } else if (octave === 4) {
+    abcNote = abcNote.toUpperCase();
+  } else if (octave === 5) {
+    abcNote = abcNote.toLowerCase();
+  } else if (octave === 6) {
+    abcNote = abcNote.toLowerCase() + "'";
+  }
+  
+  if (skipDuration) {
+    return abcNote;
+  }
+  
+  return abcNote + getDurationString(note.duration);
+}
+
+function getDurationString(duration: number): string {
+  if (duration === 0.25) return "/2"; // eighth note
+  if (duration === 0.5) return ""; // quarter note (default)
+  if (duration === 1.0) return "2"; // half note
+  if (duration === 2.0) return "4"; // whole note
+  if (duration === 4.0) return "8"; // double whole note
+  return "";
 }
 
 /**
@@ -65,54 +93,89 @@ export function abcToNotes(abc: string): NoteWithDuration[] {
   
   // Extract the note line (after the headers)
   const lines = abc.split("\n");
-  const noteLineIndex = lines.findIndex(line => line.match(/^[A-Ga-g^_,'/\d\s]+$/));
+  const noteLineIndex = lines.findIndex(line => line.match(/^[\[A-Ga-g^_,'/\d\s\]]+$/));
   if (noteLineIndex === -1) return notes;
   
   const noteLine = lines[noteLineIndex];
   
-  // Split by spaces and parse each note
-  const abcNotes = noteLine.trim().split(/\s+/);
+  // Split by spaces and parse each element (note or chord)
+  const abcElements = noteLine.trim().split(/\s+/);
   
-  for (const abcNote of abcNotes) {
-    if (!abcNote) continue;
+  let currentStartTime = 0;
+  
+  for (const abcElement of abcElements) {
+    if (!abcElement) continue;
     
-    // Parse note with regex: (accidental?)(note)(octave markers?)(duration?)
-    const match = abcNote.match(/^([_^]?)([A-Ga-g])([,']*)(\/?\d*)$/);
-    if (!match) continue;
-    
-    const [, accidental, noteLetter, octaveMarkers, durationStr] = match;
-    
-    // Convert accidental
-    let noteName = noteLetter;
-    if (accidental === "^") noteName += "#";
-    if (accidental === "_") noteName += "b";
-    
-    // Convert octave
-    let octave = 4; // default
-    if (noteLetter === noteLetter.toUpperCase()) {
-      // Uppercase = octave 4 or 3
-      if (octaveMarkers === ",") octave = 3;
-      else octave = 4;
+    // Check if it's a chord (starts with [)
+    if (abcElement.startsWith("[")) {
+      // Parse chord
+      const chordMatch = abcElement.match(/^\[([^\]]+)\](\/?\d*)$/);
+      if (!chordMatch) continue;
+      
+      const [, chordNotes, durationStr] = chordMatch;
+      const duration = parseDuration(durationStr);
+      
+      // Parse each note in the chord
+      const noteMatches = chordNotes.matchAll(/([_^]?)([A-Ga-g])([,']*)/g);
+      for (const match of noteMatches) {
+        const [, accidental, noteLetter, octaveMarkers] = match;
+        const parsedNote = parseNote(accidental, noteLetter, octaveMarkers);
+        notes.push({
+          note: parsedNote,
+          duration,
+          startTime: currentStartTime,
+        });
+      }
+      
+      currentStartTime += duration;
     } else {
-      // Lowercase = octave 5 or 6
-      if (octaveMarkers === "'") octave = 6;
-      else octave = 5;
+      // Parse single note
+      const match = abcElement.match(/^([_^]?)([A-Ga-g])([,']*)(\/?\d*)$/);
+      if (!match) continue;
+      
+      const [, accidental, noteLetter, octaveMarkers, durationStr] = match;
+      const duration = parseDuration(durationStr);
+      const parsedNote = parseNote(accidental, noteLetter, octaveMarkers);
+      
+      notes.push({
+        note: parsedNote,
+        duration,
+        startTime: currentStartTime,
+      });
+      
+      currentStartTime += duration;
     }
-    
-    noteName = noteName.toUpperCase();
-    
-    // Convert duration
-    let duration = 0.5; // default (quarter note in our system)
-    if (durationStr === "/2") duration = 0.25; // eighth note
-    else if (durationStr === "2") duration = 1.0; // half note
-    else if (durationStr === "4") duration = 2.0; // whole note
-    else if (durationStr === "8") duration = 4.0; // double whole note
-    
-    notes.push({
-      note: `${noteName}${octave}`,
-      duration,
-    });
   }
   
   return notes;
+}
+
+function parseNote(accidental: string, noteLetter: string, octaveMarkers: string): string {
+  // Convert accidental
+  let noteName = noteLetter;
+  if (accidental === "^") noteName += "#";
+  if (accidental === "_") noteName += "b";
+  
+  // Convert octave
+  let octave = 4; // default
+  if (noteLetter === noteLetter.toUpperCase()) {
+    // Uppercase = octave 4 or 3
+    if (octaveMarkers === ",") octave = 3;
+    else octave = 4;
+  } else {
+    // Lowercase = octave 5 or 6
+    if (octaveMarkers === "'") octave = 6;
+    else octave = 5;
+  }
+  
+  noteName = noteName.toUpperCase();
+  return `${noteName}${octave}`;
+}
+
+function parseDuration(durationStr: string): number {
+  if (durationStr === "/2") return 0.25; // eighth note
+  if (durationStr === "2") return 1.0; // half note
+  if (durationStr === "4") return 2.0; // whole note
+  if (durationStr === "8") return 4.0; // double whole note
+  return 0.5; // default quarter note
 }
