@@ -56,6 +56,9 @@ const Index = () => {
       return;
     }
 
+    console.log(`[Playback] Starting playback of ${notes.length} notes (isReplay: ${isReplay})`);
+    notes.forEach((n, i) => console.log(`  Note ${i}: ${n.note}, duration: ${n.duration}`));
+
     shouldStopAiRef.current = false;
     setAppState("ai_playing");
 
@@ -83,9 +86,13 @@ const Index = () => {
       // Convert beats to milliseconds (quarter note = 500ms)
       const noteDuration = noteWithDuration.duration * 500;
 
+      console.log(`[Playback] Note ${i}: ${noteWithDuration.note}, freq: ${frequency.toFixed(2)}Hz, duration: ${noteDuration}ms`);
+
       // Play audio
       if (pianoRef.current) {
         pianoRef.current.playNote(frequency, noteDuration / 1000);
+      } else {
+        console.warn(`[Playback] pianoRef.current is null at note ${i}`);
       }
 
       // Add note to active keys for visual feedback
@@ -214,6 +221,8 @@ const Index = () => {
   };
 
   const handleReplayNotes = async (notes: NoteWithDuration[]) => {
+    console.log(`[Replay] Starting replay of ${notes.length} notes`);
+    
     // Stop any ongoing activity
     stopAiPlayback();
     
@@ -221,6 +230,8 @@ const Index = () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     
     await playNotes(notes, undefined, true);
+    
+    console.log(`[Replay] Replay completed`);
   };
 
   const clearHistory = () => {
