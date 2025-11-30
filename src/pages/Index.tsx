@@ -140,6 +140,7 @@ const Index = () => {
       }
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       console.log("AI response received for request:", requestId);
 
