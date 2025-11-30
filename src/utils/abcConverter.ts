@@ -32,8 +32,8 @@ export function notesToAbc(notes: NoteWithDuration[], title: string = "Jazz Impr
       abcNote = abcNote.toLowerCase() + "'";
     }
     
-    // Convert duration (our format: 0.25 = quarter, 0.5 = half, 1.0 = whole)
-    // ABC: no number = quarter note, /2 = eighth, 2 = half, 4 = whole
+    // Convert duration (our format: 0.25 = sixteenth, 0.5 = eighth, 1.0 = quarter, 2.0 = half, 4.0 = whole)
+    // ABC: /2 = eighth, no number = quarter note, 2 = half, 4 = whole, 8 = double whole
     let durationStr = "";
     if (note.duration === 0.25) {
       durationStr = "/2"; // eighth note
@@ -43,6 +43,8 @@ export function notesToAbc(notes: NoteWithDuration[], title: string = "Jazz Impr
       durationStr = "2"; // half note
     } else if (note.duration === 2.0) {
       durationStr = "4"; // whole note
+    } else if (note.duration === 4.0) {
+      durationStr = "8"; // double whole note
     }
     
     return abcNote + durationStr;
@@ -104,6 +106,7 @@ export function abcToNotes(abc: string): NoteWithDuration[] {
     if (durationStr === "/2") duration = 0.25; // eighth note
     else if (durationStr === "2") duration = 1.0; // half note
     else if (durationStr === "4") duration = 2.0; // whole note
+    else if (durationStr === "8") duration = 4.0; // double whole note
     
     notes.push({
       note: `${noteName}${octave}`,
