@@ -10,6 +10,7 @@ import { notesToAbc, abcToNotes } from "@/utils/abcConverter";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MidiConnector } from "@/components/MidiConnector";
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 
@@ -285,7 +286,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4">
-      <div className="top-4 left-4 flex items-center gap-3 h-8">
+      <div className="top-4 left-4 flex flex-wrap items-center gap-4 h-auto">
         <div className="flex items-center gap-3">
           <Switch
             checked={isEnabled}
@@ -309,6 +310,14 @@ const Index = () => {
             </SelectContent>
           </Select>
         )}
+        <MidiConnector
+          isConnected={!!pianoRef.current?.midiDeviceName}
+          deviceName={pianoRef.current?.midiDeviceName || null}
+          error={pianoRef.current?.midiError || null}
+          isSupported={pianoRef.current?.isMidiSupported || false}
+          onConnect={() => pianoRef.current?.requestMidiAccess()}
+          onDisconnect={() => pianoRef.current?.disconnectMidi()}
+        />
       </div>
 
       <Piano
