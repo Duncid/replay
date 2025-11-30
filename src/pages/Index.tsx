@@ -146,18 +146,41 @@ const Index = () => {
 
     console.log("User finished playing, request ID:", requestId);
 
-    // If AI is disabled, just save to history and return to idle
+    // If AI is disabled, append to current session or create new one
     if (!isEnabled) {
-      const userAbc = notesToAbc(userNotes, "User Input");
-      setSessionHistory((prev) => [
-        ...prev,
-        {
-          userNotes,
-          aiNotes: [],
-          userAbc,
-          aiAbc: "",
-        },
-      ]);
+      setSessionHistory((prev) => {
+        // If there's an existing session, append to it
+        if (prev.length > 0) {
+          const lastSession = prev[prev.length - 1];
+          // Only append if last session has no AI notes (meaning it's a user-only session)
+          if (lastSession.aiNotes.length === 0) {
+            const updatedUserNotes = [...lastSession.userNotes, ...userNotes];
+            const updatedUserAbc = notesToAbc(updatedUserNotes, "User Input");
+            
+            return [
+              ...prev.slice(0, -1),
+              {
+                userNotes: updatedUserNotes,
+                aiNotes: [],
+                userAbc: updatedUserAbc,
+                aiAbc: "",
+              },
+            ];
+          }
+        }
+        
+        // Create new session
+        const userAbc = notesToAbc(userNotes, "User Input");
+        return [
+          ...prev,
+          {
+            userNotes,
+            aiNotes: [],
+            userAbc,
+            aiAbc: "",
+          },
+        ];
+      });
       setAppState("idle");
       return;
     }

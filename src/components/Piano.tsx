@@ -278,39 +278,37 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       setShowProgress(false);
       setProgress(100);
 
-      // After 1 second of silence, trigger AI with progress bar
-      recordingTimeoutRef.current = setTimeout(() => {
-        if (recordingRef.current.length > 0 && isAiEnabled) {
-          setShowProgress(true);
-          setProgress(100);
+      // Only set timeout for AI mode
+      if (isAiEnabled) {
+        // After 1 second of silence, trigger AI with progress bar
+        recordingTimeoutRef.current = setTimeout(() => {
+          if (recordingRef.current.length > 0) {
+            setShowProgress(true);
+            setProgress(100);
 
-          // Trigger AI
-          onUserPlay([...recordingRef.current]);
-          recordingRef.current = [];
-          hasNotifiedPlayStartRef.current = false;
+            // Trigger AI
+            onUserPlay([...recordingRef.current]);
+            recordingRef.current = [];
+            hasNotifiedPlayStartRef.current = false;
 
-          // Start countdown animation - fills as we wait for AI
-          const startTime = Date.now();
-          const duration = 1000; // 1 second countdown
+            // Start countdown animation - fills as we wait for AI
+            const startTime = Date.now();
+            const duration = 1000; // 1 second countdown
 
-          progressIntervalRef.current = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const newProgress = Math.max(0, 100 - (elapsed / duration) * 100);
-            setProgress(newProgress);
+            progressIntervalRef.current = setInterval(() => {
+              const elapsed = Date.now() - startTime;
+              const newProgress = Math.max(0, 100 - (elapsed / duration) * 100);
+              setProgress(newProgress);
 
-            if (newProgress === 0) {
-              if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
+              if (newProgress === 0) {
+                if (progressIntervalRef.current) {
+                  clearInterval(progressIntervalRef.current);
+                }
               }
-            }
-          }, 16); // ~60fps
-        } else if (recordingRef.current.length > 0) {
-          // Save recording even if AI is disabled
-          onUserPlay([...recordingRef.current]);
-          recordingRef.current = [];
-          hasNotifiedPlayStartRef.current = false;
-        }
-      }, 1000);
+            }, 16); // ~60fps
+          }
+        }, 1000);
+      }
     };
 
     const handleKeyRelease = (noteKey: string, frequency: number) => {
@@ -340,7 +338,16 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         roundedDuration = 0.25;     // Sixteenth note
       }
 
-      recordingRef.current.push({ note: noteKey, duration: roundedDuration });
+      const noteWithDuration = { note: noteKey, duration: roundedDuration };
+      
+      // If AI is disabled, send note immediately
+      if (!isAiEnabled) {
+        onUserPlay([noteWithDuration]);
+      } else {
+        // If AI is enabled, accumulate notes
+        recordingRef.current.push(noteWithDuration);
+      }
+      
       notePressTimesRef.current.delete(noteKey);
 
       const newKeys = new Set(userPressedKeys);
