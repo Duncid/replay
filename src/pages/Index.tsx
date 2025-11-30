@@ -79,7 +79,7 @@ const Index = () => {
     }
 
     console.log(`[Playback] Starting playback of ${notes.length} notes (isReplay: ${isReplay})`);
-    notes.forEach((n, i) => console.log(`  Note ${i}: ${n.note}, duration: ${n.duration}`));
+    notes.forEach((n, i) => console.log(`  Note ${i}: ${n.note}, duration: ${n.duration}, startTime: ${n.startTime}`));
 
     shouldStopAiRef.current = false;
     setAppState("ai_playing");
@@ -87,19 +87,14 @@ const Index = () => {
     // Map note names to frequencies (same logic as Piano component)
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-    // Calculate total playback time for precise timing
-    let currentTime = 0;
-    const pauseBetweenNotes = 0.1; // 100ms pause
+    // Calculate the maximum end time for all notes
+    const maxEndTime = Math.max(...notes.map(n => (n.startTime || 0) + n.duration));
+    
+    // Group notes by their visual end time to manage active keys display
+    const noteEndTimes: Array<{ time: number; note: string }> = [];
 
-    for (let i = 0; i < notes.length; i++) {
-      // Check if we should stop (user interrupted)
-      if (shouldStopAiRef.current) {
-        console.log("AI playback interrupted");
-        break;
-      }
-
-      const noteWithDuration = notes[i];
-
+    // Schedule all notes based on their start times
+    notes.forEach((noteWithDuration) => {
       // Parse note (e.g., "C4" -> note: "C", octave: 4)
       const noteName = noteWithDuration.note.slice(0, -1);
       const octave = parseInt(noteWithDuration.note.slice(-1));
@@ -109,35 +104,39 @@ const Index = () => {
       const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - 9);
       const frequency = 440 * Math.pow(2, semitonesFromA4 / 12);
 
-      // Convert beats to seconds (quarter note = 0.5s)
-      const noteDuration = noteWithDuration.duration * 0.5;
+      // Convert beats to seconds (beat = 0.5s)
+      const startTimeSeconds = (noteWithDuration.startTime || 0) * 0.5;
+      const noteDurationSeconds = noteWithDuration.duration * 0.5;
+      const endTimeSeconds = startTimeSeconds + noteDurationSeconds;
 
-      console.log(`[Playback] Note ${i}: ${noteWithDuration.note}, freq: ${frequency.toFixed(2)}Hz, duration: ${noteDuration}s, startTime: ${currentTime}s`);
+      console.log(`[Playback] Scheduling ${noteWithDuration.note}, start: ${startTimeSeconds}s, duration: ${noteDurationSeconds}s`);
 
-      // Schedule note at precise time
+      // Schedule note start
       setTimeout(() => {
         if (!shouldStopAiRef.current && pianoRef.current) {
-          pianoRef.current.playNote(frequency, noteDuration);
-          setActiveKeys(new Set([noteWithDuration.note]));
+          pianoRef.current.playNote(frequency, noteDurationSeconds);
+          setActiveKeys(prev => new Set([...prev, noteWithDuration.note]));
         }
-      }, currentTime * 1000);
+      }, startTimeSeconds * 1000);
 
-      // Schedule visual clear
+      // Schedule note end (visual)
       setTimeout(() => {
         if (!shouldStopAiRef.current) {
-          setActiveKeys(new Set());
+          setActiveKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(noteWithDuration.note);
+            return newSet;
+          });
         }
-      }, (currentTime + noteDuration) * 1000);
+      }, endTimeSeconds * 1000);
+    });
 
-      // Update time for next note
-      currentTime += noteDuration + pauseBetweenNotes;
-    }
-
-    // Schedule return to idle
-    const totalDuration = currentTime * 1000;
+    // Schedule return to idle after all notes finish
+    const totalDuration = maxEndTime * 0.5 * 1000;
     aiPlaybackTimeoutRef.current = setTimeout(() => {
       if (!shouldStopAiRef.current) {
         setAppState("idle");
+        setActiveKeys(new Set());
       }
     }, totalDuration);
   };

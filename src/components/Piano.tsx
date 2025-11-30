@@ -11,6 +11,7 @@ interface Note {
 export interface NoteWithDuration {
   note: string;
   duration: number; // in beats: 0.25 = quarter, 0.5 = half, 1.0 = full
+  startTime: number; // start time in beats from recording start
 }
 
 interface PianoProps {
@@ -43,6 +44,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const pressedKeysRef = useRef<Set<string>>(new Set());
     const midiPressedKeysRef = useRef<Set<string>>(new Set());
     const hasNotifiedPlayStartRef = useRef(false);
+    const recordingStartTimeRef = useRef<number | null>(null);
 
     // AZERTY keyboard mapping - C4 centered on 'e'
     const keyboardMap: { [key: string]: string } = {
@@ -259,6 +261,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       if (!hasNotifiedPlayStartRef.current) {
         onUserPlayStart();
         hasNotifiedPlayStartRef.current = true;
+        recordingStartTimeRef.current = Date.now();
       }
 
       // Start playing the note immediately
@@ -295,6 +298,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
             onUserPlay([...recordingRef.current]);
             recordingRef.current = [];
             hasNotifiedPlayStartRef.current = false;
+            recordingStartTimeRef.current = null;
 
             // Start countdown animation - fills as we wait for AI
             const startTime = Date.now();
@@ -343,7 +347,16 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         roundedDuration = 0.25;     // Sixteenth note
       }
 
-      const noteWithDuration = { note: noteKey, duration: roundedDuration };
+      // Calculate start time relative to recording start
+      const startTimeInBeats = recordingStartTimeRef.current 
+        ? (pressTime - recordingStartTimeRef.current) / 500
+        : 0;
+
+      const noteWithDuration = { 
+        note: noteKey, 
+        duration: roundedDuration,
+        startTime: Math.max(0, startTimeInBeats),
+      };
       
       // If AI is disabled, send note immediately
       if (!isAiEnabled) {
