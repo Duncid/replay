@@ -324,12 +324,19 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       const duration = Date.now() - pressTime;
       // Convert milliseconds to beats (quarter note = 500ms base)
       const durationInBeats = duration / 500;
-      // Round to nearest valid duration: 0.25, 0.5, or 1.0
-      let roundedDuration = 0.25;
-      if (durationInBeats >= 0.75) {
-        roundedDuration = 1.0;
+      
+      // Round to musical note durations without capping
+      let roundedDuration: number;
+      if (durationInBeats >= 3.0) {
+        roundedDuration = 4.0;      // Whole note (1500ms+)
+      } else if (durationInBeats >= 1.5) {
+        roundedDuration = 2.0;      // Half note (750ms+)
+      } else if (durationInBeats >= 0.75) {
+        roundedDuration = 1.0;      // Quarter note (375ms+)
       } else if (durationInBeats >= 0.375) {
-        roundedDuration = 0.5;
+        roundedDuration = 0.5;      // Eighth note (187.5ms+)
+      } else {
+        roundedDuration = 0.25;     // Sixteenth note
       }
 
       recordingRef.current.push({ note: noteKey, duration: roundedDuration });
