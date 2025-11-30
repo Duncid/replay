@@ -8,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SheetMusic } from "@/components/SheetMusic";
 import { notesToAbc, abcToNotes } from "@/utils/abcConverter";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Trash2 } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 
@@ -28,7 +27,6 @@ const Index = () => {
   const [isEnabled, setIsEnabled] = useState(true);
   const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { toast } = useToast();
   const pianoRef = useRef<PianoHandle>(null);
   const currentRequestIdRef = useRef<string | null>(null);
@@ -309,40 +307,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4">
-      <div className="top-4 left-4 flex flex-wrap items-center gap-4 h-auto">
-        <div className="flex items-center gap-3">
-          <Switch
-            checked={isEnabled}
-            onCheckedChange={setIsEnabled}
-            disabled={appState === "ai_playing"}
-            id="ai-toggle"
-          />
-          <Label htmlFor="ai-toggle" className="text-foreground cursor-pointer">
-            AI mode
-          </Label>
-        </div>
-        {isEnabled && (
-          <Select value={selectedModel} onValueChange={setSelectedModel} disabled={appState === "ai_playing"}>
-            <SelectTrigger id="model-select" className="w-[200px] h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="google/gemini-2.5-flash">Gemini Flash</SelectItem>
-              <SelectItem value="google/gemini-2.5-pro">Gemini Pro</SelectItem>
-              <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-        <MidiConnector
-          isConnected={!!connectedDevice}
-          deviceName={connectedDevice?.name || null}
-          error={midiError}
-          isSupported={isMidiSupported}
-          onConnect={requestAccess}
-          onDisconnect={disconnect}
-        />
-      </div>
-
       <Piano
         ref={pianoRef}
         onUserPlayStart={handleUserPlayStart}
@@ -352,50 +316,76 @@ const Index = () => {
         allowInput={appState === "idle" || appState === "user_playing"}
       />
 
-      {sessionHistory.length > 0 && (
-        <div className="w-full max-w-4xl">
-          <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-            <div className="flex items-center justify-between mb-4">
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  {isHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  Session History ({sessionHistory.length})
-                </Button>
-              </CollapsibleTrigger>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearHistory}
-                className="gap-2 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear History
-              </Button>
-            </div>
+      <div className="w-full max-w-4xl flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-card rounded-lg border border-border">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={isEnabled}
+              onCheckedChange={setIsEnabled}
+              disabled={appState === "ai_playing"}
+              id="ai-toggle"
+            />
+            <Label htmlFor="ai-toggle" className="text-foreground cursor-pointer">
+              AI mode
+            </Label>
+          </div>
+          {isEnabled && (
+            <Select value={selectedModel} onValueChange={setSelectedModel} disabled={appState === "ai_playing"}>
+              <SelectTrigger id="model-select" className="w-[200px] h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="google/gemini-2.5-flash">Gemini Flash</SelectItem>
+                <SelectItem value="google/gemini-2.5-pro">Gemini Pro</SelectItem>
+                <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <MidiConnector
+            isConnected={!!connectedDevice}
+            deviceName={connectedDevice?.name || null}
+            error={midiError}
+            isSupported={isMidiSupported}
+            onConnect={requestAccess}
+            onDisconnect={disconnect}
+          />
+        </div>
+        
+        {sessionHistory.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearHistory}
+            className="gap-2 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear History
+          </Button>
+        )}
+      </div>
 
-            <CollapsibleContent className="space-y-4">
-              {sessionHistory.map((entry, index) => (
-                <div key={index} className="space-y-3">
-                  <div className="text-sm font-medium text-muted-foreground">Session {index + 1}</div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <SheetMusic
-                      abc={entry.userAbc}
-                      label="You played:"
-                      isUserNotes={true}
-                      onReplay={() => handleReplayNotes(entry.userNotes)}
-                    />
-                    <SheetMusic
-                      abc={entry.aiAbc}
-                      label="AI responded:"
-                      isUserNotes={false}
-                      onReplay={() => handleReplayNotes(entry.aiNotes)}
-                    />
-                  </div>
-                  {index < sessionHistory.length - 1 && <div className="border-t border-border mt-4" />}
-                </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+      {sessionHistory.length > 0 && (
+        <div className="w-full max-w-4xl space-y-4">
+          {sessionHistory.map((entry, index) => (
+            <div key={index} className="space-y-3">
+              <div className="text-sm font-medium text-muted-foreground">Session {index + 1}</div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <SheetMusic
+                  abc={entry.userAbc}
+                  label="You played:"
+                  isUserNotes={true}
+                  onReplay={() => handleReplayNotes(entry.userNotes)}
+                />
+                <SheetMusic
+                  abc={entry.aiAbc}
+                  label="AI responded:"
+                  isUserNotes={false}
+                  onReplay={() => handleReplayNotes(entry.aiNotes)}
+                />
+              </div>
+              {index < sessionHistory.length - 1 && <div className="border-t border-border mt-4" />}
+            </div>
+          ))}
         </div>
       )}
     </div>
