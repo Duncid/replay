@@ -139,14 +139,29 @@ const Index = () => {
   };
 
   const handleUserPlay = async (userNotes: NoteWithDuration[]) => {
-    if (!isEnabled) return;
-
     // Generate unique request ID
     const requestId = crypto.randomUUID();
     currentRequestIdRef.current = requestId;
     requestStartTimeRef.current = Date.now();
 
     console.log("User finished playing, request ID:", requestId);
+
+    // If AI is disabled, just save to history and return to idle
+    if (!isEnabled) {
+      const userAbc = notesToAbc(userNotes, "User Input");
+      setSessionHistory((prev) => [
+        ...prev,
+        {
+          userNotes,
+          aiNotes: [],
+          userAbc,
+          aiAbc: "",
+        },
+      ]);
+      setAppState("idle");
+      return;
+    }
+
     setAppState("waiting_for_ai");
 
     try {
