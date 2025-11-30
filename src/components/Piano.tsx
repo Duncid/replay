@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { PianoKey } from "./PianoKey";
-import { useMidiInput } from "@/hooks/useMidiInput";
 
 interface Note {
   note: string;
@@ -26,11 +25,8 @@ export interface PianoHandle {
   playNote: (frequency: number, duration?: number) => void;
   hideProgress: () => void;
   ensureAudioReady: () => Promise<void>;
-  requestMidiAccess: () => Promise<void>;
-  disconnectMidi: () => void;
-  midiDeviceName: string | null;
-  midiError: string | null;
-  isMidiSupported: boolean;
+  handleKeyPress: (noteKey: string, frequency: number) => void;
+  handleKeyRelease: (noteKey: string, frequency: number) => void;
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
@@ -47,27 +43,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const pressedKeysRef = useRef<Set<string>>(new Set());
     const midiPressedKeysRef = useRef<Set<string>>(new Set());
     const hasNotifiedPlayStartRef = useRef(false);
-
-    // Handle MIDI note events
-    const handleMidiNoteOn = (noteKey: string, frequency: number, velocity: number) => {
-      if (!allowInput || midiPressedKeysRef.current.has(noteKey)) return;
-      
-      midiPressedKeysRef.current.add(noteKey);
-      handleKeyPress(noteKey, frequency);
-    };
-
-    const handleMidiNoteOff = (noteKey: string, frequency: number) => {
-      if (!allowInput || !midiPressedKeysRef.current.has(noteKey)) return;
-      
-      midiPressedKeysRef.current.delete(noteKey);
-      handleKeyRelease(noteKey, frequency);
-    };
-
-    // Initialize MIDI
-    const { connectedDevice, error: midiError, isSupported: isMidiSupported, requestAccess, disconnect } = useMidiInput(
-      handleMidiNoteOn,
-      handleMidiNoteOff
-    );
 
     // AZERTY keyboard mapping - C4 centered on 'e'
     const keyboardMap: { [key: string]: string } = {
@@ -201,11 +176,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           await audioContextRef.current.resume();
         }
       },
-      requestMidiAccess: requestAccess,
-      disconnectMidi: disconnect,
-      midiDeviceName: connectedDevice?.name || null,
-      midiError,
-      isMidiSupported,
+      handleKeyPress,
+      handleKeyRelease,
     }));
 
     const playNote = async (frequency: number, duration: number = 0.3) => {

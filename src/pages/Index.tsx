@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MidiConnector } from "@/components/MidiConnector";
+import { useMidiInput } from "@/hooks/useMidiInput";
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 
@@ -34,8 +35,30 @@ const Index = () => {
   const requestStartTimeRef = useRef<number>(0);
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shouldStopAiRef = useRef<boolean>(false);
+  const midiPressedKeysRef = useRef<Set<string>>(new Set());
 
   const MIN_WAIT_TIME_MS = 1000; // Match the progress bar duration
+
+  // MIDI note handlers
+  const handleMidiNoteOn = (noteKey: string, frequency: number) => {
+    if ((appState !== "idle" && appState !== "user_playing") || midiPressedKeysRef.current.has(noteKey)) return;
+    
+    midiPressedKeysRef.current.add(noteKey);
+    pianoRef.current?.handleKeyPress(noteKey, frequency);
+  };
+
+  const handleMidiNoteOff = (noteKey: string, frequency: number) => {
+    if (!midiPressedKeysRef.current.has(noteKey)) return;
+    
+    midiPressedKeysRef.current.delete(noteKey);
+    pianoRef.current?.handleKeyRelease(noteKey, frequency);
+  };
+
+  // Initialize MIDI hook - wrap callbacks to match expected signature
+  const { connectedDevice, error: midiError, isSupported: isMidiSupported, requestAccess, disconnect } = useMidiInput(
+    (noteKey: string, frequency: number, velocity: number) => handleMidiNoteOn(noteKey, frequency),
+    handleMidiNoteOff
+  );
 
   const stopAiPlayback = () => {
     // Signal AI playback to stop
@@ -311,12 +334,12 @@ const Index = () => {
           </Select>
         )}
         <MidiConnector
-          isConnected={!!pianoRef.current?.midiDeviceName}
-          deviceName={pianoRef.current?.midiDeviceName || null}
-          error={pianoRef.current?.midiError || null}
-          isSupported={pianoRef.current?.isMidiSupported || false}
-          onConnect={() => pianoRef.current?.requestMidiAccess()}
-          onDisconnect={() => pianoRef.current?.disconnectMidi()}
+          isConnected={!!connectedDevice}
+          deviceName={connectedDevice?.name || null}
+          error={midiError}
+          isSupported={isMidiSupported}
+          onConnect={requestAccess}
+          onDisconnect={disconnect}
         />
       </div>
 
