@@ -331,7 +331,7 @@ const Index = () => {
           </div>
           {isEnabled && (
             <Select value={selectedModel} onValueChange={setSelectedModel} disabled={appState === "ai_playing"}>
-              <SelectTrigger id="model-select" className="w-10 h-8">
+              <SelectTrigger id="model-select" className="w-auto h-8 px-3 gap-2">
                 <Brain className="w-4 h-4" />
               </SelectTrigger>
               <SelectContent>
