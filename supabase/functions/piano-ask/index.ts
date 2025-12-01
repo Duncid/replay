@@ -40,18 +40,28 @@ CRITICAL RULES:
    - "startTime": A number representing when the note starts in beats (0, 0.5, 1, 1.5, etc.)
 3. Valid note names: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
 4. Valid octaves: 3, 4, 5, or 6 (stay within piano range C3-C6)
-5. You can create chords by having multiple notes with the same startTime
+5. **USE CHORDS AND POLYPHONY**: Piano music sounds richer with chords! Use multiple notes with the same startTime to create harmony. For example:
+   - Major chords (C-E-G), minor chords (A-C-E), seventh chords, etc.
+   - Bass notes in left hand (octave 3-4) with melody in right hand (octave 4-6)
+   - Accompaniment patterns with chords
 6. Keep the composition short (total duration 4-8 seconds, which is 8-16 beats since 1 beat = 0.5s)
 7. Make it musically interesting and appropriate to the user's request
 
-EXAMPLE OUTPUT FORMAT:
+EXAMPLE OUTPUT WITH CHORDS:
 [
+  {"note": "C3", "duration": 2, "startTime": 0},
   {"note": "C4", "duration": 1, "startTime": 0},
   {"note": "E4", "duration": 1, "startTime": 0},
   {"note": "G4", "duration": 1, "startTime": 0},
-  {"note": "F4", "duration": 0.5, "startTime": 1},
-  {"note": "A4", "duration": 0.5, "startTime": 1.5},
-  {"note": "C5", "duration": 2, "startTime": 2}
+  {"note": "F3", "duration": 2, "startTime": 2},
+  {"note": "F4", "duration": 1, "startTime": 2},
+  {"note": "A4", "duration": 1, "startTime": 2},
+  {"note": "C5", "duration": 1, "startTime": 2},
+  {"note": "G3", "duration": 2, "startTime": 4},
+  {"note": "G4", "duration": 0.5, "startTime": 4},
+  {"note": "B4", "duration": 0.5, "startTime": 4},
+  {"note": "D5", "duration": 0.5, "startTime": 4},
+  {"note": "C5", "duration": 2, "startTime": 6}
 ]`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
