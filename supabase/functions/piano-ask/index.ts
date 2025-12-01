@@ -40,7 +40,7 @@ CRITICAL RULES:
    - "startTime": A number representing when the note starts in beats (0, 0.5, 1, 1.5, etc.)
 3. Valid note names: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
 4. Valid octaves: 3, 4, 5, or 6 (stay within piano range C3-C6)
-5. **USE CHORDS AND POLYPHONY**: Piano music sounds richer with chords! Use multiple notes with the same startTime to create harmony. For example:
+5. Polyphony: Piano music can sounds richer with chords! If it makes sense, you can use multiple notes with the same startTime to create harmony. For example:
    - Major chords (C-E-G), minor chords (A-C-E), seventh chords, etc.
    - Bass notes in left hand (octave 3-4) with melody in right hand (octave 4-6)
    - Accompaniment patterns with chords
