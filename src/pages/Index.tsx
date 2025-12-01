@@ -11,14 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Brain } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
+import { AskButton } from "@/components/AskButton";
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 
 interface SessionEntry {
+  type: "jam" | "ask";
   userNotes: NoteWithDuration[];
   aiNotes: NoteWithDuration[];
   userAbc: string;
   aiAbc: string;
+  askPrompt?: string;
 }
 
 const Index = () => {
@@ -181,6 +184,7 @@ const Index = () => {
             return [
               ...prev.slice(0, -1),
               {
+                type: "jam",
                 userNotes: updatedUserNotes,
                 aiNotes: [],
                 userAbc: updatedUserAbc,
@@ -195,6 +199,7 @@ const Index = () => {
         return [
           ...prev,
           {
+            type: "jam",
             userNotes,
             aiNotes: [],
             userAbc,
@@ -246,6 +251,7 @@ const Index = () => {
         setSessionHistory((prev) => [
           ...prev,
           {
+            type: "jam",
             userNotes,
             aiNotes: data.notes,
             userAbc,
@@ -304,6 +310,59 @@ const Index = () => {
     });
   };
 
+  const handleAskSubmit = async (prompt: string) => {
+    // Stop any ongoing activity
+    stopAiPlayback();
+    
+    // Ensure AudioContext is ready
+    await pianoRef.current?.ensureAudioReady();
+    
+    setAppState("waiting_for_ai");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("piano-ask", {
+        body: { prompt, model: selectedModel },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data.notes && data.notes.length > 0) {
+        // Save to history
+        const aiAbc = notesToAbc(data.notes, `AI played: "${prompt}"`);
+        setSessionHistory((prev) => [
+          ...prev,
+          {
+            type: "ask",
+            userNotes: [],
+            aiNotes: data.notes,
+            userAbc: "",
+            aiAbc,
+            askPrompt: prompt,
+          },
+        ]);
+
+        // Play the notes
+        await playNotes(data.notes, undefined, true);
+
+        toast({
+          title: "AI composed something!",
+          description: `Playing: "${prompt}"`,
+        });
+      } else {
+        setAppState("idle");
+      }
+    } catch (error) {
+      console.error("Error getting AI composition:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to get AI composition",
+        variant: "destructive",
+      });
+      setAppState("idle");
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4">
       <Piano
@@ -348,6 +407,10 @@ const Index = () => {
             onConnect={requestAccess}
             onDisconnect={disconnect}
           />
+          <AskButton 
+            onAskSubmit={handleAskSubmit}
+            disabled={appState === "waiting_for_ai" || appState === "ai_playing"}
+          />
         </div>
         
         {sessionHistory.length > 0 && (
@@ -367,21 +430,35 @@ const Index = () => {
         <div className="w-full max-w-4xl space-y-4">
           {sessionHistory.map((entry, index) => (
             <div key={index} className="space-y-3">
-              <div className="text-sm font-medium text-muted-foreground">Session {index + 1}</div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <SheetMusic
-                  abc={entry.userAbc}
-                  label="You played:"
-                  isUserNotes={true}
-                  onReplay={() => handleReplayNotes(entry.userNotes)}
-                />
+              <div className="text-sm font-medium text-muted-foreground">
+                {entry.type === "ask" 
+                  ? `Request ${index + 1}: "${entry.askPrompt}"`
+                  : `Session ${index + 1}`
+                }
+              </div>
+              {entry.type === "jam" ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <SheetMusic
+                    abc={entry.userAbc}
+                    label="You played:"
+                    isUserNotes={true}
+                    onReplay={() => handleReplayNotes(entry.userNotes)}
+                  />
+                  <SheetMusic
+                    abc={entry.aiAbc}
+                    label="AI responded:"
+                    isUserNotes={false}
+                    onReplay={() => handleReplayNotes(entry.aiNotes)}
+                  />
+                </div>
+              ) : (
                 <SheetMusic
                   abc={entry.aiAbc}
-                  label="AI responded:"
+                  label={`AI played: "${entry.askPrompt}"`}
                   isUserNotes={false}
                   onReplay={() => handleReplayNotes(entry.aiNotes)}
                 />
-              </div>
+              )}
               {index < sessionHistory.length - 1 && <div className="border-t border-border mt-4" />}
             </div>
           ))}
