@@ -119,6 +119,12 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       const handleKeyDown = (e: KeyboardEvent) => {
         if (!allowInput) return;
 
+        // Ignore keyboard input when user is typing in an input field
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+
         const key = e.key.toLowerCase();
         const noteKey = keyboardMap[key];
 
@@ -136,6 +142,12 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
       const handleKeyUp = (e: KeyboardEvent) => {
         if (!allowInput) return;
+
+        // Ignore keyboard input when user is typing in an input field
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
 
         const key = e.key.toLowerCase();
         const noteKey = keyboardMap[key];
