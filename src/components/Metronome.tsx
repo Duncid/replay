@@ -135,7 +135,7 @@ export const Metronome = () => {
           </Label>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-auto h-8 px-3 gap-2" asChild>
+            <DropdownMenuTrigger asChild>
               <Settings className="w-4 h-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
