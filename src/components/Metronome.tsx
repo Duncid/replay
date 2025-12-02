@@ -31,6 +31,7 @@ export const Metronome = () => {
   const [volume, setVolume] = useState(50);
   const [timeSignature, setTimeSignature] = useState("4/4");
   const [currentBeat, setCurrentBeat] = useState(0);
+  const [isDraggingBpm, setIsDraggingBpm] = useState(false);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -134,9 +135,14 @@ export const Metronome = () => {
           <>
             {/* BPM Slider */}
             <TooltipProvider>
-              <Tooltip open>
+              <Tooltip open={isDraggingBpm}>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-3 flex-1 min-w-[200px] max-w-[400px]">
+                  <div 
+                    className="flex items-center gap-3 flex-1 min-w-[200px] max-w-[400px]"
+                    onPointerDown={() => setIsDraggingBpm(true)}
+                    onPointerUp={() => setIsDraggingBpm(false)}
+                    onPointerLeave={() => setIsDraggingBpm(false)}
+                  >
                     <span className="text-sm font-medium text-foreground whitespace-nowrap">
                       BPM: {bpm}
                     </span>
