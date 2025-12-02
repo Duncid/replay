@@ -2,8 +2,20 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Volume2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Settings, Volume2 } from "lucide-react";
 
 const beatsPerBar: Record<string, number> = {
   "2/4": 2,
@@ -34,7 +46,6 @@ export const Metronome = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize AudioContext on first interaction
   const ensureAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
@@ -72,7 +83,6 @@ export const Metronome = () => {
     const beats = beatsPerBar[timeSignature];
     let beat = 0;
 
-    // Play first beat immediately
     setCurrentBeat(1);
     playClick(true);
 
@@ -93,7 +103,6 @@ export const Metronome = () => {
     setCurrentBeat(0);
   }, []);
 
-  // Handle play/stop
   useEffect(() => {
     if (isPlaying) {
       startMetronome();
@@ -103,7 +112,6 @@ export const Metronome = () => {
     return () => stopMetronome();
   }, [isPlaying, startMetronome, stopMetronome]);
 
-  // Restart metronome when BPM or time signature changes while playing
   useEffect(() => {
     if (isPlaying) {
       stopMetronome();
@@ -114,10 +122,9 @@ export const Metronome = () => {
   const beats = beatsPerBar[timeSignature];
 
   return (
-    <div className="w-full px-4 py-3 bg-card rounded-lg border border-border space-y-3">
-      {/* Controls Row */}
-      <div className="flex flex-wrap items-center gap-4">
-        {/* On/Off Switch */}
+    <div className="w-full px-4 py-3 bg-card rounded-lg border border-border">
+      <div className="flex items-center justify-between gap-4">
+        {/* Left: Switch and Label */}
         <div className="flex items-center gap-3">
           <Switch
             checked={isPlaying}
@@ -129,83 +136,91 @@ export const Metronome = () => {
           </Label>
         </div>
 
+        {/* Center: Beat Indicators (only when playing) */}
         {isPlaying && (
-          <>
-            {/* BPM Slider */}
-            <div className="flex items-center gap-3 flex-1 min-w-[200px] max-w-[400px]">
-              <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                BPM: {bpm}
-              </span>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: beats }, (_, i) => {
+              const beatNumber = i + 1;
+              const isActive = currentBeat === beatNumber;
+              const isFirstBeat = beatNumber === 1;
+
+              return (
+                <div
+                  key={i}
+                  className={`
+                    rounded-full transition-all duration-100
+                    ${isFirstBeat ? "w-4 h-4" : "w-3 h-3"}
+                    ${isActive 
+                      ? `bg-foreground ${isFirstBeat ? "ring-2 ring-foreground/50 scale-125" : "scale-110"}` 
+                      : "bg-muted border border-muted-foreground/30"
+                    }
+                  `}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Right: Edit Button with Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Settings className="w-4 h-4" />
+              Edit
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            {/* BPM Control */}
+            <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
+            <div className="px-2 pb-2">
               <Slider
                 value={[bpm]}
                 onValueChange={(value) => setBpm(value[0])}
                 min={40}
                 max={220}
                 step={1}
-                className="flex-1"
               />
+              <p className="text-xs text-muted-foreground mt-2">
+                {getBpmDescription(bpm)}
+              </p>
             </div>
 
-            {/* Volume Slider */}
-            <div className="flex items-center gap-2 min-w-[120px]">
-              <Volume2 className="w-4 h-4 text-muted-foreground" />
+            <DropdownMenuSeparator />
+
+            {/* Volume Control */}
+            <DropdownMenuLabel className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4" />
+              Volume
+            </DropdownMenuLabel>
+            <div className="px-2 pb-2">
               <Slider
                 value={[volume]}
                 onValueChange={(value) => setVolume(value[0])}
                 min={0}
                 max={100}
                 step={1}
-                className="w-20"
               />
             </div>
 
-            {/* Time Signature */}
-            <Select value={timeSignature} onValueChange={setTimeSignature}>
-              <SelectTrigger className="w-20 h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2/4">2/4</SelectItem>
-                <SelectItem value="3/4">3/4</SelectItem>
-                <SelectItem value="4/4">4/4</SelectItem>
-                <SelectItem value="6/8">6/8</SelectItem>
-              </SelectContent>
-            </Select>
-          </>
-        )}
+            <DropdownMenuSeparator />
+
+            {/* Time Signature Submenu */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                Time Signature: {timeSignature}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup value={timeSignature} onValueChange={setTimeSignature}>
+                  <DropdownMenuRadioItem value="2/4">2/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="3/4">3/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="4/4">4/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="6/8">6/8</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-
-      {/* BPM Description - only when playing */}
-      {isPlaying && (
-        <div className="text-sm text-muted-foreground">
-          {getBpmDescription(bpm)}
-        </div>
-      )}
-
-      {/* Beat Indicators - only when playing */}
-      {isPlaying && (
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: beats }, (_, i) => {
-            const beatNumber = i + 1;
-            const isActive = currentBeat === beatNumber;
-            const isFirstBeat = beatNumber === 1;
-
-            return (
-              <div
-                key={i}
-                className={`
-                  rounded-full transition-all duration-100
-                  ${isFirstBeat ? "w-4 h-4" : "w-3 h-3"}
-                  ${isActive 
-                    ? `bg-foreground ${isFirstBeat ? "ring-2 ring-foreground/50 scale-125" : "scale-110"}` 
-                    : "bg-muted border border-muted-foreground/30"
-                  }
-                `}
-              />
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 };
