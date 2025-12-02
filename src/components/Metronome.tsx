@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Volume2 } from "lucide-react";
+import { Settings, Volume2, ChevronDown } from "lucide-react";
 
 const beatsPerBar: Record<string, number> = {
   "2/4": 2,
@@ -136,7 +136,10 @@ export const Metronome = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Settings className="w-4 h-4" />
+              <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
+                <Settings className="w-4 h-4" />
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
               {/* BPM Control */}
