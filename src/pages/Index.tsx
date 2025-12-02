@@ -12,6 +12,7 @@ import { Trash2, Brain } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { AskButton } from "@/components/AskButton";
+import { Metronome } from "@/components/Metronome";
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 
@@ -365,6 +366,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4">
+      <Metronome />
+      
       <Piano
         ref={pianoRef}
         onUserPlayStart={handleUserPlayStart}
