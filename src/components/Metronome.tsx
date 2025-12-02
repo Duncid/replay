@@ -42,7 +42,7 @@ export const Metronome = () => {
   const [volume, setVolume] = useState(50);
   const [timeSignature, setTimeSignature] = useState("4/4");
   const [currentBeat, setCurrentBeat] = useState(0);
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -56,28 +56,31 @@ export const Metronome = () => {
     return audioContextRef.current;
   }, []);
 
-  const playClick = useCallback((isAccent: boolean) => {
-    const audioContext = ensureAudioContext();
-    if (!audioContext) return;
+  const playClick = useCallback(
+    (isAccent: boolean) => {
+      const audioContext = ensureAudioContext();
+      if (!audioContext) return;
 
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-    oscillator.frequency.value = isAccent ? 1000 : 800;
-    oscillator.type = "sine";
+      oscillator.frequency.value = isAccent ? 1000 : 800;
+      oscillator.type = "sine";
 
-    const volumeMultiplier = volume / 100;
-    const baseGain = isAccent ? 0.5 : 0.3;
-    const now = audioContext.currentTime;
-    gainNode.gain.setValueAtTime(baseGain * volumeMultiplier, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      const volumeMultiplier = volume / 100;
+      const baseGain = isAccent ? 0.5 : 0.3;
+      const now = audioContext.currentTime;
+      gainNode.gain.setValueAtTime(baseGain * volumeMultiplier, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
 
-    oscillator.start(now);
-    oscillator.stop(now + 0.05);
-  }, [ensureAudioContext, volume]);
+      oscillator.start(now);
+      oscillator.stop(now + 0.05);
+    },
+    [ensureAudioContext, volume],
+  );
 
   const startMetronome = useCallback(() => {
     const beats = beatsPerBar[timeSignature];
@@ -126,35 +129,21 @@ export const Metronome = () => {
       <div className="flex items-center justify-between gap-4">
         {/* Left: Switch, Label, and Settings */}
         <div className="flex items-center gap-3">
-          <Switch
-            checked={isPlaying}
-            onCheckedChange={setIsPlaying}
-            id="metronome-toggle"
-          />
+          <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
           <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer">
             Metronome
           </Label>
-          
+
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Settings className="w-4 h-4" />
-              </Button>
+            <DropdownMenuTrigger className="w-auto h-8 px-3 gap-2" asChild>
+              <Settings className="w-4 h-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
               {/* BPM Control */}
               <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
               <div className="px-2 pb-2">
-                <Slider
-                  value={[bpm]}
-                  onValueChange={(value) => setBpm(value[0])}
-                  min={40}
-                  max={220}
-                  step={1}
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  {getBpmDescription(bpm)}
-                </p>
+                <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={40} max={220} step={1} />
+                <p className="text-xs text-muted-foreground mt-2">{getBpmDescription(bpm)}</p>
               </div>
 
               <DropdownMenuSeparator />
@@ -165,22 +154,14 @@ export const Metronome = () => {
                 Volume
               </DropdownMenuLabel>
               <div className="px-2 pb-2">
-                <Slider
-                  value={[volume]}
-                  onValueChange={(value) => setVolume(value[0])}
-                  min={0}
-                  max={100}
-                  step={1}
-                />
+                <Slider value={[volume]} onValueChange={(value) => setVolume(value[0])} min={0} max={100} step={1} />
               </div>
 
               <DropdownMenuSeparator />
 
               {/* Time Signature Submenu */}
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  Time Signature: {timeSignature}
-                </DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger>Time Signature: {timeSignature}</DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuRadioGroup value={timeSignature} onValueChange={setTimeSignature}>
                     <DropdownMenuRadioItem value="2/4">2/4</DropdownMenuRadioItem>
@@ -208,9 +189,10 @@ export const Metronome = () => {
                   className={`
                     rounded-full transition-all duration-100
                     ${isFirstBeat ? "w-4 h-4" : "w-3 h-3"}
-                    ${isActive 
-                      ? `bg-foreground ${isFirstBeat ? "ring-2 ring-foreground/50 scale-125" : "scale-110"}` 
-                      : "bg-muted border border-muted-foreground/30"
+                    ${
+                      isActive
+                        ? `bg-foreground ${isFirstBeat ? "ring-2 ring-foreground/50 scale-125" : "scale-110"}`
+                        : "bg-muted border border-muted-foreground/30"
                     }
                   `}
                 />
