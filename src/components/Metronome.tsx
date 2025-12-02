@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Volume2 } from "lucide-react";
 
 const beatsPerBar: Record<string, number> = {
   "2/4": 2,
@@ -26,6 +27,7 @@ const getBpmDescription = (bpm: number): string => {
 export const Metronome = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpm] = useState(120);
+  const [volume, setVolume] = useState(50);
   const [timeSignature, setTimeSignature] = useState("4/4");
   const [currentBeat, setCurrentBeat] = useState(0);
   
@@ -56,13 +58,15 @@ export const Metronome = () => {
     oscillator.frequency.value = isAccent ? 1000 : 800;
     oscillator.type = "sine";
 
+    const volumeMultiplier = volume / 100;
+    const baseGain = isAccent ? 0.5 : 0.3;
     const now = audioContext.currentTime;
-    gainNode.gain.setValueAtTime(isAccent ? 0.5 : 0.3, now);
+    gainNode.gain.setValueAtTime(baseGain * volumeMultiplier, now);
     gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
 
     oscillator.start(now);
     oscillator.stop(now + 0.05);
-  }, [ensureAudioContext]);
+  }, [ensureAudioContext, volume]);
 
   const startMetronome = useCallback(() => {
     const beats = beatsPerBar[timeSignature];
@@ -125,62 +129,83 @@ export const Metronome = () => {
           </Label>
         </div>
 
-        {/* BPM Slider */}
-        <div className="flex items-center gap-3 flex-1 min-w-[200px] max-w-[400px]">
-          <span className="text-sm font-medium text-foreground whitespace-nowrap">
-            BPM: {bpm}
-          </span>
-          <Slider
-            value={[bpm]}
-            onValueChange={(value) => setBpm(value[0])}
-            min={40}
-            max={220}
-            step={1}
-            className="flex-1"
-          />
+        {isPlaying && (
+          <>
+            {/* BPM Slider */}
+            <div className="flex items-center gap-3 flex-1 min-w-[200px] max-w-[400px]">
+              <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                BPM: {bpm}
+              </span>
+              <Slider
+                value={[bpm]}
+                onValueChange={(value) => setBpm(value[0])}
+                min={40}
+                max={220}
+                step={1}
+                className="flex-1"
+              />
+            </div>
+
+            {/* Volume Slider */}
+            <div className="flex items-center gap-2 min-w-[120px]">
+              <Volume2 className="w-4 h-4 text-muted-foreground" />
+              <Slider
+                value={[volume]}
+                onValueChange={(value) => setVolume(value[0])}
+                min={0}
+                max={100}
+                step={1}
+                className="w-20"
+              />
+            </div>
+
+            {/* Time Signature */}
+            <Select value={timeSignature} onValueChange={setTimeSignature}>
+              <SelectTrigger className="w-20 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2/4">2/4</SelectItem>
+                <SelectItem value="3/4">3/4</SelectItem>
+                <SelectItem value="4/4">4/4</SelectItem>
+                <SelectItem value="6/8">6/8</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        )}
+      </div>
+
+      {/* BPM Description - only when playing */}
+      {isPlaying && (
+        <div className="text-sm text-muted-foreground">
+          {getBpmDescription(bpm)}
         </div>
+      )}
 
-        {/* Time Signature */}
-        <Select value={timeSignature} onValueChange={setTimeSignature}>
-          <SelectTrigger className="w-20 h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="2/4">2/4</SelectItem>
-            <SelectItem value="3/4">3/4</SelectItem>
-            <SelectItem value="4/4">4/4</SelectItem>
-            <SelectItem value="6/8">6/8</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Beat Indicators - only when playing */}
+      {isPlaying && (
+        <div className="flex items-center justify-center gap-2">
+          {Array.from({ length: beats }, (_, i) => {
+            const beatNumber = i + 1;
+            const isActive = currentBeat === beatNumber;
+            const isFirstBeat = beatNumber === 1;
 
-      {/* BPM Description */}
-      <div className="text-sm text-muted-foreground">
-        {getBpmDescription(bpm)}
-      </div>
-
-      {/* Beat Indicators */}
-      <div className="flex items-center justify-center gap-2">
-        {Array.from({ length: beats }, (_, i) => {
-          const beatNumber = i + 1;
-          const isActive = currentBeat === beatNumber;
-          const isFirstBeat = beatNumber === 1;
-
-          return (
-            <div
-              key={i}
-              className={`
-                rounded-full transition-all duration-100
-                ${isFirstBeat ? "w-4 h-4" : "w-3 h-3"}
-                ${isActive 
-                  ? `bg-primary ${isFirstBeat ? "ring-2 ring-primary/50 scale-125" : "scale-110"}` 
-                  : "bg-muted border border-muted-foreground/30"
-                }
-              `}
-            />
-          );
-        })}
-      </div>
+            return (
+              <div
+                key={i}
+                className={`
+                  rounded-full transition-all duration-100
+                  ${isFirstBeat ? "w-4 h-4" : "w-3 h-3"}
+                  ${isActive 
+                    ? `bg-foreground ${isFirstBeat ? "ring-2 ring-foreground/50 scale-125" : "scale-110"}` 
+                    : "bg-muted border border-muted-foreground/30"
+                  }
+                `}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
