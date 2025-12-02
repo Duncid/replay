@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Volume2 } from "lucide-react";
 
 const beatsPerBar: Record<string, number> = {
@@ -132,19 +133,28 @@ export const Metronome = () => {
         {isPlaying && (
           <>
             {/* BPM Slider */}
-            <div className="flex items-center gap-3 flex-1 min-w-[200px] max-w-[400px]">
-              <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                BPM: {bpm}
-              </span>
-              <Slider
-                value={[bpm]}
-                onValueChange={(value) => setBpm(value[0])}
-                min={40}
-                max={220}
-                step={1}
-                className="flex-1"
-              />
-            </div>
+            <TooltipProvider>
+              <Tooltip open>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-3 flex-1 min-w-[200px] max-w-[400px]">
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                      BPM: {bpm}
+                    </span>
+                    <Slider
+                      value={[bpm]}
+                      onValueChange={(value) => setBpm(value[0])}
+                      min={40}
+                      max={220}
+                      step={1}
+                      className="flex-1"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-popover text-popover-foreground">
+                  {getBpmDescription(bpm)}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             {/* Volume Slider */}
             <div className="flex items-center gap-2 min-w-[120px]">
@@ -174,13 +184,6 @@ export const Metronome = () => {
           </>
         )}
       </div>
-
-      {/* BPM Description - only when playing */}
-      {isPlaying && (
-        <div className="text-sm text-muted-foreground">
-          {getBpmDescription(bpm)}
-        </div>
-      )}
 
       {/* Beat Indicators - only when playing */}
       {isPlaying && (
