@@ -38,12 +38,7 @@ export const AskButton = ({ onAskSubmit, disabled }: AskButtonProps) => {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          className="gap-2"
-        >
+        <Button variant="outline" size="sm" disabled={disabled} className="gap-2 h-8">
           <MessageSquare className="w-4 h-4" />
           Ask AI
         </Button>
@@ -65,17 +60,8 @@ export const AskButton = ({ onAskSubmit, disabled }: AskButtonProps) => {
               disabled={isLoading}
               autoFocus
             />
-            <Button
-              size="sm"
-              onClick={handleSubmit}
-              disabled={!prompt.trim() || isLoading}
-              className="shrink-0"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
+            <Button size="sm" onClick={handleSubmit} disabled={!prompt.trim() || isLoading} className="shrink-0">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </div>
         </div>
