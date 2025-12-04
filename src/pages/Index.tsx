@@ -31,6 +31,12 @@ const Index = () => {
   const [isEnabled, setIsEnabled] = useState(true);
   const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
+  
+  // Metronome state (lifted up)
+  const [metronomeBpm, setMetronomeBpm] = useState(120);
+  const [metronomeTimeSignature, setMetronomeTimeSignature] = useState("4/4");
+  const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
+  
   const { toast } = useToast();
   const pianoRef = useRef<PianoHandle>(null);
   const currentRequestIdRef = useRef<string | null>(null);
@@ -216,7 +222,15 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("jazz-improvise", {
-        body: { userNotes, model: selectedModel },
+        body: { 
+          userNotes, 
+          model: selectedModel,
+          metronome: {
+            bpm: metronomeBpm,
+            timeSignature: metronomeTimeSignature,
+            isActive: metronomeIsPlaying,
+          },
+        },
       });
 
       // Check 1: Is this request still valid?
@@ -366,7 +380,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4">
-      <Metronome />
+      <Metronome
+        bpm={metronomeBpm}
+        setBpm={setMetronomeBpm}
+        timeSignature={metronomeTimeSignature}
+        setTimeSignature={setMetronomeTimeSignature}
+        isPlaying={metronomeIsPlaying}
+        setIsPlaying={setMetronomeIsPlaying}
+      />
       
       <Piano
         ref={pianoRef}

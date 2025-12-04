@@ -11,12 +11,35 @@ serve(async (req) => {
   }
 
   try {
-    const { userNotes, model = "google/gemini-2.5-flash" } = await req.json();
-    console.log("Received user notes:", userNotes, "Model:", model);
+    const { userNotes, model = "google/gemini-2.5-flash", metronome } = await req.json();
+    console.log("Received user notes:", userNotes, "Model:", model, "Metronome:", metronome);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Build tempo context for the prompt
+    let tempoContext = "";
+    if (metronome) {
+      const tempoFeel = metronome.bpm <= 60 ? "slow and expressive" :
+        metronome.bpm <= 90 ? "walking pace, relaxed" :
+        metronome.bpm <= 120 ? "moderate groove" :
+        metronome.bpm <= 160 ? "upbeat and energetic" :
+        "fast, driving rhythm";
+      
+      tempoContext = `
+TEMPO CONTEXT:
+- BPM: ${metronome.bpm}
+- Time Signature: ${metronome.timeSignature}
+- Metronome Active: ${metronome.isActive ? "Yes" : "No"}
+- Feel: ${tempoFeel}
+
+Consider the tempo when choosing note durations. At ${metronome.bpm} BPM in ${metronome.timeSignature}:
+- Use shorter durations (0.25, 0.5) for faster passages
+- Use longer durations (1.0, 2.0) for sustained notes
+- Match the rhythmic feel of the time signature
+`;
     }
 
     const systemPrompt = `You are a jazz improvisation assistant. The user will provide you with a sequence of musical notes they played, and you should respond with a creative jazz improvisation that complements their input.
@@ -42,7 +65,7 @@ You should respond with a JSON array in EXACTLY this format:
   {"note": "D5", "duration": 1.0, "startTime": 1.0},
   ...
 ]
-
+${tempoContext}
 Guidelines:
 - Create a musically coherent response that complements the user's input
 - Stay in the C3-C6 range

@@ -36,11 +36,30 @@ const getBpmDescription = (bpm: number): string => {
   return "🧠 Extreme — Ultra-fast or double-time feel.";
 };
 
-export const Metronome = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [bpm, setBpm] = useState(120);
+export interface MetronomeSettings {
+  bpm: number;
+  timeSignature: string;
+  isPlaying: boolean;
+}
+
+interface MetronomeProps {
+  bpm: number;
+  setBpm: (bpm: number) => void;
+  timeSignature: string;
+  setTimeSignature: (ts: string) => void;
+  isPlaying: boolean;
+  setIsPlaying: (playing: boolean) => void;
+}
+
+export const Metronome = ({
+  bpm,
+  setBpm,
+  timeSignature,
+  setTimeSignature,
+  isPlaying,
+  setIsPlaying,
+}: MetronomeProps) => {
   const [volume, setVolume] = useState(50);
-  const [timeSignature, setTimeSignature] = useState("4/4");
   const [currentBeat, setCurrentBeat] = useState(0);
 
   const audioContextRef = useRef<AudioContext | null>(null);
