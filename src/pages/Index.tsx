@@ -236,14 +236,14 @@ const Index = () => {
     toast({ title: "History cleared", description: "Session history has been cleared" });
   };
 
-  const handleAskSubmit = async (prompt: string) => {
+  const handleAskSubmit = async (prompt: string, model: string) => {
     stopAiPlayback();
     await pianoRef.current?.ensureAudioReady();
     setAppState("waiting_for_ai");
 
     try {
       const { data, error } = await supabase.functions.invoke("piano-ask", {
-        body: { prompt, model: selectedModel },
+        body: { prompt, model },
       });
 
       if (error) throw error;
