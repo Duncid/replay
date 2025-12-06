@@ -135,6 +135,13 @@ export const useMidiInput = (
     }
   }, [isSupported, handleMidiMessage]);
 
+  // Auto-connect on mount if supported
+  useEffect(() => {
+    if (isSupported) {
+      requestAccess();
+    }
+  }, []); // Only run once on mount
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
