@@ -356,11 +356,19 @@ const Index = () => {
   };
 
   const handleReplaySequence = async (sequence: NoteSequence) => {
+    // Prevent replay if already playing (guards against accidental double-clicks or race conditions)
+    if (isPlayingRef.current) {
+      console.log(`[Replay] Blocked - already playing`);
+      return;
+    }
+    
     console.log(`[Replay] Starting replay of ${sequence.notes.length} notes`);
     console.log(`[Replay] First note startTime: ${sequence.notes[0]?.startTime}s, totalTime: ${sequence.totalTime}s`);
     
     // Stop any current playback without resetting to idle (we're about to play again)
     shouldStopAiRef.current = true;
+    noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    noteTimeoutsRef.current = [];
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
       aiPlaybackTimeoutRef.current = null;
