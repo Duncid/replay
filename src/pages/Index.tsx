@@ -51,7 +51,7 @@ const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
   const [isEnabled, setIsEnabled] = useState(true);
-  const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
+  const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
   
   // Metronome state (lifted up)
