@@ -293,7 +293,15 @@ const Index = () => {
 
   const handleReplaySequence = async (sequence: NoteSequence) => {
     console.log(`[Replay] Starting replay of ${sequence.notes.length} notes`);
-    stopAiPlayback();
+    
+    // Stop any current playback without resetting to idle (we're about to play again)
+    shouldStopAiRef.current = true;
+    if (aiPlaybackTimeoutRef.current) {
+      clearTimeout(aiPlaybackTimeoutRef.current);
+      aiPlaybackTimeoutRef.current = null;
+    }
+    setActiveKeys(new Set());
+    
     await pianoRef.current?.ensureAudioReady();
     await new Promise(resolve => setTimeout(resolve, 50));
     await playSequence(sequence, undefined, true);
