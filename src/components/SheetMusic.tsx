@@ -1,9 +1,16 @@
 import { useEffect, useRef } from "react";
 import abcjs from "abcjs";
 import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
+import { Play, MoreHorizontal, Copy } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 interface SheetMusicProps {
   sequence: NoteSequence;
@@ -14,17 +21,15 @@ interface SheetMusicProps {
 
 export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false }: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
 
-    // Convert NoteSequence to ABC notation
     const abc = noteSequenceToAbc(sequence, label || (isUserNotes ? "You played" : "AI responded"));
 
-    // Clear previous render
     renderDivRef.current.innerHTML = "";
 
-    // Render ABC notation to SVG
     abcjs.renderAbc(renderDivRef.current, abc, {
       responsive: "resize",
       staffwidth: 600,
@@ -32,6 +37,15 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false }: S
       add_classes: true,
     });
   }, [sequence, label, isUserNotes]);
+
+  const handleCopySequence = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
+      toast({ title: "Copied", description: "NoteSequence copied to clipboard" });
+    } catch {
+      toast({ title: "Error", description: "Failed to copy", variant: "destructive" });
+    }
+  };
 
   if (!sequence || sequence.notes.length === 0) return null;
 
@@ -41,17 +55,32 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false }: S
         <h3 className="text-sm font-medium text-foreground">
           {label || (isUserNotes ? "You played:" : "AI responded:")}
         </h3>
-        {onReplay && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onReplay}
-            className="gap-2"
-          >
-            <Play className="w-3 h-3" />
-            Replay
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {onReplay && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onReplay}
+              className="gap-2"
+            >
+              <Play className="w-3 h-3" />
+              Replay
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCopySequence}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy NoteSequence
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <div
         ref={renderDivRef}
