@@ -43,11 +43,27 @@ const loadMagentaScript = (): Promise<void> => {
   });
 };
 
+// Magenta MusicRNN valid pitch range (model-specific)
+const MAGENTA_MIN_PITCH = 36; // C2
+const MAGENTA_MAX_PITCH = 81; // A5
+
+// Clamp pitch to valid range for Magenta models
+const clampPitch = (pitch: number): number => {
+  if (pitch < MAGENTA_MIN_PITCH) {
+    // Transpose up by octaves until in range
+    while (pitch < MAGENTA_MIN_PITCH) pitch += 12;
+  } else if (pitch > MAGENTA_MAX_PITCH) {
+    // Transpose down by octaves until in range
+    while (pitch > MAGENTA_MAX_PITCH) pitch -= 12;
+  }
+  return pitch;
+};
+
 // Convert our NoteSequence to Magenta's format
 const toMagentaSequence = (sequence: NoteSequence): any => {
   return {
     notes: sequence.notes.map((note) => ({
-      pitch: note.pitch,
+      pitch: clampPitch(note.pitch),
       startTime: note.startTime,
       endTime: note.endTime,
       velocity: Math.round((note.velocity || 0.8) * 127),
