@@ -67,6 +67,7 @@ const Index = () => {
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const noteTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const shouldStopAiRef = useRef<boolean>(false);
+  const isPlayingRef = useRef<boolean>(false);
   const midiPressedKeysRef = useRef<Set<string>>(new Set());
 
   const MIN_WAIT_TIME_MS = 1000;
@@ -93,6 +94,7 @@ const Index = () => {
 
   const stopAiPlayback = () => {
     shouldStopAiRef.current = true;
+    isPlayingRef.current = false;
     
     // Clear ALL scheduled timeouts
     noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
@@ -107,9 +109,17 @@ const Index = () => {
   };
 
   const playSequence = async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
+    // Generate a unique ID for this playback call for debugging
+    const playbackId = Math.random().toString(36).substring(7);
+    
     if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
-      console.log("Request invalidated before playback started");
+      console.log(`[Playback ${playbackId}] Request invalidated before playback started`);
       return;
+    }
+
+    // Prevent multiple simultaneous playback calls
+    if (isPlayingRef.current) {
+      console.log(`[Playback ${playbackId}] Already playing, stopping previous playback first`);
     }
 
     // Normalize times so first note starts at 0
@@ -129,7 +139,7 @@ const Index = () => {
       totalTime: sequence.totalTime - minStartTime,
     };
 
-    console.log(`[Playback] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`);
+    console.log(`[Playback ${playbackId}] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`);
 
     // Clear ALL previous playback state including note timeouts
     shouldStopAiRef.current = true;
@@ -140,9 +150,16 @@ const Index = () => {
       aiPlaybackTimeoutRef.current = null;
     }
     setActiveKeys(new Set());
+    isPlayingRef.current = true;
     
     // Small delay to ensure previous state is cleared
     await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Check again if this playback was cancelled during the delay
+    if (!isPlayingRef.current) {
+      console.log(`[Playback ${playbackId}] Playback cancelled during delay`);
+      return;
+    }
     
     shouldStopAiRef.current = false;
     setAppState("ai_playing");
@@ -177,6 +194,7 @@ const Index = () => {
         setAppState("idle");
         setActiveKeys(new Set());
         noteTimeoutsRef.current = [];
+        isPlayingRef.current = false;
       }
     }, normalizedSequence.totalTime * 1000);
   };
