@@ -125,6 +125,17 @@ const Index = () => {
 
     console.log(`[Playback] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`);
 
+    // Clear any previous playback state
+    shouldStopAiRef.current = true; // Stop any ongoing playback first
+    if (aiPlaybackTimeoutRef.current) {
+      clearTimeout(aiPlaybackTimeoutRef.current);
+      aiPlaybackTimeoutRef.current = null;
+    }
+    setActiveKeys(new Set()); // Clear all active keys before starting
+    
+    // Small delay to ensure previous state is cleared
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     shouldStopAiRef.current = false;
     setAppState("ai_playing");
 
