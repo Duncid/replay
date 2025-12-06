@@ -234,7 +234,20 @@ export const useMagenta = () => {
           return null;
         }
 
-        return fromMagentaSequence(outputSequence, bpm, timeSignature);
+        // Unquantize the output sequence to get proper timing in seconds
+        const unquantizedOutput = mm.sequences.unquantizeSequence(outputSequence);
+        
+        // Normalize times to start from 0
+        const minStartTime = Math.min(...unquantizedOutput.notes.map((n: any) => n.startTime));
+        if (minStartTime > 0) {
+          unquantizedOutput.notes.forEach((note: any) => {
+            note.startTime -= minStartTime;
+            note.endTime -= minStartTime;
+          });
+          unquantizedOutput.totalTime -= minStartTime;
+        }
+
+        return fromMagentaSequence(unquantizedOutput, bpm, timeSignature);
       } catch (error) {
         console.error("[Magenta] Error generating sequence:", error);
         setState((prev) => ({
