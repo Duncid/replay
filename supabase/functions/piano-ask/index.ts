@@ -6,6 +6,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// NoteSequence types
+interface Note {
+  pitch: number;
+  startTime: number;
+  endTime: number;
+  velocity: number;
+}
+
+interface NoteSequence {
+  notes: Note[];
+  totalTime: number;
+  tempos?: Array<{ time: number; qpm: number }>;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -28,40 +42,45 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an expert piano player and composer. The user will ask you to play something for them (e.g., "play something jazzy", "play a happy melody", "play a sad tune", "play the C major scale").
+    const systemPrompt = `You are an expert piano player and composer. The user will ask you to play something for them.
 
-Your task is to compose a piano piece that matches their request.
+Your task is to compose a piano piece that matches their request and return it as a NoteSequence JSON object.
 
 CRITICAL RULES:
-1. Return ONLY a valid JSON array of notes - no explanation, no markdown, no extra text
-2. Each note MUST have exactly these properties:
-   - "note": A string in the format [NoteName][Octave] (e.g., "C4", "F#5")
-   - "duration": A number representing the length in beats (0.25, 0.5, 1, 2, etc.)
-   - "startTime": A number representing when the note starts in beats (0, 0.5, 1, 1.5, etc.)
-3. Valid note names: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
-4. Valid octaves: 3, 4, 5, or 6 (stay within piano range C3-C6)
-5. Polyphony: Piano music can sounds richer with chords! If it makes sense, you can use multiple notes with the same startTime to create harmony. For example:
-   - Major chords (C-E-G), minor chords (A-C-E), seventh chords, etc.
-   - Bass notes in left hand (octave 3-4) with melody in right hand (octave 4-6)
-   - Accompaniment patterns with chords
-6. Make it musically interesting and appropriate to the user's request
+1. Return ONLY a valid JSON object - no explanation, no markdown, no extra text
+2. The format must be:
+{
+  "notes": [
+    {"pitch": 60, "startTime": 0, "endTime": 0.5, "velocity": 0.8},
+    {"pitch": 64, "startTime": 0.5, "endTime": 1.0, "velocity": 0.7},
+    ...
+  ],
+  "totalTime": 4.0,
+  "tempos": [{"time": 0, "qpm": 120}]
+}
+
+3. "pitch" is MIDI note number: 48=C3, 60=C4, 72=C5, 84=C6
+4. "startTime" and "endTime" are in seconds
+5. "velocity" is 0.0-1.0 (dynamics/intensity)
+6. Valid range: pitch 48-84 (C3-C6)
+7. Create polyphony with overlapping notes (same startTime = chord)
+8. Make it musically interesting and appropriate to the user's request
 
 EXAMPLE OUTPUT WITH CHORDS:
-[
-  {"note": "C3", "duration": 2, "startTime": 0},
-  {"note": "C4", "duration": 1, "startTime": 0},
-  {"note": "E4", "duration": 1, "startTime": 0},
-  {"note": "G4", "duration": 1, "startTime": 0},
-  {"note": "F3", "duration": 2, "startTime": 2},
-  {"note": "F4", "duration": 1, "startTime": 2},
-  {"note": "A4", "duration": 1, "startTime": 2},
-  {"note": "C5", "duration": 1, "startTime": 2},
-  {"note": "G3", "duration": 2, "startTime": 4},
-  {"note": "G4", "duration": 0.5, "startTime": 4},
-  {"note": "B4", "duration": 0.5, "startTime": 4},
-  {"note": "D5", "duration": 0.5, "startTime": 4},
-  {"note": "C5", "duration": 2, "startTime": 6}
-]`;
+{
+  "notes": [
+    {"pitch": 48, "startTime": 0, "endTime": 1.0, "velocity": 0.7},
+    {"pitch": 60, "startTime": 0, "endTime": 0.5, "velocity": 0.8},
+    {"pitch": 64, "startTime": 0, "endTime": 0.5, "velocity": 0.8},
+    {"pitch": 67, "startTime": 0, "endTime": 0.5, "velocity": 0.8},
+    {"pitch": 53, "startTime": 1.0, "endTime": 2.0, "velocity": 0.7},
+    {"pitch": 65, "startTime": 1.0, "endTime": 1.5, "velocity": 0.8},
+    {"pitch": 69, "startTime": 1.0, "endTime": 1.5, "velocity": 0.8},
+    {"pitch": 72, "startTime": 1.0, "endTime": 1.5, "velocity": 0.8}
+  ],
+  "totalTime": 2.0,
+  "tempos": [{"time": 0, "qpm": 120}]
+}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -107,73 +126,61 @@ EXAMPLE OUTPUT WITH CHORDS:
     console.log("AI response:", aiMessage);
 
     // Parse the AI's response
-    let aiNotes: Array<{ note: string; duration: number; startTime: number }> = [];
+    let aiSequence: NoteSequence;
 
     try {
-      // Try to extract JSON array from the response
-      const jsonMatch = aiMessage.match(/\[[\s\S]*\]/);
+      const jsonMatch = aiMessage.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        aiNotes = JSON.parse(jsonMatch[0]);
+        aiSequence = JSON.parse(jsonMatch[0]);
       } else {
-        aiNotes = JSON.parse(aiMessage);
+        throw new Error("No JSON object found");
       }
     } catch (parseError) {
-      console.error("Failed to parse AI response as JSON:", parseError);
-      console.log("Attempting regex fallback...");
-
-      // Fallback: try to extract notes using regex
-      const noteRegex =
-        /\{\s*"note"\s*:\s*"([A-G]#?\d)"\s*,\s*"duration"\s*:\s*(\d+\.?\d*)\s*,\s*"startTime"\s*:\s*(\d+\.?\d*)\s*\}/g;
-      let match;
-      while ((match = noteRegex.exec(aiMessage)) !== null) {
-        aiNotes.push({
-          note: match[1],
-          duration: parseFloat(match[2]),
-          startTime: parseFloat(match[3]),
-        });
-      }
+      console.error("Failed to parse AI response:", parseError);
+      // Fallback sequence
+      aiSequence = {
+        notes: [
+          { pitch: 60, startTime: 0, endTime: 0.5, velocity: 0.8 },
+          { pitch: 64, startTime: 0.5, endTime: 1.0, velocity: 0.8 },
+          { pitch: 67, startTime: 1.0, endTime: 1.5, velocity: 0.8 },
+          { pitch: 72, startTime: 1.5, endTime: 2.5, velocity: 0.8 },
+        ],
+        totalTime: 2.5,
+        tempos: [{ time: 0, qpm: 120 }],
+      };
     }
 
-    console.log("Parsed AI notes:", aiNotes);
+    // Validate notes
+    const validNotes: Note[] = [];
+    for (const note of aiSequence.notes || []) {
+      if (typeof note.pitch !== 'number' || note.pitch < 48 || note.pitch > 84) continue;
+      if (typeof note.startTime !== 'number' || note.startTime < 0) continue;
+      if (typeof note.endTime !== 'number' || note.endTime <= note.startTime) continue;
+      
+      const velocity = typeof note.velocity === 'number' ? Math.max(0, Math.min(1, note.velocity)) : 0.8;
+      validNotes.push({ ...note, velocity });
+    }
 
-    // Validate and filter notes
-    const validNotes = aiNotes.filter((n) => {
-      if (!n.note || typeof n.note !== "string") return false;
-      if (typeof n.duration !== "number" || n.duration <= 0) return false;
-      if (typeof n.startTime !== "number" || n.startTime < 0) return false;
-
-      // Validate note format
-      const noteMatch = n.note.match(/^([A-G]#?)(\d)$/);
-      if (!noteMatch) return false;
-
-      const [, , octave] = noteMatch;
-      const octaveNum = parseInt(octave);
-
-      // Valid range: C3 to C6
-      if (octaveNum < 3 || octaveNum > 6) return false;
-
-      // Valid duration values (common note lengths)
-      const validDurations = [0.125, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4];
-      const isValidDuration = validDurations.some((d) => Math.abs(n.duration - d) < 0.01);
-      if (!isValidDuration) return false;
-
-      return true;
-    });
-
-    console.log("Final valid notes:", validNotes);
-
-    // If no valid notes, provide a default composition
     if (validNotes.length === 0) {
-      console.log("No valid notes generated, using default composition");
       validNotes.push(
-        { note: "C4", duration: 1, startTime: 0 },
-        { note: "E4", duration: 1, startTime: 1 },
-        { note: "G4", duration: 1, startTime: 2 },
-        { note: "C5", duration: 2, startTime: 3 },
+        { pitch: 60, startTime: 0, endTime: 0.5, velocity: 0.8 },
+        { pitch: 64, startTime: 0.5, endTime: 1.0, velocity: 0.8 },
+        { pitch: 67, startTime: 1.0, endTime: 1.5, velocity: 0.8 },
+        { pitch: 72, startTime: 1.5, endTime: 2.5, velocity: 0.8 },
       );
     }
 
-    return new Response(JSON.stringify({ notes: validNotes }), {
+    const totalTime = Math.max(...validNotes.map(n => n.endTime));
+
+    const resultSequence: NoteSequence = {
+      notes: validNotes,
+      totalTime,
+      tempos: aiSequence.tempos || [{ time: 0, qpm: 120 }],
+    };
+
+    console.log("Final sequence:", JSON.stringify(resultSequence));
+
+    return new Response(JSON.stringify({ sequence: resultSequence }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

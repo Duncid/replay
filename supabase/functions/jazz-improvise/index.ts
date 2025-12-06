@@ -5,19 +5,54 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// NoteSequence types (matching frontend)
+interface Note {
+  pitch: number;
+  startTime: number;
+  endTime: number;
+  velocity: number;
+}
+
+interface NoteSequence {
+  notes: Note[];
+  totalTime: number;
+  tempos?: Array<{ time: number; qpm: number }>;
+  timeSignatures?: Array<{ time: number; numerator: number; denominator: number }>;
+}
+
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+function midiToNoteName(pitch: number): string {
+  const octave = Math.floor(pitch / 12) - 1;
+  const noteIndex = pitch % 12;
+  return `${NOTE_NAMES[noteIndex]}${octave}`;
+}
+
+function noteNameToMidi(noteName: string): number {
+  const match = noteName.match(/^([A-G]#?)(\d)$/);
+  if (!match) throw new Error(`Invalid note name: ${noteName}`);
+  const [, note, octaveStr] = match;
+  const octave = parseInt(octaveStr);
+  const noteIndex = NOTE_NAMES.indexOf(note);
+  return (octave + 1) * 12 + noteIndex;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userNotes, model = "google/gemini-2.5-flash", metronome } = await req.json();
-    console.log("Received user notes:", userNotes, "Model:", model, "Metronome:", metronome);
+    const { userSequence, model = "google/gemini-2.5-flash", metronome } = await req.json();
+    console.log("Received user sequence:", JSON.stringify(userSequence), "Model:", model, "Metronome:", metronome);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
+
+    // Get tempo from sequence or metronome
+    const qpm = userSequence?.tempos?.[0]?.qpm ?? metronome?.bpm ?? 120;
 
     // Build tempo context for the prompt
     let tempoContext = "";
@@ -35,57 +70,52 @@ TEMPO CONTEXT:
 - Metronome Active: ${metronome.isActive ? "Yes" : "No"}
 - Feel: ${tempoFeel}
 
-Consider the tempo when choosing note durations. At ${metronome.bpm} BPM in ${metronome.timeSignature}:
-- Use shorter durations (0.25, 0.5) for faster passages
-- Use longer durations (1.0, 2.0) for sustained notes
-- Match the rhythmic feel of the time signature
+Consider the tempo when choosing note durations. Match the rhythmic feel.
 `;
     }
 
+    // Convert user sequence to readable format for the AI
+    const userNotesDescription = userSequence?.notes?.map((n: Note) => 
+      `${midiToNoteName(n.pitch)} (${(n.endTime - n.startTime).toFixed(2)}s at ${n.startTime.toFixed(2)}s)`
+    ).join(", ") || "No notes";
+
     const systemPrompt = `You are a jazz improvisation assistant. The user will provide you with a sequence of musical notes they played, and you should respond with a creative jazz improvisation that complements their input.
 
-The user's notes will be in this format:
-[
-  {"note": "C4", "duration": 1.0, "startTime": 0},
-  {"note": "E4", "duration": 0.5, "startTime": 1.0},
-  {"note": "G4", "duration": 0.5, "startTime": 1.0},
-  ...
-]
+The user's notes are provided in NoteSequence format with MIDI pitch numbers (48-84 for C3-C6).
+
+You should respond with a JSON object containing a NoteSequence:
+{
+  "notes": [
+    {"pitch": 64, "startTime": 0, "endTime": 0.5, "velocity": 0.8},
+    {"pitch": 67, "startTime": 0.5, "endTime": 1.0, "velocity": 0.7},
+    ...
+  ],
+  "totalTime": 4.0,
+  "tempos": [{"time": 0, "qpm": ${qpm}}]
+}
 
 Where:
-- "note" is the musical note (e.g., "C4", "C#4", "D4", etc.) ranging from C3 to C6
-- "duration" is in beats (0.25 = sixteenth note, 0.5 = eighth note, 1.0 = quarter note, 2.0 = half note, 4.0 = whole note)
-- "startTime" is the beat position when the note starts (0 = beginning of recording). Notes with the same startTime are played simultaneously (chords).
+- "pitch" is the MIDI note number (48=C3, 60=C4, 72=C5, 84=C6)
+- "startTime" and "endTime" are in seconds
+- "velocity" is 0.0-1.0 (normalized volume/intensity)
+- "totalTime" is the total duration in seconds
 
-You should respond with a JSON array in EXACTLY this format:
-[
-  {"note": "E4", "duration": 0.5, "startTime": 0},
-  {"note": "G4", "duration": 0.5, "startTime": 0.5},
-  {"note": "B4", "duration": 1.0, "startTime": 1.0},
-  {"note": "D5", "duration": 1.0, "startTime": 1.0},
-  ...
-]
 ${tempoContext}
 Guidelines:
 - Create a musically coherent response that complements the user's input
-- Stay in the C3-C6 range
-- Use only these durations: 0.25, 0.5, 1.0, 2.0, 4.0
-- Aim for 4-12 notes in your response (you can include chords by using the same startTime)
-- Consider jazz theory: use chord tones, passing notes, neighbor notes, and harmonies
-- You can create chords by giving multiple notes the same startTime
-- Respond with ONLY the JSON array, no other text or markdown formatting`;
+- Stay in the C3-C6 range (MIDI pitch 48-84)
+- Aim for 4-12 notes in your response (you can include chords by overlapping startTime/endTime)
+- Consider jazz theory: use chord tones, passing notes, neighbor notes
+- Respond with ONLY the JSON object, no other text or markdown`;
 
-    // Prepare request body - only include temperature for legacy models that support it
-    const requestBody: any = {
+    const requestBody: Record<string, unknown> = {
       model,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `User played: ${JSON.stringify(userNotes)}` },
+        { role: "user", content: `User played these notes: ${userNotesDescription}\n\nFull NoteSequence: ${JSON.stringify(userSequence)}` },
       ],
     };
 
-    // Only add temperature for legacy OpenAI models (gpt-4o, gpt-4o-mini)
-    // Newer models (gpt-5, gpt-4.1+) don't support custom temperature
     if (model === "gpt-4o" || model === "gpt-4o-mini") {
       requestBody.temperature = 0.9;
     }
@@ -115,12 +145,6 @@ Guidelines:
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      if (response.status === 503) {
-        return new Response(
-          JSON.stringify({ error: "AI service temporarily unavailable. Please try again in a moment." }),
-          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
 
       throw new Error(`AI gateway error: ${response.status}`);
     }
@@ -129,77 +153,69 @@ Guidelines:
     const aiMessage = data.choices[0].message.content;
     console.log("AI response:", aiMessage);
 
-    // Parse the AI response to extract notes with durations and startTime
-    let aiNotes: Array<{note: string, duration: number, startTime?: number}>;
+    // Parse the AI response
+    let aiSequence: NoteSequence;
     try {
-      // Try to parse as JSON
-      aiNotes = JSON.parse(aiMessage);
+      const jsonMatch = aiMessage.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        aiSequence = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON object found");
+      }
     } catch {
-      // Fallback: extract notes and assign default durations
-      const noteRegex = /[A-G]#?\d/g;
-      const noteMatches = aiMessage.match(noteRegex) || [];
-      aiNotes = noteMatches.map((note: string) => ({ note, duration: 0.5, startTime: 0 }));
+      console.error("Failed to parse AI response, using fallback");
+      // Fallback sequence
+      aiSequence = {
+        notes: [
+          { pitch: 67, startTime: 0, endTime: 0.25, velocity: 0.8 },
+          { pitch: 65, startTime: 0.25, endTime: 0.375, velocity: 0.7 },
+          { pitch: 64, startTime: 0.375, endTime: 0.5, velocity: 0.7 },
+          { pitch: 62, startTime: 0.5, endTime: 1.0, velocity: 0.8 },
+        ],
+        totalTime: 1.0,
+        tempos: [{ time: 0, qpm }],
+      };
     }
 
-    console.log("Parsed AI notes:", aiNotes);
-
-    // Validate notes are in the correct range (C3 to C6) and have valid durations and startTime
-    const validNotes: Array<{note: string, duration: number, startTime: number}> = [];
-    
-    for (let i = 0; i < aiNotes.length; i++) {
-      const item = aiNotes[i];
-      
-      if (!item.note || typeof item.duration !== 'number') {
-        console.log(`Skipping invalid note at index ${i}:`, item);
+    // Validate notes
+    const validNotes: Note[] = [];
+    for (const note of aiSequence.notes || []) {
+      if (typeof note.pitch !== 'number' || note.pitch < 48 || note.pitch > 84) {
+        console.log(`Invalid pitch: ${note.pitch}`);
         continue;
       }
-      
-      const match = item.note.match(/([A-G]#?)(\d)/);
-      if (!match) {
-        console.log(`Invalid note format at index ${i}:`, item.note);
+      if (typeof note.startTime !== 'number' || note.startTime < 0) {
+        console.log(`Invalid startTime: ${note.startTime}`);
         continue;
       }
-      
-      const octave = parseInt(match[2]);
-      if (octave < 3 || octave > 6) {
-        console.log(`Note ${item.note} is outside valid range (C3-C6)`);
+      if (typeof note.endTime !== 'number' || note.endTime <= note.startTime) {
+        console.log(`Invalid endTime: ${note.endTime}`);
         continue;
       }
-      
-      const validDurations = [0.25, 0.5, 1.0, 2.0, 4.0];
-      if (!validDurations.includes(item.duration)) {
-        console.log(`Invalid duration ${item.duration} for note ${item.note}, rounding to nearest valid duration`);
-        // Round to nearest valid duration
-        item.duration = validDurations.reduce((prev, curr) => 
-          Math.abs(curr - item.duration) < Math.abs(prev - item.duration) ? curr : prev
-        );
-      }
-      
-      // Validate startTime (must be non-negative number)
-      const startTime = typeof item.startTime === 'number' && item.startTime >= 0 
-        ? item.startTime 
-        : 0;
-      
-      validNotes.push({
-        note: item.note,
-        duration: item.duration,
-        startTime,
-      });
+      const velocity = typeof note.velocity === 'number' ? Math.max(0, Math.min(1, note.velocity)) : 0.8;
+      validNotes.push({ ...note, velocity });
     }
 
     if (validNotes.length === 0) {
-      // Fallback to a simple jazz response with durations and startTime
       validNotes.push(
-        { note: "G4", duration: 0.5, startTime: 0 },
-        { note: "F4", duration: 0.25, startTime: 0.5 },
-        { note: "E4", duration: 0.25, startTime: 0.75 },
-        { note: "D4", duration: 1.0, startTime: 1.0 }
+        { pitch: 67, startTime: 0, endTime: 0.25, velocity: 0.8 },
+        { pitch: 65, startTime: 0.25, endTime: 0.375, velocity: 0.7 },
+        { pitch: 64, startTime: 0.375, endTime: 0.5, velocity: 0.7 },
+        { pitch: 62, startTime: 0.5, endTime: 1.0, velocity: 0.8 },
       );
     }
 
-    console.log("Final valid notes:", validNotes);
+    const totalTime = Math.max(...validNotes.map(n => n.endTime));
 
-    return new Response(JSON.stringify({ notes: validNotes }), {
+    const resultSequence: NoteSequence = {
+      notes: validNotes,
+      totalTime,
+      tempos: [{ time: 0, qpm }],
+    };
+
+    console.log("Final sequence:", JSON.stringify(resultSequence));
+
+    return new Response(JSON.stringify({ sequence: resultSequence }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

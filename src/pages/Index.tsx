@@ -1,27 +1,26 @@
 import { useState, useRef } from "react";
-import Piano, { PianoHandle, NoteWithDuration } from "@/components/Piano";
+import Piano, { PianoHandle } from "@/components/Piano";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SheetMusic } from "@/components/SheetMusic";
-import { notesToAbc, abcToNotes } from "@/utils/abcConverter";
 import { Button } from "@/components/ui/button";
 import { Trash2, Brain } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { AskButton } from "@/components/AskButton";
 import { Metronome } from "@/components/Metronome";
+import { NoteSequence } from "@/types/noteSequence";
+import { midiToFrequency, midiToNoteName, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 
 interface SessionEntry {
   type: "jam" | "ask";
-  userNotes: NoteWithDuration[];
-  aiNotes: NoteWithDuration[];
-  userAbc: string;
-  aiAbc: string;
+  userSequence: NoteSequence;
+  aiSequence: NoteSequence;
   askPrompt?: string;
 }
 
@@ -45,14 +44,14 @@ const Index = () => {
   const shouldStopAiRef = useRef<boolean>(false);
   const midiPressedKeysRef = useRef<Set<string>>(new Set());
 
-  const MIN_WAIT_TIME_MS = 1000; // Match the progress bar duration
+  const MIN_WAIT_TIME_MS = 1000;
 
   // MIDI note handlers
-  const handleMidiNoteOn = (noteKey: string, frequency: number) => {
+  const handleMidiNoteOn = (noteKey: string, frequency: number, velocity: number) => {
     if ((appState !== "idle" && appState !== "user_playing") || midiPressedKeysRef.current.has(noteKey)) return;
     
     midiPressedKeysRef.current.add(noteKey);
-    pianoRef.current?.handleKeyPress(noteKey, frequency);
+    pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
   };
 
   const handleMidiNoteOff = (noteKey: string, frequency: number) => {
@@ -62,17 +61,13 @@ const Index = () => {
     pianoRef.current?.handleKeyRelease(noteKey, frequency);
   };
 
-  // Initialize MIDI hook - wrap callbacks to match expected signature
   const { connectedDevice, error: midiError, isSupported: isMidiSupported, requestAccess, disconnect } = useMidiInput(
-    (noteKey: string, frequency: number, velocity: number) => handleMidiNoteOn(noteKey, frequency),
+    handleMidiNoteOn,
     handleMidiNoteOff
   );
 
   const stopAiPlayback = () => {
-    // Signal AI playback to stop
     shouldStopAiRef.current = true;
-
-    // Clear any active AI playback
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
       aiPlaybackTimeoutRef.current = null;
@@ -81,86 +76,53 @@ const Index = () => {
     setAppState("idle");
   };
 
-  const playNotes = async (notes: NoteWithDuration[], requestId?: string, isReplay: boolean = false) => {
-    // Check if request is still valid (skip for replay)
+  const playSequence = async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
     if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
       console.log("Request invalidated before playback started");
       return;
     }
 
-    console.log(`[Playback] Starting playback of ${notes.length} notes (isReplay: ${isReplay})`);
-    notes.forEach((n, i) => console.log(`  Note ${i}: ${n.note}, duration: ${n.duration}, startTime: ${n.startTime}`));
+    console.log(`[Playback] Starting playback of ${sequence.notes.length} notes`);
 
     shouldStopAiRef.current = false;
     setAppState("ai_playing");
 
-    // Map note names to frequencies (same logic as Piano component)
-    const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    sequence.notes.forEach((note) => {
+      const noteKey = midiToNoteName(note.pitch);
+      const frequency = midiToFrequency(note.pitch);
+      const duration = note.endTime - note.startTime;
 
-    // Calculate the maximum end time for all notes
-    const maxEndTime = Math.max(...notes.map(n => (n.startTime || 0) + n.duration));
-    
-    // Group notes by their visual end time to manage active keys display
-    const noteEndTimes: Array<{ time: number; note: string }> = [];
-
-    // Schedule all notes based on their start times
-    notes.forEach((noteWithDuration) => {
-      // Parse note (e.g., "C4" -> note: "C", octave: 4)
-      const noteName = noteWithDuration.note.slice(0, -1);
-      const octave = parseInt(noteWithDuration.note.slice(-1));
-
-      // Calculate frequency
-      const noteIndex = noteNames.indexOf(noteName);
-      const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - 9);
-      const frequency = 440 * Math.pow(2, semitonesFromA4 / 12);
-
-      // Convert beats to seconds (beat = 0.5s)
-      const startTimeSeconds = (noteWithDuration.startTime || 0) * 0.5;
-      const noteDurationSeconds = noteWithDuration.duration * 0.5;
-      const endTimeSeconds = startTimeSeconds + noteDurationSeconds;
-
-      console.log(`[Playback] Scheduling ${noteWithDuration.note}, start: ${startTimeSeconds}s, duration: ${noteDurationSeconds}s`);
-
-      // Schedule note start
       setTimeout(() => {
         if (!shouldStopAiRef.current && pianoRef.current) {
-          pianoRef.current.playNote(frequency, noteDurationSeconds);
-          setActiveKeys(prev => new Set([...prev, noteWithDuration.note]));
+          pianoRef.current.playNote(frequency, duration);
+          setActiveKeys(prev => new Set([...prev, noteKey]));
         }
-      }, startTimeSeconds * 1000);
+      }, note.startTime * 1000);
 
-      // Schedule note end (visual)
       setTimeout(() => {
         if (!shouldStopAiRef.current) {
           setActiveKeys(prev => {
             const newSet = new Set(prev);
-            newSet.delete(noteWithDuration.note);
+            newSet.delete(noteKey);
             return newSet;
           });
         }
-      }, endTimeSeconds * 1000);
+      }, note.endTime * 1000);
     });
 
-    // Schedule return to idle after all notes finish
-    const totalDuration = maxEndTime * 0.5 * 1000;
     aiPlaybackTimeoutRef.current = setTimeout(() => {
       if (!shouldStopAiRef.current) {
         setAppState("idle");
         setActiveKeys(new Set());
       }
-    }, totalDuration);
+    }, sequence.totalTime * 1000);
   };
 
   const handleUserPlayStart = () => {
     console.log("User started playing, current state:", appState);
-
-    // Invalidate any pending AI request by clearing the request ID
     currentRequestIdRef.current = null;
-
-    // Hide progress bar
     pianoRef.current?.hideProgress();
 
-    // Stop any AI playback
     if (appState === "ai_playing") {
       console.log("Interrupting AI playback");
       stopAiPlayback();
@@ -169,50 +131,27 @@ const Index = () => {
     setAppState("user_playing");
   };
 
-  const handleUserPlay = async (userNotes: NoteWithDuration[]) => {
-    // Generate unique request ID
+  const handleUserPlay = async (userSequence: NoteSequence) => {
     const requestId = crypto.randomUUID();
     currentRequestIdRef.current = requestId;
     requestStartTimeRef.current = Date.now();
 
     console.log("User finished playing, request ID:", requestId);
 
-    // If AI is disabled, append to current session or create new one
     if (!isEnabled) {
       setSessionHistory((prev) => {
-        // If there's an existing session, append to it
         if (prev.length > 0) {
           const lastSession = prev[prev.length - 1];
-          // Only append if last session has no AI notes (meaning it's a user-only session)
-          if (lastSession.aiNotes.length === 0) {
-            const updatedUserNotes = [...lastSession.userNotes, ...userNotes];
-            const updatedUserAbc = notesToAbc(updatedUserNotes, "User Input");
-            
-            return [
-              ...prev.slice(0, -1),
-              {
-                type: "jam",
-                userNotes: updatedUserNotes,
-                aiNotes: [],
-                userAbc: updatedUserAbc,
-                aiAbc: "",
-              },
-            ];
+          if (lastSession.aiSequence.notes.length === 0) {
+            const updatedUserSequence: NoteSequence = {
+              ...lastSession.userSequence,
+              notes: [...lastSession.userSequence.notes, ...userSequence.notes],
+              totalTime: Math.max(lastSession.userSequence.totalTime, userSequence.totalTime),
+            };
+            return [...prev.slice(0, -1), { ...lastSession, userSequence: updatedUserSequence }];
           }
         }
-        
-        // Create new session
-        const userAbc = notesToAbc(userNotes, "User Input");
-        return [
-          ...prev,
-          {
-            type: "jam",
-            userNotes,
-            aiNotes: [],
-            userAbc,
-            aiAbc: "",
-          },
-        ];
+        return [...prev, { type: "jam", userSequence, aiSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature) }];
       });
       setAppState("idle");
       return;
@@ -223,7 +162,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase.functions.invoke("jazz-improvise", {
         body: { 
-          userNotes, 
+          userSequence,
           model: selectedModel,
           metronome: {
             bpm: metronomeBpm,
@@ -233,10 +172,9 @@ const Index = () => {
         },
       });
 
-      // Check 1: Is this request still valid?
       if (currentRequestIdRef.current !== requestId) {
         console.log("Request invalidated (ID mismatch), discarding response");
-        return; // Don't change state - user is already doing something else
+        return;
       }
 
       if (error) throw error;
@@ -244,8 +182,7 @@ const Index = () => {
 
       console.log("AI response received for request:", requestId);
 
-      if (data.notes && data.notes.length > 0) {
-        // Check 2: Enforce minimum wait time
+      if (data.sequence && data.sequence.notes && data.sequence.notes.length > 0) {
         const elapsed = Date.now() - requestStartTimeRef.current;
         const remainingWait = MIN_WAIT_TIME_MS - elapsed;
 
@@ -254,29 +191,16 @@ const Index = () => {
           await new Promise((resolve) => setTimeout(resolve, remainingWait));
         }
 
-        // Check 3: Is this request STILL valid after waiting?
         if (currentRequestIdRef.current !== requestId) {
           console.log("Request invalidated during wait, discarding response");
           return;
         }
 
-        // Convert to ABC and save to history
-        const userAbc = notesToAbc(userNotes, "User Input");
-        const aiAbc = notesToAbc(data.notes, "AI Response");
-        setSessionHistory((prev) => [
-          ...prev,
-          {
-            type: "jam",
-            userNotes,
-            aiNotes: data.notes,
-            userAbc,
-            aiAbc,
-          },
-        ]);
+        const aiSequence = data.sequence as NoteSequence;
+        setSessionHistory((prev) => [...prev, { type: "jam", userSequence, aiSequence }]);
 
-        // Hide progress and play
         pianoRef.current?.hideProgress();
-        await playNotes(data.notes, requestId);
+        await playSequence(aiSequence, requestId);
       } else {
         console.log("No notes in response");
         if (currentRequestIdRef.current === requestId) {
@@ -287,7 +211,6 @@ const Index = () => {
     } catch (error) {
       console.error("Error getting AI response:", error);
 
-      // Only show error if this request is still valid
       if (currentRequestIdRef.current === requestId) {
         toast({
           title: "Error",
@@ -300,38 +223,22 @@ const Index = () => {
     }
   };
 
-  const handleReplayNotes = async (notes: NoteWithDuration[]) => {
-    console.log(`[Replay] Starting replay of ${notes.length} notes`);
-    
-    // Stop any ongoing activity
+  const handleReplaySequence = async (sequence: NoteSequence) => {
+    console.log(`[Replay] Starting replay of ${sequence.notes.length} notes`);
     stopAiPlayback();
-    
-    // Ensure AudioContext is ready BEFORE any playback
     await pianoRef.current?.ensureAudioReady();
-    
-    // Small delay to let state settle and avoid race conditions
     await new Promise(resolve => setTimeout(resolve, 50));
-    
-    await playNotes(notes, undefined, true);
-    
-    console.log(`[Replay] Replay completed`);
+    await playSequence(sequence, undefined, true);
   };
 
   const clearHistory = () => {
     setSessionHistory([]);
-    toast({
-      title: "History cleared",
-      description: "Session history has been cleared",
-    });
+    toast({ title: "History cleared", description: "Session history has been cleared" });
   };
 
   const handleAskSubmit = async (prompt: string) => {
-    // Stop any ongoing activity
     stopAiPlayback();
-    
-    // Ensure AudioContext is ready
     await pianoRef.current?.ensureAudioReady();
-    
     setAppState("waiting_for_ai");
 
     try {
@@ -342,28 +249,21 @@ const Index = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (data.notes && data.notes.length > 0) {
-        // Save to history
-        const aiAbc = notesToAbc(data.notes, `AI played: "${prompt}"`);
+      if (data.sequence && data.sequence.notes && data.sequence.notes.length > 0) {
+        const aiSequence = data.sequence as NoteSequence;
         setSessionHistory((prev) => [
           ...prev,
           {
             type: "ask",
-            userNotes: [],
-            aiNotes: data.notes,
-            userAbc: "",
-            aiAbc,
+            userSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature),
+            aiSequence,
             askPrompt: prompt,
           },
         ]);
 
-        // Play the notes
-        await playNotes(data.notes, undefined, true);
+        await playSequence(aiSequence, undefined, true);
 
-        toast({
-          title: "AI composed something!",
-          description: `Playing: "${prompt}"`,
-        });
+        toast({ title: "AI composed something!", description: `Playing: "${prompt}"` });
       } else {
         setAppState("idle");
       }
@@ -396,6 +296,8 @@ const Index = () => {
         activeKeys={activeKeys}
         isAiEnabled={isEnabled}
         allowInput={appState === "idle" || appState === "user_playing"}
+        bpm={metronomeBpm}
+        timeSignature={metronomeTimeSignature}
       />
 
       <div className="w-full flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-card rounded-lg border border-border">
@@ -463,24 +365,24 @@ const Index = () => {
               {entry.type === "jam" ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <SheetMusic
-                    abc={entry.userAbc}
+                    sequence={entry.userSequence}
                     label="You played:"
                     isUserNotes={true}
-                    onReplay={() => handleReplayNotes(entry.userNotes)}
+                    onReplay={() => handleReplaySequence(entry.userSequence)}
                   />
                   <SheetMusic
-                    abc={entry.aiAbc}
+                    sequence={entry.aiSequence}
                     label="AI responded:"
                     isUserNotes={false}
-                    onReplay={() => handleReplayNotes(entry.aiNotes)}
+                    onReplay={() => handleReplaySequence(entry.aiSequence)}
                   />
                 </div>
               ) : (
                 <SheetMusic
-                  abc={entry.aiAbc}
+                  sequence={entry.aiSequence}
                   label={`AI played: "${entry.askPrompt}"`}
                   isUserNotes={false}
-                  onReplay={() => handleReplayNotes(entry.aiNotes)}
+                  onReplay={() => handleReplaySequence(entry.aiSequence)}
                 />
               )}
               {index < sessionHistory.length - 1 && <div className="border-t border-border mt-4" />}

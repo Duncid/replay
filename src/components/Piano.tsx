@@ -1,165 +1,107 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { PianoKey } from "./PianoKey";
+import { NoteSequence, Note, DEFAULT_QPM } from "@/types/noteSequence";
+import { noteNameToMidi, midiToFrequency, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
 
-interface Note {
+interface PianoNote {
   note: string;
   octave: number;
   frequency: number;
   isBlack: boolean;
 }
 
-export interface NoteWithDuration {
-  note: string;
-  duration: number; // in beats: 0.25 = quarter, 0.5 = half, 1.0 = full
-  startTime: number; // start time in beats from recording start
-}
-
 interface PianoProps {
   onUserPlayStart: () => void;
-  onUserPlay: (notes: NoteWithDuration[]) => void;
+  onUserPlay: (sequence: NoteSequence) => void;
   activeKeys: Set<string>;
   isAiEnabled: boolean;
   allowInput: boolean;
+  bpm?: number;
+  timeSignature?: string;
 }
 
 export interface PianoHandle {
   playNote: (frequency: number, duration?: number) => void;
   hideProgress: () => void;
   ensureAudioReady: () => Promise<void>;
-  handleKeyPress: (noteKey: string, frequency: number) => void;
+  handleKeyPress: (noteKey: string, frequency: number, velocity?: number) => void;
   handleKeyRelease: (noteKey: string, frequency: number) => void;
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
-  ({ onUserPlayStart, onUserPlay, activeKeys, isAiEnabled, allowInput }, ref) => {
+  ({ onUserPlayStart, onUserPlay, activeKeys, isAiEnabled, allowInput, bpm = 120, timeSignature = "4/4" }, ref) => {
     const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
     const [showProgress, setShowProgress] = useState(false);
     const [progress, setProgress] = useState(100);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const recordingRef = useRef<NoteWithDuration[]>([]);
-    const notePressTimesRef = useRef<Map<string, number>>(new Map());
+    const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
+    const notePressDataRef = useRef<Map<string, { startTime: number; velocity: number }>>(new Map());
     const activeOscillatorsRef = useRef<Map<string, { oscillator: OscillatorNode; gainNode: GainNode }>>(new Map());
     const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const pressedKeysRef = useRef<Set<string>>(new Set());
-    const midiPressedKeysRef = useRef<Set<string>>(new Set());
     const hasNotifiedPlayStartRef = useRef(false);
     const recordingStartTimeRef = useRef<number | null>(null);
 
     // AZERTY keyboard mapping - C4 centered on 'e'
     const keyboardMap: { [key: string]: string } = {
-      // White keys (main row)
-      a: "A3",
-      z: "B3",
-      e: "C4",
-      r: "D4",
-      t: "E4",
-      y: "F4",
-      u: "G4",
-      i: "A4",
-      o: "B4",
-      p: "C5",
-      q: "D5",
-      s: "E5",
-      d: "F5",
-      f: "G5",
-      g: "A5",
-      h: "B5",
-      j: "C6",
-
-      // Black keys (number row) - positioned above the gaps between white keys
-      "&": "A#3",
-      "1": "A#3", // Between A3-B3 (above 'a'/'z' gap)
-      "'": "C#4",
-      "4": "C#4", // Between C4-D4 (above 'e'/'r' gap)
-      "(": "D#4",
-      "5": "D#4", // Between D4-E4 (above 'r'/'t' gap)
-      è: "F#4",
-      "7": "F#4", // Between F4-G4 (above 'y'/'u' gap)
-      "!": "G#4",
-      _: "G#4",
-      "8": "G#4", // Between G4-A4 (above 'u'/'i' gap)
-      ç: "A#4",
-      "9": "A#4", // Between A4-B4 (above 'i'/'o' gap)
-      à: "C#5",
-      "0": "C#5", // Between C5-D5 (above 'p'/'q' gap)
-      '"': "D#5",
-      "2": "D#5", // Between D5-E5
-      "°": "F#5",
-      ")": "F#5", // Between F5-G5
+      a: "A3", z: "B3", e: "C4", r: "D4", t: "E4", y: "F4", u: "G4",
+      i: "A4", o: "B4", p: "C5", q: "D5", s: "E5", d: "F5", f: "G5",
+      g: "A5", h: "B5", j: "C6",
+      "&": "A#3", "1": "A#3", "'": "C#4", "4": "C#4", "(": "D#4", "5": "D#4",
+      è: "F#4", "7": "F#4", "!": "G#4", _: "G#4", "8": "G#4",
+      ç: "A#4", "9": "A#4", à: "C#5", "0": "C#5", '"': "D#5", "2": "D#5",
+      "°": "F#5", ")": "F#5",
     };
 
-    // 37 keys: C3 to C6 (3 octaves + 1 key)
-    const notes: Note[] = [];
+    // 37 keys: C3 to C6
+    const notes: PianoNote[] = [];
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-    // Generate 37 keys starting from C3
     for (let i = 0; i < 37; i++) {
       const octave = Math.floor(i / 12) + 3;
       const noteIndex = i % 12;
       const noteName = noteNames[noteIndex];
       const isBlack = noteName.includes("#");
-
-      // Calculate frequency: f = 440 * 2^((n-49)/12) where A4 = 440Hz
       const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - 9);
       const frequency = 440 * Math.pow(2, semitonesFromA4 / 12);
 
-      notes.push({
-        note: noteName,
-        octave,
-        frequency,
-        isBlack,
-      });
+      notes.push({ note: noteName, octave, frequency, isBlack });
     }
 
     useEffect(() => {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-      // Keyboard event handlers
       const handleKeyDown = (e: KeyboardEvent) => {
         if (!allowInput) return;
-
-        // Ignore keyboard input when user is typing in an input field
         const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-          return;
-        }
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
 
         const key = e.key.toLowerCase();
         const noteKey = keyboardMap[key];
 
         if (noteKey && !pressedKeysRef.current.has(key)) {
           pressedKeysRef.current.add(key);
-
-          // Find the note in our notes array
           const note = notes.find((n) => `${n.note}${n.octave}` === noteKey);
           if (note) {
-            const fullNoteKey = `${note.note}${note.octave}`;
-            handleKeyPress(fullNoteKey, note.frequency);
+            handleKeyPress(`${note.note}${note.octave}`, note.frequency, 0.8);
           }
         }
       };
 
       const handleKeyUp = (e: KeyboardEvent) => {
         if (!allowInput) return;
-
-        // Ignore keyboard input when user is typing in an input field
         const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-          return;
-        }
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
 
         const key = e.key.toLowerCase();
         const noteKey = keyboardMap[key];
 
         if (noteKey && pressedKeysRef.current.has(key)) {
           pressedKeysRef.current.delete(key);
-
-          // Find the note in our notes array
           const note = notes.find((n) => `${n.note}${n.octave}` === noteKey);
           if (note) {
-            const fullNoteKey = `${note.note}${note.octave}`;
-            handleKeyRelease(fullNoteKey, note.frequency);
+            handleKeyRelease(`${note.note}${note.octave}`, note.frequency);
           }
         }
       };
@@ -168,9 +110,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       window.addEventListener("keyup", handleKeyUp);
 
       return () => {
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
-        }
+        if (audioContextRef.current) audioContextRef.current.close();
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
       };
@@ -181,9 +121,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       hideProgress: () => {
         setShowProgress(false);
         setProgress(100);
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
-        }
+        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       },
       ensureAudioReady: async () => {
         if (audioContextRef.current?.state === 'suspended') {
@@ -196,30 +134,22 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
     const playNote = async (frequency: number, duration: number = 0.3) => {
       if (!audioContextRef.current) return;
-
       const audioContext = audioContextRef.current;
-      
-      // Ensure context is running
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-      
+      if (audioContext.state === 'suspended') await audioContext.resume();
+
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-
       oscillator.frequency.value = frequency;
       oscillator.type = "sine";
 
-      // ADSR envelope for more realistic piano sound
       const now = audioContext.currentTime;
       gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Attack
-      gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05); // Decay
-      gainNode.gain.setValueAtTime(0.2, now + duration - 0.1); // Sustain
-      gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release
+      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+      gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
+      gainNode.gain.setValueAtTime(0.2, now + duration - 0.1);
+      gainNode.gain.linearRampToValueAtTime(0, now + duration);
 
       oscillator.start(now);
       oscillator.stop(now + duration);
@@ -231,22 +161,17 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       const audioContext = audioContextRef.current;
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-
       oscillator.frequency.value = frequency;
       oscillator.type = "sine";
 
-      // Quick attack envelope
       const now = audioContext.currentTime;
       gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Attack
-      gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05); // Decay to sustain
+      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+      gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
 
       oscillator.start(now);
-
-      // Store the oscillator and gain node
       activeOscillatorsRef.current.set(noteKey, { oscillator, gainNode });
     };
 
@@ -256,77 +181,58 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
       const { oscillator, gainNode } = nodes;
       const now = audioContextRef.current.currentTime;
-
-      // Release envelope
       gainNode.gain.cancelScheduledValues(now);
       gainNode.gain.setValueAtTime(gainNode.gain.value, now);
       gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
-
       oscillator.stop(now + 0.1);
       activeOscillatorsRef.current.delete(noteKey);
     };
 
-    const handleKeyPress = (noteKey: string, frequency: number) => {
+    const handleKeyPress = (noteKey: string, frequency: number, velocity: number = 0.8) => {
       if (!allowInput) return;
 
-      // Notify parent that user started playing (only once per recording session)
       if (!hasNotifiedPlayStartRef.current) {
         onUserPlayStart();
         hasNotifiedPlayStartRef.current = true;
         recordingStartTimeRef.current = Date.now();
+        // Reset recording with current tempo
+        recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
       }
 
-      // Start playing the note immediately
       startNote(noteKey, frequency);
 
-      // Record press time
-      notePressTimesRef.current.set(noteKey, Date.now());
+      // Record press data in seconds from recording start
+      const now = Date.now();
+      const startTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
+      notePressDataRef.current.set(noteKey, { startTime: startTimeSeconds, velocity });
 
-      const newKeys = new Set(userPressedKeys);
-      newKeys.add(noteKey);
-      setUserPressedKeys(newKeys);
+      setUserPressedKeys(prev => new Set([...prev, noteKey]));
 
-      // Clear existing timeouts and intervals
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current);
-      }
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-
-      // Hide progress bar
+      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       setShowProgress(false);
       setProgress(100);
 
-      // Only set timeout for AI mode
       if (isAiEnabled) {
-        // After 1 second of silence, trigger AI with progress bar
         recordingTimeoutRef.current = setTimeout(() => {
-          if (recordingRef.current.length > 0) {
+          if (recordingRef.current.notes.length > 0) {
             setShowProgress(true);
             setProgress(100);
 
-            // Trigger AI
-            onUserPlay([...recordingRef.current]);
-            recordingRef.current = [];
+            onUserPlay({ ...recordingRef.current });
+            recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
             hasNotifiedPlayStartRef.current = false;
             recordingStartTimeRef.current = null;
 
-            // Start countdown animation - fills as we wait for AI
             const startTime = Date.now();
-            const duration = 1000; // 1 second countdown
-
             progressIntervalRef.current = setInterval(() => {
               const elapsed = Date.now() - startTime;
-              const newProgress = Math.max(0, 100 - (elapsed / duration) * 100);
+              const newProgress = Math.max(0, 100 - (elapsed / 1000) * 100);
               setProgress(newProgress);
-
-              if (newProgress === 0) {
-                if (progressIntervalRef.current) {
-                  clearInterval(progressIntervalRef.current);
-                }
+              if (newProgress === 0 && progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
               }
-            }, 16); // ~60fps
+            }, 16);
           }
         }, 1000);
       }
@@ -335,74 +241,56 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const handleKeyRelease = (noteKey: string, frequency: number) => {
       if (!allowInput) return;
 
-      // Stop the note
       stopNote(noteKey);
 
-      const pressTime = notePressTimesRef.current.get(noteKey);
-      if (!pressTime) return;
+      const pressData = notePressDataRef.current.get(noteKey);
+      if (!pressData) return;
 
-      const duration = Date.now() - pressTime;
-      // Convert milliseconds to beats (quarter note = 500ms base)
-      const durationInBeats = duration / 500;
+      const now = Date.now();
+      const endTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
       
-      // Round to musical note durations without capping
-      let roundedDuration: number;
-      if (durationInBeats >= 3.0) {
-        roundedDuration = 4.0;      // Whole note (1500ms+)
-      } else if (durationInBeats >= 1.5) {
-        roundedDuration = 2.0;      // Half note (750ms+)
-      } else if (durationInBeats >= 0.75) {
-        roundedDuration = 1.0;      // Quarter note (375ms+)
-      } else if (durationInBeats >= 0.375) {
-        roundedDuration = 0.5;      // Eighth note (187.5ms+)
-      } else {
-        roundedDuration = 0.25;     // Sixteenth note
-      }
-
-      // Calculate start time relative to recording start
-      const startTimeInBeats = recordingStartTimeRef.current 
-        ? (pressTime - recordingStartTimeRef.current) / 500
-        : 0;
-
-      const noteWithDuration = { 
-        note: noteKey, 
-        duration: roundedDuration,
-        startTime: Math.max(0, startTimeInBeats),
+      // Create note in NoteSequence format
+      const pitch = noteNameToMidi(noteKey);
+      const note: Note = {
+        pitch,
+        startTime: pressData.startTime,
+        endTime: endTimeSeconds,
+        velocity: pressData.velocity,
       };
-      
-      // If AI is disabled, send note immediately
-      if (!isAiEnabled) {
-        onUserPlay([noteWithDuration]);
-      } else {
-        // If AI is enabled, accumulate notes
-        recordingRef.current.push(noteWithDuration);
-      }
-      
-      notePressTimesRef.current.delete(noteKey);
 
-      const newKeys = new Set(userPressedKeys);
-      newKeys.delete(noteKey);
-      setUserPressedKeys(newKeys);
+      if (!isAiEnabled) {
+        // Send single note immediately
+        const singleNoteSequence = createEmptyNoteSequence(bpm, timeSignature);
+        singleNoteSequence.notes.push(note);
+        singleNoteSequence.totalTime = note.endTime - note.startTime;
+        onUserPlay(singleNoteSequence);
+      } else {
+        // Accumulate notes
+        recordingRef.current.notes.push(note);
+        recordingRef.current.totalTime = Math.max(recordingRef.current.totalTime, endTimeSeconds);
+      }
+
+      notePressDataRef.current.delete(noteKey);
+      setUserPressedKeys(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(noteKey);
+        return newSet;
+      });
     };
 
-    // Separate white and black keys
     const whiteKeys = notes.filter((n) => !n.isBlack);
     const blackKeys = notes.filter((n) => n.isBlack);
 
-    // Calculate grid column for each black key (positioned between white keys)
-    const getBlackKeyColumn = (blackNote: Note) => {
+    const getBlackKeyColumn = (blackNote: PianoNote) => {
       const noteIndex = notes.findIndex((n) => `${n.note}${n.octave}` === `${blackNote.note}${blackNote.octave}`);
-      const whiteKeysBefore = notes.slice(0, noteIndex).filter((n) => !n.isBlack).length;
-      return whiteKeysBefore; // Position between this white key and the next
+      return notes.slice(0, noteIndex).filter((n) => !n.isBlack).length;
     };
 
     return (
       <div className="relative w-full select-none">
-        {/* Piano container */}
         <div className="relative h-[25vw] min-h-64 max-h-[350px] bg-card shadow-2xl">
-          {/* White keys grid - 22 full columns */}
           <div className="absolute inset-0 grid grid-cols-22 gap-px">
-            {whiteKeys.map((note, index) => {
+            {whiteKeys.map((note) => {
               const noteKey = `${note.note}${note.octave}`;
               const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
               const isAiActive = activeKeys.has(noteKey) && !allowInput;
@@ -423,7 +311,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
             })}
           </div>
 
-          {/* Black keys layer - 44 half-columns (0.5fr each) for positioning */}
           <div className="absolute inset-0 grid grid-cols-44 gap-2 pointer-events-none">
             {blackKeys.map((note) => {
               const noteKey = `${note.note}${note.octave}`;

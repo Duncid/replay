@@ -2,19 +2,24 @@ import { useEffect, useRef } from "react";
 import abcjs from "abcjs";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
+import { NoteSequence } from "@/types/noteSequence";
+import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
 
 interface SheetMusicProps {
-  abc: string;
+  sequence: NoteSequence;
   onReplay?: () => void;
   label?: string;
   isUserNotes?: boolean;
 }
 
-export const SheetMusic = ({ abc, onReplay, label, isUserNotes = false }: SheetMusicProps) => {
+export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false }: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!abc || !renderDivRef.current) return;
+    if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
+
+    // Convert NoteSequence to ABC notation
+    const abc = noteSequenceToAbc(sequence, label || (isUserNotes ? "You played" : "AI responded"));
 
     // Clear previous render
     renderDivRef.current.innerHTML = "";
@@ -26,9 +31,9 @@ export const SheetMusic = ({ abc, onReplay, label, isUserNotes = false }: SheetM
       scale: 0.8,
       add_classes: true,
     });
-  }, [abc]);
+  }, [sequence, label, isUserNotes]);
 
-  if (!abc) return null;
+  if (!sequence || sequence.notes.length === 0) return null;
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
