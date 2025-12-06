@@ -65,6 +65,7 @@ const Index = () => {
   const currentRequestIdRef = useRef<string | null>(null);
   const requestStartTimeRef = useRef<number>(0);
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const noteTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const shouldStopAiRef = useRef<boolean>(false);
   const midiPressedKeysRef = useRef<Set<string>>(new Set());
 
@@ -92,6 +93,11 @@ const Index = () => {
 
   const stopAiPlayback = () => {
     shouldStopAiRef.current = true;
+    
+    // Clear ALL scheduled timeouts
+    noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    noteTimeoutsRef.current = [];
+    
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
       aiPlaybackTimeoutRef.current = null;
@@ -125,13 +131,15 @@ const Index = () => {
 
     console.log(`[Playback] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`);
 
-    // Clear any previous playback state
-    shouldStopAiRef.current = true; // Stop any ongoing playback first
+    // Clear ALL previous playback state including note timeouts
+    shouldStopAiRef.current = true;
+    noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    noteTimeoutsRef.current = [];
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
       aiPlaybackTimeoutRef.current = null;
     }
-    setActiveKeys(new Set()); // Clear all active keys before starting
+    setActiveKeys(new Set());
     
     // Small delay to ensure previous state is cleared
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -144,14 +152,15 @@ const Index = () => {
       const frequency = midiToFrequency(note.pitch);
       const duration = note.endTime - note.startTime;
 
-      setTimeout(() => {
+      const startTimeout = setTimeout(() => {
         if (!shouldStopAiRef.current && pianoRef.current) {
           pianoRef.current.playNote(frequency, duration);
           setActiveKeys(prev => new Set([...prev, noteKey]));
         }
       }, note.startTime * 1000);
+      noteTimeoutsRef.current.push(startTimeout);
 
-      setTimeout(() => {
+      const endTimeout = setTimeout(() => {
         if (!shouldStopAiRef.current) {
           setActiveKeys(prev => {
             const newSet = new Set(prev);
@@ -160,12 +169,14 @@ const Index = () => {
           });
         }
       }, note.endTime * 1000);
+      noteTimeoutsRef.current.push(endTimeout);
     });
 
     aiPlaybackTimeoutRef.current = setTimeout(() => {
       if (!shouldStopAiRef.current) {
         setAppState("idle");
         setActiveKeys(new Set());
+        noteTimeoutsRef.current = [];
       }
     }, normalizedSequence.totalTime * 1000);
   };
