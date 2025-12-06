@@ -144,12 +144,21 @@ const Index = () => {
 
   const handleUserPlayStart = () => {
     console.log("User started playing, current state:", appState);
+    
+    // Invalidate any pending AI request
+    const hadPendingRequest = currentRequestIdRef.current !== null;
     currentRequestIdRef.current = null;
     pianoRef.current?.hideProgress();
 
     if (appState === "ai_playing") {
       console.log("Interrupting AI playback");
       stopAiPlayback();
+    }
+
+    // If we were waiting for AI, restore the last recording to continue it
+    if (appState === "waiting_for_ai" && hadPendingRequest) {
+      console.log("Interrupted waiting_for_ai, restoring last recording");
+      pianoRef.current?.restoreLastRecording();
     }
 
     setAppState("user_playing");
@@ -196,6 +205,12 @@ const Index = () => {
           metronomeBpm,
           metronomeTimeSignature
         );
+
+        // Check if request was invalidated during Magenta generation
+        if (currentRequestIdRef.current !== requestId) {
+          console.log("Request invalidated during Magenta generation, discarding");
+          return;
+        }
 
         if (!aiSequence) {
           throw new Error("Magenta failed to generate a response");
@@ -361,7 +376,7 @@ const Index = () => {
         onUserPlay={handleUserPlay}
         activeKeys={activeKeys}
         isAiEnabled={isEnabled}
-        allowInput={appState === "idle" || appState === "user_playing"}
+        allowInput={appState === "idle" || appState === "user_playing" || appState === "waiting_for_ai"}
         bpm={metronomeBpm}
         timeSignature={metronomeTimeSignature}
       />
