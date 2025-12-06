@@ -4,16 +4,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
-import { Trash2, Brain } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2 } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { AskButton } from "@/components/AskButton";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence } from "@/types/noteSequence";
 import { midiToFrequency, midiToNoteName, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
+import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
+
+const AI_MODELS = {
+  llm: [
+    { value: "google/gemini-2.5-flash", label: "Gemini Flash" },
+    { value: "google/gemini-2.5-pro", label: "Gemini Pro" },
+    { value: "openai/gpt-5", label: "GPT-5" },
+  ],
+  magenta: [
+    { value: "magenta/music-rnn", label: "MusicRNN", description: "Jazz improvisation" },
+    { value: "magenta/music-vae", label: "MusicVAE", description: "Variation sampling" },
+  ],
+} as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 
@@ -37,6 +60,7 @@ const Index = () => {
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
   
   const { toast } = useToast();
+  const magenta = useMagenta();
   const pianoRef = useRef<PianoHandle>(null);
   const currentRequestIdRef = useRef<string | null>(null);
   const requestStartTimeRef = useRef<number>(0);
@@ -160,29 +184,59 @@ const Index = () => {
     setAppState("waiting_for_ai");
 
     try {
-      const { data, error } = await supabase.functions.invoke("jazz-improvise", {
-        body: { 
+      let aiSequence: NoteSequence | null = null;
+
+      // Check if using Magenta (client-side) or LLM (server-side)
+      if (magenta.isMagentaModel(selectedModel)) {
+        console.log(`[AI Mode] Using Magenta model: ${selectedModel}`);
+        
+        aiSequence = await magenta.continueSequence(
           userSequence,
-          model: selectedModel,
-          metronome: {
-            bpm: metronomeBpm,
-            timeSignature: metronomeTimeSignature,
-            isActive: metronomeIsPlaying,
+          selectedModel as MagentaModelType,
+          metronomeBpm,
+          metronomeTimeSignature
+        );
+
+        if (!aiSequence) {
+          throw new Error("Magenta failed to generate a response");
+        }
+      } else {
+        // Use LLM via edge function
+        console.log(`[AI Mode] Using LLM model: ${selectedModel}`);
+        
+        const { data, error } = await supabase.functions.invoke("jazz-improvise", {
+          body: { 
+            userSequence,
+            model: selectedModel,
+            metronome: {
+              bpm: metronomeBpm,
+              timeSignature: metronomeTimeSignature,
+              isActive: metronomeIsPlaying,
+            },
           },
-        },
-      });
+        });
+
+        if (currentRequestIdRef.current !== requestId) {
+          console.log("Request invalidated (ID mismatch), discarding response");
+          return;
+        }
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (data.sequence && data.sequence.notes && data.sequence.notes.length > 0) {
+          aiSequence = data.sequence as NoteSequence;
+        }
+      }
 
       if (currentRequestIdRef.current !== requestId) {
         console.log("Request invalidated (ID mismatch), discarding response");
         return;
       }
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
       console.log("AI response received for request:", requestId);
 
-      if (data.sequence && data.sequence.notes && data.sequence.notes.length > 0) {
+      if (aiSequence && aiSequence.notes && aiSequence.notes.length > 0) {
         const elapsed = Date.now() - requestStartTimeRef.current;
         const remainingWait = MIN_WAIT_TIME_MS - elapsed;
 
@@ -196,8 +250,7 @@ const Index = () => {
           return;
         }
 
-        const aiSequence = data.sequence as NoteSequence;
-        setSessionHistory((prev) => [...prev, { type: "jam", userSequence, aiSequence }]);
+        setSessionHistory((prev) => [...prev, { type: "jam", userSequence, aiSequence: aiSequence! }]);
 
         pianoRef.current?.hideProgress();
         await playSequence(aiSequence, requestId);
@@ -327,16 +380,62 @@ const Index = () => {
             </Label>
           </div>
           {isEnabled && (
-            <Select value={selectedModel} onValueChange={setSelectedModel} disabled={appState === "ai_playing"}>
-              <SelectTrigger id="model-select" className="w-auto h-8 px-3 gap-2">
-                <Brain className="w-4 h-4" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="google/gemini-2.5-flash">Gemini Flash</SelectItem>
-                <SelectItem value="google/gemini-2.5-pro">Gemini Pro</SelectItem>
-                <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-3 gap-2"
+                  disabled={appState === "ai_playing" || magenta.isLoading}
+                >
+                  {magenta.isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Brain className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {AI_MODELS.llm.find(m => m.value === selectedModel)?.label ||
+                     AI_MODELS.magenta.find(m => m.value === selectedModel)?.label ||
+                     "Select Model"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Cloud Models (LLM)</DropdownMenuLabel>
+                {AI_MODELS.llm.map((model) => (
+                  <DropdownMenuItem
+                    key={model.value}
+                    onClick={() => setSelectedModel(model.value)}
+                    className={selectedModel === model.value ? "bg-accent" : ""}
+                  >
+                    {model.label}
+                  </DropdownMenuItem>
+                ))}
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <span>Magenta (Local)</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {AI_MODELS.magenta.map((model) => (
+                      <DropdownMenuItem
+                        key={model.value}
+                        onClick={() => setSelectedModel(model.value)}
+                        className={selectedModel === model.value ? "bg-accent" : ""}
+                      >
+                        <div className="flex flex-col">
+                          <span>{model.label}</span>
+                          <span className="text-xs text-muted-foreground">{model.description}</span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
         
