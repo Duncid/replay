@@ -26,6 +26,7 @@ export interface PianoHandle {
   ensureAudioReady: () => Promise<void>;
   handleKeyPress: (noteKey: string, frequency: number, velocity?: number) => void;
   handleKeyRelease: (noteKey: string, frequency: number) => void;
+  restoreLastRecording: () => void;
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
@@ -35,6 +36,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const [progress, setProgress] = useState(100);
     const audioContextRef = useRef<AudioContext | null>(null);
     const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
+    const lastRecordingRef = useRef<{ sequence: NoteSequence; startTime: number } | null>(null);
     const notePressDataRef = useRef<Map<string, { startTime: number; velocity: number }>>(new Map());
     const activeOscillatorsRef = useRef<Map<string, { oscillator: OscillatorNode; gainNode: GainNode }>>(new Map());
     const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,6 +44,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const pressedKeysRef = useRef<Set<string>>(new Set());
     const hasNotifiedPlayStartRef = useRef(false);
     const recordingStartTimeRef = useRef<number | null>(null);
+    const heldKeysCountRef = useRef(0);
 
     // AZERTY keyboard mapping - C4 centered on 'e'
     const keyboardMap: { [key: string]: string } = {
@@ -130,6 +133,14 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       },
       handleKeyPress,
       handleKeyRelease,
+      restoreLastRecording: () => {
+        if (lastRecordingRef.current) {
+          recordingRef.current = { ...lastRecordingRef.current.sequence, notes: [...lastRecordingRef.current.sequence.notes] };
+          recordingStartTimeRef.current = lastRecordingRef.current.startTime;
+          hasNotifiedPlayStartRef.current = true;
+          console.log("[Piano] Restored last recording with", recordingRef.current.notes.length, "notes");
+        }
+      },
     }));
 
     const playNote = async (frequency: number, duration: number = 0.3) => {
@@ -191,6 +202,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const handleKeyPress = (noteKey: string, frequency: number, velocity: number = 0.8) => {
       if (!allowInput) return;
 
+      // Track held keys
+      heldKeysCountRef.current++;
+
       if (!hasNotifiedPlayStartRef.current) {
         onUserPlayStart();
         hasNotifiedPlayStartRef.current = true;
@@ -208,46 +222,26 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
       setUserPressedKeys(prev => new Set([...prev, noteKey]));
 
+      // Clear any pending recording timeout when new key is pressed
       if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       setShowProgress(false);
       setProgress(100);
-
-      if (isAiEnabled) {
-        recordingTimeoutRef.current = setTimeout(() => {
-          if (recordingRef.current.notes.length > 0) {
-            setShowProgress(true);
-            setProgress(100);
-
-            onUserPlay({ ...recordingRef.current });
-            recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
-            hasNotifiedPlayStartRef.current = false;
-            recordingStartTimeRef.current = null;
-
-            const startTime = Date.now();
-            progressIntervalRef.current = setInterval(() => {
-              const elapsed = Date.now() - startTime;
-              const newProgress = Math.max(0, 100 - (elapsed / 1000) * 100);
-              setProgress(newProgress);
-              if (newProgress === 0 && progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-              }
-            }, 16);
-          }
-        }, 1000);
-      }
     };
 
     const handleKeyRelease = (noteKey: string, frequency: number) => {
-      if (!allowInput) return;
+      if (!allowInput || recordingStartTimeRef.current === null) return;
 
       stopNote(noteKey);
+
+      // Track held keys
+      heldKeysCountRef.current = Math.max(0, heldKeysCountRef.current - 1);
 
       const pressData = notePressDataRef.current.get(noteKey);
       if (!pressData) return;
 
       const now = Date.now();
-      const endTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
+      const endTimeSeconds = (now - recordingStartTimeRef.current) / 1000;
       
       // Create note in NoteSequence format
       const pitch = noteNameToMidi(noteKey);
@@ -276,6 +270,37 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         newSet.delete(noteKey);
         return newSet;
       });
+
+      // Only set recording timeout when all keys are released
+      if (isAiEnabled && heldKeysCountRef.current === 0 && recordingRef.current.notes.length > 0) {
+        recordingTimeoutRef.current = setTimeout(() => {
+          if (recordingRef.current.notes.length > 0) {
+            // Save recording before sending
+            lastRecordingRef.current = {
+              sequence: { ...recordingRef.current, notes: [...recordingRef.current.notes] },
+              startTime: recordingStartTimeRef.current!,
+            };
+
+            setShowProgress(true);
+            setProgress(100);
+
+            onUserPlay({ ...recordingRef.current, notes: [...recordingRef.current.notes] });
+            recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
+            hasNotifiedPlayStartRef.current = false;
+            recordingStartTimeRef.current = null;
+
+            const startTime = Date.now();
+            progressIntervalRef.current = setInterval(() => {
+              const elapsed = Date.now() - startTime;
+              const newProgress = Math.max(0, 100 - (elapsed / 1000) * 100);
+              setProgress(newProgress);
+              if (newProgress === 0 && progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+              }
+            }, 16);
+          }
+        }, 1000);
+      }
     };
 
     const whiteKeys = notes.filter((n) => !n.isBlack);
