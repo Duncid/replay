@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-// Load Magenta from CDN
+// Load Magenta from CDN (UMD bundle for browser compatibility)
 const loadMagentaScript = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (window.mm) {
@@ -26,26 +26,19 @@ const loadMagentaScript = (): Promise<void> => {
       return;
     }
     
+    // Use the full UMD bundle which includes all modules
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/core.js";
+    script.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/dist/magentamusic.min.js";
     script.async = true;
     script.onload = () => {
-      // Also load the music_rnn and music_vae modules
-      const rnnScript = document.createElement("script");
-      rnnScript.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/music_rnn.js";
-      rnnScript.async = true;
-      rnnScript.onload = () => {
-        const vaeScript = document.createElement("script");
-        vaeScript.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/music_vae.js";
-        vaeScript.async = true;
-        vaeScript.onload = () => resolve();
-        vaeScript.onerror = () => reject(new Error("Failed to load MusicVAE script"));
-        document.head.appendChild(vaeScript);
-      };
-      rnnScript.onerror = () => reject(new Error("Failed to load MusicRNN script"));
-      document.head.appendChild(rnnScript);
+      if (window.mm) {
+        console.log("[Magenta] UMD bundle loaded successfully");
+        resolve();
+      } else {
+        reject(new Error("Magenta loaded but mm object not found"));
+      }
     };
-    script.onerror = () => reject(new Error("Failed to load Magenta core script"));
+    script.onerror = () => reject(new Error("Failed to load Magenta script"));
     document.head.appendChild(script);
   });
 };
