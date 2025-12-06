@@ -49,6 +49,7 @@ interface MetronomeProps {
   setTimeSignature: (ts: string) => void;
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
+  children?: React.ReactNode;
 }
 
 export const Metronome = ({
@@ -58,6 +59,7 @@ export const Metronome = ({
   setTimeSignature,
   isPlaying,
   setIsPlaying,
+  children,
 }: MetronomeProps) => {
   const [volume, setVolume] = useState(50);
   const [currentBeat, setCurrentBeat] = useState(0);
@@ -195,6 +197,8 @@ export const Metronome = ({
               </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {children}
         </div>
 
         {/* Right: Beat Indicators (only when playing) */}
