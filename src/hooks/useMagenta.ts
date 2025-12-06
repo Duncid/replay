@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { NoteSequence } from "@/types/noteSequence";
 
 // Magenta model types
@@ -9,7 +9,46 @@ interface MagentaState {
   isReady: boolean;
   error: string | null;
   loadedModel: MagentaModelType | null;
+  magentaLoaded: boolean;
 }
+
+declare global {
+  interface Window {
+    mm: any;
+  }
+}
+
+// Load Magenta from CDN
+const loadMagentaScript = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (window.mm) {
+      resolve();
+      return;
+    }
+    
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/core.js";
+    script.async = true;
+    script.onload = () => {
+      // Also load the music_rnn and music_vae modules
+      const rnnScript = document.createElement("script");
+      rnnScript.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/music_rnn.js";
+      rnnScript.async = true;
+      rnnScript.onload = () => {
+        const vaeScript = document.createElement("script");
+        vaeScript.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/music_vae.js";
+        vaeScript.async = true;
+        vaeScript.onload = () => resolve();
+        vaeScript.onerror = () => reject(new Error("Failed to load MusicVAE script"));
+        document.head.appendChild(vaeScript);
+      };
+      rnnScript.onerror = () => reject(new Error("Failed to load MusicRNN script"));
+      document.head.appendChild(rnnScript);
+    };
+    script.onerror = () => reject(new Error("Failed to load Magenta core script"));
+    document.head.appendChild(script);
+  });
+};
 
 // Convert our NoteSequence to Magenta's format
 const toMagentaSequence = (sequence: NoteSequence): any => {
@@ -18,10 +57,11 @@ const toMagentaSequence = (sequence: NoteSequence): any => {
       pitch: note.pitch,
       startTime: note.startTime,
       endTime: note.endTime,
-      velocity: note.velocity,
+      velocity: Math.round((note.velocity || 0.8) * 127),
     })),
     totalTime: sequence.totalTime,
     tempos: [{ time: 0, qpm: sequence.tempos?.[0]?.qpm || 120 }],
+    quantizationInfo: { stepsPerQuarter: 4 },
   };
 };
 
@@ -34,7 +74,7 @@ const fromMagentaSequence = (magentaSeq: any, bpm: number, timeSignature: string
       pitch: note.pitch,
       startTime: note.startTime,
       endTime: note.endTime,
-      velocity: note.velocity || 80,
+      velocity: (note.velocity || 80) / 127,
     })),
     totalTime: magentaSeq.totalTime || 0,
     tempos: [{ time: 0, qpm: bpm }],
@@ -48,11 +88,24 @@ export const useMagenta = () => {
     isReady: false,
     error: null,
     loadedModel: null,
+    magentaLoaded: false,
   });
 
   const musicRnnRef = useRef<any>(null);
   const musicVaeRef = useRef<any>(null);
-  const coreRef = useRef<any>(null);
+
+  // Pre-load Magenta scripts on mount
+  useEffect(() => {
+    loadMagentaScript()
+      .then(() => {
+        console.log("[Magenta] Scripts loaded from CDN");
+        setState((prev) => ({ ...prev, magentaLoaded: true }));
+      })
+      .catch((error) => {
+        console.error("[Magenta] Failed to load scripts:", error);
+        setState((prev) => ({ ...prev, error: error.message }));
+      });
+  }, []);
 
   const loadModel = useCallback(async (modelType: MagentaModelType) => {
     // Already loaded
@@ -60,23 +113,38 @@ export const useMagenta = () => {
       return true;
     }
 
+    // Wait for Magenta to be loaded
+    if (!state.magentaLoaded && !window.mm) {
+      try {
+        await loadMagentaScript();
+      } catch (error) {
+        console.error("[Magenta] Failed to load scripts:", error);
+        setState((prev) => ({
+          ...prev,
+          error: error instanceof Error ? error.message : "Failed to load Magenta",
+        }));
+        return false;
+      }
+    }
+
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Dynamically import Magenta
-      const magenta = await import("@magenta/music");
-      coreRef.current = magenta.sequences;
+      const mm = window.mm;
+      if (!mm) {
+        throw new Error("Magenta library not available");
+      }
 
       if (modelType === "magenta/music-rnn") {
         // MusicRNN with improv_rnn checkpoint for jazz
         const checkpointUrl = "https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/chord_pitches_improv";
-        musicRnnRef.current = new magenta.MusicRNN(checkpointUrl);
+        musicRnnRef.current = new mm.MusicRNN(checkpointUrl);
         await musicRnnRef.current.initialize();
         console.log("[Magenta] MusicRNN loaded successfully");
       } else if (modelType === "magenta/music-vae") {
         // MusicVAE with mel_2bar_small checkpoint
         const checkpointUrl = "https://storage.googleapis.com/magentadata/js/checkpoints/music_vae/mel_2bar_small";
-        musicVaeRef.current = new magenta.MusicVAE(checkpointUrl);
+        musicVaeRef.current = new mm.MusicVAE(checkpointUrl);
         await musicVaeRef.current.initialize();
         console.log("[Magenta] MusicVAE loaded successfully");
       }
@@ -86,19 +154,21 @@ export const useMagenta = () => {
         isReady: true,
         error: null,
         loadedModel: modelType,
+        magentaLoaded: true,
       });
       return true;
     } catch (error) {
       console.error("[Magenta] Failed to load model:", error);
-      setState({
+      setState((prev) => ({
+        ...prev,
         isLoading: false,
         isReady: false,
         error: error instanceof Error ? error.message : "Failed to load Magenta model",
         loadedModel: null,
-      });
+      }));
       return false;
     }
-  }, [state.loadedModel, state.isReady]);
+  }, [state.loadedModel, state.isReady, state.magentaLoaded]);
 
   const continueSequence = useCallback(
     async (
@@ -113,10 +183,15 @@ export const useMagenta = () => {
       if (!loaded) return null;
 
       try {
+        const mm = window.mm;
+        if (!mm) {
+          throw new Error("Magenta library not available");
+        }
+        
         const magentaInput = toMagentaSequence(inputSequence);
         
         // Quantize the input sequence
-        const quantizedInput = coreRef.current.quantizeNoteSequence(magentaInput, 4);
+        const quantizedInput = mm.sequences.quantizeNoteSequence(magentaInput, 4);
 
         let outputSequence: any;
 
