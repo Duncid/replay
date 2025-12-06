@@ -1,0 +1,176 @@
+import { useState, useRef, useCallback } from "react";
+import { NoteSequence } from "@/types/noteSequence";
+
+// Magenta model types
+export type MagentaModelType = "magenta/music-rnn" | "magenta/music-vae";
+
+interface MagentaState {
+  isLoading: boolean;
+  isReady: boolean;
+  error: string | null;
+  loadedModel: MagentaModelType | null;
+}
+
+// Convert our NoteSequence to Magenta's format
+const toMagentaSequence = (sequence: NoteSequence): any => {
+  return {
+    notes: sequence.notes.map((note) => ({
+      pitch: note.pitch,
+      startTime: note.startTime,
+      endTime: note.endTime,
+      velocity: note.velocity,
+    })),
+    totalTime: sequence.totalTime,
+    tempos: [{ time: 0, qpm: sequence.tempos?.[0]?.qpm || 120 }],
+  };
+};
+
+// Convert Magenta's output back to our NoteSequence
+const fromMagentaSequence = (magentaSeq: any, bpm: number, timeSignature: string): NoteSequence => {
+  const [numerator, denominator] = timeSignature.split("/").map(Number);
+  
+  return {
+    notes: (magentaSeq.notes || []).map((note: any) => ({
+      pitch: note.pitch,
+      startTime: note.startTime,
+      endTime: note.endTime,
+      velocity: note.velocity || 80,
+    })),
+    totalTime: magentaSeq.totalTime || 0,
+    tempos: [{ time: 0, qpm: bpm }],
+    timeSignatures: [{ time: 0, numerator, denominator }],
+  };
+};
+
+export const useMagenta = () => {
+  const [state, setState] = useState<MagentaState>({
+    isLoading: false,
+    isReady: false,
+    error: null,
+    loadedModel: null,
+  });
+
+  const musicRnnRef = useRef<any>(null);
+  const musicVaeRef = useRef<any>(null);
+  const coreRef = useRef<any>(null);
+
+  const loadModel = useCallback(async (modelType: MagentaModelType) => {
+    // Already loaded
+    if (state.loadedModel === modelType && state.isReady) {
+      return true;
+    }
+
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      // Dynamically import Magenta
+      const magenta = await import("@magenta/music");
+      coreRef.current = magenta.sequences;
+
+      if (modelType === "magenta/music-rnn") {
+        // MusicRNN with improv_rnn checkpoint for jazz
+        const checkpointUrl = "https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/chord_pitches_improv";
+        musicRnnRef.current = new magenta.MusicRNN(checkpointUrl);
+        await musicRnnRef.current.initialize();
+        console.log("[Magenta] MusicRNN loaded successfully");
+      } else if (modelType === "magenta/music-vae") {
+        // MusicVAE with mel_2bar_small checkpoint
+        const checkpointUrl = "https://storage.googleapis.com/magentadata/js/checkpoints/music_vae/mel_2bar_small";
+        musicVaeRef.current = new magenta.MusicVAE(checkpointUrl);
+        await musicVaeRef.current.initialize();
+        console.log("[Magenta] MusicVAE loaded successfully");
+      }
+
+      setState({
+        isLoading: false,
+        isReady: true,
+        error: null,
+        loadedModel: modelType,
+      });
+      return true;
+    } catch (error) {
+      console.error("[Magenta] Failed to load model:", error);
+      setState({
+        isLoading: false,
+        isReady: false,
+        error: error instanceof Error ? error.message : "Failed to load Magenta model",
+        loadedModel: null,
+      });
+      return false;
+    }
+  }, [state.loadedModel, state.isReady]);
+
+  const continueSequence = useCallback(
+    async (
+      inputSequence: NoteSequence,
+      modelType: MagentaModelType,
+      bpm: number,
+      timeSignature: string,
+      options?: { steps?: number; temperature?: number; chordProgression?: string[] }
+    ): Promise<NoteSequence | null> => {
+      // Ensure model is loaded
+      const loaded = await loadModel(modelType);
+      if (!loaded) return null;
+
+      try {
+        const magentaInput = toMagentaSequence(inputSequence);
+        
+        // Quantize the input sequence
+        const quantizedInput = coreRef.current.quantizeNoteSequence(magentaInput, 4);
+
+        let outputSequence: any;
+
+        if (modelType === "magenta/music-rnn" && musicRnnRef.current) {
+          // MusicRNN continuation
+          const steps = options?.steps || 32;
+          const temperature = options?.temperature || 1.0;
+          const chordProgression = options?.chordProgression || ["C", "G", "Am", "F"];
+
+          outputSequence = await musicRnnRef.current.continueSequence(
+            quantizedInput,
+            steps,
+            temperature,
+            chordProgression
+          );
+          console.log("[Magenta] MusicRNN generated", outputSequence.notes?.length, "notes");
+        } else if (modelType === "magenta/music-vae" && musicVaeRef.current) {
+          // MusicVAE - sample similar sequences
+          const numSamples = 1;
+          const temperature = options?.temperature || 0.5;
+
+          // Encode input and sample around it
+          const z = await musicVaeRef.current.encode([quantizedInput]);
+          const samples = await musicVaeRef.current.decode(z, temperature);
+          outputSequence = samples[0];
+          console.log("[Magenta] MusicVAE generated", outputSequence.notes?.length, "notes");
+        }
+
+        if (!outputSequence || !outputSequence.notes?.length) {
+          console.warn("[Magenta] No notes generated");
+          return null;
+        }
+
+        return fromMagentaSequence(outputSequence, bpm, timeSignature);
+      } catch (error) {
+        console.error("[Magenta] Error generating sequence:", error);
+        setState((prev) => ({
+          ...prev,
+          error: error instanceof Error ? error.message : "Failed to generate sequence",
+        }));
+        return null;
+      }
+    },
+    [loadModel]
+  );
+
+  const isMagentaModel = useCallback((model: string): model is MagentaModelType => {
+    return model === "magenta/music-rnn" || model === "magenta/music-vae";
+  }, []);
+
+  return {
+    ...state,
+    loadModel,
+    continueSequence,
+    isMagentaModel,
+  };
+};
