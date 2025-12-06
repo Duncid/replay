@@ -287,7 +287,20 @@ const Index = () => {
         setTimeSignature={setMetronomeTimeSignature}
         isPlaying={metronomeIsPlaying}
         setIsPlaying={setMetronomeIsPlaying}
-      />
+      >
+        <MidiConnector
+          isConnected={!!connectedDevice}
+          deviceName={connectedDevice?.name || null}
+          error={midiError}
+          isSupported={isMidiSupported}
+          onConnect={requestAccess}
+          onDisconnect={disconnect}
+        />
+        <AskButton 
+          onAskSubmit={handleAskSubmit}
+          disabled={appState === "waiting_for_ai" || appState === "ai_playing"}
+        />
+      </Metronome>
       
       <Piano
         ref={pianoRef}
@@ -325,18 +338,6 @@ const Index = () => {
               </SelectContent>
             </Select>
           )}
-          <MidiConnector
-            isConnected={!!connectedDevice}
-            deviceName={connectedDevice?.name || null}
-            error={midiError}
-            isSupported={isMidiSupported}
-            onConnect={requestAccess}
-            onDisconnect={disconnect}
-          />
-          <AskButton 
-            onAskSubmit={handleAskSubmit}
-            disabled={appState === "waiting_for_ai" || appState === "ai_playing"}
-          />
         </div>
         
         {sessionHistory.length > 0 && (
