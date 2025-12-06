@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
 import { Trash2, Brain } from "lucide-react";
-import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
-import { AskButton } from "@/components/AskButton";
+import { TopBar } from "@/components/TopBar";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence } from "@/types/noteSequence";
 import { midiToFrequency, midiToNoteName, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
@@ -279,7 +278,19 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4">
+    <div className="min-h-screen flex flex-col items-center justify-start bg-background">
+      <TopBar
+        midiConnected={!!connectedDevice}
+        midiDeviceName={connectedDevice?.name || null}
+        midiError={midiError}
+        midiSupported={isMidiSupported}
+        onMidiConnect={requestAccess}
+        onMidiDisconnect={disconnect}
+        onAskSubmit={handleAskSubmit}
+        askDisabled={appState === "waiting_for_ai" || appState === "ai_playing"}
+      />
+      
+      <div className="flex flex-col items-center justify-start p-4 gap-4 w-full">
       <Metronome
         bpm={metronomeBpm}
         setBpm={setMetronomeBpm}
@@ -325,18 +336,6 @@ const Index = () => {
               </SelectContent>
             </Select>
           )}
-          <MidiConnector
-            isConnected={!!connectedDevice}
-            deviceName={connectedDevice?.name || null}
-            error={midiError}
-            isSupported={isMidiSupported}
-            onConnect={requestAccess}
-            onDisconnect={disconnect}
-          />
-          <AskButton 
-            onAskSubmit={handleAskSubmit}
-            disabled={appState === "waiting_for_ai" || appState === "ai_playing"}
-          />
         </div>
         
         {sessionHistory.length > 0 && (
@@ -390,6 +389,7 @@ const Index = () => {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 };
