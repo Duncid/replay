@@ -253,10 +253,15 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       };
 
       if (!isAiEnabled) {
-        // Send single note immediately
+        // Send single note immediately, normalized to start at 0
         const singleNoteSequence = createEmptyNoteSequence(bpm, timeSignature);
-        singleNoteSequence.notes.push(note);
-        singleNoteSequence.totalTime = note.endTime - note.startTime;
+        const normalizedNote = {
+          ...note,
+          startTime: 0,
+          endTime: note.endTime - note.startTime,
+        };
+        singleNoteSequence.notes.push(normalizedNote);
+        singleNoteSequence.totalTime = normalizedNote.endTime;
         onUserPlay(singleNoteSequence);
       } else {
         // Accumulate notes
@@ -275,16 +280,29 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       if (isAiEnabled && heldKeysCountRef.current === 0 && recordingRef.current.notes.length > 0) {
         recordingTimeoutRef.current = setTimeout(() => {
           if (recordingRef.current.notes.length > 0) {
+            // Normalize recording so first note starts at 0
+            const minTime = Math.min(...recordingRef.current.notes.map(n => n.startTime));
+            const normalizedNotes = recordingRef.current.notes.map(n => ({
+              ...n,
+              startTime: n.startTime - minTime,
+              endTime: n.endTime - minTime,
+            }));
+            const normalizedRecording: NoteSequence = {
+              ...recordingRef.current,
+              notes: normalizedNotes,
+              totalTime: recordingRef.current.totalTime - minTime,
+            };
+
             // Save recording before sending
             lastRecordingRef.current = {
-              sequence: { ...recordingRef.current, notes: [...recordingRef.current.notes] },
+              sequence: { ...normalizedRecording, notes: [...normalizedRecording.notes] },
               startTime: recordingStartTimeRef.current!,
             };
 
             setShowProgress(true);
             setProgress(100);
 
-            onUserPlay({ ...recordingRef.current, notes: [...recordingRef.current.notes] });
+            onUserPlay(normalizedRecording);
             recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
             hasNotifiedPlayStartRef.current = false;
             recordingStartTimeRef.current = null;

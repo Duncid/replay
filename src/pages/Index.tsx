@@ -106,12 +106,29 @@ const Index = () => {
       return;
     }
 
-    console.log(`[Playback] Starting playback of ${sequence.notes.length} notes`);
+    // Normalize times so first note starts at 0
+    const minStartTime = sequence.notes.length > 0 
+      ? Math.min(...sequence.notes.map(n => n.startTime)) 
+      : 0;
+    
+    const normalizedNotes = sequence.notes.map(note => ({
+      ...note,
+      startTime: note.startTime - minStartTime,
+      endTime: note.endTime - minStartTime,
+    }));
+    
+    const normalizedSequence = {
+      ...sequence,
+      notes: normalizedNotes,
+      totalTime: sequence.totalTime - minStartTime,
+    };
+
+    console.log(`[Playback] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`);
 
     shouldStopAiRef.current = false;
     setAppState("ai_playing");
 
-    sequence.notes.forEach((note) => {
+    normalizedSequence.notes.forEach((note) => {
       const noteKey = midiToNoteName(note.pitch);
       const frequency = midiToFrequency(note.pitch);
       const duration = note.endTime - note.startTime;
@@ -139,7 +156,7 @@ const Index = () => {
         setAppState("idle");
         setActiveKeys(new Set());
       }
-    }, sequence.totalTime * 1000);
+    }, normalizedSequence.totalTime * 1000);
   };
 
   const handleUserPlayStart = () => {
@@ -176,10 +193,17 @@ const Index = () => {
         if (prev.length > 0) {
           const lastSession = prev[prev.length - 1];
           if (lastSession.aiSequence.notes.length === 0) {
+            // Offset new notes by the previous sequence's totalTime
+            const timeOffset = lastSession.userSequence.totalTime;
+            const offsetNotes = userSequence.notes.map(note => ({
+              ...note,
+              startTime: note.startTime + timeOffset,
+              endTime: note.endTime + timeOffset,
+            }));
             const updatedUserSequence: NoteSequence = {
               ...lastSession.userSequence,
-              notes: [...lastSession.userSequence.notes, ...userSequence.notes],
-              totalTime: Math.max(lastSession.userSequence.totalTime, userSequence.totalTime),
+              notes: [...lastSession.userSequence.notes, ...offsetNotes],
+              totalTime: timeOffset + userSequence.totalTime,
             };
             return [...prev.slice(0, -1), { ...lastSession, userSequence: updatedUserSequence }];
           }
@@ -293,6 +317,7 @@ const Index = () => {
 
   const handleReplaySequence = async (sequence: NoteSequence) => {
     console.log(`[Replay] Starting replay of ${sequence.notes.length} notes`);
+    console.log(`[Replay] First note startTime: ${sequence.notes[0]?.startTime}s, totalTime: ${sequence.totalTime}s`);
     
     // Stop any current playback without resetting to idle (we're about to play again)
     shouldStopAiRef.current = true;
