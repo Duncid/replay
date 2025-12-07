@@ -87,9 +87,18 @@ const Index = () => {
     pianoRef.current?.handleKeyRelease(noteKey, frequency);
   };
 
+  const handleNoMidiDevices = () => {
+    toast({
+      title: "No MIDI devices found",
+      description: "Please connect a MIDI device and try again.",
+      variant: "destructive",
+    });
+  };
+
   const { connectedDevice, error: midiError, isSupported: isMidiSupported, requestAccess, disconnect } = useMidiInput(
     handleMidiNoteOn,
-    handleMidiNoteOff
+    handleMidiNoteOff,
+    handleNoMidiDevices
   );
 
   const stopAiPlayback = () => {
