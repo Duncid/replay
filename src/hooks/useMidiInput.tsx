@@ -40,7 +40,8 @@ const midiToFrequency = (midiNote: number): number => {
 
 export const useMidiInput = (
   onNoteOn?: (noteKey: string, frequency: number, velocity: number) => void,
-  onNoteOff?: (noteKey: string, frequency: number) => void
+  onNoteOff?: (noteKey: string, frequency: number) => void,
+  onManualConnectNoDevices?: () => void
 ): UseMidiInputReturn => {
   const [devices, setDevices] = useState<MidiDevice[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<MidiDevice | null>(null);
@@ -57,7 +58,6 @@ export const useMidiInput = (
       const command = status & 0xf0;
 
       if (command === NOTE_ON && velocity > 0) {
-        // Note On
         const { note, octave } = midiToNoteName(midiNote);
         const noteKey = `${note}${octave}`;
         const frequency = midiToFrequency(midiNote);
@@ -66,7 +66,6 @@ export const useMidiInput = (
         console.log(`[MIDI] Note ON: ${noteKey}, velocity: ${velocity}, freq: ${frequency.toFixed(2)}Hz`);
         onNoteOn?.(noteKey, frequency, normalizedVelocity);
       } else if (command === NOTE_OFF || (command === NOTE_ON && velocity === 0)) {
-        // Note Off
         const { note, octave } = midiToNoteName(midiNote);
         const noteKey = `${note}${octave}`;
         const frequency = midiToFrequency(midiNote);
@@ -87,9 +86,11 @@ export const useMidiInput = (
     console.log("[MIDI] Disconnected");
   }, []);
 
-  const requestAccess = useCallback(async () => {
+  const connectToDevices = useCallback(async (isManual: boolean) => {
     if (!isSupported) {
-      setError("Web MIDI API is not supported in this browser. Try Chrome, Edge, or Opera.");
+      if (isManual) {
+        setError("Web MIDI API is not supported in this browser. Try Chrome, Edge, or Opera.");
+      }
       return;
     }
 
@@ -100,7 +101,6 @@ export const useMidiInput = (
       const access = await navigator.requestMIDIAccess();
       midiAccessRef.current = access;
 
-      // Get all available input devices
       const inputs = Array.from(access.inputs.values());
       const deviceList: MidiDevice[] = inputs.map((input) => ({
         id: input.id,
@@ -112,7 +112,10 @@ export const useMidiInput = (
       console.log(`[MIDI] Found ${deviceList.length} device(s):`, deviceList);
 
       if (inputs.length === 0) {
-        setError("No MIDI devices found. Please connect a MIDI device and try again.");
+        // Only show error/toast for manual connection attempts
+        if (isManual) {
+          onManualConnectNoDevices?.();
+        }
         return;
       }
 
@@ -129,18 +132,24 @@ export const useMidiInput = (
 
       console.log(`[MIDI] Connected to: ${firstInput.name}`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to access MIDI devices";
-      setError(errorMessage);
+      if (isManual) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to access MIDI devices";
+        setError(errorMessage);
+      }
       console.error("[MIDI] Error:", err);
     }
-  }, [isSupported, handleMidiMessage]);
+  }, [isSupported, handleMidiMessage, onManualConnectNoDevices]);
 
-  // Auto-connect on mount if supported
+  const requestAccess = useCallback(async () => {
+    await connectToDevices(true);
+  }, [connectToDevices]);
+
+  // Auto-connect on mount if supported (silent - no error display)
   useEffect(() => {
     if (isSupported) {
-      requestAccess();
+      connectToDevices(false);
     }
-  }, []); // Only run once on mount
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
