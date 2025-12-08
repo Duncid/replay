@@ -16,8 +16,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send, Settings2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
@@ -51,6 +51,14 @@ const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useState<ActiveMode>("compose");
+  
+  const handleModeChange = (newMode: ActiveMode) => {
+    // If switching to player mode and a Magenta model is selected, switch to default LLM
+    if (newMode === "player" && magenta.isMagentaModel(selectedModel)) {
+      setSelectedModel("google/gemini-2.5-flash");
+    }
+    setActiveMode(newMode);
+  };
   const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
   const [askPrompt, setAskPrompt] = useState("");
   const [isAskLoading, setIsAskLoading] = useState(false);
@@ -480,7 +488,7 @@ const Index = () => {
         timeSignature={metronomeTimeSignature}
       />
 
-      <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as ActiveMode)} className="w-full">
+      <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full">
         <div className="w-full flex flex-wrap items-center justify-between gap-4 py-2">
           <TabsList className="bg-muted">
             <TabsTrigger value="compose" className="gap-2">
@@ -498,7 +506,7 @@ const Index = () => {
           </TabsList>
 
           <div className="flex items-center gap-2">
-            {activeMode === "improv" && (
+            {(activeMode === "improv" || activeMode === "player") && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -528,69 +536,32 @@ const Index = () => {
                     </DropdownMenuItem>
                   ))}
 
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <span>Magenta (Local)</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      {AI_MODELS.magenta.map((model) => (
-                        <DropdownMenuItem
-                          key={model.value}
-                          onClick={() => setSelectedModel(model.value)}
-                          className={selectedModel === model.value ? "bg-accent" : ""}
-                        >
-                          <div className="flex flex-col">
-                            <span>{model.label}</span>
-                            <span className="text-xs text-muted-foreground">{model.description}</span>
-                          </div>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
+                  {activeMode === "improv" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <span>Magenta (Local)</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          {AI_MODELS.magenta.map((model) => (
+                            <DropdownMenuItem
+                              key={model.value}
+                              onClick={() => setSelectedModel(model.value)}
+                              className={selectedModel === model.value ? "bg-accent" : ""}
+                            >
+                              <div className="flex flex-col">
+                                <span>{model.label}</span>
+                                <span className="text-xs text-muted-foreground">{model.description}</span>
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
-
-            {activeMode === "player" && (
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Ask AI to play something..."
-                  value={askPrompt}
-                  onChange={(e) => setAskPrompt(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAskSubmit()}
-                  disabled={isAskLoading || appState === "ai_playing"}
-                  className="w-48 sm:w-64 h-8"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleAskSubmit}
-                  disabled={!askPrompt.trim() || isAskLoading || appState === "ai_playing"}
-                  className="h-8 px-3"
-                >
-                  {isAskLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <Settings2 className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>AI Model</DropdownMenuLabel>
-                    {AI_MODELS.llm.map((model) => (
-                      <DropdownMenuItem
-                        key={model.value}
-                        onClick={() => setSelectedModel(model.value)}
-                        className={selectedModel === model.value ? "bg-accent" : ""}
-                      >
-                        {model.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
             )}
 
             {sessionHistory.length > 0 && (
@@ -607,6 +578,26 @@ const Index = () => {
           </div>
         </div>
       </Tabs>
+
+      {activeMode === "player" && (
+        <div className="w-full max-w-2xl mx-auto space-y-3">
+          <Textarea
+            placeholder="Describe what you'd like the AI to play..."
+            value={askPrompt}
+            onChange={(e) => setAskPrompt(e.target.value)}
+            disabled={isAskLoading || appState === "ai_playing"}
+            className="min-h-[120px] text-lg resize-none"
+          />
+          <Button
+            onClick={handleAskSubmit}
+            disabled={!askPrompt.trim() || isAskLoading || appState === "ai_playing"}
+            className="w-full gap-2"
+          >
+            {isAskLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Generate Music
+          </Button>
+        </div>
+      )}
 
       {sessionHistory.length > 0 && (
         <div className="w-full max-w-4xl space-y-4">
