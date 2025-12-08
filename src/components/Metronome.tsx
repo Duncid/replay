@@ -232,7 +232,7 @@ export const Metronome = ({
 
           {children}
         </div>
-
+        <div className="w-full" />
         {/* Right: Beat Indicators (only when playing) */}
         {isPlaying && (
           <div className="flex items-center gap-2">
