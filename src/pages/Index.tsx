@@ -271,22 +271,10 @@ const Index = () => {
     console.log("User finished playing, request ID:", requestId);
 
     if (activeMode === "compose") {
-      // Only record if composing is enabled
+      // Only update composition if composing is enabled
+      // Piano sends the full accumulated recording, so just replace
       if (isComposing) {
-        setCompositionSequence((prev) => {
-          // Offset new notes by the previous sequence's totalTime
-          const timeOffset = prev.totalTime;
-          const offsetNotes = userSequence.notes.map((note) => ({
-            ...note,
-            startTime: note.startTime + timeOffset,
-            endTime: note.endTime + timeOffset,
-          }));
-          return {
-            ...prev,
-            notes: [...prev.notes, ...offsetNotes],
-            totalTime: timeOffset + userSequence.totalTime,
-          };
-        });
+        setCompositionSequence(userSequence);
       }
       setAppState("idle");
       return;
