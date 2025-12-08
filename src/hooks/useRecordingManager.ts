@@ -34,6 +34,8 @@ export function useRecordingManager({
   const [isRecording, setIsRecording] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState(100);
+  const [showEndingProgress, setShowEndingProgress] = useState(false);
+  const [endingProgress, setEndingProgress] = useState(100);
 
   const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
   const lastRecordingRef = useRef<RecordingResult | null>(null);
@@ -51,12 +53,22 @@ export function useRecordingManager({
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const endingProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Store the callback in a ref to avoid stale closures in setTimeout
   const onRecordingCompleteRef = useRef(onRecordingComplete);
   onRecordingCompleteRef.current = onRecordingComplete;
   const onRecordingUpdateRef = useRef(onRecordingUpdate);
   onRecordingUpdateRef.current = onRecordingUpdate;
+
+  const clearEndingProgress = useCallback(() => {
+    if (endingProgressIntervalRef.current) {
+      clearInterval(endingProgressIntervalRef.current);
+      endingProgressIntervalRef.current = null;
+    }
+    setShowEndingProgress(false);
+    setEndingProgress(100);
+  }, []);
 
   const clearAllTimeouts = useCallback(() => {
     if (pauseTimeoutRef.current) {
@@ -71,7 +83,8 @@ export function useRecordingManager({
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-  }, []);
+    clearEndingProgress();
+  }, [clearEndingProgress]);
 
   const completeRecording = useCallback(() => {
     if (recordingRef.current.notes.length === 0) return;
@@ -135,22 +148,38 @@ export function useRecordingManager({
     if (completionTimeoutRef.current) {
       clearTimeout(completionTimeoutRef.current);
     }
+    clearEndingProgress();
 
-    // After 3 seconds of silence, pause the timeline
+    // Start the ending progress bar immediately
+    setShowEndingProgress(true);
+    setEndingProgress(100);
+    const endingStartTime = Date.now();
+    endingProgressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - endingStartTime;
+      const newProgress = Math.max(0, 100 - (elapsed / pauseTimeoutMs) * 100);
+      setEndingProgress(newProgress);
+      if (newProgress <= 0 && endingProgressIntervalRef.current) {
+        clearInterval(endingProgressIntervalRef.current);
+        endingProgressIntervalRef.current = null;
+      }
+    }, 16);
+
+    // After pauseTimeoutMs of silence, pause the timeline
     pauseTimeoutRef.current = setTimeout(() => {
       timelinePausedRef.current = true;
       virtualTimeRef.current = lastNoteEndTimeRef.current;
       realTimeAtPauseRef.current = Date.now();
+      setShowEndingProgress(false);
       console.log(`[RecordingManager] Timeline paused at ${virtualTimeRef.current.toFixed(3)}s`);
 
-      // After another 3 seconds, complete the recording
+      // After another pauseTimeoutMs, complete the recording
       completionTimeoutRef.current = setTimeout(() => {
         if (recordingRef.current.notes.length > 0) {
           completeRecording();
         }
       }, pauseTimeoutMs);
     }, pauseTimeoutMs);
-  }, [pauseTimeoutMs, completeRecording]);
+  }, [pauseTimeoutMs, completeRecording, clearEndingProgress]);
 
   const getCurrentVirtualTime = useCallback((): number => {
     if (!recordingStartTimeRef.current) return 0;
@@ -300,6 +329,8 @@ export function useRecordingManager({
     isRecording,
     showProgress,
     progress,
+    showEndingProgress,
+    endingProgress,
     addNoteStart,
     addNoteEnd,
     cancelRecording,
