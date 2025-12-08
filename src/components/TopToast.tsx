@@ -1,4 +1,4 @@
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, useRef, ReactNode } from "react";
 
 interface TopToastProps {
   show: boolean;
@@ -7,22 +7,24 @@ interface TopToastProps {
 
 export function TopToast({ show, children }: TopToastProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [animationState, setAnimationState] = useState<"entering" | "visible" | "exiting">("visible");
+  const [isAnimatedIn, setIsAnimatedIn] = useState(false);
+  const frameRef = useRef<number>();
 
   useEffect(() => {
-    if (show && !isVisible) {
+    if (show) {
       setIsVisible(true);
-      setAnimationState("entering");
-      const timer = setTimeout(() => setAnimationState("visible"), 120);
-      return () => clearTimeout(timer);
-    } else if (!show && isVisible) {
-      setAnimationState("exiting");
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        setAnimationState("visible");
-      }, 120);
+      // Animate in on next frame so CSS transition triggers
+      frameRef.current = requestAnimationFrame(() => {
+        setIsAnimatedIn(true);
+      });
+    } else if (isVisible) {
+      setIsAnimatedIn(false);
+      const timer = setTimeout(() => setIsVisible(false), 120);
       return () => clearTimeout(timer);
     }
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
   }, [show, isVisible]);
 
   if (!isVisible) return null;
@@ -31,15 +33,8 @@ export function TopToast({ show, children }: TopToastProps) {
     <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div
         className={`bg-primary text-primary-foreground px-4 py-2 rounded-b-lg shadow-lg min-w-[140px] transition-all duration-[120ms] ease-out ${
-          animationState === "entering"
-            ? "-translate-y-full opacity-0"
-            : animationState === "exiting"
-            ? "-translate-y-full opacity-0"
-            : "translate-y-0 opacity-100"
+          isAnimatedIn ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
         }`}
-        style={{
-          transform: animationState === "entering" ? "translateY(-100%)" : undefined,
-        }}
       >
         {children}
       </div>
