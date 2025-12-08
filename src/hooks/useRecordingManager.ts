@@ -54,6 +54,7 @@ export function useRecordingManager({
   const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const endingProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const toastDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Store the callback in a ref to avoid stale closures in setTimeout
   const onRecordingCompleteRef = useRef(onRecordingComplete);
@@ -62,6 +63,10 @@ export function useRecordingManager({
   onRecordingUpdateRef.current = onRecordingUpdate;
 
   const clearEndingProgress = useCallback(() => {
+    if (toastDelayTimeoutRef.current) {
+      clearTimeout(toastDelayTimeoutRef.current);
+      toastDelayTimeoutRef.current = null;
+    }
     if (endingProgressIntervalRef.current) {
       clearInterval(endingProgressIntervalRef.current);
       endingProgressIntervalRef.current = null;
@@ -150,19 +155,25 @@ export function useRecordingManager({
     }
     clearEndingProgress();
 
-    // Start the ending progress bar immediately
-    setShowEndingProgress(true);
-    setEndingProgress(100);
-    const endingStartTime = Date.now();
-    endingProgressIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - endingStartTime;
-      const newProgress = Math.max(0, 100 - (elapsed / pauseTimeoutMs) * 100);
-      setEndingProgress(newProgress);
-      if (newProgress <= 0 && endingProgressIntervalRef.current) {
-        clearInterval(endingProgressIntervalRef.current);
-        endingProgressIntervalRef.current = null;
-      }
-    }, 16);
+    const delayMs = pauseTimeoutMs / 2; // Wait 50% before showing toast
+    const remainingMs = pauseTimeoutMs / 2; // Countdown remaining 50%
+
+    // Delay showing the toast by 50% of the timeout
+    toastDelayTimeoutRef.current = setTimeout(() => {
+      setShowEndingProgress(true);
+      setEndingProgress(100);
+      const endingStartTime = Date.now();
+      
+      endingProgressIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - endingStartTime;
+        const newProgress = Math.max(0, 100 - (elapsed / remainingMs) * 100);
+        setEndingProgress(newProgress);
+        if (newProgress <= 0 && endingProgressIntervalRef.current) {
+          clearInterval(endingProgressIntervalRef.current);
+          endingProgressIntervalRef.current = null;
+        }
+      }, 16);
+    }, delayMs);
 
     // After pauseTimeoutMs of silence, pause the timeline
     pauseTimeoutRef.current = setTimeout(() => {

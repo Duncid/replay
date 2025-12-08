@@ -72,4 +72,15 @@ All colors MUST be HSL.
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+
+  @keyframes slide-in-from-top {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
 }
