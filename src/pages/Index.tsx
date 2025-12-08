@@ -19,7 +19,7 @@ import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare } f
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
-import { NoteSequence } from "@/types/noteSequence";
+import { NoteSequence, Note } from "@/types/noteSequence";
 import { midiToFrequency, midiToNoteName, noteNameToMidi, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
@@ -50,6 +50,7 @@ const Index = () => {
   const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
+  const [liveNotes, setLiveNotes] = useState<Note[]>([]);
 
   // Metronome state
   const [metronomeBpm, setMetronomeBpm] = useState(120);
@@ -76,6 +77,8 @@ const Index = () => {
     timeSignature: metronomeTimeSignature,
     onReplay: handleReplaySequence,
     onClearHistory: () => toast({ title: "History cleared" }),
+    liveNotes,
+    isRecording: appState === "user_playing",
   });
 
   const improvMode = ImprovMode({
@@ -93,6 +96,7 @@ const Index = () => {
 
   // Recording manager for improv mode
   const handleRecordingComplete = useCallback((result: RecordingResult) => {
+    setLiveNotes([]); // Clear live notes when recording completes
     if (activeMode === "improv") {
       pendingUserSequenceRef.current = result.sequence;
       handleImprovPlay(result.sequence);
@@ -102,11 +106,17 @@ const Index = () => {
     }
   }, [activeMode]);
 
+  const handleRecordingUpdate = useCallback((notes: Note[]) => {
+    setLiveNotes(notes);
+  }, []);
+
   const recordingManager = useRecordingManager({
     bpm: metronomeBpm,
     timeSignature: metronomeTimeSignature,
     onRecordingComplete: handleRecordingComplete,
-    recordingDelayMs: 1000,
+    onRecordingUpdate: handleRecordingUpdate,
+    pauseTimeoutMs: 3000,
+    resumeGapMs: 1000,
   });
 
   const handleModeChange = (newMode: ActiveMode) => {

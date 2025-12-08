@@ -18,16 +18,18 @@ interface UseRecordingManagerOptions {
   bpm: number;
   timeSignature: string;
   onRecordingComplete: (result: RecordingResult) => void;
-  recordingDelayMs?: number;
-  minGapOnResumeMs?: number;
+  onRecordingUpdate?: (notes: Note[]) => void; // For live display
+  pauseTimeoutMs?: number; // Time of silence before timeline pauses (default: 3000ms)
+  resumeGapMs?: number; // Gap to add when resuming after pause (default: 1000ms)
 }
 
 export function useRecordingManager({
   bpm,
   timeSignature,
   onRecordingComplete,
-  recordingDelayMs = 3000,
-  minGapOnResumeMs = 2000,
+  onRecordingUpdate,
+  pauseTimeoutMs = 3000,
+  resumeGapMs = 1000,
 }: UseRecordingManagerOptions) {
   const [isRecording, setIsRecording] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -36,29 +38,45 @@ export function useRecordingManager({
   const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
   const lastRecordingRef = useRef<RecordingResult | null>(null);
   const notePressDataRef = useRef<Map<string, { startTime: number; velocity: number }>>(new Map());
-  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
   const heldKeysCountRef = useRef(0);
-  const lastNoteEndTimeRef = useRef<number | null>(null);
+
+  // Virtual timeline state
+  const virtualTimeRef = useRef<number>(0); // Current position in virtual timeline
+  const timelinePausedRef = useRef<boolean>(false); // Whether timeline is paused after 3s silence
+  const lastNoteEndTimeRef = useRef<number>(0); // End time of last completed note
+  const realTimeAtPauseRef = useRef<number>(0); // Real time when timeline was paused
+
+  // Timeouts
+  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Store the callback in a ref to avoid stale closures in setTimeout
   const onRecordingCompleteRef = useRef(onRecordingComplete);
   onRecordingCompleteRef.current = onRecordingComplete;
+  const onRecordingUpdateRef = useRef(onRecordingUpdate);
+  onRecordingUpdateRef.current = onRecordingUpdate;
 
-  const startRecording = useCallback(() => {
-    if (recordingStartTimeRef.current !== null) return; // Already recording
-
-    recordingStartTimeRef.current = Date.now();
-    recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
-    lastNoteEndTimeRef.current = null;
-    setIsRecording(true);
-    
-    console.log("[RecordingManager] Started recording");
-  }, [bpm, timeSignature]);
+  const clearAllTimeouts = useCallback(() => {
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+      pauseTimeoutRef.current = null;
+    }
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+      completionTimeoutRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  }, []);
 
   const completeRecording = useCallback(() => {
     if (recordingRef.current.notes.length === 0) return;
+
+    clearAllTimeouts();
 
     // Normalize recording so first note starts at 0
     const minTime = Math.min(...recordingRef.current.notes.map(n => n.startTime));
@@ -81,20 +99,19 @@ export function useRecordingManager({
     lastRecordingRef.current = result;
 
     console.log(`[RecordingManager] Recording complete: ${normalizedRecording.notes.length} notes, totalTime: ${normalizedRecording.totalTime.toFixed(3)}s`);
-    normalizedRecording.notes.forEach((n, i) => {
-      console.log(`  Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
-    });
 
     setShowProgress(true);
     setProgress(100);
 
-    // Use ref to get latest callback - avoids stale closure
+    // Use ref to get latest callback
     onRecordingCompleteRef.current(result);
     
     // Reset recording state
     recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
     recordingStartTimeRef.current = null;
-    lastNoteEndTimeRef.current = null;
+    virtualTimeRef.current = 0;
+    timelinePausedRef.current = false;
+    lastNoteEndTimeRef.current = 0;
     setIsRecording(false);
 
     // Start progress animation
@@ -108,6 +125,64 @@ export function useRecordingManager({
         progressIntervalRef.current = null;
       }
     }, 16);
+  }, [bpm, timeSignature, clearAllTimeouts]);
+
+  const startPauseTimeout = useCallback(() => {
+    // Clear existing timeouts
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+    }
+
+    // After 3 seconds of silence, pause the timeline
+    pauseTimeoutRef.current = setTimeout(() => {
+      timelinePausedRef.current = true;
+      virtualTimeRef.current = lastNoteEndTimeRef.current;
+      realTimeAtPauseRef.current = Date.now();
+      console.log(`[RecordingManager] Timeline paused at ${virtualTimeRef.current.toFixed(3)}s`);
+
+      // After another 3 seconds, complete the recording
+      completionTimeoutRef.current = setTimeout(() => {
+        if (recordingRef.current.notes.length > 0) {
+          completeRecording();
+        }
+      }, pauseTimeoutMs);
+    }, pauseTimeoutMs);
+  }, [pauseTimeoutMs, completeRecording]);
+
+  const getCurrentVirtualTime = useCallback((): number => {
+    if (!recordingStartTimeRef.current) return 0;
+
+    if (timelinePausedRef.current) {
+      // Timeline is paused - resume at lastNoteEndTime + resumeGap
+      const resumeTime = lastNoteEndTimeRef.current + (resumeGapMs / 1000);
+      console.log(`[RecordingManager] Resuming timeline at ${resumeTime.toFixed(3)}s (was paused at ${virtualTimeRef.current.toFixed(3)}s)`);
+      
+      // Unpause and update the reference point for real time
+      timelinePausedRef.current = false;
+      // Adjust recording start time so that current real time maps to resumeTime
+      recordingStartTimeRef.current = Date.now() - (resumeTime * 1000);
+      virtualTimeRef.current = resumeTime;
+      return resumeTime;
+    }
+
+    // Timeline is running - use real elapsed time
+    return (Date.now() - recordingStartTimeRef.current) / 1000;
+  }, [resumeGapMs]);
+
+  const startRecording = useCallback(() => {
+    if (recordingStartTimeRef.current !== null) return; // Already recording
+
+    recordingStartTimeRef.current = Date.now();
+    recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
+    virtualTimeRef.current = 0;
+    timelinePausedRef.current = false;
+    lastNoteEndTimeRef.current = 0;
+    setIsRecording(true);
+    
+    console.log("[RecordingManager] Started recording");
   }, [bpm, timeSignature]);
 
   const addNoteStart = useCallback((noteKey: string, velocity: number = 0.8) => {
@@ -117,31 +192,14 @@ export function useRecordingManager({
 
     heldKeysCountRef.current++;
 
-    const now = Date.now();
-    let startTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
-
-    // When resuming after actual silence, ensure minimum gap from last note
-    // Only enforce if there was a real pause (>500ms) but less than the minimum gap
-    if (lastNoteEndTimeRef.current !== null) {
-      const minGapSeconds = minGapOnResumeMs / 1000;
-      const actualGap = startTimeSeconds - lastNoteEndTimeRef.current;
-      const silenceThreshold = 0.5; // 500ms counts as intentional pause
-      
-      if (actualGap >= silenceThreshold && actualGap < minGapSeconds) {
-        // There was a pause, but it's less than 2 seconds - extend it
-        const offsetNeeded = minGapSeconds - actualGap;
-        recordingStartTimeRef.current! -= offsetNeeded * 1000;
-        startTimeSeconds = lastNoteEndTimeRef.current + minGapSeconds;
-        console.log(`[RecordingManager] Enforced ${minGapSeconds}s gap (actual was ${actualGap.toFixed(3)}s), new start time: ${startTimeSeconds.toFixed(3)}s`);
-      }
+    // Clear timeouts - user is playing again
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+      pauseTimeoutRef.current = null;
     }
-
-    notePressDataRef.current.set(noteKey, { startTime: startTimeSeconds, velocity });
-
-    // Clear any pending recording timeout when new key is pressed
-    if (recordingTimeoutRef.current) {
-      clearTimeout(recordingTimeoutRef.current);
-      recordingTimeoutRef.current = null;
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+      completionTimeoutRef.current = null;
     }
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
@@ -150,8 +208,12 @@ export function useRecordingManager({
     setShowProgress(false);
     setProgress(100);
 
+    const startTimeSeconds = getCurrentVirtualTime();
+
+    notePressDataRef.current.set(noteKey, { startTime: startTimeSeconds, velocity });
+
     console.log(`[RecordingManager] Note start: ${noteKey} at ${startTimeSeconds.toFixed(3)}s`);
-  }, [startRecording, minGapOnResumeMs]);
+  }, [startRecording, getCurrentVirtualTime]);
 
   const addNoteEnd = useCallback((noteKey: string): Note | null => {
     if (recordingStartTimeRef.current === null) return null;
@@ -161,8 +223,7 @@ export function useRecordingManager({
     const pressData = notePressDataRef.current.get(noteKey);
     if (!pressData) return null;
 
-    const now = Date.now();
-    const endTimeSeconds = (now - recordingStartTimeRef.current) / 1000;
+    const endTimeSeconds = getCurrentVirtualTime();
 
     const pitch = noteNameToMidi(noteKey);
     const note: Note = {
@@ -176,32 +237,31 @@ export function useRecordingManager({
 
     recordingRef.current.notes.push(note);
     recordingRef.current.totalTime = Math.max(recordingRef.current.totalTime, endTimeSeconds);
-    lastNoteEndTimeRef.current = endTimeSeconds;
+    lastNoteEndTimeRef.current = Math.max(lastNoteEndTimeRef.current, endTimeSeconds);
+    virtualTimeRef.current = endTimeSeconds;
 
     notePressDataRef.current.delete(noteKey);
 
-    // Only set recording timeout when all keys are released
+    // Notify for live display
+    if (onRecordingUpdateRef.current) {
+      onRecordingUpdateRef.current([...recordingRef.current.notes]);
+    }
+
+    // Start pause timeout when all keys are released
     if (heldKeysCountRef.current === 0 && recordingRef.current.notes.length > 0) {
-      recordingTimeoutRef.current = setTimeout(() => {
-        completeRecording();
-      }, recordingDelayMs);
+      startPauseTimeout();
     }
 
     return note;
-  }, [recordingDelayMs, completeRecording]);
+  }, [getCurrentVirtualTime, startPauseTimeout]);
 
   const cancelRecording = useCallback(() => {
-    if (recordingTimeoutRef.current) {
-      clearTimeout(recordingTimeoutRef.current);
-      recordingTimeoutRef.current = null;
-    }
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
+    clearAllTimeouts();
     recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
     recordingStartTimeRef.current = null;
-    lastNoteEndTimeRef.current = null;
+    virtualTimeRef.current = 0;
+    timelinePausedRef.current = false;
+    lastNoteEndTimeRef.current = 0;
     notePressDataRef.current.clear();
     heldKeysCountRef.current = 0;
     setIsRecording(false);
@@ -209,7 +269,7 @@ export function useRecordingManager({
     setProgress(100);
     
     console.log("[RecordingManager] Recording cancelled");
-  }, [bpm, timeSignature]);
+  }, [bpm, timeSignature, clearAllTimeouts]);
 
   const restoreLastRecording = useCallback(() => {
     if (lastRecordingRef.current) {
@@ -232,6 +292,10 @@ export function useRecordingManager({
     }
   }, []);
 
+  const getCurrentNotes = useCallback((): Note[] => {
+    return [...recordingRef.current.notes];
+  }, []);
+
   return {
     isRecording,
     showProgress,
@@ -242,5 +306,6 @@ export function useRecordingManager({
     restoreLastRecording,
     hideProgress,
     completeRecording,
+    getCurrentNotes,
   };
 }
