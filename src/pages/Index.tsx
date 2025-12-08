@@ -226,8 +226,6 @@ const Index = () => {
         setActiveKeys(new Set());
         noteTimeoutsRef.current = [];
         isPlayingRef.current = false;
-        // Reset piano recording state so next session starts fresh
-        pianoRef.current?.resetRecordingState();
       }
     }, normalizedSequence.totalTime * 1000);
   };
