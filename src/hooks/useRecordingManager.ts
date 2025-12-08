@@ -19,13 +19,15 @@ interface UseRecordingManagerOptions {
   timeSignature: string;
   onRecordingComplete: (result: RecordingResult) => void;
   recordingDelayMs?: number;
+  minGapOnResumeMs?: number;
 }
 
 export function useRecordingManager({
   bpm,
   timeSignature,
   onRecordingComplete,
-  recordingDelayMs = 1000,
+  recordingDelayMs = 3000,
+  minGapOnResumeMs = 2000,
 }: UseRecordingManagerOptions) {
   const [isRecording, setIsRecording] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -38,6 +40,7 @@ export function useRecordingManager({
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
   const heldKeysCountRef = useRef(0);
+  const lastNoteEndTimeRef = useRef<number | null>(null);
 
   // Store the callback in a ref to avoid stale closures in setTimeout
   const onRecordingCompleteRef = useRef(onRecordingComplete);
@@ -48,6 +51,7 @@ export function useRecordingManager({
 
     recordingStartTimeRef.current = Date.now();
     recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
+    lastNoteEndTimeRef.current = null;
     setIsRecording(true);
     
     console.log("[RecordingManager] Started recording");
@@ -90,6 +94,7 @@ export function useRecordingManager({
     // Reset recording state
     recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
     recordingStartTimeRef.current = null;
+    lastNoteEndTimeRef.current = null;
     setIsRecording(false);
 
     // Start progress animation
@@ -113,7 +118,23 @@ export function useRecordingManager({
     heldKeysCountRef.current++;
 
     const now = Date.now();
-    const startTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
+    let startTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
+
+    // When resuming after silence, ensure minimum gap from last note
+    const wasWaitingToComplete = recordingTimeoutRef.current !== null;
+    if (wasWaitingToComplete && lastNoteEndTimeRef.current !== null) {
+      const minGapSeconds = minGapOnResumeMs / 1000;
+      const minStartTime = lastNoteEndTimeRef.current + minGapSeconds;
+      
+      if (startTimeSeconds < minStartTime) {
+        // Shift the recording start time backward to create the gap
+        const offsetNeeded = minStartTime - startTimeSeconds;
+        recordingStartTimeRef.current! -= offsetNeeded * 1000;
+        startTimeSeconds = minStartTime;
+        console.log(`[RecordingManager] Enforced ${minGapSeconds}s gap, new start time: ${startTimeSeconds.toFixed(3)}s`);
+      }
+    }
+
     notePressDataRef.current.set(noteKey, { startTime: startTimeSeconds, velocity });
 
     // Clear any pending recording timeout when new key is pressed
@@ -129,7 +150,7 @@ export function useRecordingManager({
     setProgress(100);
 
     console.log(`[RecordingManager] Note start: ${noteKey} at ${startTimeSeconds.toFixed(3)}s`);
-  }, [startRecording]);
+  }, [startRecording, minGapOnResumeMs]);
 
   const addNoteEnd = useCallback((noteKey: string): Note | null => {
     if (recordingStartTimeRef.current === null) return null;
@@ -154,6 +175,7 @@ export function useRecordingManager({
 
     recordingRef.current.notes.push(note);
     recordingRef.current.totalTime = Math.max(recordingRef.current.totalTime, endTimeSeconds);
+    lastNoteEndTimeRef.current = endTimeSeconds;
 
     notePressDataRef.current.delete(noteKey);
 
@@ -178,6 +200,7 @@ export function useRecordingManager({
     }
     recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
     recordingStartTimeRef.current = null;
+    lastNoteEndTimeRef.current = null;
     notePressDataRef.current.clear();
     heldKeysCountRef.current = 0;
     setIsRecording(false);
