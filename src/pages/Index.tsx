@@ -249,9 +249,6 @@ const Index = () => {
     if (appState === "waiting_for_ai" && hadPendingRequest) {
       console.log("Interrupted waiting_for_ai, restoring last recording");
       pianoRef.current?.restoreLastRecording();
-    } else if (appState === "idle") {
-      // Starting fresh from idle - ensure recording state is clean
-      pianoRef.current?.resetRecordingState();
     }
 
     setAppState("user_playing");

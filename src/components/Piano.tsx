@@ -35,7 +35,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
     const [showProgress, setShowProgress] = useState(false);
     const [progress, setProgress] = useState(100);
-    const [isRecording, setIsRecording] = useState(false);
     const audioContextRef = useRef<AudioContext | null>(null);
     const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
     const lastRecordingRef = useRef<{ sequence: NoteSequence; startTime: number } | null>(null);
@@ -228,18 +227,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       setShowProgress(false);
       setProgress(100);
 
-      // Detect stale recording state: if hasNotified is true but no notes recorded,
-      // it means the previous session completed but state wasn't properly reset
-      const isStaleSession = hasNotifiedPlayStartRef.current && recordingRef.current.notes.length === 0;
-
-      // Start new recording session if needed (or if stale)
-      if (!hasNotifiedPlayStartRef.current || isStaleSession) {
-        if (isStaleSession) {
-          console.log(`[Recording Session] Detected stale session, resetting`);
-        }
+      // Start new recording session if needed
+      if (!hasNotifiedPlayStartRef.current) {
         onUserPlayStart();
         hasNotifiedPlayStartRef.current = true;
-        setIsRecording(true);
         // CRITICAL: Always set fresh recording start time for new session
         recordingStartTimeRef.current = Date.now();
         // Reset recording with current tempo
@@ -310,7 +301,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
       // Only set recording timeout when all keys are released
       if (isAiEnabled && heldKeysCountRef.current === 0 && recordingRef.current.notes.length > 0) {
-        // Use 5-second timeout to allow longer gaps between notes in the same recording
         recordingTimeoutRef.current = setTimeout(() => {
           if (recordingRef.current.notes.length > 0) {
             // Normalize recording so first note starts at 0
@@ -343,7 +333,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
             onUserPlay(normalizedRecording);
             recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
             hasNotifiedPlayStartRef.current = false;
-            setIsRecording(false);
             recordingStartTimeRef.current = null;
 
             const startTime = Date.now();
@@ -356,7 +345,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
               }
             }, 16);
           }
-        }, 5000);
+        }, 1000);
       }
     };
 
@@ -418,16 +407,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           </div>
         </div>
 
-      {!allowInput && (
+        {!allowInput && (
           <div className="absolute top-4 right-4 px-4 py-2 bg-secondary/80 backdrop-blur rounded-full text-sm font-medium animate-pulse">
             AI Playing...
-          </div>
-        )}
-
-        {allowInput && isRecording && (
-          <div className="absolute top-4 left-4 px-4 py-2 bg-destructive/90 backdrop-blur rounded-full text-sm font-medium text-destructive-foreground flex items-center gap-2">
-            <span className="w-2 h-2 bg-destructive-foreground rounded-full animate-pulse" />
-            Recording...
           </div>
         )}
 
