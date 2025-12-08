@@ -23,8 +23,7 @@ import { NoteSequence, Note } from "@/types/noteSequence";
 import { midiToFrequency, midiToNoteName, noteNameToMidi, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
-import { RecordingProgress } from "@/components/RecordingProgress";
-import { RecordingEndingToast } from "@/components/RecordingEndingToast";
+import { TopToastProgress, TopToastLabel } from "@/components/TopToast";
 import { ComposeMode } from "@/components/modes/ComposeMode";
 import { ImprovMode } from "@/components/modes/ImprovMode";
 import { PlayerMode } from "@/components/modes/PlayerMode";
@@ -407,23 +406,21 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4 relative">
       {/* AI Playing / Replay indicator */}
-      {appState === "ai_playing" && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-b-lg shadow-lg flex items-center gap-2 animate-pulse">
-            <Sparkles className="w-4 h-4" />
-            <span className="font-medium">{isReplaying ? "Replay" : "AI Playing"}</span>
-          </div>
-        </div>
-      )}
+      <TopToastLabel
+        show={appState === "ai_playing"}
+        icon={<Sparkles className="w-4 h-4" />}
+        label={isReplaying ? "Replay" : "AI Playing"}
+        pulse
+      />
 
-      {/* Recording ending progress toast */}
+      {/* Recording ending progress toast (compose mode) */}
       {activeMode === "compose" && (
-        <RecordingEndingToast show={recordingManager.showEndingProgress} progress={recordingManager.endingProgress} />
+        <TopToastProgress show={recordingManager.showEndingProgress} progress={recordingManager.endingProgress} />
       )}
 
-      {/* Recording progress (only for improv mode) */}
+      {/* AI preparing progress (improv mode) */}
       {activeMode === "improv" && (
-        <RecordingProgress show={recordingManager.showProgress} progress={recordingManager.progress} />
+        <TopToastProgress show={recordingManager.showProgress} progress={recordingManager.progress} label="AI preparing response..." />
       )}
 
       <Metronome
