@@ -17,7 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send, Circle } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
@@ -63,7 +63,6 @@ const Index = () => {
   const [askPrompt, setAskPrompt] = useState("");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
-  const [isRecording, setIsRecording] = useState(true);
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
 
   // Metronome state (lifted up)
@@ -506,7 +505,6 @@ const Index = () => {
         onUserPlay={handleUserPlay}
         activeKeys={activeKeys}
         isAiEnabled={activeMode === "improv"}
-        isRecording={activeMode === "compose" ? isRecording : true}
         allowInput={appState === "idle" || appState === "user_playing" || appState === "waiting_for_ai"}
         bpm={metronomeBpm}
         timeSignature={metronomeTimeSignature}
@@ -528,18 +526,6 @@ const Index = () => {
               <span className="hidden sm:inline">AI Player</span>
             </TabsTrigger>
           </TabsList>
-
-          {activeMode === "compose" && (
-            <Button
-              variant={isRecording ? "destructive" : "outline"}
-              size="sm"
-              onClick={() => setIsRecording(!isRecording)}
-              className="h-8 px-3 gap-2"
-            >
-              <Circle className={`w-3 h-3 ${isRecording ? "fill-current animate-pulse" : ""}`} />
-              <span className="hidden sm:inline">{isRecording ? "Recording" : "Record"}</span>
-            </Button>
-          )}
 
           <div className="flex items-center gap-2">
             {(activeMode === "improv" || activeMode === "player") && (
