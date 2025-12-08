@@ -27,6 +27,7 @@ export interface PianoHandle {
   handleKeyPress: (noteKey: string, frequency: number, velocity?: number) => void;
   handleKeyRelease: (noteKey: string, frequency: number) => void;
   restoreLastRecording: () => void;
+  resetRecordingState: () => void;
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
@@ -140,6 +141,15 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           hasNotifiedPlayStartRef.current = true;
           console.log("[Piano] Restored last recording with", recordingRef.current.notes.length, "notes");
         }
+      },
+      resetRecordingState: () => {
+        // Reset all recording state for a fresh session
+        hasNotifiedPlayStartRef.current = false;
+        recordingStartTimeRef.current = null;
+        recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
+        heldKeysCountRef.current = 0;
+        notePressDataRef.current.clear();
+        console.log("[Piano] Recording state reset for fresh session");
       },
     }));
 
