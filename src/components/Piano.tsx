@@ -292,6 +292,24 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       recordingRef.current.totalTime = Math.max(recordingRef.current.totalTime, endTimeSeconds);
       setNoteCount(recordingRef.current.notes.length);
 
+      // In Compose mode, call onUserPlay immediately with the current note batch
+      // This enables live updates to sheet music
+      if (!isAiEnabled) {
+        // Normalize recording so first note starts at 0
+        const minTime = Math.min(...recordingRef.current.notes.map(n => n.startTime));
+        const normalizedNotes = recordingRef.current.notes.map(n => ({
+          ...n,
+          startTime: n.startTime - minTime,
+          endTime: n.endTime - minTime,
+        }));
+        const normalizedRecording: NoteSequence = {
+          ...recordingRef.current,
+          notes: normalizedNotes,
+          totalTime: recordingRef.current.totalTime - minTime,
+        };
+        onUserPlay(normalizedRecording);
+      }
+
       notePressDataRef.current.delete(noteKey);
       setUserPressedKeys(prev => {
         const newSet = new Set(prev);
