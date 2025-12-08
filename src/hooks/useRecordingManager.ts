@@ -39,6 +39,10 @@ export function useRecordingManager({
   const recordingStartTimeRef = useRef<number | null>(null);
   const heldKeysCountRef = useRef(0);
 
+  // Store the callback in a ref to avoid stale closures in setTimeout
+  const onRecordingCompleteRef = useRef(onRecordingComplete);
+  onRecordingCompleteRef.current = onRecordingComplete;
+
   const startRecording = useCallback(() => {
     if (recordingStartTimeRef.current !== null) return; // Already recording
 
@@ -47,6 +51,58 @@ export function useRecordingManager({
     setIsRecording(true);
     
     console.log("[RecordingManager] Started recording");
+  }, [bpm, timeSignature]);
+
+  const completeRecording = useCallback(() => {
+    if (recordingRef.current.notes.length === 0) return;
+
+    // Normalize recording so first note starts at 0
+    const minTime = Math.min(...recordingRef.current.notes.map(n => n.startTime));
+    const normalizedNotes = recordingRef.current.notes.map(n => ({
+      ...n,
+      startTime: n.startTime - minTime,
+      endTime: n.endTime - minTime,
+    }));
+    const normalizedRecording: NoteSequence = {
+      ...recordingRef.current,
+      notes: normalizedNotes,
+      totalTime: recordingRef.current.totalTime - minTime,
+    };
+
+    // Save recording before sending
+    const result: RecordingResult = {
+      sequence: { ...normalizedRecording, notes: [...normalizedRecording.notes] },
+      recordingStartTime: recordingStartTimeRef.current!,
+    };
+    lastRecordingRef.current = result;
+
+    console.log(`[RecordingManager] Recording complete: ${normalizedRecording.notes.length} notes, totalTime: ${normalizedRecording.totalTime.toFixed(3)}s`);
+    normalizedRecording.notes.forEach((n, i) => {
+      console.log(`  Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
+    });
+
+    setShowProgress(true);
+    setProgress(100);
+
+    // Use ref to get latest callback - avoids stale closure
+    onRecordingCompleteRef.current(result);
+    
+    // Reset recording state
+    recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
+    recordingStartTimeRef.current = null;
+    setIsRecording(false);
+
+    // Start progress animation
+    const startTime = Date.now();
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.max(0, 100 - (elapsed / 1000) * 100);
+      setProgress(newProgress);
+      if (newProgress === 0 && progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    }, 16);
   }, [bpm, timeSignature]);
 
   const addNoteStart = useCallback((noteKey: string, velocity: number = 0.8) => {
@@ -109,58 +165,7 @@ export function useRecordingManager({
     }
 
     return note;
-  }, [recordingDelayMs]);
-
-  const completeRecording = useCallback(() => {
-    if (recordingRef.current.notes.length === 0) return;
-
-    // Normalize recording so first note starts at 0
-    const minTime = Math.min(...recordingRef.current.notes.map(n => n.startTime));
-    const normalizedNotes = recordingRef.current.notes.map(n => ({
-      ...n,
-      startTime: n.startTime - minTime,
-      endTime: n.endTime - minTime,
-    }));
-    const normalizedRecording: NoteSequence = {
-      ...recordingRef.current,
-      notes: normalizedNotes,
-      totalTime: recordingRef.current.totalTime - minTime,
-    };
-
-    // Save recording before sending
-    const result: RecordingResult = {
-      sequence: { ...normalizedRecording, notes: [...normalizedRecording.notes] },
-      recordingStartTime: recordingStartTimeRef.current!,
-    };
-    lastRecordingRef.current = result;
-
-    console.log(`[RecordingManager] Recording complete: ${normalizedRecording.notes.length} notes, totalTime: ${normalizedRecording.totalTime.toFixed(3)}s`);
-    normalizedRecording.notes.forEach((n, i) => {
-      console.log(`  Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
-    });
-
-    setShowProgress(true);
-    setProgress(100);
-
-    onRecordingComplete(result);
-    
-    // Reset recording state
-    recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
-    recordingStartTimeRef.current = null;
-    setIsRecording(false);
-
-    // Start progress animation
-    const startTime = Date.now();
-    progressIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const newProgress = Math.max(0, 100 - (elapsed / 1000) * 100);
-      setProgress(newProgress);
-      if (newProgress === 0 && progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-    }, 16);
-  }, [bpm, timeSignature, onRecordingComplete]);
+  }, [recordingDelayMs, completeRecording]);
 
   const cancelRecording = useCallback(() => {
     if (recordingTimeoutRef.current) {
