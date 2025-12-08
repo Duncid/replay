@@ -27,11 +27,13 @@ export function ComposeMode({
   const [history, setHistory] = useState<ComposeEntry[]>([]);
 
   const addUserSequence = useCallback((userSequence: NoteSequence) => {
+    const mergingGapSeconds = 2; // Gap between merged recordings
+    
     setHistory((prev) => {
       if (prev.length > 0) {
         const lastSession = prev[prev.length - 1];
-        // Append to existing session - offset new notes by the previous sequence's totalTime
-        const timeOffset = lastSession.userSequence.totalTime;
+        // Append to existing session - offset new notes by the previous sequence's totalTime + gap
+        const timeOffset = lastSession.userSequence.totalTime + mergingGapSeconds;
         const offsetNotes = userSequence.notes.map((note) => ({
           ...note,
           startTime: note.startTime + timeOffset,
