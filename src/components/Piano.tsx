@@ -36,7 +36,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const [showProgress, setShowProgress] = useState(false);
     const [progress, setProgress] = useState(100);
     const [isRecording, setIsRecording] = useState(false);
-    const [noteCount, setNoteCount] = useState(0);
     const audioContextRef = useRef<AudioContext | null>(null);
     const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
     const lastRecordingRef = useRef<{ sequence: NoteSequence; startTime: number } | null>(null);
@@ -151,8 +150,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
         heldKeysCountRef.current = 0;
         notePressDataRef.current.clear();
-        setIsRecording(false);
-        setNoteCount(0);
         console.log("[Piano] Recording state reset for fresh session");
       },
     }));
@@ -287,27 +284,21 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
       console.log(`[Recording] Note ${noteKey}: start=${pressData.startTime.toFixed(3)}s, end=${endTimeSeconds.toFixed(3)}s, duration=${(endTimeSeconds - pressData.startTime).toFixed(3)}s`);
 
-      // In both modes, accumulate notes with timing preserved
-      recordingRef.current.notes.push(note);
-      recordingRef.current.totalTime = Math.max(recordingRef.current.totalTime, endTimeSeconds);
-      setNoteCount(recordingRef.current.notes.length);
-
-      // In Compose mode, call onUserPlay immediately with the current note batch
-      // This enables live updates to sheet music
       if (!isAiEnabled) {
-        // Normalize recording so first note starts at 0
-        const minTime = Math.min(...recordingRef.current.notes.map(n => n.startTime));
-        const normalizedNotes = recordingRef.current.notes.map(n => ({
-          ...n,
-          startTime: n.startTime - minTime,
-          endTime: n.endTime - minTime,
-        }));
-        const normalizedRecording: NoteSequence = {
-          ...recordingRef.current,
-          notes: normalizedNotes,
-          totalTime: recordingRef.current.totalTime - minTime,
+        // Send single note immediately, normalized to start at 0
+        const singleNoteSequence = createEmptyNoteSequence(bpm, timeSignature);
+        const normalizedNote = {
+          ...note,
+          startTime: 0,
+          endTime: note.endTime - note.startTime,
         };
-        onUserPlay(normalizedRecording);
+        singleNoteSequence.notes.push(normalizedNote);
+        singleNoteSequence.totalTime = normalizedNote.endTime;
+        onUserPlay(singleNoteSequence);
+      } else {
+        // Accumulate notes
+        recordingRef.current.notes.push(note);
+        recordingRef.current.totalTime = Math.max(recordingRef.current.totalTime, endTimeSeconds);
       }
 
       notePressDataRef.current.delete(noteKey);
@@ -317,8 +308,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         return newSet;
       });
 
-      // Only set recording timeout in AI mode when all keys are released
-      // In Compose mode (isAiEnabled=false), recording continues indefinitely
+      // Only set recording timeout when all keys are released
       if (isAiEnabled && heldKeysCountRef.current === 0 && recordingRef.current.notes.length > 0) {
         // Use 5-second timeout to allow longer gaps between notes in the same recording
         recordingTimeoutRef.current = setTimeout(() => {
@@ -354,7 +344,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
             recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
             hasNotifiedPlayStartRef.current = false;
             setIsRecording(false);
-            setNoteCount(0);
             recordingStartTimeRef.current = null;
 
             const startTime = Date.now();
@@ -438,7 +427,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         {allowInput && isRecording && (
           <div className="absolute top-4 left-4 px-4 py-2 bg-destructive/90 backdrop-blur rounded-full text-sm font-medium text-destructive-foreground flex items-center gap-2">
             <span className="w-2 h-2 bg-destructive-foreground rounded-full animate-pulse" />
-            {noteCount} note{noteCount !== 1 ? 's' : ''} • Recording
+            Recording...
           </div>
         )}
 
