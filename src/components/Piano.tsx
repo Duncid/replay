@@ -227,8 +227,15 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       setShowProgress(false);
       setProgress(100);
 
-      // Start new recording session if needed
-      if (!hasNotifiedPlayStartRef.current) {
+      // Detect stale recording state: if hasNotified is true but no notes recorded,
+      // it means the previous session completed but state wasn't properly reset
+      const isStaleSession = hasNotifiedPlayStartRef.current && recordingRef.current.notes.length === 0;
+
+      // Start new recording session if needed (or if stale)
+      if (!hasNotifiedPlayStartRef.current || isStaleSession) {
+        if (isStaleSession) {
+          console.log(`[Recording Session] Detected stale session, resetting`);
+        }
         onUserPlayStart();
         hasNotifiedPlayStartRef.current = true;
         // CRITICAL: Always set fresh recording start time for new session
