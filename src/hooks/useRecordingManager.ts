@@ -120,18 +120,19 @@ export function useRecordingManager({
     const now = Date.now();
     let startTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
 
-    // When resuming after silence, ensure minimum gap from last note
-    const wasWaitingToComplete = recordingTimeoutRef.current !== null;
-    if (wasWaitingToComplete && lastNoteEndTimeRef.current !== null) {
+    // When resuming after actual silence, ensure minimum gap from last note
+    // Only enforce if there was a real pause (>500ms) but less than the minimum gap
+    if (lastNoteEndTimeRef.current !== null) {
       const minGapSeconds = minGapOnResumeMs / 1000;
-      const minStartTime = lastNoteEndTimeRef.current + minGapSeconds;
+      const actualGap = startTimeSeconds - lastNoteEndTimeRef.current;
+      const silenceThreshold = 0.5; // 500ms counts as intentional pause
       
-      if (startTimeSeconds < minStartTime) {
-        // Shift the recording start time backward to create the gap
-        const offsetNeeded = minStartTime - startTimeSeconds;
+      if (actualGap >= silenceThreshold && actualGap < minGapSeconds) {
+        // There was a pause, but it's less than 2 seconds - extend it
+        const offsetNeeded = minGapSeconds - actualGap;
         recordingStartTimeRef.current! -= offsetNeeded * 1000;
-        startTimeSeconds = minStartTime;
-        console.log(`[RecordingManager] Enforced ${minGapSeconds}s gap, new start time: ${startTimeSeconds.toFixed(3)}s`);
+        startTimeSeconds = lastNoteEndTimeRef.current + minGapSeconds;
+        console.log(`[RecordingManager] Enforced ${minGapSeconds}s gap (actual was ${actualGap.toFixed(3)}s), new start time: ${startTimeSeconds.toFixed(3)}s`);
       }
     }
 
