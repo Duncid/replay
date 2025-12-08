@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { SheetMusic } from "@/components/SheetMusic";
-import { NoteSequence } from "@/types/noteSequence";
+import { NoteSequence, Note } from "@/types/noteSequence";
 import { createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
 
 interface ComposeEntry {
@@ -12,9 +12,18 @@ interface ComposeModeProps {
   timeSignature: string;
   onReplay: (sequence: NoteSequence) => void;
   onClearHistory: () => void;
+  liveNotes?: Note[]; // Notes currently being recorded (for live display)
+  isRecording?: boolean;
 }
 
-export function ComposeMode({ bpm, timeSignature, onReplay, onClearHistory }: ComposeModeProps) {
+export function ComposeMode({ 
+  bpm, 
+  timeSignature, 
+  onReplay, 
+  onClearHistory,
+  liveNotes = [],
+  isRecording = false,
+}: ComposeModeProps) {
   const [history, setHistory] = useState<ComposeEntry[]>([]);
 
   const addUserSequence = useCallback((userSequence: NoteSequence) => {
@@ -49,27 +58,54 @@ export function ComposeMode({ bpm, timeSignature, onReplay, onClearHistory }: Co
     setHistory((prev) => [...prev, { userSequence: createEmptyNoteSequence(bpm, timeSignature) }]);
   }, [bpm, timeSignature]);
 
+  // Create a live sequence from current notes for real-time display
+  const liveSequence: NoteSequence | null = liveNotes.length > 0 ? {
+    notes: liveNotes,
+    totalTime: Math.max(...liveNotes.map(n => n.endTime), 0),
+    tempos: [{ time: 0, qpm: bpm }],
+    timeSignatures: [{ 
+      time: 0, 
+      numerator: parseInt(timeSignature.split('/')[0]), 
+      denominator: parseInt(timeSignature.split('/')[1]) 
+    }],
+  } : null;
+
   return {
     history,
     addUserSequence,
     clearHistory,
     startNewSession,
     renderHistory: () => (
-      history.length > 0 && (
-        <div className="w-full space-y-2">
-          {history.map((entry, index) => (
-            entry.userSequence.notes.length > 0 && (
-              <SheetMusic
-                key={index}
-                sequence={entry.userSequence}
-                isUserNotes={true}
-                onReplay={() => onReplay(entry.userSequence)}
-                compact
-              />
-            )
-          ))}
-        </div>
-      )
+      <>
+        {/* Live recording display */}
+        {isRecording && liveSequence && (
+          <div className="w-full space-y-2 opacity-75">
+            <SheetMusic
+              sequence={liveSequence}
+              isUserNotes={true}
+              compact
+              label="Recording..."
+            />
+          </div>
+        )}
+        
+        {/* Completed recordings */}
+        {history.length > 0 && (
+          <div className="w-full space-y-2">
+            {history.map((entry, index) => (
+              entry.userSequence.notes.length > 0 && (
+                <SheetMusic
+                  key={index}
+                  sequence={entry.userSequence}
+                  isUserNotes={true}
+                  onReplay={() => onReplay(entry.userSequence)}
+                  compact
+                />
+              )
+            ))}
+          </div>
+        )}
+      </>
     ),
   };
 }
