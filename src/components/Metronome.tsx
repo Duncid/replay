@@ -229,11 +229,9 @@ export const Metronome = ({
           </Label>
 
           <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
-
-          {children}
         </div>
-        <div className="w-full" />
-        {/* Right: Beat Indicators (only when playing) */}
+
+        {/* Center: Beat Indicators (only when playing) */}
         {isPlaying && (
           <div className="flex items-center gap-2">
             {Array.from({ length: beats }, (_, i) => {
@@ -258,6 +256,9 @@ export const Metronome = ({
             })}
           </div>
         )}
+
+        {/* Right: Children (MIDI Connector) */}
+        {children && <div className="ml-auto">{children}</div>}
       </div>
     </div>
   );
