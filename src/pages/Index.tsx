@@ -50,6 +50,7 @@ const Index = () => {
   const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
+  const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [liveNotes, setLiveNotes] = useState<Note[]>([]);
 
   // Metronome state
@@ -71,18 +72,11 @@ const Index = () => {
 
   const MIN_WAIT_TIME_MS = 1000;
 
-  // Mode-specific hooks
-  const composeMode = ComposeMode({
-    bpm: metronomeBpm,
-    timeSignature: metronomeTimeSignature,
-    onReplay: handleReplaySequence,
-    onClearHistory: () => toast({ title: "History cleared" }),
-    liveNotes,
-    isRecording: appState === "user_playing",
-  });
-
+  // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
+  // (they will be initialized after those functions are defined)
+  
   const improvMode = ImprovMode({
-    onReplay: handleReplaySequence,
+    onReplay: (seq) => handleReplaySequenceRef.current?.(seq),
     onClearHistory: () => toast({ title: "History cleared" }),
   });
 
@@ -90,9 +84,13 @@ const Index = () => {
     isLoading: isAskLoading,
     isPlaying: appState === "ai_playing",
     onSubmit: handleAskSubmit,
-    onReplay: handleReplaySequence,
+    onReplay: (seq) => handleReplaySequenceRef.current?.(seq),
     onClearHistory: () => toast({ title: "History cleared" }),
   });
+
+  // Refs for circular dependency handling
+  const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>();
+  const composeModeRef = useRef<ReturnType<typeof ComposeMode>>();
 
   // Recording manager for improv mode
   const handleRecordingComplete = useCallback((result: RecordingResult) => {
@@ -101,7 +99,7 @@ const Index = () => {
       pendingUserSequenceRef.current = result.sequence;
       handleImprovPlay(result.sequence);
     } else if (activeMode === "compose") {
-      composeMode.addUserSequence(result.sequence);
+      composeModeRef.current?.addUserSequence(result.sequence);
       setAppState("idle");
     }
   }, [activeMode]);
@@ -162,6 +160,7 @@ const Index = () => {
     }
     setActiveKeys(new Set());
     setAppState("idle");
+    setIsPlayingAll(false);
   }, []);
 
   const playSequence = useCallback(async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
@@ -262,6 +261,34 @@ const Index = () => {
     pianoRef.current?.ensureAudioReady();
     setTimeout(() => playSequence(sequence, undefined, true), 50);
   }
+
+  // Assign to ref for use in callbacks defined earlier
+  handleReplaySequenceRef.current = handleReplaySequence;
+
+  // Handle playing all sequences
+  const handlePlayAllSequences = useCallback((combinedSequence: NoteSequence) => {
+    if (isPlayingRef.current) return;
+    
+    setIsPlayingAll(true);
+    pianoRef.current?.ensureAudioReady();
+    setTimeout(() => playSequence(combinedSequence, undefined, true), 50);
+  }, [playSequence]);
+
+  // Compose mode hook - defined here since it needs handleReplaySequence and playSequence
+  const composeMode = ComposeMode({
+    bpm: metronomeBpm,
+    timeSignature: metronomeTimeSignature,
+    onReplay: handleReplaySequence,
+    onPlayAll: handlePlayAllSequences,
+    onStopPlayback: stopAiPlayback,
+    onClearHistory: () => toast({ title: "History cleared" }),
+    liveNotes,
+    isRecording: appState === "user_playing",
+    isPlayingAll,
+  });
+
+  // Assign to ref for use in handleRecordingComplete
+  composeModeRef.current = composeMode;
 
   // Handle note events from Piano
   const handleNoteStart = useCallback((noteKey: string, frequency: number, velocity: number) => {
