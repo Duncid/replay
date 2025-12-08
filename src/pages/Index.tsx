@@ -24,6 +24,7 @@ import { midiToFrequency, midiToNoteName, noteNameToMidi, createEmptyNoteSequenc
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
 import { RecordingProgress } from "@/components/RecordingProgress";
+import { RecordingEndingToast } from "@/components/RecordingEndingToast";
 import { ComposeMode } from "@/components/modes/ComposeMode";
 import { ImprovMode } from "@/components/modes/ImprovMode";
 import { PlayerMode } from "@/components/modes/PlayerMode";
@@ -413,6 +414,11 @@ const Index = () => {
             <span className="font-medium">{isReplaying ? "Replay" : "AI Playing"}</span>
           </div>
         </div>
+      )}
+
+      {/* Recording ending progress toast */}
+      {activeMode === "compose" && (
+        <RecordingEndingToast show={recordingManager.showEndingProgress} progress={recordingManager.endingProgress} />
       )}
 
       {/* Recording progress (only for improv mode) */}
