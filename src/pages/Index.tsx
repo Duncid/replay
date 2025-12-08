@@ -17,7 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send, Circle, RotateCcw, Play } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
@@ -64,6 +64,12 @@ const Index = () => {
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
+  
+  // Compose mode state
+  const [isComposing, setIsComposing] = useState(false);
+  const [compositionSequence, setCompositionSequence] = useState<NoteSequence>(
+    createEmptyNoteSequence(120, "4/4")
+  );
 
   // Metronome state (lifted up)
   const [metronomeBpm, setMetronomeBpm] = useState(120);
@@ -265,30 +271,23 @@ const Index = () => {
     console.log("User finished playing, request ID:", requestId);
 
     if (activeMode === "compose") {
-      setSessionHistory((prev) => {
-        if (prev.length > 0) {
-          const lastSession = prev[prev.length - 1];
-          if (lastSession.aiSequence.notes.length === 0) {
-            // Offset new notes by the previous sequence's totalTime
-            const timeOffset = lastSession.userSequence.totalTime;
-            const offsetNotes = userSequence.notes.map((note) => ({
-              ...note,
-              startTime: note.startTime + timeOffset,
-              endTime: note.endTime + timeOffset,
-            }));
-            const updatedUserSequence: NoteSequence = {
-              ...lastSession.userSequence,
-              notes: [...lastSession.userSequence.notes, ...offsetNotes],
-              totalTime: timeOffset + userSequence.totalTime,
-            };
-            return [...prev.slice(0, -1), { ...lastSession, userSequence: updatedUserSequence }];
-          }
-        }
-        return [
-          ...prev,
-          { type: "jam", userSequence, aiSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature) },
-        ];
-      });
+      // Only record if composing is enabled
+      if (isComposing) {
+        setCompositionSequence((prev) => {
+          // Offset new notes by the previous sequence's totalTime
+          const timeOffset = prev.totalTime;
+          const offsetNotes = userSequence.notes.map((note) => ({
+            ...note,
+            startTime: note.startTime + timeOffset,
+            endTime: note.endTime + timeOffset,
+          }));
+          return {
+            ...prev,
+            notes: [...prev.notes, ...offsetNotes],
+            totalTime: timeOffset + userSequence.totalTime,
+          };
+        });
+      }
       setAppState("idle");
       return;
     }
@@ -427,6 +426,26 @@ const Index = () => {
     toast({ title: "History cleared", description: "Session history has been cleared" });
   };
 
+  const toggleComposing = () => {
+    if (!isComposing) {
+      // Starting recording - clear composition
+      setCompositionSequence(createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature));
+      pianoRef.current?.resetRecordingState();
+    }
+    setIsComposing(!isComposing);
+  };
+
+  const clearComposition = () => {
+    setCompositionSequence(createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature));
+    pianoRef.current?.resetRecordingState();
+    toast({ title: "Composition cleared" });
+  };
+
+  const replayComposition = async () => {
+    if (compositionSequence.notes.length === 0) return;
+    await handleReplaySequence(compositionSequence);
+  };
+
   const handleAskSubmit = async () => {
     if (!askPrompt.trim() || isAskLoading) return;
 
@@ -517,20 +536,57 @@ const Index = () => {
 
       <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full">
         <div className="w-full flex flex-wrap items-center justify-between gap-4 py-2">
-          <TabsList className="bg-muted">
-            <TabsTrigger value="compose" className="gap-2">
-              <Music className="w-4 h-4" />
-              <span className="hidden sm:inline">Compose</span>
-            </TabsTrigger>
-            <TabsTrigger value="improv" className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">AI Improv</span>
-            </TabsTrigger>
-            <TabsTrigger value="player" className="gap-2">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">AI Player</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2">
+            <TabsList className="bg-muted">
+              <TabsTrigger value="compose" className="gap-2">
+                <Music className="w-4 h-4" />
+                <span className="hidden sm:inline">Compose</span>
+              </TabsTrigger>
+              <TabsTrigger value="improv" className="gap-2">
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline">AI Improv</span>
+              </TabsTrigger>
+              <TabsTrigger value="player" className="gap-2">
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">AI Player</span>
+              </TabsTrigger>
+            </TabsList>
+
+            {activeMode === "compose" && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={isComposing ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={toggleComposing}
+                  className="gap-2"
+                  disabled={appState === "ai_playing"}
+                >
+                  <Circle className={`w-3 h-3 ${isComposing ? "fill-current" : ""}`} />
+                  {isComposing ? "Stop" : "Record"}
+                </Button>
+                {compositionSequence.notes.length > 0 && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={replayComposition}
+                      disabled={appState === "ai_playing"}
+                    >
+                      <Play className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearComposition}
+                      disabled={appState === "ai_playing"}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             {(activeMode === "improv" || activeMode === "player") && (
@@ -623,6 +679,17 @@ const Index = () => {
             {isAskLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Generate Music
           </Button>
+        </div>
+      )}
+
+      {activeMode === "compose" && compositionSequence.notes.length > 0 && (
+        <div className="w-full max-w-4xl">
+          <SheetMusic
+            sequence={compositionSequence}
+            label={`Composition (${compositionSequence.notes.length} note${compositionSequence.notes.length !== 1 ? 's' : ''}):`}
+            isUserNotes={true}
+            onReplay={replayComposition}
+          />
         </div>
       )}
 
