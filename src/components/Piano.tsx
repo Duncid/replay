@@ -15,6 +15,7 @@ interface PianoProps {
   onUserPlay: (sequence: NoteSequence) => void;
   activeKeys: Set<string>;
   isAiEnabled: boolean;
+  isRecording?: boolean;
   allowInput: boolean;
   bpm?: number;
   timeSignature?: string;
@@ -30,7 +31,7 @@ export interface PianoHandle {
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
-  ({ onUserPlayStart, onUserPlay, activeKeys, isAiEnabled, allowInput, bpm = 120, timeSignature = "4/4" }, ref) => {
+  ({ onUserPlayStart, onUserPlay, activeKeys, isAiEnabled, isRecording = true, allowInput, bpm = 120, timeSignature = "4/4" }, ref) => {
     const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
     const [showProgress, setShowProgress] = useState(false);
     const [progress, setProgress] = useState(100);
@@ -255,16 +256,20 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       console.log(`[Recording] Note ${noteKey}: start=${pressData.startTime.toFixed(3)}s, end=${endTimeSeconds.toFixed(3)}s, duration=${(endTimeSeconds - pressData.startTime).toFixed(3)}s`);
 
       if (!isAiEnabled) {
-        // Send single note immediately, normalized to start at 0
-        const singleNoteSequence = createEmptyNoteSequence(bpm, timeSignature);
-        const normalizedNote = {
-          ...note,
-          startTime: 0,
-          endTime: note.endTime - note.startTime,
-        };
-        singleNoteSequence.notes.push(normalizedNote);
-        singleNoteSequence.totalTime = normalizedNote.endTime;
-        onUserPlay(singleNoteSequence);
+        // Only record if recording is enabled (for Compose mode)
+        if (isRecording) {
+          // Send single note immediately, normalized to start at 0
+          const singleNoteSequence = createEmptyNoteSequence(bpm, timeSignature);
+          const normalizedNote = {
+            ...note,
+            startTime: 0,
+            endTime: note.endTime - note.startTime,
+          };
+          singleNoteSequence.notes.push(normalizedNote);
+          singleNoteSequence.totalTime = normalizedNote.endTime;
+          onUserPlay(singleNoteSequence);
+        }
+        // If not recording, just play sound (already done via stopNote above)
       } else {
         // Accumulate notes
         recordingRef.current.notes.push(note);
