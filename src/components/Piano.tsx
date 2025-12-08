@@ -205,12 +205,27 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       // Track held keys
       heldKeysCountRef.current++;
 
+      // Clear any pending recording timeout when new key is pressed
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setShowProgress(false);
+      setProgress(100);
+
+      // Start new recording session if needed
       if (!hasNotifiedPlayStartRef.current) {
         onUserPlayStart();
         hasNotifiedPlayStartRef.current = true;
+        // CRITICAL: Always set fresh recording start time for new session
         recordingStartTimeRef.current = Date.now();
         // Reset recording with current tempo
         recordingRef.current = createEmptyNoteSequence(bpm, timeSignature);
+        console.log(`[Recording Session] Started new recording at ${recordingStartTimeRef.current}`);
       }
 
       startNote(noteKey, frequency);
@@ -219,14 +234,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       const now = Date.now();
       const startTimeSeconds = (now - recordingStartTimeRef.current!) / 1000;
       notePressDataRef.current.set(noteKey, { startTime: startTimeSeconds, velocity });
+      
+      console.log(`[KeyPress] ${noteKey}: now=${now}, recordingStart=${recordingStartTimeRef.current}, startTimeSeconds=${startTimeSeconds.toFixed(3)}s`);
 
       setUserPressedKeys(prev => new Set([...prev, noteKey]));
-
-      // Clear any pending recording timeout when new key is pressed
-      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      setShowProgress(false);
-      setProgress(100);
     };
 
     const handleKeyRelease = (noteKey: string, frequency: number) => {
