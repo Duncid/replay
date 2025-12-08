@@ -252,6 +252,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         velocity: pressData.velocity,
       };
 
+      console.log(`[Recording] Note ${noteKey}: start=${pressData.startTime.toFixed(3)}s, end=${endTimeSeconds.toFixed(3)}s, duration=${(endTimeSeconds - pressData.startTime).toFixed(3)}s`);
+
       if (!isAiEnabled) {
         // Send single note immediately, normalized to start at 0
         const singleNoteSequence = createEmptyNoteSequence(bpm, timeSignature);
@@ -298,6 +300,11 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
               sequence: { ...normalizedRecording, notes: [...normalizedRecording.notes] },
               startTime: recordingStartTimeRef.current!,
             };
+
+            console.log(`[Recording Complete] Total notes: ${normalizedRecording.notes.length}, totalTime: ${normalizedRecording.totalTime.toFixed(3)}s`);
+            normalizedRecording.notes.forEach((n, i) => {
+              console.log(`  Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
+            });
 
             setShowProgress(true);
             setProgress(100);

@@ -160,9 +160,12 @@ const Index = () => {
       totalTime: sequence.totalTime - minStartTime,
     };
 
-    console.log(
-      `[Playback ${playbackId}] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`,
-    );
+    console.log(`[Playback ${playbackId}] ========== PLAYBACK START ==========`);
+    console.log(`[Playback ${playbackId}] Notes: ${normalizedSequence.notes.length}, normalizedTotalTime: ${normalizedSequence.totalTime.toFixed(3)}s`);
+    normalizedSequence.notes.forEach((n, i) => {
+      console.log(`[Playback ${playbackId}] Scheduled Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
+    });
+    const playbackStartTime = Date.now();
 
     // Clear ALL previous playback state including note timeouts
     shouldStopAiRef.current = true;
@@ -194,6 +197,8 @@ const Index = () => {
 
       const startTimeout = setTimeout(() => {
         if (!shouldStopAiRef.current && pianoRef.current) {
+          const actualElapsed = (Date.now() - playbackStartTime) / 1000;
+          console.log(`[Playback ${playbackId}] Note ${noteKey} PLAYING at ${actualElapsed.toFixed(3)}s (scheduled: ${note.startTime.toFixed(3)}s, diff: ${(actualElapsed - note.startTime).toFixed(3)}s)`);
           pianoRef.current.playNote(frequency, duration);
           setActiveKeys((prev) => new Set([...prev, noteKey]));
         }
@@ -214,6 +219,9 @@ const Index = () => {
 
     aiPlaybackTimeoutRef.current = setTimeout(() => {
       if (!shouldStopAiRef.current) {
+        const totalElapsed = (Date.now() - playbackStartTime) / 1000;
+        console.log(`[Playback ${playbackId}] ========== PLAYBACK END ==========`);
+        console.log(`[Playback ${playbackId}] Total elapsed: ${totalElapsed.toFixed(3)}s (expected: ${normalizedSequence.totalTime.toFixed(3)}s, diff: ${(totalElapsed - normalizedSequence.totalTime).toFixed(3)}s)`);
         setAppState("idle");
         setActiveKeys(new Set());
         noteTimeoutsRef.current = [];
@@ -388,8 +396,11 @@ const Index = () => {
       return;
     }
 
-    console.log(`[Replay] Starting replay of ${sequence.notes.length} notes`);
-    console.log(`[Replay] First note startTime: ${sequence.notes[0]?.startTime}s, totalTime: ${sequence.totalTime}s`);
+    console.log(`[Replay Debug] ========== REPLAY START ==========`);
+    console.log(`[Replay Debug] Total notes: ${sequence.notes.length}, totalTime: ${sequence.totalTime.toFixed(3)}s`);
+    sequence.notes.forEach((n, i) => {
+      console.log(`[Replay Debug] Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
+    });
 
     // Stop any current playback without resetting to idle (we're about to play again)
     shouldStopAiRef.current = true;
