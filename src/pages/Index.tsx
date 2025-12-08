@@ -62,6 +62,7 @@ const Index = () => {
   const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
   const [askPrompt, setAskPrompt] = useState("");
   const [isAskLoading, setIsAskLoading] = useState(false);
+  const [isReplaying, setIsReplaying] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
 
   // Metronome state (lifted up)
@@ -130,6 +131,7 @@ const Index = () => {
   };
 
   const playSequence = async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
+    setIsReplaying(isReplay);
     // Generate a unique ID for this playback call for debugging
     const playbackId = Math.random().toString(36).substring(7);
 
@@ -458,7 +460,16 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4">
+    <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4 relative">
+      {/* AI Playing / Replay indicator */}
+      {appState === "ai_playing" && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-b-lg shadow-lg flex items-center gap-2 animate-pulse">
+            <Sparkles className="w-4 h-4" />
+            <span className="font-medium">{isReplaying ? "Replay" : "AI Playing"}</span>
+          </div>
+        </div>
+      )}
       <Metronome
         bpm={metronomeBpm}
         setBpm={setMetronomeBpm}
