@@ -182,15 +182,10 @@ export const Metronome = ({
       <div className="flex items-center justify-between gap-4">
         {/* Left: Switch, Label, and Settings */}
         <div className="flex items-center gap-3">
-          <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
-          <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer">
-            Metronome
-          </Label>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
-                <Settings className="w-4 h-4" />
+                Time settings
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
@@ -229,6 +224,11 @@ export const Metronome = ({
               </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer">
+            Metronome
+          </Label>
+
+          <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
 
           {children}
         </div>
