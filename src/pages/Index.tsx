@@ -405,13 +405,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4 relative">
-      {/* AI Playing / Replay indicator */}
-      <TopToastLabel
-        show={appState === "ai_playing"}
-        icon={<Sparkles className="w-4 h-4" />}
-        label={isReplaying ? "Replay" : "AI Playing"}
-        pulse
-      />
 
       {/* Recording ending progress toast (compose mode) */}
       {activeMode === "compose" && (
