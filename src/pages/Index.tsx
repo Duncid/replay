@@ -63,7 +63,7 @@ const Index = () => {
   const [askPrompt, setAskPrompt] = useState("");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+  const [isRecording, setIsRecording] = useState(true);
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
 
   // Metronome state (lifted up)
