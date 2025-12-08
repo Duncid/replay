@@ -308,6 +308,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
       // Only set recording timeout when all keys are released
       if (isAiEnabled && heldKeysCountRef.current === 0 && recordingRef.current.notes.length > 0) {
+        // Use 3-second timeout to allow gaps between notes in the same recording
         recordingTimeoutRef.current = setTimeout(() => {
           if (recordingRef.current.notes.length > 0) {
             // Normalize recording so first note starts at 0
@@ -352,7 +353,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
               }
             }, 16);
           }
-        }, 1000);
+        }, 3000);
       }
     };
 
