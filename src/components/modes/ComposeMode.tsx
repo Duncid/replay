@@ -56,21 +56,16 @@ export function ComposeMode({ bpm, timeSignature, onReplay, onClearHistory }: Co
     startNewSession,
     renderHistory: () => (
       history.length > 0 && (
-        <div className="w-full max-w-4xl space-y-4">
+        <div className="w-full space-y-2">
           {history.map((entry, index) => (
             entry.userSequence.notes.length > 0 && (
-              <div key={index} className="space-y-3">
-                <div className="text-sm font-medium text-muted-foreground">
-                  Composition {index + 1}
-                </div>
-                <SheetMusic
-                  sequence={entry.userSequence}
-                  label="Your composition:"
-                  isUserNotes={true}
-                  onReplay={() => onReplay(entry.userSequence)}
-                />
-                {index < history.length - 1 && <div className="border-t border-border mt-4" />}
-              </div>
+              <SheetMusic
+                key={index}
+                sequence={entry.userSequence}
+                isUserNotes={true}
+                onReplay={() => onReplay(entry.userSequence)}
+                compact
+              />
             )
           ))}
         </div>

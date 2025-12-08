@@ -17,9 +17,10 @@ interface SheetMusicProps {
   onReplay?: () => void;
   label?: string;
   isUserNotes?: boolean;
+  compact?: boolean;
 }
 
-export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false }: SheetMusicProps) => {
+export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, compact = false }: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -32,11 +33,11 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false }: S
 
     abcjs.renderAbc(renderDivRef.current, abc, {
       responsive: "resize",
-      staffwidth: 600,
-      scale: 0.8,
+      staffwidth: compact ? 1200 : 600,
+      scale: compact ? 0.7 : 0.8,
       add_classes: true,
     });
-  }, [sequence, label, isUserNotes]);
+  }, [sequence, label, isUserNotes, compact]);
 
   const handleCopySequence = async () => {
     try {
@@ -48,6 +49,39 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false }: S
   };
 
   if (!sequence || sequence.notes.length === 0) return null;
+
+  if (compact) {
+    return (
+      <div className="bg-card/50 border border-border/50 rounded-md px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div
+            ref={renderDivRef}
+            className="flex-1 overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground"
+          />
+          <div className="flex items-center gap-1 shrink-0">
+            {onReplay && (
+              <Button variant="ghost" size="sm" onClick={onReplay} className="h-7 w-7 p-0">
+                <Play className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCopySequence}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy NoteSequence
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
