@@ -150,27 +150,22 @@ export function useRecordingManager({
     }
     clearEndingProgress();
 
-    const halfTimeout = pauseTimeoutMs / 2;
-
-    // Show progress bar after 50% of the timeout, for the remaining 50%
-    const showProgressTimeout = setTimeout(() => {
-      setShowEndingProgress(true);
-      setEndingProgress(100);
-      const endingStartTime = Date.now();
-      endingProgressIntervalRef.current = setInterval(() => {
-        const elapsed = Date.now() - endingStartTime;
-        const newProgress = Math.max(0, 100 - (elapsed / halfTimeout) * 100);
-        setEndingProgress(newProgress);
-        if (newProgress <= 0 && endingProgressIntervalRef.current) {
-          clearInterval(endingProgressIntervalRef.current);
-          endingProgressIntervalRef.current = null;
-        }
-      }, 16);
-    }, halfTimeout);
+    // Start the ending progress bar immediately
+    setShowEndingProgress(true);
+    setEndingProgress(100);
+    const endingStartTime = Date.now();
+    endingProgressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - endingStartTime;
+      const newProgress = Math.max(0, 100 - (elapsed / pauseTimeoutMs) * 100);
+      setEndingProgress(newProgress);
+      if (newProgress <= 0 && endingProgressIntervalRef.current) {
+        clearInterval(endingProgressIntervalRef.current);
+        endingProgressIntervalRef.current = null;
+      }
+    }, 16);
 
     // After pauseTimeoutMs of silence, pause the timeline
     pauseTimeoutRef.current = setTimeout(() => {
-      clearTimeout(showProgressTimeout);
       timelinePausedRef.current = true;
       virtualTimeRef.current = lastNoteEndTimeRef.current;
       realTimeAtPauseRef.current = Date.now();
