@@ -481,7 +481,7 @@ const Index = () => {
       />
 
       <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as ActiveMode)} className="w-full">
-        <div className="w-full flex flex-wrap items-center justify-between gap-4 px-2">
+        <div className="w-full flex flex-wrap items-center justify-between gap-4 py-2">
           <TabsList className="bg-muted">
             <TabsTrigger value="compose" className="gap-2">
               <Music className="w-4 h-4" />

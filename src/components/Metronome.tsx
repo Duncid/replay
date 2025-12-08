@@ -178,7 +178,7 @@ export const Metronome = ({
   const beats = beatsPerBar[timeSignature];
 
   return (
-    <div className="w-full px-2">
+    <div className="w-full py-2">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Switch, Label, and Settings */}
         <div className="flex items-center gap-3">
