@@ -55,12 +55,12 @@ const Index = () => {
   const [askPrompt, setAskPrompt] = useState("");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
-  
+
   // Metronome state (lifted up)
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomeTimeSignature, setMetronomeTimeSignature] = useState("4/4");
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
-  
+
   const { toast } = useToast();
   const magenta = useMagenta();
   const pianoRef = useRef<PianoHandle>(null);
@@ -77,14 +77,14 @@ const Index = () => {
   // MIDI note handlers
   const handleMidiNoteOn = (noteKey: string, frequency: number, velocity: number) => {
     if ((appState !== "idle" && appState !== "user_playing") || midiPressedKeysRef.current.has(noteKey)) return;
-    
+
     midiPressedKeysRef.current.add(noteKey);
     pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
   };
 
   const handleMidiNoteOff = (noteKey: string, frequency: number) => {
     if (!midiPressedKeysRef.current.has(noteKey)) return;
-    
+
     midiPressedKeysRef.current.delete(noteKey);
     pianoRef.current?.handleKeyRelease(noteKey, frequency);
   };
@@ -97,20 +97,22 @@ const Index = () => {
     });
   };
 
-  const { connectedDevice, error: midiError, isSupported: isMidiSupported, requestAccess, disconnect } = useMidiInput(
-    handleMidiNoteOn,
-    handleMidiNoteOff,
-    handleNoMidiDevices
-  );
+  const {
+    connectedDevice,
+    error: midiError,
+    isSupported: isMidiSupported,
+    requestAccess,
+    disconnect,
+  } = useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices);
 
   const stopAiPlayback = () => {
     shouldStopAiRef.current = true;
     isPlayingRef.current = false;
-    
+
     // Clear ALL scheduled timeouts
-    noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
     noteTimeoutsRef.current = [];
-    
+
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
       aiPlaybackTimeoutRef.current = null;
@@ -122,7 +124,7 @@ const Index = () => {
   const playSequence = async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
     // Generate a unique ID for this playback call for debugging
     const playbackId = Math.random().toString(36).substring(7);
-    
+
     if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
       console.log(`[Playback ${playbackId}] Request invalidated before playback started`);
       return;
@@ -134,27 +136,27 @@ const Index = () => {
     }
 
     // Normalize times so first note starts at 0
-    const minStartTime = sequence.notes.length > 0 
-      ? Math.min(...sequence.notes.map(n => n.startTime)) 
-      : 0;
-    
-    const normalizedNotes = sequence.notes.map(note => ({
+    const minStartTime = sequence.notes.length > 0 ? Math.min(...sequence.notes.map((n) => n.startTime)) : 0;
+
+    const normalizedNotes = sequence.notes.map((note) => ({
       ...note,
       startTime: note.startTime - minStartTime,
       endTime: note.endTime - minStartTime,
     }));
-    
+
     const normalizedSequence = {
       ...sequence,
       notes: normalizedNotes,
       totalTime: sequence.totalTime - minStartTime,
     };
 
-    console.log(`[Playback ${playbackId}] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`);
+    console.log(
+      `[Playback ${playbackId}] Starting playback of ${normalizedSequence.notes.length} notes (normalized from startTime ${minStartTime}s)`,
+    );
 
     // Clear ALL previous playback state including note timeouts
     shouldStopAiRef.current = true;
-    noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
     noteTimeoutsRef.current = [];
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
@@ -162,16 +164,16 @@ const Index = () => {
     }
     setActiveKeys(new Set());
     isPlayingRef.current = true;
-    
+
     // Small delay to ensure previous state is cleared
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     // Check again if this playback was cancelled during the delay
     if (!isPlayingRef.current) {
       console.log(`[Playback ${playbackId}] Playback cancelled during delay`);
       return;
     }
-    
+
     shouldStopAiRef.current = false;
     setAppState("ai_playing");
 
@@ -183,14 +185,14 @@ const Index = () => {
       const startTimeout = setTimeout(() => {
         if (!shouldStopAiRef.current && pianoRef.current) {
           pianoRef.current.playNote(frequency, duration);
-          setActiveKeys(prev => new Set([...prev, noteKey]));
+          setActiveKeys((prev) => new Set([...prev, noteKey]));
         }
       }, note.startTime * 1000);
       noteTimeoutsRef.current.push(startTimeout);
 
       const endTimeout = setTimeout(() => {
         if (!shouldStopAiRef.current) {
-          setActiveKeys(prev => {
+          setActiveKeys((prev) => {
             const newSet = new Set(prev);
             newSet.delete(noteKey);
             return newSet;
@@ -212,7 +214,7 @@ const Index = () => {
 
   const handleUserPlayStart = () => {
     console.log("User started playing, current state:", appState);
-    
+
     // Invalidate any pending AI request
     const hadPendingRequest = currentRequestIdRef.current !== null;
     currentRequestIdRef.current = null;
@@ -246,7 +248,7 @@ const Index = () => {
           if (lastSession.aiSequence.notes.length === 0) {
             // Offset new notes by the previous sequence's totalTime
             const timeOffset = lastSession.userSequence.totalTime;
-            const offsetNotes = userSequence.notes.map(note => ({
+            const offsetNotes = userSequence.notes.map((note) => ({
               ...note,
               startTime: note.startTime + timeOffset,
               endTime: note.endTime + timeOffset,
@@ -259,7 +261,10 @@ const Index = () => {
             return [...prev.slice(0, -1), { ...lastSession, userSequence: updatedUserSequence }];
           }
         }
-        return [...prev, { type: "jam", userSequence, aiSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature) }];
+        return [
+          ...prev,
+          { type: "jam", userSequence, aiSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature) },
+        ];
       });
       setAppState("idle");
       return;
@@ -273,12 +278,12 @@ const Index = () => {
       // Check if using Magenta (client-side) or LLM (server-side)
       if (magenta.isMagentaModel(selectedModel)) {
         console.log(`[AI Mode] Using Magenta model: ${selectedModel}`);
-        
+
         aiSequence = await magenta.continueSequence(
           userSequence,
           selectedModel as MagentaModelType,
           metronomeBpm,
-          metronomeTimeSignature
+          metronomeTimeSignature,
         );
 
         // Check if request was invalidated during Magenta generation
@@ -293,9 +298,9 @@ const Index = () => {
       } else {
         // Use LLM via edge function
         console.log(`[AI Mode] Using LLM model: ${selectedModel}`);
-        
+
         const { data, error } = await supabase.functions.invoke("jazz-improvise", {
-          body: { 
+          body: {
             userSequence,
             model: selectedModel,
             metronome: {
@@ -372,22 +377,22 @@ const Index = () => {
       console.log(`[Replay] Blocked - already playing`);
       return;
     }
-    
+
     console.log(`[Replay] Starting replay of ${sequence.notes.length} notes`);
     console.log(`[Replay] First note startTime: ${sequence.notes[0]?.startTime}s, totalTime: ${sequence.totalTime}s`);
-    
+
     // Stop any current playback without resetting to idle (we're about to play again)
     shouldStopAiRef.current = true;
-    noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
     noteTimeoutsRef.current = [];
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
       aiPlaybackTimeoutRef.current = null;
     }
     setActiveKeys(new Set());
-    
+
     await pianoRef.current?.ensureAudioReady();
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     await playSequence(sequence, undefined, true);
   };
 
@@ -398,7 +403,7 @@ const Index = () => {
 
   const handleAskSubmit = async () => {
     if (!askPrompt.trim() || isAskLoading) return;
-    
+
     stopAiPlayback();
     await pianoRef.current?.ensureAudioReady();
     setAppState("waiting_for_ai");
@@ -463,7 +468,7 @@ const Index = () => {
           onDisconnect={disconnect}
         />
       </Metronome>
-      
+
       <Piano
         ref={pianoRef}
         onUserPlayStart={handleUserPlayStart}
@@ -476,7 +481,7 @@ const Index = () => {
       />
 
       <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as ActiveMode)} className="w-full">
-        <div className="w-full flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-card rounded-lg border border-border">
+        <div className="w-full flex flex-wrap items-center justify-between gap-4 px-2">
           <TabsList className="bg-muted">
             <TabsTrigger value="compose" className="gap-2">
               <Music className="w-4 h-4" />
@@ -496,21 +501,17 @@ const Index = () => {
             {activeMode === "improv" && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="h-8 px-3 gap-2"
                     disabled={appState === "ai_playing" || magenta.isLoading}
                   >
-                    {magenta.isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Brain className="w-4 h-4" />
-                    )}
+                    {magenta.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                     <span className="hidden sm:inline">
-                      {AI_MODELS.llm.find(m => m.value === selectedModel)?.label ||
-                       AI_MODELS.magenta.find(m => m.value === selectedModel)?.label ||
-                       "Model"}
+                      {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label ||
+                        AI_MODELS.magenta.find((m) => m.value === selectedModel)?.label ||
+                        "Model"}
                     </span>
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
@@ -526,9 +527,9 @@ const Index = () => {
                       {model.label}
                     </DropdownMenuItem>
                   ))}
-                  
+
                   <DropdownMenuSeparator />
-                  
+
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <span>Magenta (Local)</span>
@@ -568,11 +569,7 @@ const Index = () => {
                   disabled={!askPrompt.trim() || isAskLoading || appState === "ai_playing"}
                   className="h-8 px-3"
                 >
-                  {isAskLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
+                  {isAskLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -595,7 +592,7 @@ const Index = () => {
                 </DropdownMenu>
               </div>
             )}
-            
+
             {sessionHistory.length > 0 && (
               <Button
                 variant="ghost"
@@ -616,10 +613,7 @@ const Index = () => {
           {sessionHistory.map((entry, index) => (
             <div key={index} className="space-y-3">
               <div className="text-sm font-medium text-muted-foreground">
-                {entry.type === "ask" 
-                  ? `Request ${index + 1}: "${entry.askPrompt}"`
-                  : `Session ${index + 1}`
-                }
+                {entry.type === "ask" ? `Request ${index + 1}: "${entry.askPrompt}"` : `Session ${index + 1}`}
               </div>
               {entry.type === "jam" ? (
                 <div className="grid gap-3 md:grid-cols-2">
