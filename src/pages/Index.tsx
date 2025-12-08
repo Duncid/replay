@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,17 +13,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { SheetMusic } from "@/components/SheetMusic";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence } from "@/types/noteSequence";
-import { midiToFrequency, midiToNoteName, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
+import { midiToFrequency, midiToNoteName, noteNameToMidi, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
+import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
+import { RecordingProgress } from "@/components/RecordingProgress";
+import { ComposeMode } from "@/components/modes/ComposeMode";
+import { ImprovMode } from "@/components/modes/ImprovMode";
+import { PlayerMode } from "@/components/modes/PlayerMode";
 
 const AI_MODELS = {
   llm: [
@@ -40,32 +43,15 @@ const AI_MODELS = {
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 type ActiveMode = "compose" | "improv" | "player";
 
-interface SessionEntry {
-  type: "jam" | "ask";
-  userSequence: NoteSequence;
-  aiSequence: NoteSequence;
-  askPrompt?: string;
-}
-
 const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useState<ActiveMode>("compose");
-  
-  const handleModeChange = (newMode: ActiveMode) => {
-    // If switching to player mode and a Magenta model is selected, switch to default LLM
-    if (newMode === "player" && magenta.isMagentaModel(selectedModel)) {
-      setSelectedModel("google/gemini-2.5-flash");
-    }
-    setActiveMode(newMode);
-  };
   const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
-  const [askPrompt, setAskPrompt] = useState("");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
-  const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
 
-  // Metronome state (lifted up)
+  // Metronome state
   const [metronomeBpm, setMetronomeBpm] = useState(120);
   const [metronomeTimeSignature, setMetronomeTimeSignature] = useState("4/4");
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
@@ -80,20 +66,66 @@ const Index = () => {
   const shouldStopAiRef = useRef<boolean>(false);
   const isPlayingRef = useRef<boolean>(false);
   const midiPressedKeysRef = useRef<Set<string>>(new Set());
+  const pendingUserSequenceRef = useRef<NoteSequence | null>(null);
 
   const MIN_WAIT_TIME_MS = 1000;
+
+  // Mode-specific hooks
+  const composeMode = ComposeMode({
+    bpm: metronomeBpm,
+    timeSignature: metronomeTimeSignature,
+    onReplay: handleReplaySequence,
+    onClearHistory: () => toast({ title: "History cleared" }),
+  });
+
+  const improvMode = ImprovMode({
+    onReplay: handleReplaySequence,
+    onClearHistory: () => toast({ title: "History cleared" }),
+  });
+
+  const playerMode = PlayerMode({
+    isLoading: isAskLoading,
+    isPlaying: appState === "ai_playing",
+    onSubmit: handleAskSubmit,
+    onReplay: handleReplaySequence,
+    onClearHistory: () => toast({ title: "History cleared" }),
+  });
+
+  // Recording manager for improv mode
+  const handleRecordingComplete = useCallback((result: RecordingResult) => {
+    if (activeMode === "improv") {
+      pendingUserSequenceRef.current = result.sequence;
+      handleImprovPlay(result.sequence);
+    } else if (activeMode === "compose") {
+      composeMode.addUserSequence(result.sequence);
+      setAppState("idle");
+    }
+  }, [activeMode]);
+
+  const recordingManager = useRecordingManager({
+    bpm: metronomeBpm,
+    timeSignature: metronomeTimeSignature,
+    onRecordingComplete: handleRecordingComplete,
+    recordingDelayMs: 1000,
+  });
+
+  const handleModeChange = (newMode: ActiveMode) => {
+    if (newMode === "player" && magenta.isMagentaModel(selectedModel)) {
+      setSelectedModel("google/gemini-2.5-flash");
+    }
+    recordingManager.cancelRecording();
+    setActiveMode(newMode);
+  };
 
   // MIDI note handlers
   const handleMidiNoteOn = (noteKey: string, frequency: number, velocity: number) => {
     if ((appState !== "idle" && appState !== "user_playing") || midiPressedKeysRef.current.has(noteKey)) return;
-
     midiPressedKeysRef.current.add(noteKey);
     pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
   };
 
   const handleMidiNoteOff = (noteKey: string, frequency: number) => {
     if (!midiPressedKeysRef.current.has(noteKey)) return;
-
     midiPressedKeysRef.current.delete(noteKey);
     pianoRef.current?.handleKeyRelease(noteKey, frequency);
   };
@@ -106,68 +138,48 @@ const Index = () => {
     });
   };
 
-  const {
-    connectedDevice,
-    error: midiError,
-    isSupported: isMidiSupported,
-    requestAccess,
-    disconnect,
-  } = useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices);
+  const { connectedDevice, error: midiError, isSupported: isMidiSupported, requestAccess, disconnect } = 
+    useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices);
 
-  const stopAiPlayback = () => {
+  const stopAiPlayback = useCallback(() => {
     shouldStopAiRef.current = true;
     isPlayingRef.current = false;
-
-    // Clear ALL scheduled timeouts
     noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
     noteTimeoutsRef.current = [];
-
     if (aiPlaybackTimeoutRef.current) {
       clearTimeout(aiPlaybackTimeoutRef.current);
       aiPlaybackTimeoutRef.current = null;
     }
     setActiveKeys(new Set());
     setAppState("idle");
-  };
+  }, []);
 
-  const playSequence = async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
+  const playSequence = useCallback(async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
     setIsReplaying(isReplay);
-    // Generate a unique ID for this playback call for debugging
     const playbackId = Math.random().toString(36).substring(7);
 
     if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
-      console.log(`[Playback ${playbackId}] Request invalidated before playback started`);
+      console.log(`[Playback ${playbackId}] Request invalidated`);
       return;
     }
 
-    // Prevent multiple simultaneous playback calls
     if (isPlayingRef.current) {
-      console.log(`[Playback ${playbackId}] Already playing, stopping previous playback first`);
+      console.log(`[Playback ${playbackId}] Already playing, stopping previous`);
     }
 
     // Normalize times so first note starts at 0
     const minStartTime = sequence.notes.length > 0 ? Math.min(...sequence.notes.map((n) => n.startTime)) : 0;
-
     const normalizedNotes = sequence.notes.map((note) => ({
       ...note,
       startTime: note.startTime - minStartTime,
       endTime: note.endTime - minStartTime,
     }));
+    const normalizedSequence = { ...sequence, notes: normalizedNotes, totalTime: sequence.totalTime - minStartTime };
 
-    const normalizedSequence = {
-      ...sequence,
-      notes: normalizedNotes,
-      totalTime: sequence.totalTime - minStartTime,
-    };
-
-    console.log(`[Playback ${playbackId}] ========== PLAYBACK START ==========`);
-    console.log(`[Playback ${playbackId}] Notes: ${normalizedSequence.notes.length}, normalizedTotalTime: ${normalizedSequence.totalTime.toFixed(3)}s`);
-    normalizedSequence.notes.forEach((n, i) => {
-      console.log(`[Playback ${playbackId}] Scheduled Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
-    });
+    console.log(`[Playback ${playbackId}] Starting: ${normalizedSequence.notes.length} notes, ${normalizedSequence.totalTime.toFixed(3)}s`);
     const playbackStartTime = Date.now();
 
-    // Clear ALL previous playback state including note timeouts
+    // Clear previous playback state
     shouldStopAiRef.current = true;
     noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
     noteTimeoutsRef.current = [];
@@ -178,12 +190,10 @@ const Index = () => {
     setActiveKeys(new Set());
     isPlayingRef.current = true;
 
-    // Small delay to ensure previous state is cleared
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    // Check again if this playback was cancelled during the delay
     if (!isPlayingRef.current) {
-      console.log(`[Playback ${playbackId}] Playback cancelled during delay`);
+      console.log(`[Playback ${playbackId}] Cancelled during delay`);
       return;
     }
 
@@ -197,8 +207,6 @@ const Index = () => {
 
       const startTimeout = setTimeout(() => {
         if (!shouldStopAiRef.current && pianoRef.current) {
-          const actualElapsed = (Date.now() - playbackStartTime) / 1000;
-          console.log(`[Playback ${playbackId}] Note ${noteKey} PLAYING at ${actualElapsed.toFixed(3)}s (scheduled: ${note.startTime.toFixed(3)}s, diff: ${(actualElapsed - note.startTime).toFixed(3)}s)`);
           pianoRef.current.playNote(frequency, duration);
           setActiveKeys((prev) => new Set([...prev, noteKey]));
         }
@@ -219,190 +227,19 @@ const Index = () => {
 
     aiPlaybackTimeoutRef.current = setTimeout(() => {
       if (!shouldStopAiRef.current) {
-        const totalElapsed = (Date.now() - playbackStartTime) / 1000;
-        console.log(`[Playback ${playbackId}] ========== PLAYBACK END ==========`);
-        console.log(`[Playback ${playbackId}] Total elapsed: ${totalElapsed.toFixed(3)}s (expected: ${normalizedSequence.totalTime.toFixed(3)}s, diff: ${(totalElapsed - normalizedSequence.totalTime).toFixed(3)}s)`);
+        const elapsed = (Date.now() - playbackStartTime) / 1000;
+        console.log(`[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`);
         setAppState("idle");
         setActiveKeys(new Set());
         noteTimeoutsRef.current = [];
         isPlayingRef.current = false;
       }
     }, normalizedSequence.totalTime * 1000);
-  };
+  }, []);
 
-  const handleUserPlayStart = () => {
-    console.log("User started playing, current state:", appState);
+  function handleReplaySequence(sequence: NoteSequence) {
+    if (isPlayingRef.current) return;
 
-    // Invalidate any pending AI request
-    const hadPendingRequest = currentRequestIdRef.current !== null;
-    currentRequestIdRef.current = null;
-    pianoRef.current?.hideProgress();
-
-    if (appState === "ai_playing") {
-      console.log("Interrupting AI playback");
-      stopAiPlayback();
-    }
-
-    // If we were waiting for AI, restore the last recording to continue it
-    if (appState === "waiting_for_ai" && hadPendingRequest) {
-      console.log("Interrupted waiting_for_ai, restoring last recording");
-      pianoRef.current?.restoreLastRecording();
-    }
-
-    setAppState("user_playing");
-  };
-
-  const handleUserPlay = async (userSequence: NoteSequence) => {
-    const requestId = crypto.randomUUID();
-    currentRequestIdRef.current = requestId;
-    requestStartTimeRef.current = Date.now();
-
-    console.log("User finished playing, request ID:", requestId);
-
-    if (activeMode === "compose") {
-      setSessionHistory((prev) => {
-        if (prev.length > 0) {
-          const lastSession = prev[prev.length - 1];
-          if (lastSession.aiSequence.notes.length === 0) {
-            // Offset new notes by the previous sequence's totalTime
-            const timeOffset = lastSession.userSequence.totalTime;
-            const offsetNotes = userSequence.notes.map((note) => ({
-              ...note,
-              startTime: note.startTime + timeOffset,
-              endTime: note.endTime + timeOffset,
-            }));
-            const updatedUserSequence: NoteSequence = {
-              ...lastSession.userSequence,
-              notes: [...lastSession.userSequence.notes, ...offsetNotes],
-              totalTime: timeOffset + userSequence.totalTime,
-            };
-            return [...prev.slice(0, -1), { ...lastSession, userSequence: updatedUserSequence }];
-          }
-        }
-        return [
-          ...prev,
-          { type: "jam", userSequence, aiSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature) },
-        ];
-      });
-      setAppState("idle");
-      return;
-    }
-
-    setAppState("waiting_for_ai");
-
-    try {
-      let aiSequence: NoteSequence | null = null;
-
-      // Check if using Magenta (client-side) or LLM (server-side)
-      if (magenta.isMagentaModel(selectedModel)) {
-        console.log(`[AI Mode] Using Magenta model: ${selectedModel}`);
-
-        aiSequence = await magenta.continueSequence(
-          userSequence,
-          selectedModel as MagentaModelType,
-          metronomeBpm,
-          metronomeTimeSignature,
-        );
-
-        // Check if request was invalidated during Magenta generation
-        if (currentRequestIdRef.current !== requestId) {
-          console.log("Request invalidated during Magenta generation, discarding");
-          return;
-        }
-
-        if (!aiSequence) {
-          throw new Error("Magenta failed to generate a response");
-        }
-      } else {
-        // Use LLM via edge function
-        console.log(`[AI Mode] Using LLM model: ${selectedModel}`);
-
-        const { data, error } = await supabase.functions.invoke("jazz-improvise", {
-          body: {
-            userSequence,
-            model: selectedModel,
-            metronome: {
-              bpm: metronomeBpm,
-              timeSignature: metronomeTimeSignature,
-              isActive: metronomeIsPlaying,
-            },
-          },
-        });
-
-        if (currentRequestIdRef.current !== requestId) {
-          console.log("Request invalidated (ID mismatch), discarding response");
-          return;
-        }
-
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        if (data.sequence && data.sequence.notes && data.sequence.notes.length > 0) {
-          aiSequence = data.sequence as NoteSequence;
-        }
-      }
-
-      if (currentRequestIdRef.current !== requestId) {
-        console.log("Request invalidated (ID mismatch), discarding response");
-        return;
-      }
-
-      console.log("AI response received for request:", requestId);
-
-      if (aiSequence && aiSequence.notes && aiSequence.notes.length > 0) {
-        const elapsed = Date.now() - requestStartTimeRef.current;
-        const remainingWait = MIN_WAIT_TIME_MS - elapsed;
-
-        if (remainingWait > 0) {
-          console.log(`Waiting ${remainingWait}ms before playing`);
-          await new Promise((resolve) => setTimeout(resolve, remainingWait));
-        }
-
-        if (currentRequestIdRef.current !== requestId) {
-          console.log("Request invalidated during wait, discarding response");
-          return;
-        }
-
-        setSessionHistory((prev) => [...prev, { type: "jam", userSequence, aiSequence: aiSequence! }]);
-
-        pianoRef.current?.hideProgress();
-        await playSequence(aiSequence, requestId);
-      } else {
-        console.log("No notes in response");
-        if (currentRequestIdRef.current === requestId) {
-          setAppState("idle");
-          pianoRef.current?.hideProgress();
-        }
-      }
-    } catch (error) {
-      console.error("Error getting AI response:", error);
-
-      if (currentRequestIdRef.current === requestId) {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to get AI response",
-          variant: "destructive",
-        });
-        setAppState("idle");
-        pianoRef.current?.hideProgress();
-      }
-    }
-  };
-
-  const handleReplaySequence = async (sequence: NoteSequence) => {
-    // Prevent replay if already playing (guards against accidental double-clicks or race conditions)
-    if (isPlayingRef.current) {
-      console.log(`[Replay] Blocked - already playing`);
-      return;
-    }
-
-    console.log(`[Replay Debug] ========== REPLAY START ==========`);
-    console.log(`[Replay Debug] Total notes: ${sequence.notes.length}, totalTime: ${sequence.totalTime.toFixed(3)}s`);
-    sequence.notes.forEach((n, i) => {
-      console.log(`[Replay Debug] Note ${i}: start=${n.startTime.toFixed(3)}s, end=${n.endTime.toFixed(3)}s, duration=${(n.endTime - n.startTime).toFixed(3)}s`);
-    });
-
-    // Stop any current playback without resetting to idle (we're about to play again)
     shouldStopAiRef.current = true;
     noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
     noteTimeoutsRef.current = [];
@@ -412,19 +249,105 @@ const Index = () => {
     }
     setActiveKeys(new Set());
 
-    await pianoRef.current?.ensureAudioReady();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    await playSequence(sequence, undefined, true);
-  };
+    pianoRef.current?.ensureAudioReady();
+    setTimeout(() => playSequence(sequence, undefined, true), 50);
+  }
 
-  const clearHistory = () => {
-    setSessionHistory([]);
-    toast({ title: "History cleared", description: "Session history has been cleared" });
-  };
+  // Handle note events from Piano
+  const handleNoteStart = useCallback((noteKey: string, frequency: number, velocity: number) => {
+    if (appState === "ai_playing") {
+      stopAiPlayback();
+    }
 
-  const handleAskSubmit = async () => {
-    if (!askPrompt.trim() || isAskLoading) return;
+    if (appState !== "user_playing") {
+      currentRequestIdRef.current = null;
+      recordingManager.hideProgress();
+      setAppState("user_playing");
+    }
 
+    if (activeMode === "improv" || activeMode === "compose") {
+      recordingManager.addNoteStart(noteKey, velocity);
+    }
+  }, [appState, activeMode, recordingManager, stopAiPlayback]);
+
+  const handleNoteEnd = useCallback((noteKey: string, frequency: number) => {
+    if (activeMode === "improv" || activeMode === "compose") {
+      recordingManager.addNoteEnd(noteKey);
+    }
+  }, [activeMode, recordingManager]);
+
+  // Improv AI handling
+  async function handleImprovPlay(userSequence: NoteSequence) {
+    const requestId = crypto.randomUUID();
+    currentRequestIdRef.current = requestId;
+    requestStartTimeRef.current = Date.now();
+
+    setAppState("waiting_for_ai");
+
+    try {
+      let aiSequence: NoteSequence | null = null;
+
+      if (magenta.isMagentaModel(selectedModel)) {
+        aiSequence = await magenta.continueSequence(
+          userSequence,
+          selectedModel as MagentaModelType,
+          metronomeBpm,
+          metronomeTimeSignature,
+        );
+
+        if (currentRequestIdRef.current !== requestId) return;
+        if (!aiSequence) throw new Error("Magenta failed to generate a response");
+      } else {
+        const { data, error } = await supabase.functions.invoke("jazz-improvise", {
+          body: {
+            userSequence,
+            model: selectedModel,
+            metronome: { bpm: metronomeBpm, timeSignature: metronomeTimeSignature, isActive: metronomeIsPlaying },
+          },
+        });
+
+        if (currentRequestIdRef.current !== requestId) return;
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (data.sequence?.notes?.length > 0) {
+          aiSequence = data.sequence as NoteSequence;
+        }
+      }
+
+      if (currentRequestIdRef.current !== requestId) return;
+
+      if (aiSequence?.notes?.length > 0) {
+        const elapsed = Date.now() - requestStartTimeRef.current;
+        if (elapsed < MIN_WAIT_TIME_MS) {
+          await new Promise((resolve) => setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed));
+        }
+
+        if (currentRequestIdRef.current !== requestId) return;
+
+        improvMode.addSession(userSequence, aiSequence);
+        recordingManager.hideProgress();
+        await playSequence(aiSequence, requestId);
+      } else {
+        setAppState("idle");
+        recordingManager.hideProgress();
+      }
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      if (currentRequestIdRef.current === requestId) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to get AI response",
+          variant: "destructive",
+        });
+        setAppState("idle");
+        recordingManager.hideProgress();
+      }
+    }
+  }
+
+  // Player mode AI handling
+  async function handleAskSubmit(prompt: string) {
     stopAiPlayback();
     await pianoRef.current?.ensureAudioReady();
     setAppState("waiting_for_ai");
@@ -432,28 +355,17 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("piano-ask", {
-        body: { prompt: askPrompt, model: selectedModel },
+        body: { prompt, model: selectedModel },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (data.sequence && data.sequence.notes && data.sequence.notes.length > 0) {
+      if (data.sequence?.notes?.length > 0) {
         const aiSequence = data.sequence as NoteSequence;
-        setSessionHistory((prev) => [
-          ...prev,
-          {
-            type: "ask",
-            userSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature),
-            aiSequence,
-            askPrompt,
-          },
-        ]);
-
-        setAskPrompt("");
+        playerMode.addSession(prompt, aiSequence);
         await playSequence(aiSequence, undefined, true);
-
-        toast({ title: "AI composed something!", description: `Playing: "${askPrompt}"` });
+        toast({ title: "AI composed something!", description: `Playing: "${prompt}"` });
       } else {
         setAppState("idle");
       }
@@ -468,7 +380,18 @@ const Index = () => {
     } finally {
       setIsAskLoading(false);
     }
+  }
+
+  const clearCurrentHistory = () => {
+    if (activeMode === "compose") composeMode.clearHistory();
+    else if (activeMode === "improv") improvMode.clearHistory();
+    else if (activeMode === "player") playerMode.clearHistory();
   };
+
+  const hasHistory = 
+    (activeMode === "compose" && composeMode.history.length > 0) ||
+    (activeMode === "improv" && improvMode.history.length > 0) ||
+    (activeMode === "player" && playerMode.history.length > 0);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4 relative">
@@ -481,6 +404,12 @@ const Index = () => {
           </div>
         </div>
       )}
+
+      {/* Recording progress (only for improv mode) */}
+      {activeMode === "improv" && (
+        <RecordingProgress show={recordingManager.showProgress} progress={recordingManager.progress} />
+      )}
+
       <Metronome
         bpm={metronomeBpm}
         setBpm={setMetronomeBpm}
@@ -501,13 +430,10 @@ const Index = () => {
 
       <Piano
         ref={pianoRef}
-        onUserPlayStart={handleUserPlayStart}
-        onUserPlay={handleUserPlay}
         activeKeys={activeKeys}
-        isAiEnabled={activeMode === "improv"}
         allowInput={appState === "idle" || appState === "user_playing" || appState === "waiting_for_ai"}
-        bpm={metronomeBpm}
-        timeSignature={metronomeTimeSignature}
+        onNoteStart={handleNoteStart}
+        onNoteEnd={handleNoteEnd}
       />
 
       <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full">
@@ -586,11 +512,11 @@ const Index = () => {
               </DropdownMenu>
             )}
 
-            {sessionHistory.length > 0 && (
+            {hasHistory && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearHistory}
+                onClick={clearCurrentHistory}
                 className="gap-2 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="w-4 h-4" />
@@ -601,61 +527,13 @@ const Index = () => {
         </div>
       </Tabs>
 
-      {activeMode === "player" && (
-        <div className="w-full max-w-2xl mx-auto space-y-3">
-          <Textarea
-            placeholder="Describe what you'd like the AI to play..."
-            value={askPrompt}
-            onChange={(e) => setAskPrompt(e.target.value)}
-            disabled={isAskLoading || appState === "ai_playing"}
-            className="min-h-[120px] text-lg resize-none"
-          />
-          <Button
-            onClick={handleAskSubmit}
-            disabled={!askPrompt.trim() || isAskLoading || appState === "ai_playing"}
-            className="w-full gap-2"
-          >
-            {isAskLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Generate Music
-          </Button>
-        </div>
-      )}
-
-      {sessionHistory.length > 0 && (
-        <div className="w-full max-w-4xl space-y-4">
-          {sessionHistory.map((entry, index) => (
-            <div key={index} className="space-y-3">
-              <div className="text-sm font-medium text-muted-foreground">
-                {entry.type === "ask" ? `Request ${index + 1}: "${entry.askPrompt}"` : `Session ${index + 1}`}
-              </div>
-              {entry.type === "jam" ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <SheetMusic
-                    sequence={entry.userSequence}
-                    label="You played:"
-                    isUserNotes={true}
-                    onReplay={() => handleReplaySequence(entry.userSequence)}
-                  />
-                  <SheetMusic
-                    sequence={entry.aiSequence}
-                    label="AI responded:"
-                    isUserNotes={false}
-                    onReplay={() => handleReplaySequence(entry.aiSequence)}
-                  />
-                </div>
-              ) : (
-                <SheetMusic
-                  sequence={entry.aiSequence}
-                  label={`AI played: "${entry.askPrompt}"`}
-                  isUserNotes={false}
-                  onReplay={() => handleReplaySequence(entry.aiSequence)}
-                />
-              )}
-              {index < sessionHistory.length - 1 && <div className="border-t border-border mt-4" />}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Mode-specific content */}
+      {activeMode === "player" && playerMode.renderInput()}
+      
+      {/* Mode-specific history */}
+      {activeMode === "compose" && composeMode.renderHistory()}
+      {activeMode === "improv" && improvMode.renderHistory()}
+      {activeMode === "player" && playerMode.renderHistory()}
     </div>
   );
 };
