@@ -2,8 +2,6 @@ import { useState, useRef } from "react";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
-import { Trash2, Brain, ChevronDown, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare, Send, Settings2 } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
-import { AskButton } from "@/components/AskButton";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence } from "@/types/noteSequence";
 import { midiToFrequency, midiToNoteName, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
@@ -39,6 +38,7 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
+type ActiveMode = "compose" | "improv" | "player";
 
 interface SessionEntry {
   type: "jam" | "ask";
@@ -50,8 +50,10 @@ interface SessionEntry {
 const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
-  const [isEnabled, setIsEnabled] = useState(true);
+  const [activeMode, setActiveMode] = useState<ActiveMode>("compose");
   const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
+  const [askPrompt, setAskPrompt] = useState("");
+  const [isAskLoading, setIsAskLoading] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
   
   // Metronome state (lifted up)
@@ -237,7 +239,7 @@ const Index = () => {
 
     console.log("User finished playing, request ID:", requestId);
 
-    if (!isEnabled) {
+    if (activeMode === "compose") {
       setSessionHistory((prev) => {
         if (prev.length > 0) {
           const lastSession = prev[prev.length - 1];
@@ -394,14 +396,17 @@ const Index = () => {
     toast({ title: "History cleared", description: "Session history has been cleared" });
   };
 
-  const handleAskSubmit = async (prompt: string, model: string) => {
+  const handleAskSubmit = async () => {
+    if (!askPrompt.trim() || isAskLoading) return;
+    
     stopAiPlayback();
     await pianoRef.current?.ensureAudioReady();
     setAppState("waiting_for_ai");
+    setIsAskLoading(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("piano-ask", {
-        body: { prompt, model },
+        body: { prompt: askPrompt, model: selectedModel },
       });
 
       if (error) throw error;
@@ -415,13 +420,14 @@ const Index = () => {
             type: "ask",
             userSequence: createEmptyNoteSequence(metronomeBpm, metronomeTimeSignature),
             aiSequence,
-            askPrompt: prompt,
+            askPrompt,
           },
         ]);
 
+        setAskPrompt("");
         await playSequence(aiSequence, undefined, true);
 
-        toast({ title: "AI composed something!", description: `Playing: "${prompt}"` });
+        toast({ title: "AI composed something!", description: `Playing: "${askPrompt}"` });
       } else {
         setAppState("idle");
       }
@@ -433,6 +439,8 @@ const Index = () => {
         variant: "destructive",
       });
       setAppState("idle");
+    } finally {
+      setIsAskLoading(false);
     }
   };
 
@@ -454,10 +462,6 @@ const Index = () => {
           onConnect={requestAccess}
           onDisconnect={disconnect}
         />
-        <AskButton 
-          onAskSubmit={handleAskSubmit}
-          disabled={appState === "waiting_for_ai" || appState === "ai_playing"}
-        />
       </Metronome>
       
       <Piano
@@ -465,97 +469,147 @@ const Index = () => {
         onUserPlayStart={handleUserPlayStart}
         onUserPlay={handleUserPlay}
         activeKeys={activeKeys}
-        isAiEnabled={isEnabled}
+        isAiEnabled={activeMode === "improv"}
         allowInput={appState === "idle" || appState === "user_playing" || appState === "waiting_for_ai"}
         bpm={metronomeBpm}
         timeSignature={metronomeTimeSignature}
       />
 
-      <div className="w-full flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-card rounded-lg border border-border">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3">
-            <Switch
-              checked={isEnabled}
-              onCheckedChange={setIsEnabled}
-              disabled={appState === "ai_playing"}
-              id="ai-toggle"
-            />
-            <Label htmlFor="ai-toggle" className="text-foreground cursor-pointer">
-              AI mode
-            </Label>
-          </div>
-          {isEnabled && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 px-3 gap-2"
-                  disabled={appState === "ai_playing" || magenta.isLoading}
+      <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as ActiveMode)} className="w-full">
+        <div className="w-full flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-card rounded-lg border border-border">
+          <TabsList className="bg-muted">
+            <TabsTrigger value="compose" className="gap-2">
+              <Music className="w-4 h-4" />
+              <span className="hidden sm:inline">Compose</span>
+            </TabsTrigger>
+            <TabsTrigger value="improv" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">AI Improv</span>
+            </TabsTrigger>
+            <TabsTrigger value="player" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">AI Player</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-2">
+            {activeMode === "improv" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 px-3 gap-2"
+                    disabled={appState === "ai_playing" || magenta.isLoading}
+                  >
+                    {magenta.isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Brain className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {AI_MODELS.llm.find(m => m.value === selectedModel)?.label ||
+                       AI_MODELS.magenta.find(m => m.value === selectedModel)?.label ||
+                       "Model"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Cloud Models (LLM)</DropdownMenuLabel>
+                  {AI_MODELS.llm.map((model) => (
+                    <DropdownMenuItem
+                      key={model.value}
+                      onClick={() => setSelectedModel(model.value)}
+                      className={selectedModel === model.value ? "bg-accent" : ""}
+                    >
+                      {model.label}
+                    </DropdownMenuItem>
+                  ))}
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <span>Magenta (Local)</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {AI_MODELS.magenta.map((model) => (
+                        <DropdownMenuItem
+                          key={model.value}
+                          onClick={() => setSelectedModel(model.value)}
+                          className={selectedModel === model.value ? "bg-accent" : ""}
+                        >
+                          <div className="flex flex-col">
+                            <span>{model.label}</span>
+                            <span className="text-xs text-muted-foreground">{model.description}</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {activeMode === "player" && (
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Ask AI to play something..."
+                  value={askPrompt}
+                  onChange={(e) => setAskPrompt(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAskSubmit()}
+                  disabled={isAskLoading || appState === "ai_playing"}
+                  className="w-48 sm:w-64 h-8"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAskSubmit}
+                  disabled={!askPrompt.trim() || isAskLoading || appState === "ai_playing"}
+                  className="h-8 px-3"
                 >
-                  {magenta.isLoading ? (
+                  {isAskLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Brain className="w-4 h-4" />
+                    <Send className="w-4 h-4" />
                   )}
-                  <span className="hidden sm:inline">
-                    {AI_MODELS.llm.find(m => m.value === selectedModel)?.label ||
-                     AI_MODELS.magenta.find(m => m.value === selectedModel)?.label ||
-                     "Select Model"}
-                  </span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>Cloud Models (LLM)</DropdownMenuLabel>
-                {AI_MODELS.llm.map((model) => (
-                  <DropdownMenuItem
-                    key={model.value}
-                    onClick={() => setSelectedModel(model.value)}
-                    className={selectedModel === model.value ? "bg-accent" : ""}
-                  >
-                    {model.label}
-                  </DropdownMenuItem>
-                ))}
-                
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <span>Magenta (Local)</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {AI_MODELS.magenta.map((model) => (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Settings2 className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>AI Model</DropdownMenuLabel>
+                    {AI_MODELS.llm.map((model) => (
                       <DropdownMenuItem
                         key={model.value}
                         onClick={() => setSelectedModel(model.value)}
                         className={selectedModel === model.value ? "bg-accent" : ""}
                       >
-                        <div className="flex flex-col">
-                          <span>{model.label}</span>
-                          <span className="text-xs text-muted-foreground">{model.description}</span>
-                        </div>
+                        {model.label}
                       </DropdownMenuItem>
                     ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+            
+            {sessionHistory.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearHistory}
+                className="gap-2 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Clear</span>
+              </Button>
+            )}
+          </div>
         </div>
-        
-        {sessionHistory.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearHistory}
-            className="gap-2 text-muted-foreground hover:text-destructive"
-          >
-            <Trash2 className="w-4 h-4" />
-            Clear History
-          </Button>
-        )}
-      </div>
+      </Tabs>
 
       {sessionHistory.length > 0 && (
         <div className="w-full max-w-4xl space-y-4">
