@@ -8,23 +8,27 @@ interface TopToastProps {
 export function TopToast({ show, children }: TopToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimatedIn, setIsAnimatedIn] = useState(false);
-  const frameRef = useRef<number>();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (show) {
       setIsVisible(true);
-      // Animate in on next frame so CSS transition triggers
-      frameRef.current = requestAnimationFrame(() => {
-        setIsAnimatedIn(true);
+      setIsAnimatedIn(false);
+      // Force reflow then animate in
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          // Force reflow
+          containerRef.current.offsetHeight;
+        }
+        requestAnimationFrame(() => {
+          setIsAnimatedIn(true);
+        });
       });
     } else if (isVisible) {
       setIsAnimatedIn(false);
-      const timer = setTimeout(() => setIsVisible(false), 120);
+      const timer = setTimeout(() => setIsVisible(false), 150);
       return () => clearTimeout(timer);
     }
-    return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    };
   }, [show, isVisible]);
 
   if (!isVisible) return null;
@@ -32,7 +36,8 @@ export function TopToast({ show, children }: TopToastProps) {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div
-        className={`bg-primary text-primary-foreground px-4 py-2 rounded-b-lg shadow-lg min-w-[140px] transition-all duration-[120ms] ease-out ${
+        ref={containerRef}
+        className={`bg-primary text-primary-foreground px-4 py-2 rounded-b-lg shadow-lg min-w-[140px] transition-all duration-150 ease-out ${
           isAnimatedIn ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
         }`}
       >
