@@ -84,51 +84,51 @@ export const Metronome = ({
 
       const now = audioContext.currentTime;
       const volumeMultiplier = volume / 100;
-      
+
       // Create a short, crisp click using filtered noise + high-freq oscillator
       // Duration: ~15ms for clean transient without lingering tail
       const clickDuration = 0.015;
-      
+
       // Main click oscillator - higher frequencies for better timing perception
       const oscillator = audioContext.createOscillator();
       const oscGain = audioContext.createGain();
-      
+
       // Use triangle wave for softer timbre than sine, less harsh than square
       oscillator.type = "triangle";
       oscillator.frequency.value = isAccent ? 2400 : 1800; // Higher freq, easier to locate in time
-      
+
       oscillator.connect(oscGain);
       oscGain.connect(audioContext.destination);
-      
+
       // Very fast attack, immediate decay - creates "pip" quality
       const baseGain = isAccent ? 0.12 : 0.08; // Much softer overall
       oscGain.gain.setValueAtTime(baseGain * volumeMultiplier, now);
       oscGain.gain.exponentialRampToValueAtTime(0.001, now + clickDuration);
-      
+
       oscillator.start(now);
       oscillator.stop(now + clickDuration);
-      
+
       // Add subtle high-frequency "tick" layer for extra clarity
       const tickOsc = audioContext.createOscillator();
       const tickGain = audioContext.createGain();
       const tickFilter = audioContext.createBiquadFilter();
-      
+
       tickOsc.type = "square";
       tickOsc.frequency.value = isAccent ? 4000 : 3200;
-      
+
       // High-pass filter to keep only the "click" portion
       tickFilter.type = "highpass";
       tickFilter.frequency.value = 2000;
       tickFilter.Q.value = 1;
-      
+
       tickOsc.connect(tickFilter);
       tickFilter.connect(tickGain);
       tickGain.connect(audioContext.destination);
-      
+
       const tickBaseGain = isAccent ? 0.04 : 0.025;
       tickGain.gain.setValueAtTime(tickBaseGain * volumeMultiplier, now);
       tickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.008); // Even shorter
-      
+
       tickOsc.start(now);
       tickOsc.stop(now + 0.01);
     },
@@ -178,7 +178,7 @@ export const Metronome = ({
   const beats = beatsPerBar[timeSignature];
 
   return (
-    <div className="w-full px-4 py-3 bg-card rounded-lg border border-border">
+    <div className="w-full px-2">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Switch, Label, and Settings */}
         <div className="flex items-center gap-3">
