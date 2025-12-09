@@ -470,12 +470,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4 relative">
       {/* AI Playing / Replay indicator */}
-      <TopToastLabel
-        show={appState === "ai_playing"}
-        icon={<Sparkles className="w-4 h-4" />}
-        label={isReplaying ? "Replay" : "AI Playing"}
-        pulse
-      />
+      <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
 
       {/* Recording ending progress toast (compose mode) */}
       {activeMode === "compose" && (
@@ -591,7 +586,7 @@ const Index = () => {
             )}
 
             {/* Play/Stop button for compose and improv modes */}
-            {(activeMode === "compose" || activeMode === "improv") && (
+            {(activeMode === "compose" || activeMode === "improv") &&
               (() => {
                 const mode = activeMode === "compose" ? composeMode : improvMode;
                 return mode.isPlayingAll ? (
@@ -611,8 +606,7 @@ const Index = () => {
                     <span className="hidden sm:inline">Play</span>
                   </Button>
                 );
-              })()
-            )}
+              })()}
 
             {/* Copy menu for compose and improv modes */}
             {(activeMode === "compose" || activeMode === "improv") && (
