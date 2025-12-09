@@ -113,12 +113,22 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartit
         {previewSequence && (
           <>
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="shrink-0 h-8 w-8"
+              className="shrink-0 h-8 w-8 gap-2"
               onClick={isPlaying ? handleStop : handlePlay}
             >
-              {isPlaying ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              {isPlaying ? (
+                <>
+                  <Square className="h-4 w-4" />
+                  Stop
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  Play
+                </>
+              )}
             </Button>
             <div className="flex items-start gap-2 border border-border rounded-md p-2 bg-muted/30">
               <div className="overflow-x-auto flex-1">
