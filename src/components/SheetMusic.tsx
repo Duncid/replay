@@ -18,16 +18,19 @@ interface SheetMusicProps {
   label?: string;
   isUserNotes?: boolean;
   compact?: boolean;
+  noTitle?: boolean;
+  noControls?: boolean;
 }
 
-export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, compact = false }: SheetMusicProps) => {
+export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, compact = false, noTitle = false, noControls = false }: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
 
-    const abc = noteSequenceToAbc(sequence, label || (isUserNotes ? "You played" : "AI responded"));
+    const title = noTitle ? undefined : (label || (isUserNotes ? "You played" : "AI responded"));
+    const abc = noteSequenceToAbc(sequence, title);
 
     renderDivRef.current.innerHTML = "";
 
@@ -51,6 +54,16 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
   if (!sequence || sequence.notes.length === 0) return null;
 
   if (compact) {
+    // Minimal view for TrackItem - just the sheet music
+    if (noControls) {
+      return (
+        <div
+          ref={renderDivRef}
+          className="overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground"
+        />
+      );
+    }
+
     return (
       <div className="bg-card/50 border border-border/50 rounded-md px-3 py-2">
         <div className="flex items-center gap-2">
@@ -70,7 +83,7 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
                   <MoreHorizontal className="w-3.5 h-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="bg-popover">
                 <DropdownMenuItem onClick={handleCopySequence}>
                   <Copy className="w-4 h-4 mr-2" />
                   Copy NoteSequence

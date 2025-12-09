@@ -84,13 +84,13 @@ export function addNote(
 /**
  * Convert NoteSequence to ABC notation for sheet music display
  */
-export function noteSequenceToAbc(sequence: NoteSequence, title: string = "Music"): string {
+export function noteSequenceToAbc(sequence: NoteSequence, title?: string): string {
   if (sequence.notes.length === 0) return "";
   
   const qpm = sequence.tempos?.[0]?.qpm ?? DEFAULT_QPM;
   
-  // ABC header
-  let abc = `X:1\nT:${title}\nM:4/4\nL:1/4\nK:C\n`;
+  // ABC header - title is optional
+  let abc = `X:1\n${title ? `T:${title}\n` : ""}M:4/4\nL:1/4\nK:C\n`;
   
   // Group notes by start time to identify chords
   const notesByStartTime = new Map<number, Note[]>();
