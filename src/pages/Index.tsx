@@ -619,8 +619,6 @@ const Index = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={!(activeMode === "compose" ? composeMode : improvMode).hasValidSessions}
-                      className="disabled:opacity-50"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
