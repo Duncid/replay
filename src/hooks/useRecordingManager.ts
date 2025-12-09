@@ -183,12 +183,12 @@ export function useRecordingManager({
       setShowEndingProgress(false);
       console.log(`[RecordingManager] Timeline paused at ${virtualTimeRef.current.toFixed(3)}s`);
 
-      // After another pauseTimeoutMs, complete the recording
+      // Complete recording after a short delay
       completionTimeoutRef.current = setTimeout(() => {
         if (recordingRef.current.notes.length > 0) {
           completeRecording();
         }
-      }, pauseTimeoutMs);
+      }, 300);
     }, pauseTimeoutMs);
   }, [pauseTimeoutMs, completeRecording, clearEndingProgress]);
 
