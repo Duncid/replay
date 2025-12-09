@@ -99,8 +99,8 @@ export function ComposeMode({
   const getCombinedSequence = useCallback((): NoteSequence | null => {
     if (history.length === 0) return null;
 
-    // One measure gap between sessions
-    const measureGapSeconds = beatsToSeconds(beatsPerMeasure, bpm);
+    // Half measure gap between sessions
+    const measureGapSeconds = beatsToSeconds(beatsPerMeasure / 2, bpm);
 
     let combinedNotes: Note[] = [];
     let currentTime = 0;
