@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal, Trash2, Copy } from "lucide-react";
+import { Play, Square, MoreHorizontal, Trash2, Copy, Music } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
@@ -24,6 +24,7 @@ interface TrackItemProps {
   onMergeNext?: () => void;
   onRemove?: () => void;
   isAiGenerated?: boolean;
+  onAddPartition?: () => void;
 }
 
 export function TrackItem({
@@ -38,6 +39,7 @@ export function TrackItem({
   onMergeNext,
   onRemove,
   isAiGenerated = false,
+  onAddPartition,
 }: TrackItemProps) {
   const { toast } = useToast();
 
@@ -96,6 +98,11 @@ export function TrackItem({
                 <DropdownMenuItem onClick={handleCopyAbc}>
                   <Copy className="w-3 h-3 mr-2" />
                   Copy as ABC
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onAddPartition}>
+                  <Music className="w-3 h-3 mr-2" />
+                  Add partition
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onRemove} className="text-destructive focus:text-destructive">

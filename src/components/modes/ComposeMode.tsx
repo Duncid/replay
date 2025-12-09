@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { NoteSequence, Note } from "@/types/noteSequence";
 import { createEmptyNoteSequence, beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
+import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import { TrackItem } from "@/components/TrackItem";
 import { TrackContainer } from "@/components/TrackContainer";
 interface ComposeEntry {
@@ -170,6 +171,13 @@ export function ComposeMode({
     setMergeDialogOpen(false);
   };
 
+  // State for add partition dialog
+  const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
+
+  const handleAddPartition = useCallback((sequence: NoteSequence) => {
+    addUserSequence(sequence);
+  }, [addUserSequence]);
+
   // Filter to only valid sessions for display
   const validHistory = history.filter(entry => entry.userSequence.notes.length > 0);
 
@@ -204,6 +212,7 @@ export function ComposeMode({
                 onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
                 onMergeNext={() => openMergeDialog(actualIndex, "next")}
                 onRemove={() => removeSession(actualIndex)}
+                onAddPartition={() => setPartitionDialogOpen(true)}
               />
             );
           })}
@@ -225,6 +234,14 @@ export function ComposeMode({
           open={mergeDialogOpen}
           onOpenChange={setMergeDialogOpen}
           initialDirection={mergeDirection}
+        />
+
+        {/* Add partition dialog */}
+        <AddPartitionDialog
+          open={partitionDialogOpen}
+          onOpenChange={setPartitionDialogOpen}
+          onAdd={handleAddPartition}
+          bpm={bpm}
         />
       </div>
     ),
