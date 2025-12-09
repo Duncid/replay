@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import abcjs from "abcjs";
 import { Button } from "@/components/ui/button";
 import { Play, MoreHorizontal, Copy } from "lucide-react";
@@ -32,45 +32,22 @@ export const SheetMusic = ({
   noControls = false,
 }: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
   const { toast } = useToast();
-
-  // Observe container width changes
-  useEffect(() => {
-    if (!compact || !containerRef.current) return;
-
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0].contentRect.width;
-      if (width > 0) {
-        setContainerWidth(width);
-      }
-    });
-
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [compact]);
 
   useEffect(() => {
     if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
-    // For compact mode, wait for container width
-    if (compact && containerWidth === 0) return;
 
     const title = noTitle ? undefined : label || (isUserNotes ? "You played" : "AI responded");
     const abc = noteSequenceToAbc(sequence, title);
 
     renderDivRef.current.innerHTML = "";
 
-    let options;
-    if (compact) {
-      const staffwidth = Math.max(80, containerWidth - 16);
-      options = { staffwidth, scale: 0.9, add_classes: true };
-    } else {
-      options = { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
-    }
+    const options = compact
+      ? { scale: 0.9, add_classes: true }
+      : { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
 
     abcjs.renderAbc(renderDivRef.current, abc, options);
-  }, [sequence, label, isUserNotes, compact, noTitle, containerWidth]);
+  }, [sequence, label, isUserNotes, compact, noTitle]);
 
   const handleCopySequence = async () => {
     try {
@@ -87,12 +64,10 @@ export const SheetMusic = ({
     // Minimal view for TrackItem - just the sheet music
     if (noControls) {
       return (
-        <div ref={containerRef} className="w-full">
-          <div
-            ref={renderDivRef}
-            className="overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground"
-          />
-        </div>
+        <div
+          ref={renderDivRef}
+          className="[&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground"
+        />
       );
     }
 

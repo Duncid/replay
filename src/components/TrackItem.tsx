@@ -35,7 +35,7 @@ export function TrackItem({
   if (!sequence || sequence.notes.length === 0) return null;
 
   return (
-    <div className="flex flex-col shrink-0 transition duration-300 ease-out">
+    <div className="flex flex-col w-fit shrink-0">
       {/* Control bar */}
       <div className="flex items-center gap-1 px-2 h-9 bg-muted/50 rounded-t-md border border-b-0 border-border/50">
         {!isRecording && (
