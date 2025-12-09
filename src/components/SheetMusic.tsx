@@ -23,14 +23,23 @@ interface SheetMusicProps {
   width?: number;
 }
 
-export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, compact = false, noTitle = false, noControls = false, width }: SheetMusicProps) => {
+export const SheetMusic = ({
+  sequence,
+  onReplay,
+  label,
+  isUserNotes = false,
+  compact = false,
+  noTitle = false,
+  noControls = false,
+  width,
+}: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
 
-    const title = noTitle ? undefined : (label || (isUserNotes ? "You played" : "AI responded"));
+    const title = noTitle ? undefined : label || (isUserNotes ? "You played" : "AI responded");
     const abc = noteSequenceToAbc(sequence, title);
 
     renderDivRef.current.innerHTML = "";
@@ -45,7 +54,7 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
     } else {
       options = { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
     }
-    
+
     abcjs.renderAbc(renderDivRef.current, abc, options);
   }, [sequence, label, isUserNotes, compact, noTitle, width]);
 
@@ -72,7 +81,7 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
     }
 
     return (
-      <div className="bg-card/50 border border-border/50 rounded-md px-3 py-2">
+      <div className="bg-card/50 border border-border/50 rounded-md p-2">
         <div className="flex items-center gap-2">
           <div
             ref={renderDivRef}
@@ -111,12 +120,7 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
         </h3>
         <div className="flex items-center gap-1">
           {onReplay && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onReplay}
-              className="gap-2"
-            >
+            <Button variant="outline" size="sm" onClick={onReplay} className="gap-2">
               <Play className="w-3 h-3" />
               Replay
             </Button>
