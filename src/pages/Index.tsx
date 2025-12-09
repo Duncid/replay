@@ -469,7 +469,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
-      <div id="topContainer" className="flex flex-col items-center justify-start p-4 gap-4 relative">
+      <div id="topContainer" className="w-full flex flex-col items-center justify-start p-4 gap-4 relative">
         {/* AI Playing / Replay indicator */}
         <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
 
@@ -668,7 +668,7 @@ const Index = () => {
           </div>
         </Tabs>
       </div>
-      <div id="bottomContainer">
+      <div id="bottomContainer" className="w-full">
         {/* Mode-specific content */}
         {activeMode === "player" && playerMode.renderInput()}
 
