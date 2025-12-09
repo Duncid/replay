@@ -21,9 +21,6 @@ interface TrackItemProps {
   onMergeNext?: () => void;
 }
 
-const PIXELS_PER_SECOND = 48;
-const MIN_WIDTH = 48;
-
 export function TrackItem({
   sequence,
   onPlay,
@@ -36,8 +33,6 @@ export function TrackItem({
   onMergeNext,
 }: TrackItemProps) {
   if (!sequence || sequence.notes.length === 0) return null;
-
-  const itemWidth = Math.max(MIN_WIDTH, Math.ceil((sequence.totalTime || 1) * PIXELS_PER_SECOND));
 
   return (
     <div className="flex flex-col shrink-0 transition duration-300 ease-out">
