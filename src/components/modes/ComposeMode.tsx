@@ -221,7 +221,7 @@ export function ComposeMode({
         <div className="-mx-4 w-[calc(100%+2rem)]">
           <div
             ref={trackContainerRef}
-            className="w-full overflow-x-auto pb-2 px-3"
+            className="w-full overflow-x-auto pb-8 px-3 custom-scrollbar"
           >
             <div className="flex gap-2">
               {/* Completed recordings - left to right */}
