@@ -181,7 +181,7 @@ export const Metronome = ({
     <div className="w-full py-2">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Settings dropdown, Metronome switch, and Volume */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
@@ -214,15 +214,16 @@ export const Metronome = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer">
-            Metronome
-          </Label>
-          <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
+          <div className="flex items-center gap-3">
+            <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer">
+              Metronome
+            </Label>
+            <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
+          </div>
 
           {/* Volume slider - only visible when metronome is on */}
           {isPlaying && (
             <div className="flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-muted-foreground" />
               <Slider
                 value={[volume]}
                 onValueChange={(value) => setVolume(value[0])}
@@ -237,7 +238,7 @@ export const Metronome = ({
 
         {/* Center: Beat Indicators (only when playing) */}
         {isPlaying && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ">
             {Array.from({ length: beats }, (_, i) => {
               const beatNumber = i + 1;
               const isActive = currentBeat === beatNumber;
