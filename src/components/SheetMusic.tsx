@@ -34,6 +34,8 @@ export const SheetMusic = ({
   const renderDivRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  const containerWidth = sequence ? Math.max(48, sequence.totalTime * 48) : 48;
+
   useEffect(() => {
     if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
 
@@ -43,16 +45,7 @@ export const SheetMusic = ({
     renderDivRef.current.innerHTML = "";
 
     const options = compact
-      ? {
-          staffwidth: 800,
-          wrap: {
-            minSpacing: 1,
-            maxSpacing: 1.5,
-            preferredMeasuresPerLine: 8,
-          },
-          scale: 0.9,
-          add_classes: true,
-        }
+      ? { responsive: "resize" as const, scale: 0.9, add_classes: true }
       : { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
 
     abcjs.renderAbc(renderDivRef.current, abc, options);
@@ -72,11 +65,17 @@ export const SheetMusic = ({
   if (compact) {
     // Minimal view for TrackItem - just the sheet music
     if (noControls) {
-      return <div ref={renderDivRef} className="[&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground" />;
+      return (
+        <div 
+          ref={renderDivRef} 
+          style={{ width: containerWidth }}
+          className="[&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground" 
+        />
+      );
     }
 
     return (
-      <div className="bg-card/50 border border-border/50 rounded-md p-2">
+      <div style={{ width: containerWidth }} className="bg-card/50 border border-border/50 rounded-md p-2">
         <div className="flex items-center gap-2">
           <div
             ref={renderDivRef}
