@@ -536,7 +536,7 @@ const Index = () => {
                     className="h-8 px-3 gap-2"
                     disabled={appState === "ai_playing" || magenta.isLoading}
                   >
-                    {magenta.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                    {magenta.isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                     <span className="hidden sm:inline">
                       {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label ||
                         AI_MODELS.magenta.find((m) => m.value === selectedModel)?.label ||
