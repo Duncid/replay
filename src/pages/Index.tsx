@@ -481,15 +481,15 @@ const Index = () => {
           <TabsList className="bg-muted">
             <TabsTrigger value="compose" className="gap-2">
               <Music className="w-4 h-4" />
-              <span className="hidden sm:inline">Compose</span>
+              <span className="hidden sm:inline">Free</span>
             </TabsTrigger>
             <TabsTrigger value="improv" className="gap-2">
               <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">AI Improv</span>
+              <span className="hidden sm:inline">Duo</span>
             </TabsTrigger>
             <TabsTrigger value="player" className="gap-2">
               <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">AI Player</span>
+              <span className="hidden sm:inline">Teacher</span>
             </TabsTrigger>
           </TabsList>
 
