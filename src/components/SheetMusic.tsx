@@ -44,7 +44,7 @@ export const SheetMusic = ({
 
     const options = compact
       ? {
-          staffwidth: wrap,
+          staffwidth: 800,
           wrap: {
             minSpacing: 1,
             maxSpacing: 1.5,
