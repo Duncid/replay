@@ -482,7 +482,7 @@ const Index = () => {
         <TopToastProgress
           show={recordingManager.showProgress}
           progress={recordingManager.progress}
-          label="AI preparing response..."
+          label="Improvising..."
         />
       )}
 
