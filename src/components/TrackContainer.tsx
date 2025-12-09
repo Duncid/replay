@@ -30,7 +30,7 @@ export const TrackContainer = forwardRef<TrackContainerHandle, TrackContainerPro
     }, [autoScroll, scrollDependency]);
 
     return (
-      <div ref={containerRef} className="w-full overflow-x-auto py-6 px-3 custom-scrollbar">
+      <div ref={containerRef} className="w-full overflow-x-auto py-6 px-4 custom-scrollbar">
         <div className="flex gap-2">{children}</div>
       </div>
     );
