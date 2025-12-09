@@ -99,7 +99,8 @@ const Index = () => {
     (result: RecordingResult) => {
       setLiveNotes([]); // Clear live notes when recording completes
       if (activeMode === "improv") {
-        pendingUserSequenceRef.current = result.sequence;
+        // Add user recording immediately as a separate entry
+        improvModeRef.current?.addEntry(result.sequence, false);
         handleImprovPlay(result.sequence);
       } else if (activeMode === "compose") {
         composeModeRef.current?.addUserSequence(result.sequence);
@@ -397,7 +398,8 @@ const Index = () => {
 
         if (currentRequestIdRef.current !== requestId) return;
 
-        improvMode.addSession(userSequence, aiSequence);
+        // Add AI response as a separate entry
+        improvMode.addEntry(aiSequence, true);
         recordingManager.hideProgress();
         await playSequence(aiSequence, requestId);
       } else {

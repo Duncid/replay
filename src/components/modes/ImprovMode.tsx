@@ -1,13 +1,14 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { NoteSequence, Note } from "@/types/noteSequence";
-import { createEmptyNoteSequence, beatsToSeconds } from "@/utils/noteSequenceUtils";
+import { beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { TrackContainer } from "@/components/TrackContainer";
 import { TrackItem } from "@/components/TrackItem";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
 
-interface ImprovEntry {
-  userSequence: NoteSequence;
-  aiSequence: NoteSequence;
+// Single-entry model - same as ComposeMode but with isAiGenerated flag
+interface TrackEntry {
+  sequence: NoteSequence;
+  isAiGenerated: boolean;
 }
 
 type GapUnit = "beats" | "measures";
@@ -36,12 +37,13 @@ export function ImprovMode({
   isRecording = false,
   isPlayingAll = false,
 }: ImprovModeProps) {
-  const [history, setHistory] = useState<ImprovEntry[]>([]);
+  const [history, setHistory] = useState<TrackEntry[]>([]);
 
   const beatsPerMeasure = parseInt(timeSignature.split('/')[0]);
 
-  const addSession = useCallback((userSequence: NoteSequence, aiSequence: NoteSequence) => {
-    setHistory((prev) => [...prev, { userSequence, aiSequence }]);
+  // Add a single entry (user or AI)
+  const addEntry = useCallback((sequence: NoteSequence, isAiGenerated: boolean) => {
+    setHistory((prev) => [...prev, { sequence, isAiGenerated }]);
   }, []);
 
   const clearHistory = useCallback(() => {
@@ -49,97 +51,73 @@ export function ImprovMode({
     onClearHistory();
   }, [onClearHistory]);
 
-  // Merge two sessions with a gap (combines user+AI pairs)
+  // Merge two adjacent entries - result inherits isAiGenerated from target (left entry)
   const mergeSessions = useCallback((
-    sessionIndex: number,
-    direction: MergeDirection,
+    targetIndex: number,
+    sourceIndex: number,
     gapValue: number,
     gapUnit: GapUnit
   ) => {
     setHistory((prev) => {
-      const targetIndex = direction === "previous" ? sessionIndex - 1 : sessionIndex;
-      const sourceIndex = direction === "previous" ? sessionIndex : sessionIndex + 1;
-
       if (targetIndex < 0 || sourceIndex >= prev.length) return prev;
 
-      const targetSession = prev[targetIndex];
-      const sourceSession = prev[sourceIndex];
+      const target = prev[targetIndex];
+      const source = prev[sourceIndex];
 
       // Calculate gap in seconds
       const gapInBeats = gapUnit === "measures" ? gapValue * beatsPerMeasure : gapValue;
       const gapSeconds = beatsToSeconds(gapInBeats, bpm);
 
-      // Target total time is max of user and AI
-      const targetTotalTime = Math.max(
-        targetSession.userSequence.totalTime,
-        targetSession.aiSequence.totalTime
-      );
-
       // Offset source notes
-      const timeOffset = targetTotalTime + gapSeconds;
+      const timeOffset = target.sequence.totalTime + gapSeconds;
 
-      const offsetUserNotes = sourceSession.userSequence.notes.map((note) => ({
+      const offsetNotes = source.sequence.notes.map((note) => ({
         ...note,
         startTime: note.startTime + timeOffset,
         endTime: note.endTime + timeOffset,
       }));
 
-      const offsetAiNotes = sourceSession.aiSequence.notes.map((note) => ({
-        ...note,
-        startTime: note.startTime + timeOffset,
-        endTime: note.endTime + timeOffset,
-      }));
-
-      const mergedUserSequence: NoteSequence = {
-        ...targetSession.userSequence,
-        notes: [...targetSession.userSequence.notes, ...offsetUserNotes],
-        totalTime: timeOffset + sourceSession.userSequence.totalTime,
+      const mergedSequence: NoteSequence = {
+        ...target.sequence,
+        notes: [...target.sequence.notes, ...offsetNotes],
+        totalTime: timeOffset + source.sequence.totalTime,
       };
 
-      const mergedAiSequence: NoteSequence = {
-        ...targetSession.aiSequence,
-        notes: [...targetSession.aiSequence.notes, ...offsetAiNotes],
-        totalTime: timeOffset + sourceSession.aiSequence.totalTime,
+      // Result inherits isAiGenerated from TARGET (merge AI into human = human)
+      const mergedEntry: TrackEntry = {
+        sequence: mergedSequence,
+        isAiGenerated: target.isAiGenerated,
       };
 
       // Remove the source and replace target with merged
       const newHistory = [...prev];
-      newHistory[targetIndex] = { userSequence: mergedUserSequence, aiSequence: mergedAiSequence };
+      newHistory[targetIndex] = mergedEntry;
       newHistory.splice(sourceIndex, 1);
 
       return newHistory;
     });
   }, [bpm, beatsPerMeasure]);
 
-  // Build combined sequence from all sessions (both user and AI interleaved)
+  // Build combined sequence from all entries
   const getCombinedSequence = useCallback((): NoteSequence | null => {
     if (history.length === 0) return null;
 
-    // One measure gap between sessions
+    // One measure gap between entries
     const measureGapSeconds = beatsToSeconds(beatsPerMeasure, bpm);
 
     let combinedNotes: Note[] = [];
     let currentTime = 0;
 
     history.forEach((entry, index) => {
-      // Add user notes with time offset
-      const offsetUserNotes = entry.userSequence.notes.map((note) => ({
+      // Add notes with time offset
+      const offsetNotes = entry.sequence.notes.map((note) => ({
         ...note,
         startTime: note.startTime + currentTime,
         endTime: note.endTime + currentTime,
       }));
-      combinedNotes = [...combinedNotes, ...offsetUserNotes];
+      combinedNotes = [...combinedNotes, ...offsetNotes];
 
-      // Add AI notes with time offset
-      const offsetAiNotes = entry.aiSequence.notes.map((note) => ({
-        ...note,
-        startTime: note.startTime + currentTime,
-        endTime: note.endTime + currentTime,
-      }));
-      combinedNotes = [...combinedNotes, ...offsetAiNotes];
-
-      // Session total time is max of user and AI
-      currentTime += Math.max(entry.userSequence.totalTime, entry.aiSequence.totalTime);
+      currentTime += entry.sequence.totalTime;
 
       // Add measure gap if not last
       if (index < history.length - 1) {
@@ -175,43 +153,34 @@ export function ImprovMode({
     }],
   } : null;
 
-  const hasValidSessions = history.some(entry =>
-    entry.userSequence.notes.length > 0 || entry.aiSequence.notes.length > 0
-  );
-
-  // Track container ref for auto-scroll
-  const trackContainerRef = useRef<HTMLDivElement>(null);
+  const hasValidSessions = history.some(entry => entry.sequence.notes.length > 0);
 
   // State for merge dialog
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
-  const [mergeSessionIndex, setMergeSessionIndex] = useState(0);
+  const [mergeEntryIndex, setMergeEntryIndex] = useState(0);
   const [mergeDirection, setMergeDirection] = useState<MergeDirection>("next");
 
   const openMergeDialog = (index: number, direction: MergeDirection) => {
-    setMergeSessionIndex(index);
+    setMergeEntryIndex(index);
     setMergeDirection(direction);
     setMergeDialogOpen(true);
   };
 
   const handleMergeConfirm = (gapValue: number, gapUnit: GapUnit) => {
-    mergeSessions(mergeSessionIndex, mergeDirection, gapValue, gapUnit);
+    const targetIndex = mergeDirection === "previous" ? mergeEntryIndex - 1 : mergeEntryIndex;
+    const sourceIndex = mergeDirection === "previous" ? mergeEntryIndex : mergeEntryIndex + 1;
+    mergeSessions(targetIndex, sourceIndex, gapValue, gapUnit);
     setMergeDialogOpen(false);
   };
 
-  // Remove a session by index
-  const removeSession = useCallback((index: number) => {
+  // Remove an entry by index
+  const removeEntry = useCallback((index: number) => {
     setHistory((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Flatten history for display: each entry has user + AI tracks
-  const flattenedTracks = history.flatMap((entry, sessionIndex) => [
-    { sequence: entry.userSequence, isAi: false, sessionIndex },
-    { sequence: entry.aiSequence, isAi: true, sessionIndex },
-  ]).filter(track => track.sequence.notes.length > 0);
-
   return {
     history,
-    addSession,
+    addEntry,
     clearHistory,
     hasValidSessions,
     handlePlayAll,
@@ -221,18 +190,18 @@ export function ImprovMode({
     renderHistory: () => (
       <div className="w-full">
         <TrackContainer scrollDependency={[history.length, liveNotes.length]}>
-          {/* Completed recordings - pairs of user/AI */}
-          {flattenedTracks.map((track, displayIndex) => (
+          {/* All entries - each with full controls */}
+          {history.map((entry, index) => (
             <TrackItem
-              key={`${track.sessionIndex}-${track.isAi ? 'ai' : 'user'}`}
-              sequence={track.sequence}
-              onPlay={() => onReplay(track.sequence)}
-              isFirst={displayIndex === 0}
-              isLast={displayIndex === flattenedTracks.length - 1 && !isRecording}
-              isAiGenerated={track.isAi}
-              onMergePrevious={!track.isAi ? () => openMergeDialog(track.sessionIndex, "previous") : undefined}
-              onMergeNext={!track.isAi ? () => openMergeDialog(track.sessionIndex, "next") : undefined}
-              onRemove={!track.isAi ? () => removeSession(track.sessionIndex) : undefined}
+              key={index}
+              sequence={entry.sequence}
+              onPlay={() => onReplay(entry.sequence)}
+              isFirst={index === 0}
+              isLast={index === history.length - 1 && !isRecording}
+              isAiGenerated={entry.isAiGenerated}
+              onMergePrevious={index > 0 ? () => openMergeDialog(index, "previous") : undefined}
+              onMergeNext={index < history.length - 1 ? () => openMergeDialog(index, "next") : undefined}
+              onRemove={() => removeEntry(index)}
             />
           ))}
 
@@ -247,7 +216,7 @@ export function ImprovMode({
 
         {/* Merge dialog */}
         <MergeSessionDialog
-          sessionIndex={mergeSessionIndex}
+          sessionIndex={mergeEntryIndex}
           totalSessions={history.length}
           onMerge={(direction, gapValue, gapUnit) => handleMergeConfirm(gapValue, gapUnit)}
           open={mergeDialogOpen}
