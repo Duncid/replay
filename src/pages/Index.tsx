@@ -479,17 +479,14 @@ const Index = () => {
       <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full">
         <div className="w-full flex flex-wrap items-center justify-between gap-4 py-2">
           <TabsList className="bg-muted">
-            <TabsTrigger value="compose" className="gap-2">
-              <Music className="w-4 h-4" />
-              <span className="hidden sm:inline">Free</span>
+            <TabsTrigger value="compose">
+              <span>Free</span>
             </TabsTrigger>
-            <TabsTrigger value="improv" className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">Duo</span>
+            <TabsTrigger value="improv">
+              <span>Duo</span>
             </TabsTrigger>
-            <TabsTrigger value="player" className="gap-2">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Teacher</span>
+            <TabsTrigger value="player">
+              <span>Teacher</span>
             </TabsTrigger>
           </TabsList>
 

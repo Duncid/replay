@@ -180,12 +180,12 @@ export const Metronome = ({
   return (
     <div className="w-full py-2">
       <div className="flex items-center justify-between gap-4">
-        {/* Left: Switch, Label, and Settings */}
+        {/* Left: Settings dropdown, Metronome switch, and Volume */}
         <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
-                Time settings
+                {bpm}, {timeSignature}
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
@@ -195,17 +195,6 @@ export const Metronome = ({
               <div className="px-2 pb-2">
                 <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={40} max={220} step={1} />
                 <p className="text-xs text-muted-foreground mt-2">{getBpmDescription(bpm)}</p>
-              </div>
-
-              <DropdownMenuSeparator />
-
-              {/* Volume Control */}
-              <DropdownMenuLabel className="flex items-center gap-2">
-                <Volume2 className="w-4 h-4" />
-                Volume
-              </DropdownMenuLabel>
-              <div className="px-2 pb-2">
-                <Slider value={[volume]} onValueChange={(value) => setVolume(value[0])} min={0} max={100} step={1} />
               </div>
 
               <DropdownMenuSeparator />
@@ -224,11 +213,26 @@ export const Metronome = ({
               </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer">
             Metronome
           </Label>
-
           <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
+
+          {/* Volume slider - only visible when metronome is on */}
+          {isPlaying && (
+            <div className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-muted-foreground" />
+              <Slider 
+                value={[volume]} 
+                onValueChange={(value) => setVolume(value[0])} 
+                min={0} 
+                max={100} 
+                step={1} 
+                className="w-20"
+              />
+            </div>
+          )}
         </div>
 
         {/* Center: Beat Indicators (only when playing) */}
