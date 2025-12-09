@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Music } from "lucide-react";
+import { useState, useMemo, useRef, useCallback } from "react";
+import { Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,13 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { abcToNoteSequence } from "@/utils/noteSequenceUtils";
+import { abcToNoteSequence, midiToFrequency } from "@/utils/noteSequenceUtils";
 import { NoteSequence } from "@/types/noteSequence";
 import { useToast } from "@/hooks/use-toast";
 import { SheetMusic } from "@/components/SheetMusic";
+import { usePianoAudio } from "@/hooks/usePianoAudio";
 
 interface AddPartitionDialogProps {
   open: boolean;
@@ -24,7 +24,10 @@ interface AddPartitionDialogProps {
 
 export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartitionDialogProps) {
   const [abcText, setAbcText] = useState("");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const { toast } = useToast();
+  const { ensureAudioReady, playNote } = usePianoAudio();
 
   const previewSequence = useMemo(() => {
     if (!abcText.trim()) return null;
@@ -35,6 +38,49 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartit
       return null;
     }
   }, [abcText, bpm]);
+
+  const handlePlay = useCallback(async () => {
+    if (!previewSequence || previewSequence.notes.length === 0) return;
+    
+    await ensureAudioReady();
+    setIsPlaying(true);
+    playbackRef.current = { cancelled: false };
+    
+    const sortedNotes = [...previewSequence.notes].sort((a, b) => a.startTime - b.startTime);
+    const startTime = performance.now();
+    
+    for (const note of sortedNotes) {
+      if (playbackRef.current.cancelled) break;
+      
+      const noteStartMs = note.startTime * 1000;
+      const elapsed = performance.now() - startTime;
+      const delay = noteStartMs - elapsed;
+      
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      if (playbackRef.current.cancelled) break;
+      
+      const frequency = midiToFrequency(note.pitch);
+      const duration = note.endTime - note.startTime;
+      playNote(frequency, duration);
+    }
+    
+    // Wait for last note to finish
+    const lastNote = sortedNotes[sortedNotes.length - 1];
+    if (lastNote && !playbackRef.current.cancelled) {
+      const lastNoteDuration = (lastNote.endTime - lastNote.startTime) * 1000;
+      await new Promise(resolve => setTimeout(resolve, lastNoteDuration));
+    }
+    
+    setIsPlaying(false);
+  }, [previewSequence, ensureAudioReady, playNote]);
+
+  const handleStop = useCallback(() => {
+    playbackRef.current.cancelled = true;
+    setIsPlaying(false);
+  }, []);
 
   const handleAdd = () => {
     if (!abcText.trim()) {
@@ -71,8 +117,18 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartit
           <DialogTitle className="flex items-center gap-2">Add Partition</DialogTitle>
         </DialogHeader>
         {previewSequence && (
-          <div className="border border-border rounded-md p-2 overflow-x-auto bg-muted/30">
-            <SheetMusic sequence={previewSequence} compact noControls noTitle />
+          <div className="flex items-start gap-2 border border-border rounded-md p-2 bg-muted/30">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8"
+              onClick={isPlaying ? handleStop : handlePlay}
+            >
+              {isPlaying ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </Button>
+            <div className="overflow-x-auto flex-1">
+              <SheetMusic sequence={previewSequence} compact noControls noTitle />
+            </div>
           </div>
         )}
         <Textarea
