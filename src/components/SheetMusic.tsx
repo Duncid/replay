@@ -39,9 +39,9 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
     if (compact && width) {
       // Use width-based staffwidth for duration-proportional sizing
       const staffwidth = Math.max(100, width - 20); // Account for padding
-      options = { staffwidth, scale: 1.2, add_classes: true };
+      options = { staffwidth, scale: 0.9, add_classes: true };
     } else if (compact) {
-      options = { staffwidth: 400, scale: 1.2, add_classes: true };
+      options = { staffwidth: 400, scale: 0.9, add_classes: true };
     } else {
       options = { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
     }
