@@ -179,6 +179,11 @@ export function ComposeMode({
   // Filter to only valid sessions for display
   const validHistory = history.filter(entry => entry.userSequence.notes.length > 0);
 
+  // Remove a session by index
+  const removeSession = useCallback((index: number) => {
+    setHistory((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   return {
     history,
     addUserSequence,
@@ -186,32 +191,31 @@ export function ComposeMode({
     startNewSession,
     renderHistory: () => (
       <div className="w-full space-y-2">
-        {/* Global Play/Stop button */}
-        {hasValidSessions && (
-          <div className="flex items-center gap-2">
-            {isPlayingAll ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onStopPlayback}
-                className="gap-2"
-              >
-                <Square className="h-4 w-4" />
-                Stop
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePlayAll}
-                className="gap-2"
-              >
-                <Play className="h-4 w-4" />
-                Play All
-              </Button>
-            )}
-          </div>
-        )}
+        {/* Global Play/Stop button - always visible */}
+        <div className="flex items-center gap-2">
+          {isPlayingAll ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onStopPlayback}
+              className="gap-2"
+            >
+              <Square className="h-4 w-4" />
+              Stop
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePlayAll}
+              disabled={!hasValidSessions}
+              className="gap-2"
+            >
+              <Play className="h-4 w-4" />
+              Play
+            </Button>
+          )}
+        </div>
 
         {/* Horizontal track container */}
         <div
@@ -231,6 +235,7 @@ export function ComposeMode({
                   isLast={displayIndex === validHistory.length - 1}
                   onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
                   onMergeNext={() => openMergeDialog(actualIndex, "next")}
+                  onRemove={() => removeSession(actualIndex)}
                 />
               );
             })}
