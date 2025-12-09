@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal } from "lucide-react";
+import { Play, Square, MoreHorizontal, Trash2 } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -19,6 +20,7 @@ interface TrackItemProps {
   isLast?: boolean;
   onMergePrevious?: () => void;
   onMergeNext?: () => void;
+  onRemove?: () => void;
 }
 
 export function TrackItem({
@@ -31,6 +33,7 @@ export function TrackItem({
   isLast = false,
   onMergePrevious,
   onMergeNext,
+  onRemove,
 }: TrackItemProps) {
   if (!sequence || sequence.notes.length === 0) return null;
 
@@ -61,6 +64,11 @@ export function TrackItem({
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={isLast} onClick={onMergeNext}>
                   Merge with next
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onRemove} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-3 h-3 mr-2" />
+                  Remove
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
