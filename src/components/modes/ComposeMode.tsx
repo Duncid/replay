@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
-import { SheetMusic } from "@/components/SheetMusic";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { NoteSequence, Note } from "@/types/noteSequence";
 import { createEmptyNoteSequence, beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { Button } from "@/components/ui/button";
 import { Play, Square } from "lucide-react";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
+import { TrackItem } from "@/components/TrackItem";
 
 interface ComposeEntry {
   userSequence: NoteSequence;
@@ -149,6 +149,35 @@ export function ComposeMode({
   } : null;
 
   const hasValidSessions = history.some(entry => entry.userSequence.notes.length > 0);
+  
+  // Track container ref for auto-scroll
+  const trackContainerRef = useRef<HTMLDivElement>(null);
+  
+  // State for merge dialog
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [mergeSessionIndex, setMergeSessionIndex] = useState(0);
+  const [mergeDirection, setMergeDirection] = useState<MergeDirection>("next");
+  
+  // Auto-scroll to end when new items are added
+  useEffect(() => {
+    if (trackContainerRef.current) {
+      trackContainerRef.current.scrollLeft = trackContainerRef.current.scrollWidth;
+    }
+  }, [history.length, liveNotes.length]);
+  
+  const openMergeDialog = (index: number, direction: MergeDirection) => {
+    setMergeSessionIndex(index);
+    setMergeDirection(direction);
+    setMergeDialogOpen(true);
+  };
+  
+  const handleMergeConfirm = (gapValue: number, gapUnit: GapUnit) => {
+    mergeSessions(mergeSessionIndex, mergeDirection, gapValue, gapUnit);
+    setMergeDialogOpen(false);
+  };
+
+  // Filter to only valid sessions for display
+  const validHistory = history.filter(entry => entry.userSequence.notes.length > 0);
 
   return {
     history,
@@ -156,10 +185,10 @@ export function ComposeMode({
     clearHistory,
     startNewSession,
     renderHistory: () => (
-      <>
+      <div className="w-full space-y-2">
         {/* Global Play/Stop button */}
         {hasValidSessions && (
-          <div className="w-full flex justify-start mb-2">
+          <div className="flex items-center gap-2">
             {isPlayingAll ? (
               <Button
                 variant="outline"
@@ -184,46 +213,48 @@ export function ComposeMode({
           </div>
         )}
 
-        {/* Live recording display */}
-        {isRecording && liveSequence && (
-          <div className="w-full space-y-2 opacity-75">
-            <SheetMusic
-              sequence={liveSequence}
-              isUserNotes={true}
-              compact
-              label="Recording..."
-            />
+        {/* Horizontal track container */}
+        <div
+          ref={trackContainerRef}
+          className="w-full overflow-x-auto pb-2"
+        >
+          <div className="flex gap-2">
+            {/* Completed recordings - left to right */}
+            {validHistory.map((entry, displayIndex) => {
+              const actualIndex = history.findIndex(h => h === entry);
+              return (
+                <TrackItem
+                  key={actualIndex}
+                  sequence={entry.userSequence}
+                  onPlay={() => onReplay(entry.userSequence)}
+                  isFirst={displayIndex === 0}
+                  isLast={displayIndex === validHistory.length - 1}
+                  onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
+                  onMergeNext={() => openMergeDialog(actualIndex, "next")}
+                />
+              );
+            })}
+
+            {/* Current recording (live) - rightmost */}
+            {isRecording && liveSequence && (
+              <TrackItem
+                sequence={liveSequence}
+                isRecording={true}
+              />
+            )}
           </div>
-        )}
-        
-        {/* Completed recordings */}
-        {history.length > 0 && (
-          <div className="w-full space-y-2">
-            {history.map((entry, index) => (
-              entry.userSequence.notes.length > 0 && (
-                <div key={index} className="relative group">
-                  <SheetMusic
-                    sequence={entry.userSequence}
-                    isUserNotes={true}
-                    onReplay={() => onReplay(entry.userSequence)}
-                    compact
-                  />
-                  {/* Merge button overlay */}
-                  <div className="absolute top-2 right-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MergeSessionDialog
-                      sessionIndex={index}
-                      totalSessions={history.filter(e => e.userSequence.notes.length > 0).length}
-                      onMerge={(direction, gapValue, gapUnit) => 
-                        mergeSessions(index, direction, gapValue, gapUnit)
-                      }
-                    />
-                  </div>
-                </div>
-              )
-            ))}
-          </div>
-        )}
-      </>
+        </div>
+
+        {/* Merge dialog */}
+        <MergeSessionDialog
+          sessionIndex={mergeSessionIndex}
+          totalSessions={validHistory.length}
+          onMerge={(direction, gapValue, gapUnit) => handleMergeConfirm(gapValue, gapUnit)}
+          open={mergeDialogOpen}
+          onOpenChange={setMergeDialogOpen}
+          initialDirection={mergeDirection}
+        />
+      </div>
     ),
   };
 }
