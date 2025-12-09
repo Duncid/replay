@@ -44,7 +44,7 @@ export const SheetMusic = ({
 
     const options = compact
       ? {
-          staffwidth: 800,
+          staffwidth: wrap,
           wrap: {
             minSpacing: 1,
             maxSpacing: 1.5,
@@ -72,12 +72,7 @@ export const SheetMusic = ({
   if (compact) {
     // Minimal view for TrackItem - just the sheet music
     if (noControls) {
-      return (
-        <div
-          ref={renderDivRef}
-          className="[&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground"
-        />
-      );
+      return <div ref={renderDivRef} className="[&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground" />;
     }
 
     return (
