@@ -53,7 +53,7 @@ interface TopToastProgressProps {
   label?: string;
 }
 
-export function TopToastProgress({ show, progress, label = "Recording..." }: TopToastProgressProps) {
+export function TopToastProgress({ show, progress, label = "Stopping..." }: TopToastProgressProps) {
   return (
     <TopToast show={show}>
       <div className="text-sm font-medium text-center mb-2">{label}</div>
