@@ -22,12 +22,7 @@ interface AddPartitionDialogProps {
   bpm: number;
 }
 
-export function AddPartitionDialog({
-  open,
-  onOpenChange,
-  onAdd,
-  bpm,
-}: AddPartitionDialogProps) {
+export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartitionDialogProps) {
   const [abcText, setAbcText] = useState("");
   const { toast } = useToast();
 
@@ -73,25 +68,19 @@ export function AddPartitionDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Music className="w-4 h-4" />
-            Add Partition
-          </DialogTitle>
-          <DialogDescription>
-            Paste ABC notation to add it as a new track.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">Add Partition</DialogTitle>
         </DialogHeader>
+        {previewSequence && (
+          <div className="border border-border rounded-md p-2 overflow-x-auto bg-muted/30">
+            <SheetMusic sequence={previewSequence} compact noControls noTitle />
+          </div>
+        )}
         <Textarea
           placeholder="E E G E | C C C/2 D/2 E/2 z/ | E E G E | A,2"
           value={abcText}
           onChange={(e) => setAbcText(e.target.value)}
           className="min-h-[100px] font-mono text-sm"
         />
-        {previewSequence && (
-          <div className="border border-border rounded-md p-2 overflow-x-auto bg-muted/30">
-            <SheetMusic sequence={previewSequence} compact noControls noTitle />
-          </div>
-        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
