@@ -37,10 +37,10 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
     abcjs.renderAbc(renderDivRef.current, abc, {
       responsive: "resize",
       staffwidth: compact ? 1200 : 600,
-      scale: compact ? 0.7 : 0.8,
+      scale: compact ? 3.5 : 0.8,
       add_classes: true,
     });
-  }, [sequence, label, isUserNotes, compact]);
+  }, [sequence, label, isUserNotes, compact, noTitle]);
 
   const handleCopySequence = async () => {
     try {
