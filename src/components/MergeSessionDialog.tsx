@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -27,6 +33,91 @@ interface MergeSessionDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialDirection?: MergeDirection;
+}
+
+function MergeContent({
+  direction,
+  setDirection,
+  canMergePrevious,
+  canMergeNext,
+  gapValue,
+  setGapValue,
+  gapUnit,
+  setGapUnit,
+  onMerge,
+}: {
+  direction: MergeDirection;
+  setDirection: (d: MergeDirection) => void;
+  canMergePrevious: boolean;
+  canMergeNext: boolean;
+  gapValue: number;
+  setGapValue: (v: number) => void;
+  gapUnit: GapUnit;
+  setGapUnit: (u: GapUnit) => void;
+  onMerge: () => void;
+}) {
+  const effectiveDirection = direction === "previous" && !canMergePrevious 
+    ? "next" 
+    : direction === "next" && !canMergeNext 
+      ? "previous" 
+      : direction;
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Direction</Label>
+        <div className="flex gap-2">
+          <Button
+            variant={effectiveDirection === "previous" ? "default" : "outline"}
+            size="sm"
+            className="flex-1 gap-1"
+            disabled={!canMergePrevious}
+            onClick={() => setDirection("previous")}
+          >
+            <ChevronLeft className="h-3 w-3" />
+            Previous
+          </Button>
+          <Button
+            variant={effectiveDirection === "next" ? "default" : "outline"}
+            size="sm"
+            className="flex-1 gap-1"
+            disabled={!canMergeNext}
+            onClick={() => setDirection("next")}
+          >
+            <ChevronRight className="h-3 w-3" />
+            Next
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Gap between sessions</Label>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            min={0}
+            max={16}
+            value={gapValue}
+            onChange={(e) => setGapValue(Math.max(0, parseInt(e.target.value) || 0))}
+            className="w-16"
+          />
+          <Select value={gapUnit} onValueChange={(v) => setGapUnit(v as GapUnit)}>
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="beats">Beats</SelectItem>
+              <SelectItem value="measures">Measures</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Button onClick={onMerge} className="w-full" size="sm">
+        Merge
+      </Button>
+    </div>
+  );
 }
 
 export function MergeSessionDialog({
@@ -62,82 +153,31 @@ export function MergeSessionDialog({
     setOpen(false);
   };
 
-  // Auto-select valid direction
-  const effectiveDirection = direction === "previous" && !canMergePrevious 
-    ? "next" 
-    : direction === "next" && !canMergeNext 
-      ? "previous" 
-      : direction;
-
-  // For controlled mode without trigger
+  // For controlled mode, use a Dialog (centered modal)
   if (isControlled) {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <span className="hidden" />
-        </PopoverTrigger>
-        <PopoverContent className="w-64 bg-popover" align="start">
-          <div className="space-y-4">
-            <h4 className="font-medium text-sm">Merge Session</h4>
-            
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Direction</Label>
-              <div className="flex gap-2">
-                <Button
-                  variant={effectiveDirection === "previous" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1 gap-1"
-                  disabled={!canMergePrevious}
-                  onClick={() => setDirection("previous")}
-                >
-                  <ChevronLeft className="h-3 w-3" />
-                  Previous
-                </Button>
-                <Button
-                  variant={effectiveDirection === "next" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1 gap-1"
-                  disabled={!canMergeNext}
-                  onClick={() => setDirection("next")}
-                >
-                  <ChevronRight className="h-3 w-3" />
-                  Next
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Gap between sessions</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={16}
-                  value={gapValue}
-                  onChange={(e) => setGapValue(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-16"
-                />
-                <Select value={gapUnit} onValueChange={(v) => setGapUnit(v as GapUnit)}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beats">Beats</SelectItem>
-                    <SelectItem value="measures">Measures</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <Button onClick={handleMerge} className="w-full" size="sm">
-              Merge
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[280px]">
+          <DialogHeader>
+            <DialogTitle>Merge Session</DialogTitle>
+          </DialogHeader>
+          <MergeContent
+            direction={direction}
+            setDirection={setDirection}
+            canMergePrevious={canMergePrevious}
+            canMergeNext={canMergeNext}
+            gapValue={gapValue}
+            setGapValue={setGapValue}
+            gapUnit={gapUnit}
+            setGapUnit={setGapUnit}
+            onMerge={handleMerge}
+          />
+        </DialogContent>
+      </Dialog>
     );
   }
 
+  // Uncontrolled mode with inline trigger button
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -151,62 +191,18 @@ export function MergeSessionDialog({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 bg-popover" align="end">
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm">Merge Session</h4>
-          
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Direction</Label>
-            <div className="flex gap-2">
-              <Button
-                variant={effectiveDirection === "previous" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 gap-1"
-                disabled={!canMergePrevious}
-                onClick={() => setDirection("previous")}
-              >
-                <ChevronLeft className="h-3 w-3" />
-                Previous
-              </Button>
-              <Button
-                variant={effectiveDirection === "next" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 gap-1"
-                disabled={!canMergeNext}
-                onClick={() => setDirection("next")}
-              >
-                <ChevronRight className="h-3 w-3" />
-                Next
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Gap between sessions</Label>
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                min={0}
-                max={16}
-                value={gapValue}
-                onChange={(e) => setGapValue(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-16"
-              />
-              <Select value={gapUnit} onValueChange={(v) => setGapUnit(v as GapUnit)}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beats">Beats</SelectItem>
-                  <SelectItem value="measures">Measures</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Button onClick={handleMerge} className="w-full" size="sm">
-            Merge
-          </Button>
-        </div>
+        <h4 className="font-medium text-sm mb-4">Merge Session</h4>
+        <MergeContent
+          direction={direction}
+          setDirection={setDirection}
+          canMergePrevious={canMergePrevious}
+          canMergeNext={canMergeNext}
+          gapValue={gapValue}
+          setGapValue={setGapValue}
+          gapUnit={gapUnit}
+          setGapUnit={setGapUnit}
+          onMerge={handleMerge}
+        />
       </PopoverContent>
     </Popover>
   );
