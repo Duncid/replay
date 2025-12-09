@@ -42,25 +42,15 @@ export function TrackItem({
   return (
     <div className="flex flex-col shrink-0" style={{ width: `${itemWidth}px` }}>
       {/* Control bar */}
-      <div className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded-t-md border border-b-0 border-border/50">
+      <div className="flex items-center gap-1 px-2 h-9 bg-muted/50 rounded-t-md border border-b-0 border-border/50">
         {!isRecording && (
           <>
             {isPlaying ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={onStop}
-                className="h-6 w-6"
-              >
+              <Button size="icon" variant="ghost" onClick={onStop} className="h-6 w-6">
                 <Square className="w-3 h-3" />
               </Button>
             ) : (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={onPlay}
-                className="h-6 w-6"
-              >
+              <Button size="icon" variant="ghost" onClick={onPlay} className="h-6 w-6">
                 <Play className="w-3 h-3" />
               </Button>
             )}
@@ -71,28 +61,20 @@ export function TrackItem({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="bg-popover">
-                <DropdownMenuItem
-                  disabled={isFirst}
-                  onClick={onMergePrevious}
-                >
+                <DropdownMenuItem disabled={isFirst} onClick={onMergePrevious}>
                   Merge with previous
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isLast}
-                  onClick={onMergeNext}
-                >
+                <DropdownMenuItem disabled={isLast} onClick={onMergeNext}>
                   Merge with next
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         )}
-        {isRecording && (
-          <span className="text-xs text-muted-foreground px-1">Recording...</span>
-        )}
+        {isRecording && <span className="text-xs text-muted-foreground px-1">Recording...</span>}
       </div>
       {/* Sheet music - no title, no controls */}
-      <div className="bg-card/50 border border-border/50 rounded-b-md px-3 py-2 overflow-hidden">
+      <div className="bg-card/50 border border-border/50 rounded-b-md overflow-hidden">
         <SheetMusic sequence={sequence} compact noTitle noControls width={itemWidth} />
       </div>
     </div>
