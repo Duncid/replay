@@ -40,10 +40,7 @@ export function TrackItem({
   const itemWidth = Math.max(MIN_WIDTH, Math.ceil((sequence.totalTime || 1) * PIXELS_PER_SECOND));
 
   return (
-    <div 
-      className="flex flex-col shrink-0 transition-[width] duration-300 ease-out" 
-      style={{ width: `${itemWidth}px` }}
-    >
+    <div className="flex flex-col shrink-0 transition duration-300 ease-out">
       {/* Control bar */}
       <div className="flex items-center gap-1 px-2 h-9 bg-muted/50 rounded-t-md border border-b-0 border-border/50">
         {!isRecording && (
