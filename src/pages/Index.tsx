@@ -20,7 +20,13 @@ import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence, Note } from "@/types/noteSequence";
-import { midiToFrequency, midiToNoteName, noteNameToMidi, createEmptyNoteSequence, noteSequenceToAbc } from "@/utils/noteSequenceUtils";
+import {
+  midiToFrequency,
+  midiToNoteName,
+  noteNameToMidi,
+  createEmptyNoteSequence,
+  noteSequenceToAbc,
+} from "@/utils/noteSequenceUtils";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
 import { TopToastProgress, TopToastLabel } from "@/components/TopToast";
@@ -580,7 +586,7 @@ const Index = () => {
                 </Button>
               ) : (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={composeMode.handlePlayAll}
                   disabled={!composeMode.hasValidSessions}
@@ -595,7 +601,7 @@ const Index = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     disabled={!composeMode.hasValidSessions}
                     className="disabled:opacity-50"
