@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Trash2, Brain, ChevronDown, Loader2, Music, Sparkles, MessageSquare } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
@@ -549,17 +549,41 @@ const Index = () => {
               </DropdownMenu>
             )}
 
-            {hasHistory && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearCurrentHistory}
-                className="gap-2 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Clear</span>
-              </Button>
+            {activeMode === "compose" && (
+              composeMode.isPlayingAll ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={stopAiPlayback}
+                  className="gap-2"
+                >
+                  <Square className="h-4 w-4" />
+                  <span className="hidden sm:inline">Stop</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={composeMode.handlePlayAll}
+                  disabled={!composeMode.hasValidSessions}
+                  className="gap-2 disabled:opacity-50"
+                >
+                  <Play className="h-4 w-4" />
+                  <span className="hidden sm:inline">Play</span>
+                </Button>
+              )
             )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearCurrentHistory}
+              disabled={!hasHistory}
+              className="gap-2 text-muted-foreground hover:text-destructive disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Clear</span>
+            </Button>
           </div>
         </div>
       </Tabs>
