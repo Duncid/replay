@@ -468,212 +468,215 @@ const Index = () => {
     (activeMode === "player" && playerMode.history.length > 0);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-4 bg-background gap-4 relative">
-      {/* AI Playing / Replay indicator */}
-      <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
+    <div className="min-h-screen flex flex-col items-center justify-start bg-background">
+      <div id="topContainer" className="flex flex-col items-center justify-start p-4 gap-4 relative">
+        {/* AI Playing / Replay indicator */}
+        <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
 
-      {/* Recording ending progress toast (compose mode) */}
-      {activeMode === "compose" && (
-        <TopToastProgress show={recordingManager.showEndingProgress} progress={recordingManager.endingProgress} />
-      )}
+        {/* Recording ending progress toast (compose mode) */}
+        {activeMode === "compose" && (
+          <TopToastProgress show={recordingManager.showEndingProgress} progress={recordingManager.endingProgress} />
+        )}
 
-      {/* AI preparing progress (improv mode) */}
-      {activeMode === "improv" && (
-        <TopToastProgress
-          show={recordingManager.showProgress}
-          progress={recordingManager.progress}
-          label="Improvising..."
+        {/* AI preparing progress (improv mode) */}
+        {activeMode === "improv" && (
+          <TopToastProgress
+            show={recordingManager.showProgress}
+            progress={recordingManager.progress}
+            label="Improvising..."
+          />
+        )}
+
+        <Metronome
+          bpm={metronomeBpm}
+          setBpm={setMetronomeBpm}
+          timeSignature={metronomeTimeSignature}
+          setTimeSignature={setMetronomeTimeSignature}
+          isPlaying={metronomeIsPlaying}
+          setIsPlaying={setMetronomeIsPlaying}
+        >
+          <MidiConnector
+            isConnected={!!connectedDevice}
+            deviceName={connectedDevice?.name || null}
+            error={midiError}
+            isSupported={isMidiSupported}
+            onConnect={requestAccess}
+            onDisconnect={disconnect}
+          />
+        </Metronome>
+
+        <Piano
+          ref={pianoRef}
+          activeKeys={activeKeys}
+          allowInput={appState === "idle" || appState === "user_playing" || appState === "waiting_for_ai"}
+          onNoteStart={handleNoteStart}
+          onNoteEnd={handleNoteEnd}
         />
-      )}
 
-      <Metronome
-        bpm={metronomeBpm}
-        setBpm={setMetronomeBpm}
-        timeSignature={metronomeTimeSignature}
-        setTimeSignature={setMetronomeTimeSignature}
-        isPlaying={metronomeIsPlaying}
-        setIsPlaying={setMetronomeIsPlaying}
-      >
-        <MidiConnector
-          isConnected={!!connectedDevice}
-          deviceName={connectedDevice?.name || null}
-          error={midiError}
-          isSupported={isMidiSupported}
-          onConnect={requestAccess}
-          onDisconnect={disconnect}
-        />
-      </Metronome>
+        <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full">
+          <div className="w-full flex flex-wrap items-center justify-between gap-4 py-2">
+            <TabsList className="bg-muted">
+              <TabsTrigger value="compose">
+                <span>Free</span>
+              </TabsTrigger>
+              <TabsTrigger value="improv">
+                <span>Duo</span>
+              </TabsTrigger>
+              <TabsTrigger value="player">
+                <span>Teacher</span>
+              </TabsTrigger>
+            </TabsList>
 
-      <Piano
-        ref={pianoRef}
-        activeKeys={activeKeys}
-        allowInput={appState === "idle" || appState === "user_playing" || appState === "waiting_for_ai"}
-        onNoteStart={handleNoteStart}
-        onNoteEnd={handleNoteEnd}
-      />
-
-      <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full">
-        <div className="w-full flex flex-wrap items-center justify-between gap-4 py-2">
-          <TabsList className="bg-muted">
-            <TabsTrigger value="compose">
-              <span>Free</span>
-            </TabsTrigger>
-            <TabsTrigger value="improv">
-              <span>Duo</span>
-            </TabsTrigger>
-            <TabsTrigger value="player">
-              <span>Teacher</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex items-center gap-2">
-            {(activeMode === "improv" || activeMode === "player") && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-3 gap-2"
-                    disabled={appState === "ai_playing" || magenta.isLoading}
-                  >
-                    {magenta.isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    <span className="hidden sm:inline">
-                      {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label ||
-                        AI_MODELS.magenta.find((m) => m.value === selectedModel)?.label ||
-                        "Model"}
-                    </span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Cloud Models (LLM)</DropdownMenuLabel>
-                  {AI_MODELS.llm.map((model) => (
-                    <DropdownMenuItem
-                      key={model.value}
-                      onClick={() => setSelectedModel(model.value)}
-                      className={selectedModel === model.value ? "bg-accent" : ""}
+            <div className="flex items-center gap-2">
+              {(activeMode === "improv" || activeMode === "player") && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 gap-2"
+                      disabled={appState === "ai_playing" || magenta.isLoading}
                     >
-                      {model.label}
+                      {magenta.isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <span className="hidden sm:inline">
+                        {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label ||
+                          AI_MODELS.magenta.find((m) => m.value === selectedModel)?.label ||
+                          "Model"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Cloud Models (LLM)</DropdownMenuLabel>
+                    {AI_MODELS.llm.map((model) => (
+                      <DropdownMenuItem
+                        key={model.value}
+                        onClick={() => setSelectedModel(model.value)}
+                        className={selectedModel === model.value ? "bg-accent" : ""}
+                      >
+                        {model.label}
+                      </DropdownMenuItem>
+                    ))}
+
+                    {activeMode === "improv" && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <span>Magenta (Local)</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            {AI_MODELS.magenta.map((model) => (
+                              <DropdownMenuItem
+                                key={model.value}
+                                onClick={() => setSelectedModel(model.value)}
+                                className={selectedModel === model.value ? "bg-accent" : ""}
+                              >
+                                <div className="flex flex-col">
+                                  <span>{model.label}</span>
+                                  <span className="text-xs text-muted-foreground">{model.description}</span>
+                                </div>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {/* Play/Stop button for compose and improv modes */}
+              {(activeMode === "compose" || activeMode === "improv") &&
+                (() => {
+                  const mode = activeMode === "compose" ? composeMode : improvMode;
+                  return mode.isPlayingAll ? (
+                    <Button variant="outline" size="sm" onClick={stopAiPlayback} className="gap-2">
+                      <Square className="h-4 w-4" />
+                      <span className="hidden sm:inline">Stop</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={mode.handlePlayAll}
+                      disabled={!mode.hasValidSessions}
+                      className="gap-2 disabled:opacity-50"
+                    >
+                      <Play className="h-4 w-4" />
+                      <span className="hidden sm:inline">Play</span>
+                    </Button>
+                  );
+                })()}
+
+              {/* Copy menu for compose and improv modes */}
+              {(activeMode === "compose" || activeMode === "improv") && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!(activeMode === "compose" ? composeMode : improvMode).hasValidSessions}
+                      className="disabled:opacity-50"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        const mode = activeMode === "compose" ? composeMode : improvMode;
+                        const seq = mode.getCombinedSequence();
+                        if (seq) {
+                          await navigator.clipboard.writeText(JSON.stringify(seq, null, 2));
+                          toast({ title: "Copied all as NoteSequence" });
+                        }
+                      }}
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy all as NoteSequence
                     </DropdownMenuItem>
-                  ))}
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        const mode = activeMode === "compose" ? composeMode : improvMode;
+                        const seq = mode.getCombinedSequence();
+                        if (seq) {
+                          const abc = noteSequenceToAbc(seq);
+                          await navigator.clipboard.writeText(abc);
+                          toast({ title: "Copied all as ABC" });
+                        }
+                      }}
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy all as ABC
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
-                  {activeMode === "improv" && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <span>Magenta (Local)</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          {AI_MODELS.magenta.map((model) => (
-                            <DropdownMenuItem
-                              key={model.value}
-                              onClick={() => setSelectedModel(model.value)}
-                              className={selectedModel === model.value ? "bg-accent" : ""}
-                            >
-                              <div className="flex flex-col">
-                                <span>{model.label}</span>
-                                <span className="text-xs text-muted-foreground">{model.description}</span>
-                              </div>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {/* Play/Stop button for compose and improv modes */}
-            {(activeMode === "compose" || activeMode === "improv") &&
-              (() => {
-                const mode = activeMode === "compose" ? composeMode : improvMode;
-                return mode.isPlayingAll ? (
-                  <Button variant="outline" size="sm" onClick={stopAiPlayback} className="gap-2">
-                    <Square className="h-4 w-4" />
-                    <span className="hidden sm:inline">Stop</span>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={mode.handlePlayAll}
-                    disabled={!mode.hasValidSessions}
-                    className="gap-2 disabled:opacity-50"
-                  >
-                    <Play className="h-4 w-4" />
-                    <span className="hidden sm:inline">Play</span>
-                  </Button>
-                );
-              })()}
-
-            {/* Copy menu for compose and improv modes */}
-            {(activeMode === "compose" || activeMode === "improv") && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!(activeMode === "compose" ? composeMode : improvMode).hasValidSessions}
-                    className="disabled:opacity-50"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-popover">
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      const mode = activeMode === "compose" ? composeMode : improvMode;
-                      const seq = mode.getCombinedSequence();
-                      if (seq) {
-                        await navigator.clipboard.writeText(JSON.stringify(seq, null, 2));
-                        toast({ title: "Copied all as NoteSequence" });
-                      }
-                    }}
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy all as NoteSequence
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      const mode = activeMode === "compose" ? composeMode : improvMode;
-                      const seq = mode.getCombinedSequence();
-                      if (seq) {
-                        const abc = noteSequenceToAbc(seq);
-                        await navigator.clipboard.writeText(abc);
-                        toast({ title: "Copied all as ABC" });
-                      }
-                    }}
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy all as ABC
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearCurrentHistory}
-              disabled={!hasHistory}
-              className="gap-2 disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Clear</span>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearCurrentHistory}
+                disabled={!hasHistory}
+                className="gap-2 disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Clear</span>
+              </Button>
+            </div>
           </div>
-        </div>
-      </Tabs>
+        </Tabs>
+      </div>
+      <div id="bottomContainer">
+        {/* Mode-specific content */}
+        {activeMode === "player" && playerMode.renderInput()}
 
-      {/* Mode-specific content */}
-      {activeMode === "player" && playerMode.renderInput()}
-
-      {/* Mode-specific history */}
-      {activeMode === "compose" && composeMode.renderHistory()}
-      {activeMode === "improv" && improvMode.renderHistory()}
-      {activeMode === "player" && playerMode.renderHistory()}
+        {/* Mode-specific history */}
+        {activeMode === "compose" && composeMode.renderHistory()}
+        {activeMode === "improv" && improvMode.renderHistory()}
+        {activeMode === "player" && playerMode.renderHistory()}
+      </div>
     </div>
   );
 };
