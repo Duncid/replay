@@ -198,36 +198,61 @@ export function validateNoteSequence(sequence: NoteSequence): { valid: boolean; 
 }
 
 /**
- * Parse ABC notation back to NoteSequence (for compatibility)
+ * Parse ABC notation back to NoteSequence
+ * Handles both full ABC with headers and simple note-only input like:
+ * E E G E | C C C/2 D/2 E/2 z/ | E E G E | A,2
  */
 export function abcToNoteSequence(abc: string, qpm: number = DEFAULT_QPM): NoteSequence {
   const sequence = createEmptyNoteSequence(qpm);
   
-  // Extract the note line (after the headers)
+  // Check if input has ABC headers
   const lines = abc.split("\n");
-  const noteLineIndex = lines.findIndex(line => line.match(/^[\[A-Ga-g^_,'/\d\s\]]+$/));
-  if (noteLineIndex === -1) return sequence;
+  const headerPattern = /^[A-Z]:/;
+  const hasHeaders = lines.some(line => headerPattern.test(line.trim()));
   
-  const noteLine = lines[noteLineIndex];
-  const abcElements = noteLine.trim().split(/\s+/);
+  let noteLine: string;
+  if (hasHeaders) {
+    // Filter out header lines and join the rest
+    const noteLines = lines.filter(line => !headerPattern.test(line.trim()));
+    noteLine = noteLines.join(' ');
+  } else {
+    // Treat entire input as notes
+    noteLine = abc;
+  }
+  
+  // Remove bar lines, ties (~), and normalize whitespace
+  noteLine = noteLine
+    .replace(/\|/g, ' ')
+    .replace(/~/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  if (!noteLine) return sequence;
+  
+  // Tokenize: match notes, chords, and rests
+  // Pattern matches: [chord], rest (z with optional duration), or note with accidentals/octave/duration
+  const tokenPattern = /(\[[^\]]+\](?:\/?\d*|\/)?)|([zZ](?:\d+|\/\d*|\/)?)|([_^]?[A-Ga-g][,']*)(\d+|\/\d*|\/)?/g;
   
   let currentTime = 0;
+  let match;
   
-  for (const element of abcElements) {
-    if (!element) continue;
+  while ((match = tokenPattern.exec(noteLine)) !== null) {
+    const [, chord, rest, note, duration] = match;
     
-    if (element.startsWith("[")) {
-      // Chord
-      const chordMatch = element.match(/^\[([^\]]+)\](\/?\d*)$/);
+    if (chord) {
+      // Chord: [CEG]2, [CEG]/2, [CEG]
+      const chordMatch = chord.match(/^\[([^\]]+)\](\/?\d*|\/)?$/);
       if (!chordMatch) continue;
       
       const [, chordNotes, durationStr] = chordMatch;
-      const durationBeats = parseDuration(durationStr);
+      const durationBeats = parseDuration(durationStr || "");
       const durationSeconds = beatsToSeconds(durationBeats, qpm);
       
-      const noteMatches = chordNotes.matchAll(/([_^]?)([A-Ga-g])([,']*)/g);
-      for (const match of noteMatches) {
-        const [, accidental, noteLetter, octaveMarkers] = match;
+      // Parse individual notes in chord
+      const notePattern = /([_^]?)([A-Ga-g])([,']*)/g;
+      let noteMatch;
+      while ((noteMatch = notePattern.exec(chordNotes)) !== null) {
+        const [, accidental, noteLetter, octaveMarkers] = noteMatch;
         const pitch = abcNoteToPitch(accidental, noteLetter, octaveMarkers);
         sequence.notes.push({
           pitch,
@@ -238,13 +263,19 @@ export function abcToNoteSequence(abc: string, qpm: number = DEFAULT_QPM): NoteS
       }
       
       currentTime += durationSeconds;
-    } else {
-      // Single note
-      const match = element.match(/^([_^]?)([A-Ga-g])([,']*)(\/?\d*)$/);
-      if (!match) continue;
+    } else if (rest) {
+      // Rest: z, z2, z/2, z/
+      const restDuration = rest.slice(1) || ""; // Remove the 'z'
+      const durationBeats = parseDuration(restDuration);
+      const durationSeconds = beatsToSeconds(durationBeats, qpm);
+      currentTime += durationSeconds;
+    } else if (note) {
+      // Single note: E, E2, E/2, E/, ^E, _E, e, e', E,, A,2
+      const noteMatch = note.match(/^([_^]?)([A-Ga-g])([,']*)$/);
+      if (!noteMatch) continue;
       
-      const [, accidental, noteLetter, octaveMarkers, durationStr] = match;
-      const durationBeats = parseDuration(durationStr);
+      const [, accidental, noteLetter, octaveMarkers] = noteMatch;
+      const durationBeats = parseDuration(duration || "");
       const durationSeconds = beatsToSeconds(durationBeats, qpm);
       const pitch = abcNoteToPitch(accidental, noteLetter, octaveMarkers);
       
@@ -266,21 +297,49 @@ export function abcToNoteSequence(abc: string, qpm: number = DEFAULT_QPM): NoteS
 function abcNoteToPitch(accidental: string, noteLetter: string, octaveMarkers: string): number {
   let noteName = noteLetter.toUpperCase();
   if (accidental === "^") noteName += "#";
+  if (accidental === "_") noteName += "b";
   
-  let octave = 4;
-  if (noteLetter === noteLetter.toUpperCase()) {
-    octave = octaveMarkers === "," ? 3 : 4;
-  } else {
-    octave = octaveMarkers === "'" ? 6 : 5;
+  // Base octave: uppercase = 4, lowercase = 5
+  let octave = noteLetter === noteLetter.toUpperCase() ? 4 : 5;
+  
+  // Adjust for octave markers: , = down, ' = up
+  for (const marker of octaveMarkers) {
+    if (marker === ",") octave--;
+    else if (marker === "'") octave++;
+  }
+  
+  // Handle flats by converting to equivalent sharp
+  if (noteName.endsWith("b")) {
+    const baseNote = noteName.charAt(0);
+    const noteIndex = NOTE_NAMES.indexOf(baseNote);
+    const flatIndex = (noteIndex - 1 + 12) % 12;
+    noteName = NOTE_NAMES[flatIndex];
   }
   
   return noteNameToMidi(`${noteName}${octave}`);
 }
 
 function parseDuration(durationStr: string): number {
-  if (durationStr === "/2") return 0.25;
-  if (durationStr === "2") return 1.0;
-  if (durationStr === "4") return 2.0;
-  if (durationStr === "8") return 4.0;
-  return 0.5; // default quarter note
+  if (!durationStr || durationStr === "") return 1; // default quarter note
+  if (durationStr === "/") return 0.5; // shorthand for /2
+  if (durationStr === "/2") return 0.5;
+  if (durationStr === "/4") return 0.25;
+  if (durationStr === "2") return 2;
+  if (durationStr === "3") return 3;
+  if (durationStr === "4") return 4;
+  if (durationStr === "8") return 8;
+  
+  // Handle other fractions like /3, /8
+  const fractionMatch = durationStr.match(/^\/(\d+)$/);
+  if (fractionMatch) {
+    return 1 / parseInt(fractionMatch[1]);
+  }
+  
+  // Handle other multipliers
+  const multiplierMatch = durationStr.match(/^(\d+)$/);
+  if (multiplierMatch) {
+    return parseInt(multiplierMatch[1]);
+  }
+  
+  return 1; // fallback to quarter note
 }

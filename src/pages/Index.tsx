@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
@@ -26,7 +26,9 @@ import {
   noteNameToMidi,
   createEmptyNoteSequence,
   noteSequenceToAbc,
+  abcToNoteSequence,
 } from "@/utils/noteSequenceUtils";
+import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
 import { TopToastProgress, TopToastLabel } from "@/components/TopToast";
@@ -58,6 +60,7 @@ const Index = () => {
   const [isReplaying, setIsReplaying] = useState(false);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [liveNotes, setLiveNotes] = useState<Note[]>([]);
+  const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
 
   // Metronome state
   const [metronomeBpm, setMetronomeBpm] = useState(120);
@@ -623,6 +626,11 @@ const Index = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem onClick={() => setPartitionDialogOpen(true)}>
+                      <Music className="w-4 h-4 mr-2" />
+                      Add partition
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={async () => {
                         const mode = activeMode === "compose" ? composeMode : improvMode;
@@ -677,6 +685,20 @@ const Index = () => {
         {activeMode === "improv" && improvMode.renderHistory()}
         {activeMode === "player" && playerMode.renderHistory()}
       </div>
+
+      {/* Add Partition Dialog */}
+      <AddPartitionDialog
+        open={partitionDialogOpen}
+        onOpenChange={setPartitionDialogOpen}
+        onAdd={(sequence) => {
+          if (activeMode === "compose") {
+            composeMode.addUserSequence(sequence);
+          } else if (activeMode === "improv") {
+            improvMode.addEntry(sequence, false);
+          }
+        }}
+        bpm={metronomeBpm}
+      />
     </div>
   );
 };
