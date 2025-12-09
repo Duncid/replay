@@ -68,7 +68,7 @@ export const SheetMusic = ({
       return (
         <div 
           ref={renderDivRef} 
-          style={{ width: containerWidth }}
+          style={{ width: containerWidth, minWidth: containerWidth }}
           className="[&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground" 
         />
       );
