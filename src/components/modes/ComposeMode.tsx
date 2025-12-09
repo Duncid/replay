@@ -97,9 +97,9 @@ export function ComposeMode({
     });
   }, [bpm, beatsPerMeasure]);
 
-  // Create combined sequence for playing all
-  const handlePlayAll = useCallback(() => {
-    if (history.length === 0) return;
+  // Build combined sequence from all sessions
+  const getCombinedSequence = useCallback((): NoteSequence | null => {
+    if (history.length === 0) return null;
 
     // One measure gap between sessions
     const measureGapSeconds = beatsToSeconds(beatsPerMeasure, bpm);
@@ -126,15 +126,21 @@ export function ComposeMode({
       }
     });
 
-    const combinedSequence: NoteSequence = {
+    return {
       notes: combinedNotes,
       totalTime: currentTime,
       tempos: [{ time: 0, qpm: bpm }],
       timeSignatures: [{ time: 0, numerator: beatsPerMeasure, denominator: parseInt(timeSignature.split('/')[1]) }],
     };
+  }, [history, bpm, beatsPerMeasure, timeSignature]);
 
-    onPlayAll(combinedSequence);
-  }, [history, bpm, beatsPerMeasure, timeSignature, onPlayAll]);
+  // Create combined sequence for playing all
+  const handlePlayAll = useCallback(() => {
+    const combinedSequence = getCombinedSequence();
+    if (combinedSequence) {
+      onPlayAll(combinedSequence);
+    }
+  }, [getCombinedSequence, onPlayAll]);
 
   // Create a live sequence from current notes for real-time display
   const liveSequence: NoteSequence | null = liveNotes.length > 0 ? {
@@ -193,6 +199,7 @@ export function ComposeMode({
     handlePlayAll,
     isPlayingAll,
     onStopPlayback,
+    getCombinedSequence,
     renderHistory: () => (
       <div className="w-full">
         {/* Horizontal track container - full width edge to edge */}
