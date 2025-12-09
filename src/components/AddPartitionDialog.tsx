@@ -71,13 +71,10 @@ export function AddPartitionDialog({
           </DialogDescription>
         </DialogHeader>
         <Textarea
-          placeholder="X:1
-M:4/4
-K:C
-C D E F | G A B c |"
+          placeholder="E E G E | C C C/2 D/2 E/2 z/ | E E G E | A,2"
           value={abcText}
           onChange={(e) => setAbcText(e.target.value)}
-          className="min-h-[200px] font-mono text-sm"
+          className="min-h-[150px] font-mono text-sm"
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
