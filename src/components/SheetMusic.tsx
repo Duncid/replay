@@ -43,7 +43,16 @@ export const SheetMusic = ({
     renderDivRef.current.innerHTML = "";
 
     const options = compact
-      ? { scale: 0.9, add_classes: true }
+      ? {
+          staffwidth: 800,
+          wrap: {
+            minSpacing: 1,
+            maxSpacing: 1.5,
+            preferredMeasuresPerLine: 8,
+          },
+          scale: 0.9,
+          add_classes: true,
+        }
       : { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
 
     abcjs.renderAbc(renderDivRef.current, abc, options);
