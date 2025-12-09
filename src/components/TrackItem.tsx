@@ -21,6 +21,9 @@ interface TrackItemProps {
   onMergeNext?: () => void;
 }
 
+const PIXELS_PER_SECOND = 80;
+const MIN_WIDTH = 80;
+
 export function TrackItem({
   sequence,
   onPlay,
@@ -34,8 +37,10 @@ export function TrackItem({
 }: TrackItemProps) {
   if (!sequence || sequence.notes.length === 0) return null;
 
+  const itemWidth = Math.max(MIN_WIDTH, Math.ceil((sequence.totalTime || 1) * PIXELS_PER_SECOND));
+
   return (
-    <div className="flex flex-col shrink-0">
+    <div className="flex flex-col shrink-0" style={{ width: `${itemWidth}px` }}>
       {/* Control bar */}
       <div className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded-t-md border border-b-0 border-border/50">
         {!isRecording && (
@@ -87,8 +92,8 @@ export function TrackItem({
         )}
       </div>
       {/* Sheet music - no title, no controls */}
-      <div className="bg-card/50 border border-border/50 rounded-b-md px-3 py-2">
-        <SheetMusic sequence={sequence} compact noTitle noControls />
+      <div className="bg-card/50 border border-border/50 rounded-b-md px-3 py-2 overflow-hidden">
+        <SheetMusic sequence={sequence} compact noTitle noControls width={itemWidth} />
       </div>
     </div>
   );
