@@ -112,12 +112,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartit
         </DialogHeader>
         {previewSequence && (
           <>
-            <Button
-              variant="outline"
-              size="icon"
-              className="shrink-0 h-8 w-8 gap-2"
-              onClick={isPlaying ? handleStop : handlePlay}
-            >
+            <Button variant="outline" size="icon" className="gap-2" onClick={isPlaying ? handleStop : handlePlay}>
               {isPlaying ? (
                 <>
                   <Square className="h-4 w-4" />
