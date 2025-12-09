@@ -223,12 +223,12 @@ export const Metronome = ({
           {isPlaying && (
             <div className="flex items-center gap-2">
               <Volume2 className="w-4 h-4 text-muted-foreground" />
-              <Slider 
-                value={[volume]} 
-                onValueChange={(value) => setVolume(value[0])} 
-                min={0} 
-                max={100} 
-                step={1} 
+              <Slider
+                value={[volume]}
+                onValueChange={(value) => setVolume(value[0])}
+                min={0}
+                max={100}
+                step={1}
                 className="w-20"
               />
             </div>
@@ -248,11 +248,11 @@ export const Metronome = ({
                   key={i}
                   className={`
                     rounded-full transition-all duration-100
-                    ${isFirstBeat ? "w-4 h-4" : "w-3 h-3"}
+                    ${isFirstBeat ? "w-3.5 h-3.5" : "w-2.5 h-2.5"}
                     ${
                       isActive
                         ? `bg-foreground ${isFirstBeat ? "ring-2 ring-foreground/50 scale-125" : "scale-110"}`
-                        : "bg-muted border border-muted-foreground/30"
+                        : "bg-muted"
                     }
                   `}
                 />
