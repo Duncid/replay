@@ -34,12 +34,11 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
 
     renderDivRef.current.innerHTML = "";
 
-    abcjs.renderAbc(renderDivRef.current, abc, {
-      responsive: "resize",
-      staffwidth: compact ? 1200 : 600,
-      scale: compact ? 3.5 : 0.8,
-      add_classes: true,
-    });
+    const options = compact 
+      ? { staffwidth: 400, scale: 1.2, add_classes: true }
+      : { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
+    
+    abcjs.renderAbc(renderDivRef.current, abc, options);
   }, [sequence, label, isUserNotes, compact, noTitle]);
 
   const handleCopySequence = async () => {
