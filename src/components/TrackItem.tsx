@@ -21,8 +21,8 @@ interface TrackItemProps {
   onMergeNext?: () => void;
 }
 
-const PIXELS_PER_SECOND = 60;
-const MIN_WIDTH = 60;
+const PIXELS_PER_SECOND = 48;
+const MIN_WIDTH = 48;
 
 export function TrackItem({
   sequence,
