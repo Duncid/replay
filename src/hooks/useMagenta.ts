@@ -235,19 +235,8 @@ export const useMagenta = () => {
         }
 
         // Unquantize the output sequence to get proper timing in seconds
+        // unquantizeSequence already handles tempo conversion correctly
         const unquantizedOutput = mm.sequences.unquantizeSequence(outputSequence);
-        
-        // Magenta unquantizes using its internal tempo (often 120 QPM)
-        // We need to scale the timing to match the user's actual BPM
-        const magentaQpm = outputSequence.tempos?.[0]?.qpm || 120;
-        const tempoScale = magentaQpm / bpm;
-        
-        // Scale all note timings to match user's tempo
-        unquantizedOutput.notes.forEach((note: any) => {
-          note.startTime *= tempoScale;
-          note.endTime *= tempoScale;
-        });
-        unquantizedOutput.totalTime *= tempoScale;
         
         // Normalize times to start from 0
         const minStartTime = Math.min(...unquantizedOutput.notes.map((n: any) => n.startTime));
