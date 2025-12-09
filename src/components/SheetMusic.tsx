@@ -68,8 +68,8 @@ export const SheetMusic = ({
       return (
         <div 
           ref={renderDivRef} 
-          style={{ width: containerWidth, minWidth: containerWidth }}
-          className="[&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground" 
+          style={{ width: containerWidth, minWidth: containerWidth, height: 64 }}
+          className="overflow-hidden [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground" 
         />
       );
     }
