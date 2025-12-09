@@ -74,7 +74,7 @@ const Index = () => {
 
   // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
   // (they will be initialized after those functions are defined)
-  
+
   const improvMode = ImprovMode({
     onReplay: (seq) => handleReplaySequenceRef.current?.(seq),
     onClearHistory: () => toast({ title: "History cleared" }),
@@ -93,16 +93,19 @@ const Index = () => {
   const composeModeRef = useRef<ReturnType<typeof ComposeMode>>();
 
   // Recording manager for improv mode
-  const handleRecordingComplete = useCallback((result: RecordingResult) => {
-    setLiveNotes([]); // Clear live notes when recording completes
-    if (activeMode === "improv") {
-      pendingUserSequenceRef.current = result.sequence;
-      handleImprovPlay(result.sequence);
-    } else if (activeMode === "compose") {
-      composeModeRef.current?.addUserSequence(result.sequence);
-      setAppState("idle");
-    }
-  }, [activeMode]);
+  const handleRecordingComplete = useCallback(
+    (result: RecordingResult) => {
+      setLiveNotes([]); // Clear live notes when recording completes
+      if (activeMode === "improv") {
+        pendingUserSequenceRef.current = result.sequence;
+        handleImprovPlay(result.sequence);
+      } else if (activeMode === "compose") {
+        composeModeRef.current?.addUserSequence(result.sequence);
+        setAppState("idle");
+      }
+    },
+    [activeMode],
+  );
 
   const handleRecordingUpdate = useCallback((notes: Note[]) => {
     setLiveNotes(notes);
@@ -146,8 +149,13 @@ const Index = () => {
     });
   };
 
-  const { connectedDevice, error: midiError, isSupported: isMidiSupported, requestAccess, disconnect } = 
-    useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices);
+  const {
+    connectedDevice,
+    error: midiError,
+    isSupported: isMidiSupported,
+    requestAccess,
+    disconnect,
+  } = useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices);
 
   const stopAiPlayback = useCallback(() => {
     shouldStopAiRef.current = true;
@@ -185,7 +193,9 @@ const Index = () => {
     }));
     const normalizedSequence = { ...sequence, notes: normalizedNotes, totalTime: sequence.totalTime - minStartTime };
 
-    console.log(`[Playback ${playbackId}] Starting: ${normalizedSequence.notes.length} notes, ${normalizedSequence.totalTime.toFixed(3)}s`);
+    console.log(
+      `[Playback ${playbackId}] Starting: ${normalizedSequence.notes.length} notes, ${normalizedSequence.totalTime.toFixed(3)}s`,
+    );
     const playbackStartTime = Date.now();
 
     // Clear previous playback state
@@ -266,13 +276,16 @@ const Index = () => {
   handleReplaySequenceRef.current = handleReplaySequence;
 
   // Handle playing all sequences
-  const handlePlayAllSequences = useCallback((combinedSequence: NoteSequence) => {
-    if (isPlayingRef.current) return;
-    
-    setIsPlayingAll(true);
-    pianoRef.current?.ensureAudioReady();
-    setTimeout(() => playSequence(combinedSequence, undefined, true), 50);
-  }, [playSequence]);
+  const handlePlayAllSequences = useCallback(
+    (combinedSequence: NoteSequence) => {
+      if (isPlayingRef.current) return;
+
+      setIsPlayingAll(true);
+      pianoRef.current?.ensureAudioReady();
+      setTimeout(() => playSequence(combinedSequence, undefined, true), 50);
+    },
+    [playSequence],
+  );
 
   // Compose mode hook - defined here since it needs handleReplaySequence and playSequence
   const composeMode = ComposeMode({
@@ -291,27 +304,33 @@ const Index = () => {
   composeModeRef.current = composeMode;
 
   // Handle note events from Piano
-  const handleNoteStart = useCallback((noteKey: string, frequency: number, velocity: number) => {
-    if (appState === "ai_playing") {
-      stopAiPlayback();
-    }
+  const handleNoteStart = useCallback(
+    (noteKey: string, frequency: number, velocity: number) => {
+      if (appState === "ai_playing") {
+        stopAiPlayback();
+      }
 
-    if (appState !== "user_playing") {
-      currentRequestIdRef.current = null;
-      recordingManager.hideProgress();
-      setAppState("user_playing");
-    }
+      if (appState !== "user_playing") {
+        currentRequestIdRef.current = null;
+        recordingManager.hideProgress();
+        setAppState("user_playing");
+      }
 
-    if (activeMode === "improv" || activeMode === "compose") {
-      recordingManager.addNoteStart(noteKey, velocity);
-    }
-  }, [appState, activeMode, recordingManager, stopAiPlayback]);
+      if (activeMode === "improv" || activeMode === "compose") {
+        recordingManager.addNoteStart(noteKey, velocity);
+      }
+    },
+    [appState, activeMode, recordingManager, stopAiPlayback],
+  );
 
-  const handleNoteEnd = useCallback((noteKey: string, frequency: number) => {
-    if (activeMode === "improv" || activeMode === "compose") {
-      recordingManager.addNoteEnd(noteKey);
-    }
-  }, [activeMode, recordingManager]);
+  const handleNoteEnd = useCallback(
+    (noteKey: string, frequency: number) => {
+      if (activeMode === "improv" || activeMode === "compose") {
+        recordingManager.addNoteEnd(noteKey);
+      }
+    },
+    [activeMode, recordingManager],
+  );
 
   // Improv AI handling
   async function handleImprovPlay(userSequence: NoteSequence) {
@@ -425,7 +444,7 @@ const Index = () => {
     else if (activeMode === "player") playerMode.clearHistory();
   };
 
-  const hasHistory = 
+  const hasHistory =
     (activeMode === "compose" && composeMode.history.length > 0) ||
     (activeMode === "improv" && improvMode.history.length > 0) ||
     (activeMode === "player" && playerMode.history.length > 0);
@@ -447,7 +466,11 @@ const Index = () => {
 
       {/* AI preparing progress (improv mode) */}
       {activeMode === "improv" && (
-        <TopToastProgress show={recordingManager.showProgress} progress={recordingManager.progress} label="AI preparing response..." />
+        <TopToastProgress
+          show={recordingManager.showProgress}
+          progress={recordingManager.progress}
+          label="AI preparing response..."
+        />
       )}
 
       <Metronome
@@ -549,14 +572,9 @@ const Index = () => {
               </DropdownMenu>
             )}
 
-            {activeMode === "compose" && (
-              composeMode.isPlayingAll ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={stopAiPlayback}
-                  className="gap-2"
-                >
+            {activeMode === "compose" &&
+              (composeMode.isPlayingAll ? (
+                <Button variant="outline" size="sm" onClick={stopAiPlayback} className="gap-2">
                   <Square className="h-4 w-4" />
                   <span className="hidden sm:inline">Stop</span>
                 </Button>
@@ -571,15 +589,14 @@ const Index = () => {
                   <Play className="h-4 w-4" />
                   <span className="hidden sm:inline">Play</span>
                 </Button>
-              )
-            )}
+              ))}
 
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={clearCurrentHistory}
               disabled={!hasHistory}
-              className="gap-2 text-muted-foreground hover:text-destructive disabled:opacity-50"
+              className="gap-2 disabled:opacity-50"
             >
               <Trash2 className="w-4 h-4" />
               <span className="hidden sm:inline">Clear</span>
@@ -590,7 +607,7 @@ const Index = () => {
 
       {/* Mode-specific content */}
       {activeMode === "player" && playerMode.renderInput()}
-      
+
       {/* Mode-specific history */}
       {activeMode === "compose" && composeMode.renderHistory()}
       {activeMode === "improv" && improvMode.renderHistory()}
