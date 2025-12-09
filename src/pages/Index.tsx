@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy } from "lucide-react";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence, Note } from "@/types/noteSequence";
-import { midiToFrequency, midiToNoteName, noteNameToMidi, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
+import { midiToFrequency, midiToNoteName, noteNameToMidi, createEmptyNoteSequence, noteSequenceToAbc } from "@/utils/noteSequenceUtils";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
 import { TopToastProgress, TopToastLabel } from "@/components/TopToast";
@@ -590,6 +590,48 @@ const Index = () => {
                   <span className="hidden sm:inline">Play</span>
                 </Button>
               ))}
+
+            {activeMode === "compose" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={!composeMode.hasValidSessions}
+                    className="disabled:opacity-50"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-popover">
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      const seq = composeMode.getCombinedSequence();
+                      if (seq) {
+                        await navigator.clipboard.writeText(JSON.stringify(seq, null, 2));
+                        toast({ title: "Copied all as NoteSequence" });
+                      }
+                    }}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy all as NoteSequence
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      const seq = composeMode.getCombinedSequence();
+                      if (seq) {
+                        const abc = noteSequenceToAbc(seq);
+                        await navigator.clipboard.writeText(abc);
+                        toast({ title: "Copied all as ABC" });
+                      }
+                    }}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy all as ABC
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <Button
               variant="outline"

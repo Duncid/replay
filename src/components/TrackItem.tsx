@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal, Trash2 } from "lucide-react";
+import { Play, Square, MoreHorizontal, Trash2, Copy } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
+import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +37,20 @@ export function TrackItem({
   onMergeNext,
   onRemove,
 }: TrackItemProps) {
+  const { toast } = useToast();
+
   if (!sequence || sequence.notes.length === 0) return null;
+
+  const handleCopySequence = async () => {
+    await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
+    toast({ title: "Copied as NoteSequence" });
+  };
+
+  const handleCopyAbc = async () => {
+    const abc = noteSequenceToAbc(sequence);
+    await navigator.clipboard.writeText(abc);
+    toast({ title: "Copied as ABC" });
+  };
 
   return (
     <div className="flex flex-col w-fit shrink-0">
@@ -64,6 +79,15 @@ export function TrackItem({
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={isLast} onClick={onMergeNext}>
                   Merge with next
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleCopySequence}>
+                  <Copy className="w-3 h-3 mr-2" />
+                  Copy as NoteSequence
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyAbc}>
+                  <Copy className="w-3 h-3 mr-2" />
+                  Copy as ABC
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onRemove} className="text-destructive focus:text-destructive">
