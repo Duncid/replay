@@ -23,6 +23,7 @@ interface TrackItemProps {
   onMergePrevious?: () => void;
   onMergeNext?: () => void;
   onRemove?: () => void;
+  isAiGenerated?: boolean;
 }
 
 export function TrackItem({
@@ -36,10 +37,17 @@ export function TrackItem({
   onMergePrevious,
   onMergeNext,
   onRemove,
+  isAiGenerated = false,
 }: TrackItemProps) {
   const { toast } = useToast();
 
   if (!sequence || sequence.notes.length === 0) return null;
+
+  // AI-generated styling uses a blue shade
+  const controlBarBg = isAiGenerated ? "bg-blue-500/20" : "bg-muted/50";
+  const controlBarBorder = isAiGenerated ? "border-blue-500/30" : "border-border/50";
+  const contentBg = isAiGenerated ? "bg-blue-500/5" : "bg-card/50";
+  const contentBorder = isAiGenerated ? "border-blue-500/30" : "border-border/50";
 
   const handleCopySequence = async () => {
     await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
@@ -55,7 +63,7 @@ export function TrackItem({
   return (
     <div className="flex flex-col w-fit shrink-0">
       {/* Control bar */}
-      <div className="flex items-center gap-1 px-2 h-9 bg-muted/50 rounded-t-md border border-b-0 border-border/50">
+      <div className={`flex items-center gap-1 px-2 h-9 ${controlBarBg} rounded-t-md border border-b-0 ${controlBarBorder}`}>
         {!isRecording && (
           <>
             {isPlaying ? (
@@ -101,7 +109,7 @@ export function TrackItem({
         {isRecording && <span className="text-xs text-muted-foreground px-1">Recording...</span>}
       </div>
       {/* Sheet music - no title, no controls */}
-      <div className="bg-card/50 border border-border/50 rounded-b-md overflow-hidden">
+      <div className={`${contentBg} border ${contentBorder} rounded-b-md overflow-hidden`}>
         <SheetMusic sequence={sequence} compact noTitle noControls />
       </div>
     </div>

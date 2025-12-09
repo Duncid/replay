@@ -81,11 +81,11 @@ const Index = () => {
   // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
   // (they will be initialized after those functions are defined)
 
-  const improvMode = ImprovMode({
-    onReplay: (seq) => handleReplaySequenceRef.current?.(seq),
-    onClearHistory: () => toast({ title: "History cleared" }),
-  });
-
+  // Refs for circular dependency handling
+  const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>();
+  const composeModeRef = useRef<ReturnType<typeof ComposeMode>>();
+  const improvModeRef = useRef<ReturnType<typeof ImprovMode>>();
+  const handlePlayAllSequencesRef = useRef<(combinedSequence: NoteSequence) => void>();
   const playerMode = PlayerMode({
     isLoading: isAskLoading,
     isPlaying: appState === "ai_playing",
@@ -94,11 +94,7 @@ const Index = () => {
     onClearHistory: () => toast({ title: "History cleared" }),
   });
 
-  // Refs for circular dependency handling
-  const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>();
-  const composeModeRef = useRef<ReturnType<typeof ComposeMode>>();
-
-  // Recording manager for improv mode
+  // Recording manager for improv and compose modes
   const handleRecordingComplete = useCallback(
     (result: RecordingResult) => {
       setLiveNotes([]); // Clear live notes when recording completes
@@ -122,7 +118,7 @@ const Index = () => {
     timeSignature: metronomeTimeSignature,
     onRecordingComplete: handleRecordingComplete,
     onRecordingUpdate: handleRecordingUpdate,
-    pauseTimeoutMs: 3000,
+    pauseTimeoutMs: activeMode === "improv" ? 2000 : 3000, // Duo uses 2s, Free uses 3s
     resumeGapMs: 1000,
   });
 
@@ -302,12 +298,26 @@ const Index = () => {
     onStopPlayback: stopAiPlayback,
     onClearHistory: () => toast({ title: "History cleared" }),
     liveNotes,
-    isRecording: appState === "user_playing",
+    isRecording: appState === "user_playing" && activeMode === "compose",
     isPlayingAll,
   });
 
-  // Assign to ref for use in handleRecordingComplete
+  // Improv mode hook - also uses track display now
+  const improvMode = ImprovMode({
+    bpm: metronomeBpm,
+    timeSignature: metronomeTimeSignature,
+    onReplay: handleReplaySequence,
+    onPlayAll: handlePlayAllSequences,
+    onStopPlayback: stopAiPlayback,
+    onClearHistory: () => toast({ title: "History cleared" }),
+    liveNotes,
+    isRecording: appState === "user_playing" && activeMode === "improv",
+    isPlayingAll,
+  });
+
+  // Assign to refs for use in handleRecordingComplete
   composeModeRef.current = composeMode;
+  improvModeRef.current = improvMode;
 
   // Handle note events from Piano
   const handleNoteStart = useCallback(
@@ -578,32 +588,38 @@ const Index = () => {
               </DropdownMenu>
             )}
 
-            {activeMode === "compose" &&
-              (composeMode.isPlayingAll ? (
-                <Button variant="outline" size="sm" onClick={stopAiPlayback} className="gap-2">
-                  <Square className="h-4 w-4" />
-                  <span className="hidden sm:inline">Stop</span>
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={composeMode.handlePlayAll}
-                  disabled={!composeMode.hasValidSessions}
-                  className="gap-2 disabled:opacity-50"
-                >
-                  <Play className="h-4 w-4" />
-                  <span className="hidden sm:inline">Play</span>
-                </Button>
-              ))}
+            {/* Play/Stop button for compose and improv modes */}
+            {(activeMode === "compose" || activeMode === "improv") && (
+              (() => {
+                const mode = activeMode === "compose" ? composeMode : improvMode;
+                return mode.isPlayingAll ? (
+                  <Button variant="outline" size="sm" onClick={stopAiPlayback} className="gap-2">
+                    <Square className="h-4 w-4" />
+                    <span className="hidden sm:inline">Stop</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={mode.handlePlayAll}
+                    disabled={!mode.hasValidSessions}
+                    className="gap-2 disabled:opacity-50"
+                  >
+                    <Play className="h-4 w-4" />
+                    <span className="hidden sm:inline">Play</span>
+                  </Button>
+                );
+              })()
+            )}
 
-            {activeMode === "compose" && (
+            {/* Copy menu for compose and improv modes */}
+            {(activeMode === "compose" || activeMode === "improv") && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={!composeMode.hasValidSessions}
+                    disabled={!(activeMode === "compose" ? composeMode : improvMode).hasValidSessions}
                     className="disabled:opacity-50"
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -612,7 +628,8 @@ const Index = () => {
                 <DropdownMenuContent align="end" className="bg-popover">
                   <DropdownMenuItem
                     onClick={async () => {
-                      const seq = composeMode.getCombinedSequence();
+                      const mode = activeMode === "compose" ? composeMode : improvMode;
+                      const seq = mode.getCombinedSequence();
                       if (seq) {
                         await navigator.clipboard.writeText(JSON.stringify(seq, null, 2));
                         toast({ title: "Copied all as NoteSequence" });
@@ -624,7 +641,8 @@ const Index = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={async () => {
-                      const seq = composeMode.getCombinedSequence();
+                      const mode = activeMode === "compose" ? composeMode : improvMode;
+                      const seq = mode.getCombinedSequence();
                       if (seq) {
                         const abc = noteSequenceToAbc(seq);
                         await navigator.clipboard.writeText(abc);

@@ -1,11 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { NoteSequence, Note } from "@/types/noteSequence";
 import { createEmptyNoteSequence, beatsToSeconds } from "@/utils/noteSequenceUtils";
-import { Button } from "@/components/ui/button";
-import { Play, Square } from "lucide-react";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
 import { TrackItem } from "@/components/TrackItem";
-
+import { TrackContainer } from "@/components/TrackContainer";
 interface ComposeEntry {
   userSequence: NoteSequence;
 }
@@ -155,22 +153,12 @@ export function ComposeMode({
   } : null;
 
   const hasValidSessions = history.some(entry => entry.userSequence.notes.length > 0);
-  
-  // Track container ref for auto-scroll
-  const trackContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // State for merge dialog
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [mergeSessionIndex, setMergeSessionIndex] = useState(0);
   const [mergeDirection, setMergeDirection] = useState<MergeDirection>("next");
-  
-  // Auto-scroll to end when new items are added
-  useEffect(() => {
-    if (trackContainerRef.current) {
-      trackContainerRef.current.scrollLeft = trackContainerRef.current.scrollWidth;
-    }
-  }, [history.length, liveNotes.length]);
-  
+
   const openMergeDialog = (index: number, direction: MergeDirection) => {
     setMergeSessionIndex(index);
     setMergeDirection(direction);
@@ -202,40 +190,32 @@ export function ComposeMode({
     getCombinedSequence,
     renderHistory: () => (
       <div className="w-full">
-        {/* Horizontal track container - full width edge to edge */}
-        <div className="-mx-4 w-[calc(100%+2rem)]">
-          <div
-            ref={trackContainerRef}
-            className="w-full overflow-x-auto pb-8 px-3 custom-scrollbar"
-          >
-            <div className="flex gap-2">
-              {/* Completed recordings - left to right */}
-              {validHistory.map((entry, displayIndex) => {
-                const actualIndex = history.findIndex(h => h === entry);
-                return (
-                  <TrackItem
-                    key={actualIndex}
-                    sequence={entry.userSequence}
-                    onPlay={() => onReplay(entry.userSequence)}
-                    isFirst={displayIndex === 0}
-                    isLast={displayIndex === validHistory.length - 1}
-                    onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
-                    onMergeNext={() => openMergeDialog(actualIndex, "next")}
-                    onRemove={() => removeSession(actualIndex)}
-                  />
-                );
-              })}
+        <TrackContainer scrollDependency={[history.length, liveNotes.length]}>
+          {/* Completed recordings - left to right */}
+          {validHistory.map((entry, displayIndex) => {
+            const actualIndex = history.findIndex(h => h === entry);
+            return (
+              <TrackItem
+                key={actualIndex}
+                sequence={entry.userSequence}
+                onPlay={() => onReplay(entry.userSequence)}
+                isFirst={displayIndex === 0}
+                isLast={displayIndex === validHistory.length - 1 && !isRecording}
+                onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
+                onMergeNext={() => openMergeDialog(actualIndex, "next")}
+                onRemove={() => removeSession(actualIndex)}
+              />
+            );
+          })}
 
-              {/* Current recording (live) - rightmost */}
-              {isRecording && liveSequence && (
-                <TrackItem
-                  sequence={liveSequence}
-                  isRecording={true}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+          {/* Current recording (live) - rightmost */}
+          {isRecording && liveSequence && (
+            <TrackItem
+              sequence={liveSequence}
+              isRecording={true}
+            />
+          )}
+        </TrackContainer>
 
         {/* Merge dialog */}
         <MergeSessionDialog
