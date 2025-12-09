@@ -179,7 +179,7 @@ export const Metronome = ({
 
   return (
     <div className="w-full py-2">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-6">
         {/* Left: Settings dropdown, Metronome switch, and Volume */}
         <div className="flex items-center gap-6">
           <DropdownMenu>
