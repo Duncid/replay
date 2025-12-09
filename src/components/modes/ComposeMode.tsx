@@ -189,34 +189,12 @@ export function ComposeMode({
     addUserSequence,
     clearHistory,
     startNewSession,
+    hasValidSessions,
+    handlePlayAll,
+    isPlayingAll,
+    onStopPlayback,
     renderHistory: () => (
-      <div className="w-full space-y-2">
-        {/* Global Play/Stop button - always visible */}
-        <div className="flex items-center gap-2">
-          {isPlayingAll ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onStopPlayback}
-              className="gap-2"
-            >
-              <Square className="h-4 w-4" />
-              Stop
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePlayAll}
-              disabled={!hasValidSessions}
-              className="gap-2"
-            >
-              <Play className="h-4 w-4" />
-              Play
-            </Button>
-          )}
-        </div>
-
+      <div className="w-full">
         {/* Horizontal track container - full width edge to edge */}
         <div className="-mx-4 w-[calc(100%+2rem)]">
           <div
