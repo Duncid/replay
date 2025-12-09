@@ -20,9 +20,10 @@ interface SheetMusicProps {
   compact?: boolean;
   noTitle?: boolean;
   noControls?: boolean;
+  width?: number;
 }
 
-export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, compact = false, noTitle = false, noControls = false }: SheetMusicProps) => {
+export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, compact = false, noTitle = false, noControls = false, width }: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -34,12 +35,19 @@ export const SheetMusic = ({ sequence, onReplay, label, isUserNotes = false, com
 
     renderDivRef.current.innerHTML = "";
 
-    const options = compact 
-      ? { staffwidth: 400, scale: 1.2, add_classes: true }
-      : { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
+    let options;
+    if (compact && width) {
+      // Use width-based staffwidth for duration-proportional sizing
+      const staffwidth = Math.max(100, width - 20); // Account for padding
+      options = { staffwidth, scale: 1.2, add_classes: true };
+    } else if (compact) {
+      options = { staffwidth: 400, scale: 1.2, add_classes: true };
+    } else {
+      options = { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
+    }
     
     abcjs.renderAbc(renderDivRef.current, abc, options);
-  }, [sequence, label, isUserNotes, compact, noTitle]);
+  }, [sequence, label, isUserNotes, compact, noTitle, width]);
 
   const handleCopySequence = async () => {
     try {
