@@ -217,36 +217,38 @@ export function ComposeMode({
           )}
         </div>
 
-        {/* Horizontal track container */}
-        <div
-          ref={trackContainerRef}
-          className="w-full overflow-x-auto pb-2"
-        >
-          <div className="flex gap-2">
-            {/* Completed recordings - left to right */}
-            {validHistory.map((entry, displayIndex) => {
-              const actualIndex = history.findIndex(h => h === entry);
-              return (
-                <TrackItem
-                  key={actualIndex}
-                  sequence={entry.userSequence}
-                  onPlay={() => onReplay(entry.userSequence)}
-                  isFirst={displayIndex === 0}
-                  isLast={displayIndex === validHistory.length - 1}
-                  onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
-                  onMergeNext={() => openMergeDialog(actualIndex, "next")}
-                  onRemove={() => removeSession(actualIndex)}
-                />
-              );
-            })}
+        {/* Horizontal track container - full width edge to edge */}
+        <div className="-mx-4 w-[calc(100%+2rem)]">
+          <div
+            ref={trackContainerRef}
+            className="w-full overflow-x-auto pb-2 px-3"
+          >
+            <div className="flex gap-2">
+              {/* Completed recordings - left to right */}
+              {validHistory.map((entry, displayIndex) => {
+                const actualIndex = history.findIndex(h => h === entry);
+                return (
+                  <TrackItem
+                    key={actualIndex}
+                    sequence={entry.userSequence}
+                    onPlay={() => onReplay(entry.userSequence)}
+                    isFirst={displayIndex === 0}
+                    isLast={displayIndex === validHistory.length - 1}
+                    onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
+                    onMergeNext={() => openMergeDialog(actualIndex, "next")}
+                    onRemove={() => removeSession(actualIndex)}
+                  />
+                );
+              })}
 
-            {/* Current recording (live) - rightmost */}
-            {isRecording && liveSequence && (
-              <TrackItem
-                sequence={liveSequence}
-                isRecording={true}
-              />
-            )}
+              {/* Current recording (live) - rightmost */}
+              {isRecording && liveSequence && (
+                <TrackItem
+                  sequence={liveSequence}
+                  isRecording={true}
+                />
+              )}
+            </div>
           </div>
         </div>
 
