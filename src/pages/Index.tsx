@@ -269,6 +269,7 @@ const Index = () => {
         console.log(`[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`);
         setAppState("idle");
         setActiveKeys(new Set());
+        setIsPlayingAll(false);
         noteTimeoutsRef.current = [];
         isPlayingRef.current = false;
       }
