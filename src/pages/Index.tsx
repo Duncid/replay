@@ -381,7 +381,7 @@ const Index = () => {
         if (currentRequestIdRef.current !== requestId) return;
         if (!aiSequence) throw new Error("Magenta failed to generate a response");
       } else {
-        const { data, error } = await supabase.functions.invoke("jazz-improvise", {
+        const { data, error } = await supabase.functions.invoke("improvise", {
           body: {
             userSequence,
             model: selectedModel,
