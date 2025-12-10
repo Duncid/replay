@@ -18,6 +18,8 @@ import {
 import { ChevronDown, Timer } from "lucide-react";
 import { useToneMetronome, MetronomeSoundType } from "@/hooks/useToneMetronome";
 import * as Tone from "tone";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { STORAGE_KEYS } from "@/utils/storageKeys";
 
 const beatsPerBar: Record<string, number> = {
   "2/4": 2,
@@ -74,10 +76,15 @@ export const Metronome = ({
   setIsPlaying,
   children,
 }: MetronomeProps) => {
-  const [volume, setVolume] = useState(50);
+  const [volume, setVolume] = useLocalStorage(STORAGE_KEYS.METRONOME_VOLUME, 50);
   const [currentBeat, setCurrentBeat] = useState(0);
 
-  const { soundType, setSoundType, playClick, ensureAudioReady } = useToneMetronome();
+  const [storedSoundType, setStoredSoundType] = useLocalStorage<MetronomeSoundType>(
+    STORAGE_KEYS.METRONOME_SOUND,
+    "classic",
+  );
+
+  const { soundType, setSoundType, playClick, ensureAudioReady } = useToneMetronome(storedSoundType);
 
   const schedulerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const nextNoteTimeRef = useRef<number>(0);
@@ -167,6 +174,12 @@ export const Metronome = ({
 
   const beats = beatsPerBar[timeSignature];
 
+  const handleSoundTypeChange = (value: string) => {
+    const newSoundType = value as MetronomeSoundType;
+    setSoundType(newSoundType);
+    setStoredSoundType(newSoundType);
+  };
+
   return (
     <div className="py-2">
       <div className="flex items-center gap-6">
@@ -203,7 +216,7 @@ export const Metronome = ({
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Sound: {soundTypeLabels[soundType]}</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="bg-popover">
-                <DropdownMenuRadioGroup value={soundType} onValueChange={(v) => setSoundType(v as MetronomeSoundType)}>
+                <DropdownMenuRadioGroup value={soundType} onValueChange={handleSoundTypeChange}>
                   <DropdownMenuRadioItem value="classic">Classic Click</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="woodblock">Woodblock</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="digital">Digital Tick</DropdownMenuRadioItem>
