@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from "react";
 import { PianoKey } from "./PianoKey";
 import { usePianoAudio } from "@/hooks/usePianoAudio";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
@@ -86,16 +86,16 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
     notes.push({ note: noteName, octave, frequency, isBlack });
   }
 
-  const handleKeyPress = (noteKey: string, frequency: number, velocity: number = 0.8) => {
+  const handleKeyPress = useCallback((noteKey: string, frequency: number, velocity: number = 0.8) => {
     if (!allowInput) return;
 
     audio.startNote(noteKey, frequency);
     setUserPressedKeys((prev) => new Set([...prev, noteKey]));
 
     onNoteStart?.(noteKey, frequency, velocity);
-  };
+  }, [allowInput, audio, onNoteStart]);
 
-  const handleKeyRelease = (noteKey: string, frequency: number) => {
+  const handleKeyRelease = useCallback((noteKey: string, frequency: number) => {
     if (!allowInput) return;
 
     audio.stopNote(noteKey);
@@ -106,7 +106,13 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
     });
 
     onNoteEnd?.(noteKey, frequency);
-  };
+  }, [allowInput, audio, onNoteEnd]);
+
+  // Clear pressed keys when sound type changes to avoid stuck notes
+  useEffect(() => {
+    pressedKeysRef.current.clear();
+    setUserPressedKeys(new Set());
+  }, [soundType]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -150,7 +156,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [allowInput]);
+  }, [allowInput, handleKeyPress, handleKeyRelease, notes]);
 
   useImperativeHandle(ref, () => ({
     playNote: audio.playNote,
