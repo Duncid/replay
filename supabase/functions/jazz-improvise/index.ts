@@ -37,19 +37,36 @@ function noteNameToMidi(noteName: string): number {
   return (octave + 1) * 12 + noteIndex;
 }
 
+// Instrument-specific guidance for idiomatic playing
+const INSTRUMENT_GUIDANCE: Record<string, { range: string; minPitch: number; maxPitch: number; style: string }> = {
+  "classic": { range: "C3-C6", minPitch: 48, maxPitch: 84, style: "versatile piano patterns, chords and melody lines" },
+  "fm-synth": { range: "C3-C6", minPitch: 48, maxPitch: 84, style: "warm electric piano, jazzy voicings, smooth chords" },
+  "acoustic-piano": { range: "C3-C6", minPitch: 48, maxPitch: 84, style: "classical piano, full chords, counterpoint, arpeggios" },
+  "electric-piano": { range: "C3-C6", minPitch: 48, maxPitch: 84, style: "rhodes-style, soft chords, gentle melodies" },
+  "guitar": { range: "E2-E5", minPitch: 40, maxPitch: 76, style: "arpeggios, dyads, fingerpicking patterns, avoid more than 4 simultaneous notes" },
+  "cello": { range: "C2-G4", minPitch: 36, maxPitch: 67, style: "lyrical single-note lines, legato phrasing, expressive melodies" },
+  "bass": { range: "E1-G3", minPitch: 28, maxPitch: 55, style: "walking bass lines, root-fifth patterns, rhythmic foundations" },
+  "organ": { range: "C3-C6", minPitch: 48, maxPitch: 84, style: "sustained chords, smooth voice leading, gospel/jazz voicings" },
+  "trumpet": { range: "F#3-D6", minPitch: 54, maxPitch: 86, style: "bebop lines, single notes only, breath-phrased, bold statements" },
+  "flute": { range: "C4-C7", minPitch: 60, maxPitch: 96, style: "airy melodic lines, single notes, ornaments, light and flowing" },
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userSequence, model = "google/gemini-2.5-flash", metronome } = await req.json();
-    console.log("Received user sequence:", JSON.stringify(userSequence), "Model:", model, "Metronome:", metronome);
+    const { userSequence, model = "google/gemini-2.5-flash", metronome, instrument = "classic" } = await req.json();
+    console.log("Received user sequence:", JSON.stringify(userSequence), "Model:", model, "Metronome:", metronome, "Instrument:", instrument);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
+
+    // Get instrument guidance
+    const instrumentInfo = INSTRUMENT_GUIDANCE[instrument] || INSTRUMENT_GUIDANCE["classic"];
 
     // Get tempo from sequence or metronome
     const qpm = userSequence?.tempos?.[0]?.qpm ?? metronome?.bpm ?? 120;
@@ -74,6 +91,16 @@ Consider the tempo when choosing note durations. Match the rhythmic feel.
 `;
     }
 
+    // Build instrument context for the prompt
+    const instrumentContext = `
+INSTRUMENT CONTEXT:
+- Instrument: ${instrument}
+- Optimal Range: ${instrumentInfo.range}
+- Style Guidance: ${instrumentInfo.style}
+
+IMPORTANT: Tailor your improvisation to be idiomatic for this instrument. Stay within the optimal range and use patterns natural to this instrument.
+`;
+
     // Convert user sequence to readable format for the AI
     const userNotesDescription = userSequence?.notes?.map((n: Note) => 
       `${midiToNoteName(n.pitch)} (${(n.endTime - n.startTime).toFixed(2)}s at ${n.startTime.toFixed(2)}s)`
@@ -81,7 +108,7 @@ Consider the tempo when choosing note durations. Match the rhythmic feel.
 
     const systemPrompt = `You are a jazz improvisation assistant. The user will provide you with a sequence of musical notes they played, and you should respond with a creative jazz improvisation that complements their input.
 
-The user's notes are provided in NoteSequence format with MIDI pitch numbers (48-84 for C3-C6).
+The user's notes are provided in NoteSequence format with MIDI pitch numbers.
 
 You should respond with a JSON object containing a NoteSequence:
 {
@@ -95,16 +122,17 @@ You should respond with a JSON object containing a NoteSequence:
 }
 
 Where:
-- "pitch" is the MIDI note number (48=C3, 60=C4, 72=C5, 84=C6)
+- "pitch" is the MIDI note number
 - "startTime" and "endTime" are in seconds
 - "velocity" is 0.0-1.0 (normalized volume/intensity)
 - "totalTime" is the total duration in seconds
 
 ${tempoContext}
+${instrumentContext}
 Guidelines:
 - Create a musically coherent response that complements the user's input
-- Stay in the C3-C6 range (MIDI pitch 48-84)
-- Aim for 4-12 notes in your response (you can include chords by overlapping startTime/endTime)
+- CRITICAL: Stay within the instrument's optimal range (${instrumentInfo.range}, MIDI ${instrumentInfo.minPitch}-${instrumentInfo.maxPitch})
+- Aim for 4-12 notes in your response (you can include chords by overlapping startTime/endTime, unless the instrument is monophonic)
 - Consider jazz theory: use chord tones, passing notes, neighbor notes
 - Respond with ONLY the JSON object, no other text or markdown`;
 
@@ -196,11 +224,11 @@ Guidelines:
       };
     }
 
-    // Validate notes
+    // Validate notes using instrument-specific range
     const validNotes: Note[] = [];
     for (const note of aiSequence.notes || []) {
-      if (typeof note.pitch !== 'number' || note.pitch < 48 || note.pitch > 84) {
-        console.log(`Invalid pitch: ${note.pitch}`);
+      if (typeof note.pitch !== 'number' || note.pitch < instrumentInfo.minPitch || note.pitch > instrumentInfo.maxPitch) {
+        console.log(`Invalid pitch for ${instrument}: ${note.pitch} (expected ${instrumentInfo.minPitch}-${instrumentInfo.maxPitch})`);
         continue;
       }
       if (typeof note.startTime !== 'number' || note.startTime < 0) {

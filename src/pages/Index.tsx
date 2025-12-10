@@ -386,6 +386,7 @@ const Index = () => {
             userSequence,
             model: selectedModel,
             metronome: { bpm: metronomeBpm, timeSignature: metronomeTimeSignature, isActive: metronomeIsPlaying },
+            instrument: pianoSoundType,
           },
         });
 
