@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from "react";
 import { PianoKey } from "./PianoKey";
 import { usePianoAudio } from "@/hooks/usePianoAudio";
-import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
+import {
+  INSTRUMENT_NOTE_RANGES,
+  PianoSoundType,
+  PIANO_SOUND_LABELS,
+  SAMPLED_INSTRUMENTS,
+} from "@/hooks/usePianoSound";
 import { Loader2 } from "lucide-react";
 
 interface PianoNote {
@@ -30,6 +35,23 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const pressedKeysRef = useRef<Set<string>>(new Set());
   const audio = usePianoAudio(soundType);
+
+  const noteToMidi = useCallback((noteKey: string) => {
+    const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const match = noteKey.match(/^([A-G]#?)(\d+)$/);
+    if (!match) return 0;
+    const [, note, octaveStr] = match;
+    const octave = parseInt(octaveStr, 10);
+    const noteIndex = noteNames.indexOf(note);
+    return octave * 12 + noteIndex;
+  }, []);
+
+  const isNotePlayable = useCallback((noteKey: string) => {
+    const range = INSTRUMENT_NOTE_RANGES[soundType];
+    if (!range) return true;
+    const midi = noteToMidi(noteKey);
+    return midi >= noteToMidi(range.min) && midi <= noteToMidi(range.max);
+  }, [noteToMidi, soundType]);
 
   // AZERTY keyboard mapping - C4 centered on 'e'
   const keyboardMap: { [key: string]: string } = {
@@ -87,16 +109,16 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
   }
 
   const handleKeyPress = useCallback((noteKey: string, frequency: number, velocity: number = 0.8) => {
-    if (!allowInput) return;
+    if (!allowInput || !isNotePlayable(noteKey)) return;
 
     audio.startNote(noteKey, frequency);
     setUserPressedKeys((prev) => new Set([...prev, noteKey]));
 
     onNoteStart?.(noteKey, frequency, velocity);
-  }, [allowInput, audio, onNoteStart]);
+  }, [allowInput, audio, isNotePlayable, onNoteStart]);
 
   const handleKeyRelease = useCallback((noteKey: string, frequency: number) => {
-    if (!allowInput) return;
+    if (!allowInput || !isNotePlayable(noteKey)) return;
 
     audio.stopNote(noteKey);
     setUserPressedKeys((prev) => {
@@ -106,7 +128,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
     });
 
     onNoteEnd?.(noteKey, frequency);
-  }, [allowInput, audio, onNoteEnd]);
+  }, [allowInput, audio, isNotePlayable, onNoteEnd]);
 
   // Clear pressed keys when sound type changes to avoid stuck notes
   useEffect(() => {
@@ -195,7 +217,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
         <div className="absolute inset-0 grid grid-cols-22 gap-px">
           {whiteKeys.map((note) => {
             const noteKey = `${note.note}${note.octave}`;
-            const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
+            const isPlayable = isNotePlayable(noteKey);
+            const isActive = isPlayable && (activeKeys.has(noteKey) || userPressedKeys.has(noteKey));
             const isAiActive = activeKeys.has(noteKey) && !allowInput;
 
             return (
@@ -206,9 +229,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
                 isBlack={false}
                 isActive={isActive}
                 isAiActive={isAiActive}
+                isPlayable={isPlayable}
                 onPress={() => handleKeyPress(noteKey, note.frequency)}
                 onRelease={() => handleKeyRelease(noteKey, note.frequency)}
-                disabled={!allowInput}
+                disabled={!allowInput || !isPlayable}
               />
             );
           })}
@@ -217,7 +241,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
         <div className="absolute inset-0 grid grid-cols-44 gap-2 pointer-events-none">
           {blackKeys.map((note) => {
             const noteKey = `${note.note}${note.octave}`;
-            const isActive = activeKeys.has(noteKey) || userPressedKeys.has(noteKey);
+            const isPlayable = isNotePlayable(noteKey);
+            const isActive = isPlayable && (activeKeys.has(noteKey) || userPressedKeys.has(noteKey));
             const isAiActive = activeKeys.has(noteKey) && !allowInput;
             const column = getBlackKeyColumn(note);
 
@@ -229,9 +254,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
                 isBlack={true}
                 isActive={isActive}
                 isAiActive={isAiActive}
+                isPlayable={isPlayable}
                 onPress={() => handleKeyPress(noteKey, note.frequency)}
                 onRelease={() => handleKeyRelease(noteKey, note.frequency)}
-                disabled={!allowInput}
+                disabled={!allowInput || !isPlayable}
                 gridColumn={column}
               />
             );

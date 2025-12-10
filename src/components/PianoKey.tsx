@@ -6,6 +6,7 @@ interface PianoKeyProps {
   isBlack: boolean;
   isActive: boolean;
   isAiActive: boolean;
+  isPlayable: boolean;
   onPress: () => void;
   onRelease: () => void;
   disabled?: boolean;
@@ -17,6 +18,7 @@ export const PianoKey = ({
   isBlack,
   isActive,
   isAiActive,
+  isPlayable,
   onPress,
   onRelease,
   disabled,
@@ -57,7 +59,8 @@ export const PianoKey = ({
               ? "bg-key-active-ai/20"
               : "bg-key-active-user/20"
             : "bg-key-white hover:bg-key-white-shadow",
-        disabled && "cursor-not-allowed",
+        (!isPlayable || disabled) && "cursor-not-allowed",
+        !isPlayable && (isBlack ? "opacity-40" : "opacity-70"),
       )}
       style={{
         transition: "var(--transition-smooth)",
