@@ -74,7 +74,10 @@ const Index = () => {
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
 
   // Persisted history
-  const [savedComposeHistory, setSavedComposeHistory] = useLocalStorage<ComposeEntry[]>(STORAGE_KEYS.COMPOSE_HISTORY, []);
+  const [savedComposeHistory, setSavedComposeHistory] = useLocalStorage<ComposeEntry[]>(
+    STORAGE_KEYS.COMPOSE_HISTORY,
+    [],
+  );
   const [savedImprovHistory, setSavedImprovHistory] = useLocalStorage<TrackEntry[]>(STORAGE_KEYS.IMPROV_HISTORY, []);
 
   const { toast } = useToast();
@@ -517,9 +520,11 @@ const Index = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 bg-popover">
                 <DropdownMenuLabel>Piano Sound</DropdownMenuLabel>
-                <DropdownMenuRadioGroup value={pianoSoundType} onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}>
-                  <DropdownMenuRadioItem value="classic">Classic (Original)</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="fm-synth">FM Synth</DropdownMenuRadioItem>
+                <DropdownMenuRadioGroup
+                  value={pianoSoundType}
+                  onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
+                >
+                  <DropdownMenuRadioItem value="classic">Basic</DropdownMenuRadioItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-xs text-muted-foreground">Sampled Instruments</DropdownMenuLabel>
                   {SAMPLED_INSTRUMENTS.map((instrument) => (
@@ -660,10 +665,7 @@ const Index = () => {
               {(activeMode === "compose" || activeMode === "improv") && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                    >
+                    <Button variant="outline" size="sm">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
