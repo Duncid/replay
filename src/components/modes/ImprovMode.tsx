@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { NoteSequence, Note } from "@/types/noteSequence";
 import { beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { TrackContainer } from "@/components/TrackContainer";
@@ -6,7 +6,7 @@ import { TrackItem } from "@/components/TrackItem";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
 
 // Single-entry model - same as ComposeMode but with isAiGenerated flag
-interface TrackEntry {
+export interface TrackEntry {
   sequence: NoteSequence;
   isAiGenerated: boolean;
 }
@@ -24,6 +24,8 @@ interface ImprovModeProps {
   liveNotes?: Note[];
   isRecording?: boolean;
   isPlayingAll?: boolean;
+  initialHistory?: TrackEntry[];
+  onHistoryChange?: (history: TrackEntry[]) => void;
 }
 
 export function ImprovMode({
@@ -36,10 +38,17 @@ export function ImprovMode({
   liveNotes = [],
   isRecording = false,
   isPlayingAll = false,
+  initialHistory = [],
+  onHistoryChange,
 }: ImprovModeProps) {
-  const [history, setHistory] = useState<TrackEntry[]>([]);
+  const [history, setHistory] = useState<TrackEntry[]>(initialHistory);
 
   const beatsPerMeasure = parseInt(timeSignature.split('/')[0]);
+
+  // Notify parent when history changes
+  useEffect(() => {
+    onHistoryChange?.(history);
+  }, [history, onHistoryChange]);
 
   // Add a single entry (user or AI)
   const addEntry = useCallback((sequence: NoteSequence, isAiGenerated: boolean) => {
