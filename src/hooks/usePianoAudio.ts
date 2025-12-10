@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useTonePiano } from "./useTonePiano";
+import { PianoSoundType } from "./usePianoSound";
 
 // Helper to convert frequency to note name
 function frequencyToNote(frequency: number): string {
@@ -12,8 +13,8 @@ function frequencyToNote(frequency: number): string {
   return `${noteNames[noteIndex]}${octave}`;
 }
 
-export function usePianoAudio() {
-  const tonePiano = useTonePiano();
+export function usePianoAudio(soundType: PianoSoundType = "classic") {
+  const tonePiano = useTonePiano(soundType);
 
   const ensureAudioReady = useCallback(async () => {
     await tonePiano.ensureAudioReady();
