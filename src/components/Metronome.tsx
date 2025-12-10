@@ -16,6 +16,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
+import { useToneMetronome, MetronomeSoundType } from "@/hooks/useToneMetronome";
+import * as Tone from "tone";
 
 const beatsPerBar: Record<string, number> = {
   "2/4": 2,
@@ -36,6 +38,13 @@ const getBpmDescription = (bpm: number): string => {
   return "🧠 Extreme — Ultra-fast or double-time feel.";
 };
 
+const soundTypeLabels: Record<MetronomeSoundType, string> = {
+  classic: "Classic Click",
+  woodblock: "Woodblock",
+  digital: "Digital Tick",
+  hihat: "Hi-Hat",
+};
+
 export interface MetronomeSettings {
   bpm: number;
   timeSignature: string;
@@ -53,8 +62,8 @@ interface MetronomeProps {
 }
 
 // Lookahead scheduling constants
-const SCHEDULE_AHEAD_TIME = 0.1; // seconds to look ahead for scheduling
-const LOOKAHEAD_INTERVAL = 25; // ms between scheduler checks
+const SCHEDULE_AHEAD_TIME = 0.1;
+const LOOKAHEAD_INTERVAL = 25;
 
 export const Metronome = ({
   bpm,
@@ -68,18 +77,17 @@ export const Metronome = ({
   const [volume, setVolume] = useState(50);
   const [currentBeat, setCurrentBeat] = useState(0);
 
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const { soundType, setSoundType, playClick, ensureAudioReady } = useToneMetronome();
+
   const schedulerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const nextNoteTimeRef = useRef<number>(0);
   const currentScheduledBeatRef = useRef<number>(0);
   const isPlayingRef = useRef<boolean>(false);
 
-  // Use refs to access latest values in scheduler without re-creating it
   const bpmRef = useRef(bpm);
   const timeSignatureRef = useRef(timeSignature);
   const volumeRef = useRef(volume);
 
-  // Keep refs in sync
   useEffect(() => {
     bpmRef.current = bpm;
   }, [bpm]);
@@ -90,117 +98,50 @@ export const Metronome = ({
 
   useEffect(() => {
     volumeRef.current = volume;
+    // Update Tone.js master volume
+    Tone.getDestination().volume.value = Tone.gainToDb(volume / 100);
   }, [volume]);
 
-  const ensureAudioContext = useCallback(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
-    }
-    if (audioContextRef.current.state === "suspended") {
-      audioContextRef.current.resume();
-    }
-    return audioContextRef.current;
-  }, []);
-
-  // Schedule a click at a precise time using Web Audio API
-  const scheduleClick = useCallback((audioContext: AudioContext, time: number, isAccent: boolean) => {
-    const volumeMultiplier = volumeRef.current / 100;
-    const clickDuration = 0.015;
-
-    // Main click oscillator
-    const oscillator = audioContext.createOscillator();
-    const oscGain = audioContext.createGain();
-
-    oscillator.type = "triangle";
-    oscillator.frequency.value = isAccent ? 2400 : 1800;
-
-    oscillator.connect(oscGain);
-    oscGain.connect(audioContext.destination);
-
-    const baseGain = isAccent ? 0.12 : 0.08;
-    oscGain.gain.setValueAtTime(baseGain * volumeMultiplier, time);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, time + clickDuration);
-
-    oscillator.start(time);
-    oscillator.stop(time + clickDuration);
-
-    // Add subtle high-frequency "tick" layer
-    const tickOsc = audioContext.createOscillator();
-    const tickGain = audioContext.createGain();
-    const tickFilter = audioContext.createBiquadFilter();
-
-    tickOsc.type = "square";
-    tickOsc.frequency.value = isAccent ? 4000 : 3200;
-
-    tickFilter.type = "highpass";
-    tickFilter.frequency.value = 2000;
-    tickFilter.Q.value = 1;
-
-    tickOsc.connect(tickFilter);
-    tickFilter.connect(tickGain);
-    tickGain.connect(audioContext.destination);
-
-    const tickBaseGain = isAccent ? 0.04 : 0.025;
-    tickGain.gain.setValueAtTime(tickBaseGain * volumeMultiplier, time);
-    tickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.008);
-
-    tickOsc.start(time);
-    tickOsc.stop(time + 0.01);
-  }, []);
-
-  // Schedule a beat (audio + visual update)
-  const scheduleBeat = useCallback((audioContext: AudioContext, beatNumber: number, time: number) => {
-    const beats = beatsPerBar[timeSignatureRef.current];
+  const scheduleBeat = useCallback((beatNumber: number, time: number) => {
     const isAccent = beatNumber === 0;
-    
-    // Schedule precise audio
-    scheduleClick(audioContext, time, isAccent);
-    
-    // Schedule visual update (approximate, synced to audio time)
-    const delayMs = Math.max(0, (time - audioContext.currentTime) * 1000);
+    playClick(isAccent, time);
+
+    const delayMs = Math.max(0, (time - Tone.now()) * 1000);
     setTimeout(() => {
       if (isPlayingRef.current) {
         setCurrentBeat(beatNumber + 1);
       }
     }, delayMs);
-  }, [scheduleClick]);
+  }, [playClick]);
 
-  // Main scheduler function - runs frequently to fill the scheduling buffer
   const scheduler = useCallback(() => {
-    const audioContext = audioContextRef.current;
-    if (!audioContext || !isPlayingRef.current) return;
+    if (!isPlayingRef.current) return;
 
     const beats = beatsPerBar[timeSignatureRef.current];
     const secondsPerBeat = 60 / bpmRef.current;
+    const currentTime = Tone.now();
 
-    // Schedule all beats that fall within our lookahead window
-    while (nextNoteTimeRef.current < audioContext.currentTime + SCHEDULE_AHEAD_TIME) {
-      scheduleBeat(audioContext, currentScheduledBeatRef.current, nextNoteTimeRef.current);
-      
-      // Advance to next beat
+    while (nextNoteTimeRef.current < currentTime + SCHEDULE_AHEAD_TIME) {
+      scheduleBeat(currentScheduledBeatRef.current, nextNoteTimeRef.current);
       nextNoteTimeRef.current += secondsPerBeat;
       currentScheduledBeatRef.current = (currentScheduledBeatRef.current + 1) % beats;
     }
   }, [scheduleBeat]);
 
-  const startMetronome = useCallback(() => {
-    const audioContext = ensureAudioContext();
-    if (!audioContext) return;
-
+  const startMetronome = useCallback(async () => {
+    await ensureAudioReady();
+    
     isPlayingRef.current = true;
-    
-    // Initialize timing - start scheduling from now
-    nextNoteTimeRef.current = audioContext.currentTime;
+    nextNoteTimeRef.current = Tone.now();
     currentScheduledBeatRef.current = 0;
-    
-    // Start the scheduler loop
-    scheduler(); // Run immediately to schedule first beats
+
+    scheduler();
     schedulerIntervalRef.current = setInterval(scheduler, LOOKAHEAD_INTERVAL);
-  }, [ensureAudioContext, scheduler]);
+  }, [ensureAudioReady, scheduler]);
 
   const stopMetronome = useCallback(() => {
     isPlayingRef.current = false;
-    
+
     if (schedulerIntervalRef.current) {
       clearInterval(schedulerIntervalRef.current);
       schedulerIntervalRef.current = null;
@@ -208,7 +149,6 @@ export const Metronome = ({
     setCurrentBeat(0);
   }, []);
 
-  // Handle play/stop
   useEffect(() => {
     if (isPlaying) {
       startMetronome();
@@ -218,13 +158,9 @@ export const Metronome = ({
     return () => stopMetronome();
   }, [isPlaying, startMetronome, stopMetronome]);
 
-  // Handle BPM or time signature changes while playing
   useEffect(() => {
-    if (isPlaying && audioContextRef.current) {
-      // Reset scheduling to apply new tempo immediately
-      // Keep the current beat position but recalculate timing
-      const audioContext = audioContextRef.current;
-      nextNoteTimeRef.current = audioContext.currentTime;
+    if (isPlaying) {
+      nextNoteTimeRef.current = Tone.now();
       currentScheduledBeatRef.current = 0;
     }
   }, [bpm, timeSignature, isPlaying]);
@@ -234,7 +170,6 @@ export const Metronome = ({
   return (
     <div className="w-full py-2">
       <div className="flex items-center justify-between gap-6">
-        {/* Left: Settings dropdown, Metronome switch, and Volume */}
         <div className="flex items-center gap-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -243,8 +178,7 @@ export const Metronome = ({
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              {/* BPM Control */}
+            <DropdownMenuContent align="start" className="w-64 bg-popover">
               <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
               <div className="px-2 pb-2">
                 <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={40} max={220} step={1} />
@@ -253,15 +187,28 @@ export const Metronome = ({
 
               <DropdownMenuSeparator />
 
-              {/* Time Signature Submenu */}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>Time Signature: {timeSignature}</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
+                <DropdownMenuSubContent className="bg-popover">
                   <DropdownMenuRadioGroup value={timeSignature} onValueChange={setTimeSignature}>
                     <DropdownMenuRadioItem value="2/4">2/4</DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="3/4">3/4</DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="4/4">4/4</DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="6/8">6/8</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Sound: {soundTypeLabels[soundType]}</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="bg-popover">
+                  <DropdownMenuRadioGroup value={soundType} onValueChange={(v) => setSoundType(v as MetronomeSoundType)}>
+                    <DropdownMenuRadioItem value="classic">Classic Click</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="woodblock">Woodblock</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="digital">Digital Tick</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="hihat">Hi-Hat</DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -275,7 +222,6 @@ export const Metronome = ({
             <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
           </div>
 
-          {/* Volume slider - only visible when metronome is on */}
           {isPlaying && (
             <div className="flex items-center gap-2">
               <Slider
@@ -290,7 +236,6 @@ export const Metronome = ({
           )}
         </div>
 
-        {/* Center: Beat Indicators (only when playing) */}
         {isPlaying && (
           <div className="flex items-center gap-2 ">
             {Array.from({ length: beats }, (_, i) => {
@@ -316,7 +261,6 @@ export const Metronome = ({
           </div>
         )}
 
-        {/* Right: Children (MIDI Connector) */}
         {children && <div className="ml-auto">{children}</div>}
       </div>
     </div>
