@@ -1,15 +1,16 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { NoteSequence, Note } from "@/types/noteSequence";
 import { createEmptyNoteSequence, beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
 import { TrackItem } from "@/components/TrackItem";
 import { TrackContainer } from "@/components/TrackContainer";
-interface ComposeEntry {
-  userSequence: NoteSequence;
-}
 
 type GapUnit = "beats" | "measures";
 type MergeDirection = "previous" | "next";
+
+export interface ComposeEntry {
+  userSequence: NoteSequence;
+}
 
 interface ComposeModeProps {
   bpm: number;
@@ -21,6 +22,8 @@ interface ComposeModeProps {
   liveNotes?: Note[];
   isRecording?: boolean;
   isPlayingAll?: boolean;
+  initialHistory?: ComposeEntry[];
+  onHistoryChange?: (history: ComposeEntry[]) => void;
 }
 
 export function ComposeMode({ 
@@ -33,10 +36,17 @@ export function ComposeMode({
   liveNotes = [],
   isRecording = false,
   isPlayingAll = false,
+  initialHistory = [],
+  onHistoryChange,
 }: ComposeModeProps) {
-  const [history, setHistory] = useState<ComposeEntry[]>([]);
+  const [history, setHistory] = useState<ComposeEntry[]>(initialHistory);
 
   const beatsPerMeasure = parseInt(timeSignature.split('/')[0]);
+
+  // Notify parent when history changes
+  useEffect(() => {
+    onHistoryChange?.(history);
+  }, [history, onHistoryChange]);
 
   // Simply add as a new entry - no merging
   const addUserSequence = useCallback((userSequence: NoteSequence) => {

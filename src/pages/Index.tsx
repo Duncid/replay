@@ -35,9 +35,11 @@ import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
 import { TopToastProgress, TopToastLabel } from "@/components/TopToast";
-import { ComposeMode } from "@/components/modes/ComposeMode";
-import { ImprovMode } from "@/components/modes/ImprovMode";
+import { ComposeMode, ComposeEntry } from "@/components/modes/ComposeMode";
+import { ImprovMode, TrackEntry } from "@/components/modes/ImprovMode";
 import { PlayerMode } from "@/components/modes/PlayerMode";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { STORAGE_KEYS } from "@/utils/storageKeys";
 
 const AI_MODELS = {
   llm: [
@@ -57,22 +59,23 @@ type ActiveMode = "compose" | "improv" | "player";
 const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
-  const [activeMode, setActiveMode] = useState<ActiveMode>("compose");
-  const [selectedModel, setSelectedModel] = useState("magenta/music-rnn");
+  const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(STORAGE_KEYS.ACTIVE_MODE, "compose");
+  const [selectedModel, setSelectedModel] = useLocalStorage(STORAGE_KEYS.AI_MODEL, "magenta/music-rnn");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [liveNotes, setLiveNotes] = useState<Note[]>([]);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
 
-  // Metronome state
-  // Piano sound state
-  const [pianoSoundType, setPianoSoundType] = useState<PianoSoundType>("classic");
-
-  // Metronome state
-  const [metronomeBpm, setMetronomeBpm] = useState(120);
-  const [metronomeTimeSignature, setMetronomeTimeSignature] = useState("4/4");
+  // Persisted preferences
+  const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
+  const [metronomeBpm, setMetronomeBpm] = useLocalStorage(STORAGE_KEYS.BPM, 120);
+  const [metronomeTimeSignature, setMetronomeTimeSignature] = useLocalStorage(STORAGE_KEYS.TIME_SIGNATURE, "4/4");
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
+
+  // Persisted history
+  const [savedComposeHistory, setSavedComposeHistory] = useLocalStorage<ComposeEntry[]>(STORAGE_KEYS.COMPOSE_HISTORY, []);
+  const [savedImprovHistory, setSavedImprovHistory] = useLocalStorage<TrackEntry[]>(STORAGE_KEYS.IMPROV_HISTORY, []);
 
   const { toast } = useToast();
   const magenta = useMagenta();
@@ -311,6 +314,8 @@ const Index = () => {
     liveNotes,
     isRecording: appState === "user_playing" && activeMode === "compose",
     isPlayingAll,
+    initialHistory: savedComposeHistory,
+    onHistoryChange: setSavedComposeHistory,
   });
 
   // Improv mode hook - also uses track display now
@@ -324,6 +329,8 @@ const Index = () => {
     liveNotes,
     isRecording: appState === "user_playing" && activeMode === "improv",
     isPlayingAll,
+    initialHistory: savedImprovHistory,
+    onHistoryChange: setSavedImprovHistory,
   });
 
   // Assign to refs for use in handleRecordingComplete
