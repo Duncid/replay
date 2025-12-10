@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { PianoKey } from "./PianoKey";
 import { usePianoAudio } from "@/hooks/usePianoAudio";
+import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { Loader2 } from "lucide-react";
 
 interface PianoNote {
@@ -13,6 +14,7 @@ interface PianoNote {
 interface PianoProps {
   activeKeys: Set<string>;
   allowInput: boolean;
+  soundType?: PianoSoundType;
   onNoteStart?: (noteKey: string, frequency: number, velocity: number) => void;
   onNoteEnd?: (noteKey: string, frequency: number) => void;
 }
@@ -24,10 +26,10 @@ export interface PianoHandle {
   handleKeyRelease: (noteKey: string, frequency: number) => void;
 }
 
-const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, onNoteStart, onNoteEnd }, ref) => {
+const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, soundType = "classic", onNoteStart, onNoteEnd }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const pressedKeysRef = useRef<Set<string>>(new Set());
-  const audio = usePianoAudio();
+  const audio = usePianoAudio(soundType);
 
   // AZERTY keyboard mapping - C4 centered on 'e'
   const keyboardMap: { [key: string]: string } = {
@@ -165,13 +167,21 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, onN
     return notes.slice(0, noteIndex).filter((n) => !n.isBlack).length;
   };
 
+  // Loading message based on sound type
+  const getLoadingMessage = () => {
+    if (SAMPLED_INSTRUMENTS.includes(soundType)) {
+      return `Loading ${PIANO_SOUND_LABELS[soundType]} samples...`;
+    }
+    return "Initializing synthesizer...";
+  };
+
   return (
     <div className="relative w-full select-none">
       {!audio.isLoaded && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Loading piano samples...</span>
+            <span>{getLoadingMessage()}</span>
           </div>
         </div>
       )}
