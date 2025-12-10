@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, Piano as PianoIcon } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music } from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
@@ -497,49 +497,50 @@ const Index = () => {
           />
         )}
 
-        {/* Piano Sound Selector */}
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
-                <PianoIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">{PIANO_SOUND_LABELS[pianoSoundType]}</span>
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 bg-popover">
-              <DropdownMenuLabel>Piano Sound</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={pianoSoundType} onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}>
-                <DropdownMenuRadioItem value="classic">Classic (Original)</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="fm-synth">FM Synth</DropdownMenuRadioItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">Sampled Instruments</DropdownMenuLabel>
-                {SAMPLED_INSTRUMENTS.map((instrument) => (
-                  <DropdownMenuRadioItem key={instrument} value={instrument}>
-                    {PIANO_SOUND_LABELS[instrument]}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
+        <div className="w-full flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
+                  <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 bg-popover">
+                <DropdownMenuLabel>Piano Sound</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={pianoSoundType} onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}>
+                  <DropdownMenuRadioItem value="classic">Classic (Original)</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="fm-synth">FM Synth</DropdownMenuRadioItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Sampled Instruments</DropdownMenuLabel>
+                  {SAMPLED_INSTRUMENTS.map((instrument) => (
+                    <DropdownMenuRadioItem key={instrument} value={instrument}>
+                      {PIANO_SOUND_LABELS[instrument]}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <Metronome
-            bpm={metronomeBpm}
-            setBpm={setMetronomeBpm}
-            timeSignature={metronomeTimeSignature}
-            setTimeSignature={setMetronomeTimeSignature}
-            isPlaying={metronomeIsPlaying}
-            setIsPlaying={setMetronomeIsPlaying}
-          >
-            <MidiConnector
-              isConnected={!!connectedDevice}
-              deviceName={connectedDevice?.name || null}
-              error={midiError}
-              isSupported={isMidiSupported}
-              onConnect={requestAccess}
-              onDisconnect={disconnect}
+            <Metronome
+              bpm={metronomeBpm}
+              setBpm={setMetronomeBpm}
+              timeSignature={metronomeTimeSignature}
+              setTimeSignature={setMetronomeTimeSignature}
+              isPlaying={metronomeIsPlaying}
+              setIsPlaying={setMetronomeIsPlaying}
             />
-          </Metronome>
+          </div>
+
+          <MidiConnector
+            isConnected={!!connectedDevice}
+            deviceName={connectedDevice?.name || null}
+            error={midiError}
+            isSupported={isMidiSupported}
+            onConnect={requestAccess}
+            onDisconnect={disconnect}
+          />
         </div>
 
         <Piano

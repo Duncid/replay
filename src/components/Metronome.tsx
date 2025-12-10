@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Timer } from "lucide-react";
 import { useToneMetronome, MetronomeSoundType } from "@/hooks/useToneMetronome";
 import * as Tone from "tone";
 
@@ -168,76 +168,74 @@ export const Metronome = ({
   const beats = beatsPerBar[timeSignature];
 
   return (
-    <div className="w-full py-2">
-      <div className="flex items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
-                {bpm}, {timeSignature}
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 bg-popover">
-              <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
-              <div className="px-2 pb-2">
-                <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={40} max={220} step={1} />
-                <p className="text-xs text-muted-foreground mt-2">{getBpmDescription(bpm)}</p>
-              </div>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Time Signature: {timeSignature}</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="bg-popover">
-                  <DropdownMenuRadioGroup value={timeSignature} onValueChange={setTimeSignature}>
-                    <DropdownMenuRadioItem value="2/4">2/4</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="3/4">3/4</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="4/4">4/4</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="6/8">6/8</DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Sound: {soundTypeLabels[soundType]}</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="bg-popover">
-                  <DropdownMenuRadioGroup value={soundType} onValueChange={(v) => setSoundType(v as MetronomeSoundType)}>
-                    <DropdownMenuRadioItem value="classic">Classic Click</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="woodblock">Woodblock</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="digital">Digital Tick</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="hihat">Hi-Hat</DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="flex items-center gap-3">
-            <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer">
-              Metronome
-            </Label>
-            <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
-          </div>
-
-          {isPlaying && (
-            <div className="flex items-center gap-2">
-              <Slider
-                value={[volume]}
-                onValueChange={(value) => setVolume(value[0])}
-                min={0}
-                max={100}
-                step={1}
-                className="w-20"
-              />
+    <div className="py-2">
+      <div className="flex items-center gap-6">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
+              {bpm}, {timeSignature}
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64 bg-popover">
+            <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
+            <div className="px-2 pb-2">
+              <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={40} max={220} step={1} />
+              <p className="text-xs text-muted-foreground mt-2">{getBpmDescription(bpm)}</p>
             </div>
-          )}
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Time Signature: {timeSignature}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover">
+                <DropdownMenuRadioGroup value={timeSignature} onValueChange={setTimeSignature}>
+                  <DropdownMenuRadioItem value="2/4">2/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="3/4">3/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="4/4">4/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="6/8">6/8</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Sound: {soundTypeLabels[soundType]}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover">
+                <DropdownMenuRadioGroup value={soundType} onValueChange={(v) => setSoundType(v as MetronomeSoundType)}>
+                  <DropdownMenuRadioItem value="classic">Classic Click</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="woodblock">Woodblock</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="digital">Digital Tick</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="hihat">Hi-Hat</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="flex items-center gap-3">
+          <Label htmlFor="metronome-toggle" className="text-foreground cursor-pointer flex items-center gap-1.5">
+            <Timer className="h-4 w-4" />
+          </Label>
+          <Switch checked={isPlaying} onCheckedChange={setIsPlaying} id="metronome-toggle" />
         </div>
 
         {isPlaying && (
-          <div className="flex items-center gap-2 ">
+          <div className="flex items-center gap-2">
+            <Slider
+              value={[volume]}
+              onValueChange={(value) => setVolume(value[0])}
+              min={0}
+              max={100}
+              step={1}
+              className="w-20"
+            />
+          </div>
+        )}
+
+        {isPlaying && (
+          <div className="flex items-center gap-2">
             {Array.from({ length: beats }, (_, i) => {
               const beatNumber = i + 1;
               const isActive = currentBeat === beatNumber;
@@ -261,7 +259,7 @@ export const Metronome = ({
           </div>
         )}
 
-        {children && <div className="ml-auto">{children}</div>}
+        {children && <div>{children}</div>}
       </div>
     </div>
   );

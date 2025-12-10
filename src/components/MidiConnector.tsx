@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Piano as PianoIcon, Unplug, AlertCircle } from "lucide-react";
+import { KeyboardMusic, Unplug, AlertCircle } from "lucide-react";
 
 interface MidiConnectorProps {
   isConnected: boolean;
@@ -45,7 +45,7 @@ export const MidiConnector = ({
   return (
     <div className="flex flex-col gap-2">
       <Button variant="outline" size="sm" onClick={onConnect} className="gap-2 h-8">
-        <PianoIcon className="w-4 h-4" />
+        <KeyboardMusic className="w-4 h-4" />
         Connect MIDI
       </Button>
       {error && (
