@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Volume2, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const beatsPerBar: Record<string, number> = {
   "2/4": 2,
@@ -52,6 +52,10 @@ interface MetronomeProps {
   children?: React.ReactNode;
 }
 
+// Lookahead scheduling constants
+const SCHEDULE_AHEAD_TIME = 0.1; // seconds to look ahead for scheduling
+const LOOKAHEAD_INTERVAL = 25; // ms between scheduler checks
+
 export const Metronome = ({
   bpm,
   setBpm,
@@ -65,7 +69,28 @@ export const Metronome = ({
   const [currentBeat, setCurrentBeat] = useState(0);
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const schedulerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const nextNoteTimeRef = useRef<number>(0);
+  const currentScheduledBeatRef = useRef<number>(0);
+  const isPlayingRef = useRef<boolean>(false);
+
+  // Use refs to access latest values in scheduler without re-creating it
+  const bpmRef = useRef(bpm);
+  const timeSignatureRef = useRef(timeSignature);
+  const volumeRef = useRef(volume);
+
+  // Keep refs in sync
+  useEffect(() => {
+    bpmRef.current = bpm;
+  }, [bpm]);
+
+  useEffect(() => {
+    timeSignatureRef.current = timeSignature;
+  }, [timeSignature]);
+
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
 
   const ensureAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
@@ -77,88 +102,113 @@ export const Metronome = ({
     return audioContextRef.current;
   }, []);
 
-  const playClick = useCallback(
-    (isAccent: boolean) => {
-      const audioContext = ensureAudioContext();
-      if (!audioContext) return;
+  // Schedule a click at a precise time using Web Audio API
+  const scheduleClick = useCallback((audioContext: AudioContext, time: number, isAccent: boolean) => {
+    const volumeMultiplier = volumeRef.current / 100;
+    const clickDuration = 0.015;
 
-      const now = audioContext.currentTime;
-      const volumeMultiplier = volume / 100;
+    // Main click oscillator
+    const oscillator = audioContext.createOscillator();
+    const oscGain = audioContext.createGain();
 
-      // Create a short, crisp click using filtered noise + high-freq oscillator
-      // Duration: ~15ms for clean transient without lingering tail
-      const clickDuration = 0.015;
+    oscillator.type = "triangle";
+    oscillator.frequency.value = isAccent ? 2400 : 1800;
 
-      // Main click oscillator - higher frequencies for better timing perception
-      const oscillator = audioContext.createOscillator();
-      const oscGain = audioContext.createGain();
+    oscillator.connect(oscGain);
+    oscGain.connect(audioContext.destination);
 
-      // Use triangle wave for softer timbre than sine, less harsh than square
-      oscillator.type = "triangle";
-      oscillator.frequency.value = isAccent ? 2400 : 1800; // Higher freq, easier to locate in time
+    const baseGain = isAccent ? 0.12 : 0.08;
+    oscGain.gain.setValueAtTime(baseGain * volumeMultiplier, time);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, time + clickDuration);
 
-      oscillator.connect(oscGain);
-      oscGain.connect(audioContext.destination);
+    oscillator.start(time);
+    oscillator.stop(time + clickDuration);
 
-      // Very fast attack, immediate decay - creates "pip" quality
-      const baseGain = isAccent ? 0.12 : 0.08; // Much softer overall
-      oscGain.gain.setValueAtTime(baseGain * volumeMultiplier, now);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, now + clickDuration);
+    // Add subtle high-frequency "tick" layer
+    const tickOsc = audioContext.createOscillator();
+    const tickGain = audioContext.createGain();
+    const tickFilter = audioContext.createBiquadFilter();
 
-      oscillator.start(now);
-      oscillator.stop(now + clickDuration);
+    tickOsc.type = "square";
+    tickOsc.frequency.value = isAccent ? 4000 : 3200;
 
-      // Add subtle high-frequency "tick" layer for extra clarity
-      const tickOsc = audioContext.createOscillator();
-      const tickGain = audioContext.createGain();
-      const tickFilter = audioContext.createBiquadFilter();
+    tickFilter.type = "highpass";
+    tickFilter.frequency.value = 2000;
+    tickFilter.Q.value = 1;
 
-      tickOsc.type = "square";
-      tickOsc.frequency.value = isAccent ? 4000 : 3200;
+    tickOsc.connect(tickFilter);
+    tickFilter.connect(tickGain);
+    tickGain.connect(audioContext.destination);
 
-      // High-pass filter to keep only the "click" portion
-      tickFilter.type = "highpass";
-      tickFilter.frequency.value = 2000;
-      tickFilter.Q.value = 1;
+    const tickBaseGain = isAccent ? 0.04 : 0.025;
+    tickGain.gain.setValueAtTime(tickBaseGain * volumeMultiplier, time);
+    tickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.008);
 
-      tickOsc.connect(tickFilter);
-      tickFilter.connect(tickGain);
-      tickGain.connect(audioContext.destination);
+    tickOsc.start(time);
+    tickOsc.stop(time + 0.01);
+  }, []);
 
-      const tickBaseGain = isAccent ? 0.04 : 0.025;
-      tickGain.gain.setValueAtTime(tickBaseGain * volumeMultiplier, now);
-      tickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.008); // Even shorter
+  // Schedule a beat (audio + visual update)
+  const scheduleBeat = useCallback((audioContext: AudioContext, beatNumber: number, time: number) => {
+    const beats = beatsPerBar[timeSignatureRef.current];
+    const isAccent = beatNumber === 0;
+    
+    // Schedule precise audio
+    scheduleClick(audioContext, time, isAccent);
+    
+    // Schedule visual update (approximate, synced to audio time)
+    const delayMs = Math.max(0, (time - audioContext.currentTime) * 1000);
+    setTimeout(() => {
+      if (isPlayingRef.current) {
+        setCurrentBeat(beatNumber + 1);
+      }
+    }, delayMs);
+  }, [scheduleClick]);
 
-      tickOsc.start(now);
-      tickOsc.stop(now + 0.01);
-    },
-    [ensureAudioContext, volume],
-  );
+  // Main scheduler function - runs frequently to fill the scheduling buffer
+  const scheduler = useCallback(() => {
+    const audioContext = audioContextRef.current;
+    if (!audioContext || !isPlayingRef.current) return;
+
+    const beats = beatsPerBar[timeSignatureRef.current];
+    const secondsPerBeat = 60 / bpmRef.current;
+
+    // Schedule all beats that fall within our lookahead window
+    while (nextNoteTimeRef.current < audioContext.currentTime + SCHEDULE_AHEAD_TIME) {
+      scheduleBeat(audioContext, currentScheduledBeatRef.current, nextNoteTimeRef.current);
+      
+      // Advance to next beat
+      nextNoteTimeRef.current += secondsPerBeat;
+      currentScheduledBeatRef.current = (currentScheduledBeatRef.current + 1) % beats;
+    }
+  }, [scheduleBeat]);
 
   const startMetronome = useCallback(() => {
-    const beats = beatsPerBar[timeSignature];
-    let beat = 0;
+    const audioContext = ensureAudioContext();
+    if (!audioContext) return;
 
-    setCurrentBeat(1);
-    playClick(true);
-
-    const interval = 60000 / bpm;
-    intervalRef.current = setInterval(() => {
-      beat = (beat + 1) % beats;
-      const currentBeatNumber = beat + 1;
-      setCurrentBeat(currentBeatNumber);
-      playClick(beat === 0);
-    }, interval);
-  }, [bpm, timeSignature, playClick]);
+    isPlayingRef.current = true;
+    
+    // Initialize timing - start scheduling from now
+    nextNoteTimeRef.current = audioContext.currentTime;
+    currentScheduledBeatRef.current = 0;
+    
+    // Start the scheduler loop
+    scheduler(); // Run immediately to schedule first beats
+    schedulerIntervalRef.current = setInterval(scheduler, LOOKAHEAD_INTERVAL);
+  }, [ensureAudioContext, scheduler]);
 
   const stopMetronome = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    isPlayingRef.current = false;
+    
+    if (schedulerIntervalRef.current) {
+      clearInterval(schedulerIntervalRef.current);
+      schedulerIntervalRef.current = null;
     }
     setCurrentBeat(0);
   }, []);
 
+  // Handle play/stop
   useEffect(() => {
     if (isPlaying) {
       startMetronome();
@@ -168,12 +218,16 @@ export const Metronome = ({
     return () => stopMetronome();
   }, [isPlaying, startMetronome, stopMetronome]);
 
+  // Handle BPM or time signature changes while playing
   useEffect(() => {
-    if (isPlaying) {
-      stopMetronome();
-      startMetronome();
+    if (isPlaying && audioContextRef.current) {
+      // Reset scheduling to apply new tempo immediately
+      // Keep the current beat position but recalculate timing
+      const audioContext = audioContextRef.current;
+      nextNoteTimeRef.current = audioContext.currentTime;
+      currentScheduledBeatRef.current = 0;
     }
-  }, [bpm, timeSignature]);
+  }, [bpm, timeSignature, isPlaying]);
 
   const beats = beatsPerBar[timeSignature];
 
