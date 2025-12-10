@@ -1,29 +1,62 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import * as Tone from "tone";
-import { Piano } from "@tonejs/piano";
 
 export function useTonePiano() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const pianoRef = useRef<Piano | null>(null);
+  const synthRef = useRef<Tone.PolySynth | null>(null);
+  const reverbRef = useRef<Tone.Reverb | null>(null);
   const initStartedRef = useRef(false);
 
   useEffect(() => {
     if (initStartedRef.current) return;
     initStartedRef.current = true;
 
-    const piano = new Piano({
-      velocities: 5,
+    // Create a PolySynth with FMSynth for rich piano-like sound
+    const synth = new Tone.PolySynth(Tone.FMSynth, {
+      harmonicity: 3,
+      modulationIndex: 10,
+      detune: 0,
+      oscillator: {
+        type: "sine"
+      },
+      envelope: {
+        attack: 0.01,
+        decay: 0.2,
+        sustain: 0.3,
+        release: 1.2
+      },
+      modulation: {
+        type: "square"
+      },
+      modulationEnvelope: {
+        attack: 0.5,
+        decay: 0,
+        sustain: 1,
+        release: 0.5
+      }
     });
 
-    piano.toDestination();
-    piano.load().then(() => {
+    // Add reverb for richness
+    const reverb = new Tone.Reverb({
+      decay: 1.5,
+      preDelay: 0.01,
+      wet: 0.3
+    });
+
+    synth.connect(reverb);
+    reverb.toDestination();
+
+    synthRef.current = synth;
+    reverbRef.current = reverb;
+
+    // Reverb needs time to generate impulse response
+    reverb.generate().then(() => {
       setIsLoaded(true);
     });
 
-    pianoRef.current = piano;
-
     return () => {
-      piano.disconnect();
+      synth.dispose();
+      reverb.dispose();
     };
   }, []);
 
@@ -32,32 +65,33 @@ export function useTonePiano() {
   }, []);
 
   const startNote = useCallback((noteKey: string) => {
-    if (!pianoRef.current || !isLoaded) return;
-    pianoRef.current.keyDown({ note: noteKey });
+    if (!synthRef.current || !isLoaded) return;
+    synthRef.current.triggerAttack(noteKey, Tone.now());
   }, [isLoaded]);
 
   const stopNote = useCallback((noteKey: string) => {
-    if (!pianoRef.current || !isLoaded) return;
-    pianoRef.current.keyUp({ note: noteKey });
+    if (!synthRef.current || !isLoaded) return;
+    synthRef.current.triggerRelease(noteKey, Tone.now());
   }, [isLoaded]);
 
   const playNote = useCallback(async (noteKey: string, duration: number = 0.3) => {
-    if (!pianoRef.current || !isLoaded) return;
-    pianoRef.current.keyDown({ note: noteKey });
-    setTimeout(() => {
-      pianoRef.current?.keyUp({ note: noteKey });
-    }, duration * 1000);
+    if (!synthRef.current || !isLoaded) return;
+    synthRef.current.triggerAttackRelease(noteKey, duration, Tone.now());
   }, [isLoaded]);
 
   const pedalDown = useCallback(() => {
-    if (!pianoRef.current || !isLoaded) return;
-    pianoRef.current.pedalDown();
-  }, [isLoaded]);
+    // Increase reverb wet for pedal effect
+    if (reverbRef.current) {
+      reverbRef.current.wet.value = 0.6;
+    }
+  }, []);
 
   const pedalUp = useCallback(() => {
-    if (!pianoRef.current || !isLoaded) return;
-    pianoRef.current.pedalUp();
-  }, [isLoaded]);
+    // Reset reverb wet
+    if (reverbRef.current) {
+      reverbRef.current.wet.value = 0.3;
+    }
+  }, []);
 
   return {
     isLoaded,

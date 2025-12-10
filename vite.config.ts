@@ -13,8 +13,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "events": path.resolve(__dirname, "./src/shims/events.ts"),
-      "webmidi": path.resolve(__dirname, "./src/shims/webmidi.ts"),
     },
   },
 }));
