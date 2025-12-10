@@ -1,6 +1,5 @@
 export type PianoSoundType =
   | "classic"        // Original raw Web Audio oscillators (DEFAULT)
-  | "fm-synth"       // FM synthesis (warm electric piano)
   | "acoustic-piano" // tonejs-instruments sampled grand piano
   | "electric-piano" // tonejs-instruments electric piano
   | "guitar"         // tonejs-instruments acoustic guitar
@@ -11,8 +10,7 @@ export type PianoSoundType =
   | "flute";         // tonejs-instruments flute
 
 export const PIANO_SOUND_LABELS: Record<PianoSoundType, string> = {
-  "classic": "Classic (Original)",
-  "fm-synth": "FM Synth",
+  "classic": "Basic",
   "acoustic-piano": "Acoustic Piano",
   "electric-piano": "Electric Piano",
   "guitar": "Acoustic Guitar",

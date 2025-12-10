@@ -207,14 +207,6 @@ export function useTonePiano(soundType: PianoSoundType = "classic") {
     if (soundType === "classic") {
       engineRef.current = createClassicEngine();
       setIsLoaded(true);
-    } else if (soundType === "fm-synth") {
-      const { engine, loadPromise } = createFMSynthEngine();
-      engineRef.current = engine;
-      loadPromise.then(() => {
-        if (soundTypeRef.current === soundType) {
-          setIsLoaded(true);
-        }
-      });
     } else if (SAMPLED_INSTRUMENTS.includes(soundType)) {
       const { engine, loadPromise } = createSamplerEngine(soundType);
       engineRef.current = engine;
