@@ -15,4 +15,12 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ["webmidi", "events"],
+    },
+  },
+  optimizeDeps: {
+    exclude: ["@tonejs/piano"],
+  },
 }));
