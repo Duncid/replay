@@ -106,7 +106,7 @@ IMPORTANT: Tailor your improvisation to be idiomatic for this instrument. Stay w
       `${midiToNoteName(n.pitch)} (${(n.endTime - n.startTime).toFixed(2)}s at ${n.startTime.toFixed(2)}s)`
     ).join(", ") || "No notes";
 
-    const systemPrompt = `You are a jazz improvisation assistant. The user will provide you with a sequence of musical notes they played, and you should respond with a creative jazz improvisation that complements their input.
+    const systemPrompt = `You are a musical improvisation assistant. The user will provide you with a sequence of musical notes they played, and you should respond with a creative improvisation that complements their input.
 
 The user's notes are provided in NoteSequence format with MIDI pitch numbers.
 
@@ -133,7 +133,7 @@ Guidelines:
 - Create a musically coherent response that complements the user's input
 - CRITICAL: Stay within the instrument's optimal range (${instrumentInfo.range}, MIDI ${instrumentInfo.minPitch}-${instrumentInfo.maxPitch})
 - Aim for 4-12 notes in your response (you can include chords by overlapping startTime/endTime, unless the instrument is monophonic)
-- Consider jazz theory: use chord tones, passing notes, neighbor notes
+- Use music theory: chord tones, passing notes, neighbor notes, melodic contour
 - Respond with ONLY the JSON object, no other text or markdown`;
 
     const requestBody: Record<string, unknown> = {

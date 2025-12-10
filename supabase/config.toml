@@ -1,6 +1,6 @@
 project_id = "mmlizntmpbriyumsunsh"
 
-[functions.jazz-improvise]
+[functions.improvise]
 verify_jwt = false
 
 [functions.piano-ask]
