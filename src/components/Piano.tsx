@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { PianoKey } from "./PianoKey";
 import { usePianoAudio } from "@/hooks/usePianoAudio";
+import { Loader2 } from "lucide-react";
 
 interface PianoNote {
   note: string;
@@ -83,6 +84,28 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, onN
     notes.push({ note: noteName, octave, frequency, isBlack });
   }
 
+  const handleKeyPress = (noteKey: string, frequency: number, velocity: number = 0.8) => {
+    if (!allowInput) return;
+
+    audio.startNote(noteKey, frequency);
+    setUserPressedKeys((prev) => new Set([...prev, noteKey]));
+
+    onNoteStart?.(noteKey, frequency, velocity);
+  };
+
+  const handleKeyRelease = (noteKey: string, frequency: number) => {
+    if (!allowInput) return;
+
+    audio.stopNote(noteKey);
+    setUserPressedKeys((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(noteKey);
+      return newSet;
+    });
+
+    onNoteEnd?.(noteKey, frequency);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!allowInput) return;
@@ -127,28 +150,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, onN
     };
   }, [allowInput]);
 
-  const handleKeyPress = (noteKey: string, frequency: number, velocity: number = 0.8) => {
-    if (!allowInput) return;
-
-    audio.startNote(noteKey, frequency);
-    setUserPressedKeys((prev) => new Set([...prev, noteKey]));
-
-    onNoteStart?.(noteKey, frequency, velocity);
-  };
-
-  const handleKeyRelease = (noteKey: string, frequency: number) => {
-    if (!allowInput) return;
-
-    audio.stopNote(noteKey);
-    setUserPressedKeys((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(noteKey);
-      return newSet;
-    });
-
-    onNoteEnd?.(noteKey, frequency);
-  };
-
   useImperativeHandle(ref, () => ({
     playNote: audio.playNote,
     ensureAudioReady: audio.ensureAudioReady,
@@ -166,6 +167,14 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, onN
 
   return (
     <div className="relative w-full select-none">
+      {!audio.isLoaded && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading piano samples...</span>
+          </div>
+        </div>
+      )}
       <div className="relative h-[25vw] min-h-64 max-h-[350px] bg-card shadow-2xl">
         <div className="absolute inset-0 grid grid-cols-22 gap-px">
           {whiteKeys.map((note) => {

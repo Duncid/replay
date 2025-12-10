@@ -1,90 +1,40 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { useTonePiano } from "./useTonePiano";
 
-interface ActiveOscillator {
-  oscillator: OscillatorNode;
-  gainNode: GainNode;
+// Helper to convert frequency to note name
+function frequencyToNote(frequency: number): string {
+  const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const A4 = 440;
+  const semitonesFromA4 = Math.round(12 * Math.log2(frequency / A4));
+  const midiNumber = 69 + semitonesFromA4;
+  const octave = Math.floor(midiNumber / 12) - 1;
+  const noteIndex = midiNumber % 12;
+  return `${noteNames[noteIndex]}${octave}`;
 }
 
 export function usePianoAudio() {
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const activeOscillatorsRef = useRef<Map<string, ActiveOscillator>>(new Map());
-
-  useEffect(() => {
-    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-    return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-    };
-  }, []);
+  const tonePiano = useTonePiano();
 
   const ensureAudioReady = useCallback(async () => {
-    if (audioContextRef.current?.state === "suspended") {
-      await audioContextRef.current.resume();
-    }
-  }, []);
+    await tonePiano.ensureAudioReady();
+  }, [tonePiano]);
 
   const playNote = useCallback(async (frequency: number, duration: number = 0.3) => {
-    if (!audioContextRef.current) return;
-    
-    const audioContext = audioContextRef.current;
-    if (audioContext.state === "suspended") {
-      await audioContext.resume();
-    }
+    const noteKey = frequencyToNote(frequency);
+    await tonePiano.playNote(noteKey, duration);
+  }, [tonePiano]);
 
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.frequency.value = frequency;
-    oscillator.type = "sine";
-
-    const now = audioContext.currentTime;
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
-    gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
-    gainNode.gain.setValueAtTime(0.2, now + duration - 0.1);
-    gainNode.gain.linearRampToValueAtTime(0, now + duration);
-
-    oscillator.start(now);
-    oscillator.stop(now + duration);
-  }, []);
-
-  const startNote = useCallback((noteKey: string, frequency: number) => {
-    if (!audioContextRef.current || activeOscillatorsRef.current.has(noteKey)) return;
-
-    const audioContext = audioContextRef.current;
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.frequency.value = frequency;
-    oscillator.type = "sine";
-
-    const now = audioContext.currentTime;
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
-    gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
-
-    oscillator.start(now);
-    activeOscillatorsRef.current.set(noteKey, { oscillator, gainNode });
-  }, []);
+  const startNote = useCallback((noteKey: string, _frequency: number) => {
+    // noteKey is already in format like "C4", so use it directly
+    tonePiano.startNote(noteKey);
+  }, [tonePiano]);
 
   const stopNote = useCallback((noteKey: string) => {
-    const nodes = activeOscillatorsRef.current.get(noteKey);
-    if (!nodes || !audioContextRef.current) return;
-
-    const { oscillator, gainNode } = nodes;
-    const now = audioContextRef.current.currentTime;
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-    gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
-    oscillator.stop(now + 0.1);
-    activeOscillatorsRef.current.delete(noteKey);
-  }, []);
+    tonePiano.stopNote(noteKey);
+  }, [tonePiano]);
 
   return {
+    isLoaded: tonePiano.isLoaded,
     ensureAudioReady,
     playNote,
     startNote,
