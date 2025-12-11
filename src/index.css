@@ -39,8 +39,10 @@ All colors MUST be HSL.
     --radius: 0.75rem;
 
     --key-white: 0 0% 98%;
+    --key-white-disabled: 0 0% 60%;
     --key-white-shadow: 0 0% 85%;
     --key-black: 220 20% 15%;
+    --key-black-disabled: 220 45% 25%;
     --key-black-light: 160 16% 15%;
     --key-active-user: 45 95% 60%;
     --key-active-ai: 210 80% 55%;
@@ -67,7 +69,8 @@ All colors MUST be HSL.
   }
 
   /* Prevent text selection on interactive elements */
-  button, [role="button"] {
+  button,
+  [role="button"] {
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
