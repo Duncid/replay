@@ -60,7 +60,7 @@ export const PianoKey = ({
               : "bg-key-active-user/20"
             : "bg-key-white hover:bg-key-white-shadow",
         (!isPlayable || disabled) && "cursor-not-allowed",
-        !isPlayable && (isBlack ? "opacity-40" : "opacity-70"),
+        !isPlayable && (isBlack ? "bg-key-black-disabled" : "bg-key-white-disabled"),
       )}
       style={{
         transition: "var(--transition-smooth)",
