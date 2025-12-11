@@ -45,15 +45,15 @@ export const INSTRUMENT_FOLDER_MAP: Record<string, string> = {
 };
 
 export const INSTRUMENT_NOTE_RANGES: Record<PianoSoundType, { min: string; max: string }> = {
-  classic: { min: "C0", max: "C8" },
-  "acoustic-piano": { min: "A0", max: "C8" },
-  "electric-piano": { min: "A0", max: "C8" },
-  guitar: { min: "E3", max: "E6" },
-  cello: { min: "C2", max: "C6" },
-  bass: { min: "E1", max: "C5" },
-  organ: { min: "C2", max: "C7" },
-  trumpet: { min: "F#3", max: "D6" },
-  flute: { min: "C4", max: "D7" },
+  classic: { min: "C0", max: "C8" },           // Oscillator - unlimited
+  "acoustic-piano": { min: "C1", max: "A#7" }, // Full piano samples
+  "electric-piano": { min: "C2", max: "D5" },  // Harmonium samples
+  guitar: { min: "D2", max: "D5" },            // Guitar-acoustic samples
+  cello: { min: "C2", max: "C5" },             // Cello samples
+  bass: { min: "F#1", max: "B3" },             // Contrabass samples (very limited!)
+  organ: { min: "C1", max: "C6" },             // Organ samples
+  trumpet: { min: "F3", max: "C6" },           // Trumpet samples
+  flute: { min: "C4", max: "C7" },             // Flute samples
 };
 
 // Sample notes to load for each instrument (sparse sampling)
