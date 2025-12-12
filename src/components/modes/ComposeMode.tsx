@@ -10,6 +10,7 @@ type MergeDirection = "previous" | "next";
 
 export interface ComposeEntry {
   userSequence: NoteSequence;
+  isAiGenerated?: boolean;
 }
 
 interface ComposeModeProps {
@@ -24,6 +25,8 @@ interface ComposeModeProps {
   isPlayingAll?: boolean;
   initialHistory?: ComposeEntry[];
   onHistoryChange?: (history: ComposeEntry[]) => void;
+  onRequestImprov?: (sequence: NoteSequence) => void;
+  onRequestVariations?: (sequence: NoteSequence) => void;
 }
 
 export function ComposeMode({ 
@@ -38,6 +41,8 @@ export function ComposeMode({
   isPlayingAll = false,
   initialHistory = [],
   onHistoryChange,
+  onRequestImprov,
+  onRequestVariations,
 }: ComposeModeProps) {
   const [history, setHistory] = useState<ComposeEntry[]>(initialHistory);
 
@@ -49,8 +54,8 @@ export function ComposeMode({
   }, [history, onHistoryChange]);
 
   // Simply add as a new entry - no merging
-  const addUserSequence = useCallback((userSequence: NoteSequence) => {
-    setHistory((prev) => [...prev, { userSequence }]);
+  const addUserSequence = useCallback((userSequence: NoteSequence, isAiGenerated = false) => {
+    setHistory((prev) => [...prev, { userSequence, isAiGenerated }]);
   }, []);
 
   const clearHistory = useCallback(() => {
@@ -98,7 +103,7 @@ export function ComposeMode({
 
       // Remove the source and replace target with merged
       const newHistory = [...prev];
-      newHistory[targetIndex] = { userSequence: mergedSequence };
+      newHistory[targetIndex] = { userSequence: mergedSequence, isAiGenerated: targetSession.isAiGenerated };
       newHistory.splice(sourceIndex, 1);
       
       return newHistory;
@@ -207,16 +212,21 @@ export function ComposeMode({
             return (
               <TrackItem
                 key={actualIndex}
-                sequence={entry.userSequence}
-                onPlay={() => onReplay(entry.userSequence)}
-                isFirst={displayIndex === 0}
-                isLast={displayIndex === validHistory.length - 1 && !isRecording}
-                onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
-                onMergeNext={() => openMergeDialog(actualIndex, "next")}
-                onRemove={() => removeSession(actualIndex)}
-              />
-            );
-          })}
+              sequence={entry.userSequence}
+              onPlay={() => onReplay(entry.userSequence)}
+              isFirst={displayIndex === 0}
+              isLast={displayIndex === validHistory.length - 1 && !isRecording}
+              onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
+              onMergeNext={() => openMergeDialog(actualIndex, "next")}
+              onRemove={() => removeSession(actualIndex)}
+              isAiGenerated={entry.isAiGenerated}
+              onRequestImprov={onRequestImprov ? () => onRequestImprov(entry.userSequence) : undefined}
+              onRequestVariations={
+                onRequestVariations ? () => onRequestVariations(entry.userSequence) : undefined
+              }
+            />
+          );
+        })}
 
           {/* Current recording (live) - rightmost */}
           {isRecording && liveSequence && (
