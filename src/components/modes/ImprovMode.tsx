@@ -26,6 +26,8 @@ interface ImprovModeProps {
   isPlayingAll?: boolean;
   initialHistory?: TrackEntry[];
   onHistoryChange?: (history: TrackEntry[]) => void;
+  onRequestImprov?: (sequence: NoteSequence) => void;
+  onRequestVariations?: (sequence: NoteSequence) => void;
 }
 
 export function ImprovMode({
@@ -40,6 +42,8 @@ export function ImprovMode({
   isPlayingAll = false,
   initialHistory = [],
   onHistoryChange,
+  onRequestImprov,
+  onRequestVariations,
 }: ImprovModeProps) {
   const [history, setHistory] = useState<TrackEntry[]>(initialHistory);
 
@@ -211,6 +215,8 @@ export function ImprovMode({
               onMergePrevious={index > 0 ? () => openMergeDialog(index, "previous") : undefined}
               onMergeNext={index < history.length - 1 ? () => openMergeDialog(index, "next") : undefined}
               onRemove={() => removeEntry(index)}
+              onRequestImprov={onRequestImprov}
+              onRequestVariations={onRequestVariations}
             />
           ))}
 

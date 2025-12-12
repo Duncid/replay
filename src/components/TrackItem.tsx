@@ -94,11 +94,10 @@ export function TrackItem({
                   Merge with next
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {(onRequestImprov || onRequestVariations) && <DropdownMenuLabel>Ask AI</DropdownMenuLabel>}
                 {onRequestImprov && (
                   <DropdownMenuItem onClick={() => onRequestImprov(sequence)}>
                     <Wand2 className="w-3 h-3 mr-2" />
-                    Improvise on this recording
+                    Improvise
                   </DropdownMenuItem>
                 )}
                 {onRequestVariations && (
