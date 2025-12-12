@@ -65,6 +65,7 @@ const Index = () => {
   const [isReplaying, setIsReplaying] = useState(false);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [liveNotes, setLiveNotes] = useState<Note[]>([]);
+  const [generationLabel, setGenerationLabel] = useState<string | null>(null);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
 
   // Persisted preferences
@@ -338,6 +339,8 @@ const Index = () => {
     isPlayingAll,
     initialHistory: savedImprovHistory,
     onHistoryChange: setSavedImprovHistory,
+    onRequestImprov: (sequence) => handleImprovAiRequest(sequence, "magenta/music-rnn", "create an improv"),
+    onRequestVariations: (sequence) => handleImprovAiRequest(sequence, "magenta/music-vae", "create variations"),
   });
 
   // Assign to refs for use in handleRecordingComplete
@@ -456,6 +459,7 @@ const Index = () => {
     requestStartTimeRef.current = Date.now();
 
     setAppState("waiting_for_ai");
+    setGenerationLabel(modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging...");
 
     try {
       const aiSequence = await magenta.continueSequence(
@@ -476,6 +480,7 @@ const Index = () => {
       if (currentRequestIdRef.current !== requestId) return;
 
       composeMode.addUserSequence(aiSequence, true);
+      setGenerationLabel(null);
       await playSequence(aiSequence, requestId);
     } catch (error) {
       console.error(`[Compose AI] Failed to ${requestLabel}:`, error);
@@ -485,6 +490,53 @@ const Index = () => {
         variant: "destructive",
       });
       setAppState("idle");
+      setGenerationLabel(null);
+    }
+  }
+
+  // Improv mode AI helpers (Magenta only)
+  async function handleImprovAiRequest(
+    userSequence: NoteSequence,
+    modelType: MagentaModelType,
+    requestLabel: string,
+  ) {
+    const requestId = crypto.randomUUID();
+    currentRequestIdRef.current = requestId;
+    requestStartTimeRef.current = Date.now();
+
+    setAppState("waiting_for_ai");
+    setGenerationLabel(modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging...");
+
+    try {
+      const aiSequence = await magenta.continueSequence(
+        userSequence,
+        modelType,
+        metronomeBpm,
+        metronomeTimeSignature,
+      );
+
+      if (currentRequestIdRef.current !== requestId) return;
+      if (!aiSequence) throw new Error("Magenta failed to generate a response");
+
+      const elapsed = Date.now() - requestStartTimeRef.current;
+      if (elapsed < MIN_WAIT_TIME_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed));
+      }
+
+      if (currentRequestIdRef.current !== requestId) return;
+
+      improvMode.addEntry(aiSequence, true);
+      setGenerationLabel(null);
+      await playSequence(aiSequence, requestId);
+    } catch (error) {
+      console.error(`[Improv AI] Failed to ${requestLabel}:`, error);
+      toast({
+        title: `Failed to ${requestLabel}`,
+        description: error instanceof Error ? error.message : "Unable to generate music",
+        variant: "destructive",
+      });
+      setAppState("idle");
+      setGenerationLabel(null);
     }
   }
 
@@ -540,6 +592,9 @@ const Index = () => {
       <div id="topContainer" className="w-full flex flex-col items-center justify-start p-4 gap-4 relative">
         {/* AI Playing / Replay indicator */}
         <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
+
+        {/* Generation toast (Free and Duo modes) */}
+        {generationLabel && <TopToastLabel show={true} label={generationLabel} pulse />}
 
         {/* Recording ending progress toast (compose mode) */}
         {activeMode === "compose" && (
