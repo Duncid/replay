@@ -1,30 +1,28 @@
 import { useState, useMemo } from 'react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FolderOpen, Search } from 'lucide-react';
 import { Composition } from '@/hooks/useCompositions';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface CompositionDropdownProps {
+interface CompositionSubmenuProps {
   compositions: Composition[];
   onSelect: (composition: Composition) => void;
   isLoading?: boolean;
 }
 
-export function CompositionDropdown({
+export function CompositionSubmenu({
   compositions,
   onSelect,
   isLoading = false,
-}: CompositionDropdownProps) {
+}: CompositionSubmenuProps) {
   const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
 
   const filteredCompositions = useMemo(() => {
     if (!search.trim()) return compositions;
@@ -34,21 +32,13 @@ export function CompositionDropdown({
     );
   }, [compositions, search]);
 
-  const handleSelect = (composition: Composition) => {
-    onSelect(composition);
-    setOpen(false);
-    setSearch('');
-  };
-
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={isLoading}>
-          <FolderOpen className="h-4 w-4" />
-          Open
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72">
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger disabled={isLoading}>
+        <FolderOpen className="h-4 w-4 mr-2" />
+        Open
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-72">
         <div className="p-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -57,6 +47,8 @@ export function CompositionDropdown({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-8"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             />
           </div>
         </div>
@@ -69,7 +61,7 @@ export function CompositionDropdown({
             filteredCompositions.map((composition) => (
               <DropdownMenuItem
                 key={composition.id}
-                onClick={() => handleSelect(composition)}
+                onClick={() => onSelect(composition)}
                 className="flex flex-col items-start gap-1 cursor-pointer"
               >
                 <span className="font-medium truncate w-full">{composition.title}</span>
@@ -80,7 +72,7 @@ export function CompositionDropdown({
             ))
           )}
         </ScrollArea>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
