@@ -72,6 +72,7 @@ const Index = () => {
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(STORAGE_KEYS.BPM, 120);
   const [metronomeTimeSignature, setMetronomeTimeSignature] = useLocalStorage(STORAGE_KEYS.TIME_SIGNATURE, "4/4");
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
+  const [composeGenerationLabel, setComposeGenerationLabel] = useState<string | null>(null);
 
   // Persisted history
   const [savedComposeHistory, setSavedComposeHistory] = useLocalStorage<ComposeEntry[]>(
@@ -320,6 +321,9 @@ const Index = () => {
     isPlayingAll,
     initialHistory: savedComposeHistory,
     onHistoryChange: setSavedComposeHistory,
+    onRequestImprov: (sequence) => handleComposeAiRequest(sequence, "magenta/music-rnn", "create an improv", "Improvising"),
+    onRequestVariations: (sequence) =>
+      handleComposeAiRequest(sequence, "magenta/music-vae", "create variations", "Arranging"),
   });
 
   // Improv mode hook - also uses track display now
@@ -442,6 +446,59 @@ const Index = () => {
     }
   }
 
+  // Compose mode AI helpers (Magenta only)
+  async function handleComposeAiRequest(
+    userSequence: NoteSequence,
+    modelType: MagentaModelType,
+    requestLabel: string,
+    statusLabel: string,
+  ) {
+    const requestId = crypto.randomUUID();
+    currentRequestIdRef.current = requestId;
+    requestStartTimeRef.current = Date.now();
+
+    setAppState("waiting_for_ai");
+    setComposeGenerationLabel(statusLabel);
+
+    try {
+      const aiSequence = await magenta.continueSequence(
+        userSequence,
+        modelType,
+        metronomeBpm,
+        metronomeTimeSignature,
+      );
+
+      if (currentRequestIdRef.current !== requestId) {
+        setComposeGenerationLabel(null);
+        return;
+      }
+      if (!aiSequence) throw new Error("Magenta failed to generate a response");
+
+      const elapsed = Date.now() - requestStartTimeRef.current;
+      if (elapsed < MIN_WAIT_TIME_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed));
+      }
+
+      if (currentRequestIdRef.current !== requestId) {
+        setComposeGenerationLabel(null);
+        return;
+      }
+
+      composeMode.addUserSequence(aiSequence, true);
+      await playSequence(aiSequence, requestId);
+    } catch (error) {
+      console.error(`[Compose AI] Failed to ${requestLabel}:`, error);
+      toast({
+        title: `Failed to ${requestLabel}`,
+        description: error instanceof Error ? error.message : "Unable to generate music",
+        variant: "destructive",
+      });
+      setAppState("idle");
+    } finally {
+      setComposeGenerationLabel(null);
+    }
+  }
+
   // Player mode AI handling
   async function handleAskSubmit(prompt: string) {
     stopAiPlayback();
@@ -494,6 +551,9 @@ const Index = () => {
       <div id="topContainer" className="w-full flex flex-col items-center justify-start p-4 gap-4 relative">
         {/* AI Playing / Replay indicator */}
         <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
+
+        {/* Compose AI generation indicator */}
+        <TopToastLabel show={!!composeGenerationLabel} label={composeGenerationLabel || ""} />
 
         {/* Recording ending progress toast (compose mode) */}
         {activeMode === "compose" && (
