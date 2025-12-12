@@ -219,7 +219,7 @@ export function PlayMode({
     }, []);
 
     const render = () => (
-        <div className="w-full">
+        <>
             <TrackContainer scrollDependency={[history.length, liveNotes.length]}>
                 {/* All entries - each with full controls */}
                 {history.map((entry, index) => (
@@ -258,7 +258,7 @@ export function PlayMode({
                 onOpenChange={setMergeDialogOpen}
                 initialDirection={mergeDirection}
             />
-        </div>
+        </>
     );
 
     return {

@@ -672,8 +672,8 @@ const Index = () => {
           onNoteEnd={handleNoteEnd}
         />
 
-        <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full relative z-10 px-2 py-4">
-          <div className="flex items-center justify-between mb-6">
+        <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full relative z-10">
+          <div className="flex items-center justify-between px-2 py-4">
             <div className="flex items-center gap-6">
               <TabsList>
                 <TabsTrigger value="play">Play</TabsTrigger>
@@ -796,11 +796,7 @@ const Index = () => {
             </div>
           </div>
           <TabsContent value="play" className="mt-0">
-            <Card className="border-none shadow-none bg-transparent">
-              <CardContent className="p-0 space-y-4">
-                {playMode.render()}
-              </CardContent>
-            </Card>
+            {playMode.render()}
           </TabsContent>
 
           <TabsContent value="learn" className="mt-0">

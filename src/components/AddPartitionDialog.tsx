@@ -8,6 +8,7 @@ import { NoteSequence } from "@/types/noteSequence";
 import { useToast } from "@/hooks/use-toast";
 import { SheetMusic } from "@/components/SheetMusic";
 import { usePianoAudio } from "@/hooks/usePianoAudio";
+import { PianoSoundType } from "@/hooks/usePianoSound";
 
 interface AddPartitionDialogProps {
   open: boolean;
@@ -17,7 +18,7 @@ interface AddPartitionDialogProps {
   initialAbc?: string;
   mode?: 'add' | 'edit';
   onEdit?: (sequence: NoteSequence) => void;
-  instrument?: string;
+  instrument?: PianoSoundType;
 }
 
 // Helper function to strip ABC headers and return only notes
@@ -36,7 +37,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const { toast } = useToast();
-  const { ensureAudioReady, playNote } = usePianoAudio(instrument as any);
+  const { ensureAudioReady, playNote } = usePianoAudio(instrument);
 
   // Update abcText when dialog opens with initialAbc (edit mode)
   useEffect(() => {
