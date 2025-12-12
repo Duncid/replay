@@ -809,7 +809,7 @@ const Index = () => {
               {/* Add notes - standalone */}
               <Button variant="outline" size="sm" onClick={() => setPartitionDialogOpen(true)}>
                 <PencilLine className="h-4 w-4" />
-                Add notes
+                Manual
               </Button>
 
               {/* Unified "..." menu */}
