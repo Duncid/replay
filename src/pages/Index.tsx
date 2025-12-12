@@ -6,40 +6,54 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music } from "lucide-react";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, FileMusic, X } from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
-import { NoteSequence, Note } from "@/types/noteSequence";
+import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import {
   midiToFrequency,
   midiToNoteName,
-  noteNameToMidi,
-  createEmptyNoteSequence,
   noteSequenceToAbc,
-  abcToNoteSequence,
 } from "@/utils/noteSequenceUtils";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
 import { TopToastProgress, TopToastLabel } from "@/components/TopToast";
-import { ComposeMode, ComposeEntry } from "@/components/modes/ComposeMode";
-import { ImprovMode, TrackEntry } from "@/components/modes/ImprovMode";
-import { PlayerMode } from "@/components/modes/PlayerMode";
+import { PlayMode, PlayEntry } from "@/components/modes/PlayMode";
+import { LearnMode } from "@/components/modes/LearnMode";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 const AI_MODELS = {
   llm: [
@@ -54,12 +68,13 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
-type ActiveMode = "compose" | "improv" | "player";
+type ActiveMode = "play" | "learn";
 
 const Index = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
-  const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(STORAGE_KEYS.ACTIVE_MODE, "compose");
+  const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(STORAGE_KEYS.ACTIVE_MODE, "play");
+  const [isAutoreplyActive, setIsAutoreplyActive] = useLocalStorage<boolean>(STORAGE_KEYS.AUTOREPLY, false);
   const [selectedModel, setSelectedModel] = useLocalStorage(STORAGE_KEYS.AI_MODEL, "magenta/music-rnn");
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -67,6 +82,8 @@ const Index = () => {
   const [liveNotes, setLiveNotes] = useState<Note[]>([]);
   const [generationLabel, setGenerationLabel] = useState<string | null>(null);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
+  const [editingEntryIndex, setEditingEntryIndex] = useState<number | null>(null);
+  const [editDialogMode, setEditDialogMode] = useState<'add' | 'edit'>('add');
 
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
@@ -75,11 +92,7 @@ const Index = () => {
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
 
   // Persisted history
-  const [savedComposeHistory, setSavedComposeHistory] = useLocalStorage<ComposeEntry[]>(
-    STORAGE_KEYS.COMPOSE_HISTORY,
-    [],
-  );
-  const [savedImprovHistory, setSavedImprovHistory] = useLocalStorage<TrackEntry[]>(STORAGE_KEYS.IMPROV_HISTORY, []);
+  const [savedPlayHistory, setSavedPlayHistory] = useLocalStorage<PlayEntry[]>(STORAGE_KEYS.PLAY_HISTORY, []);
 
   const { toast } = useToast();
   const magenta = useMagenta();
@@ -98,12 +111,13 @@ const Index = () => {
   // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
   // (they will be initialized after those functions are defined)
 
+  const [playingSequence, setPlayingSequence] = useState<NoteSequence | null>(null);
+
   // Refs for circular dependency handling
   const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>();
-  const composeModeRef = useRef<ReturnType<typeof ComposeMode>>();
-  const improvModeRef = useRef<ReturnType<typeof ImprovMode>>();
-  const handlePlayAllSequencesRef = useRef<(combinedSequence: NoteSequence) => void>();
-  const playerMode = PlayerMode({
+  const playModeRef = useRef<ReturnType<typeof PlayMode>>();
+  const handlePlayAllSequencesRef = useRef<(combinedSequence: NoteSequence, segments?: PlaybackSegment[]) => void>();
+  const learnMode = LearnMode({
     isLoading: isAskLoading,
     isPlaying: appState === "ai_playing",
     onSubmit: handleAskSubmit,
@@ -111,20 +125,23 @@ const Index = () => {
     onClearHistory: () => toast({ title: "History cleared" }),
   });
 
-  // Recording manager for improv and compose modes
+  // Recording manager for play mode
   const handleRecordingComplete = useCallback(
     (result: RecordingResult) => {
       setLiveNotes([]); // Clear live notes when recording completes
-      if (activeMode === "improv") {
-        // Add user recording immediately as a separate entry
-        improvModeRef.current?.addEntry(result.sequence, false);
-        handleImprovPlay(result.sequence);
-      } else if (activeMode === "compose") {
-        composeModeRef.current?.addUserSequence(result.sequence);
-        setAppState("idle");
+      if (activeMode === "play") {
+        // Add user recording
+        playModeRef.current?.addEntry(result.sequence, false);
+
+        if (isAutoreplyActive) {
+          // Trigger AI
+          handleImprovPlay(result.sequence);
+        } else {
+          setAppState("idle");
+        }
       }
     },
-    [activeMode],
+    [activeMode, isAutoreplyActive],
   );
 
   const handleRecordingUpdate = useCallback((notes: Note[]) => {
@@ -136,13 +153,15 @@ const Index = () => {
     timeSignature: metronomeTimeSignature,
     onRecordingComplete: handleRecordingComplete,
     onRecordingUpdate: handleRecordingUpdate,
-    pauseTimeoutMs: activeMode === "improv" ? 2000 : 3000, // Duo uses 2s, Free uses 3s
+    pauseTimeoutMs: isAutoreplyActive ? 2000 : 3000,
     resumeGapMs: 1000,
   });
 
   const handleModeChange = (newMode: ActiveMode) => {
-    if (newMode === "player" && magenta.isMagentaModel(selectedModel)) {
+    if (newMode === "learn" && magenta.isMagentaModel(selectedModel)) {
       setSelectedModel("google/gemini-2.5-flash");
+    } else if (newMode === "play" && !magenta.isMagentaModel(selectedModel)) {
+      setSelectedModel("magenta/music-rnn");
     }
     recordingManager.cancelRecording();
     setActiveMode(newMode);
@@ -188,94 +207,143 @@ const Index = () => {
     }
     setActiveKeys(new Set());
     setAppState("idle");
+    setPlayingSequence(null);
     setIsPlayingAll(false);
   }, []);
 
-  const playSequence = useCallback(async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
-    setIsReplaying(isReplay);
-    const playbackId = Math.random().toString(36).substring(7);
+  const playSequence = useCallback(
+    async (
+      sequence: NoteSequence,
+      requestId?: string,
+      isReplay: boolean = false,
+      segments?: PlaybackSegment[],
+    ) => {
+      setIsReplaying(isReplay);
+      const playbackId = Math.random().toString(36).substring(7);
 
-    if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
-      console.log(`[Playback ${playbackId}] Request invalidated`);
-      return;
-    }
-
-    if (isPlayingRef.current) {
-      console.log(`[Playback ${playbackId}] Already playing, stopping previous`);
-    }
-
-    // Normalize times so first note starts at 0
-    const minStartTime = sequence.notes.length > 0 ? Math.min(...sequence.notes.map((n) => n.startTime)) : 0;
-    const normalizedNotes = sequence.notes.map((note) => ({
-      ...note,
-      startTime: note.startTime - minStartTime,
-      endTime: note.endTime - minStartTime,
-    }));
-    const normalizedSequence = { ...sequence, notes: normalizedNotes, totalTime: sequence.totalTime - minStartTime };
-
-    console.log(
-      `[Playback ${playbackId}] Starting: ${normalizedSequence.notes.length} notes, ${normalizedSequence.totalTime.toFixed(3)}s`,
-    );
-    const playbackStartTime = Date.now();
-
-    // Clear previous playback state
-    shouldStopAiRef.current = true;
-    noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-    noteTimeoutsRef.current = [];
-    if (aiPlaybackTimeoutRef.current) {
-      clearTimeout(aiPlaybackTimeoutRef.current);
-      aiPlaybackTimeoutRef.current = null;
-    }
-    setActiveKeys(new Set());
-    isPlayingRef.current = true;
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    if (!isPlayingRef.current) {
-      console.log(`[Playback ${playbackId}] Cancelled during delay`);
-      return;
-    }
-
-    shouldStopAiRef.current = false;
-    setAppState("ai_playing");
-
-    normalizedSequence.notes.forEach((note) => {
-      const noteKey = midiToNoteName(note.pitch);
-      const frequency = midiToFrequency(note.pitch);
-      const duration = note.endTime - note.startTime;
-
-      const startTimeout = setTimeout(() => {
-        if (!shouldStopAiRef.current && pianoRef.current) {
-          pianoRef.current.playNote(frequency, duration);
-          setActiveKeys((prev) => new Set([...prev, noteKey]));
-        }
-      }, note.startTime * 1000);
-      noteTimeoutsRef.current.push(startTimeout);
-
-      const endTimeout = setTimeout(() => {
-        if (!shouldStopAiRef.current) {
-          setActiveKeys((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(noteKey);
-            return newSet;
-          });
-        }
-      }, note.endTime * 1000);
-      noteTimeoutsRef.current.push(endTimeout);
-    });
-
-    aiPlaybackTimeoutRef.current = setTimeout(() => {
-      if (!shouldStopAiRef.current) {
-        const elapsed = (Date.now() - playbackStartTime) / 1000;
-        console.log(`[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`);
-        setAppState("idle");
-        setActiveKeys(new Set());
-        setIsPlayingAll(false);
-        noteTimeoutsRef.current = [];
-        isPlayingRef.current = false;
+      if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
+        console.log(`[Playback ${playbackId}] Request invalidated`);
+        return;
       }
-    }, normalizedSequence.totalTime * 1000);
-  }, []);
+
+      if (isPlayingRef.current) {
+        console.log(`[Playback ${playbackId}] Already playing, stopping previous`);
+      }
+
+      // Normalize times so first note starts at 0
+      const minStartTime = sequence.notes.length > 0 ? Math.min(...sequence.notes.map((n) => n.startTime)) : 0;
+      const normalizedNotes = sequence.notes.map((note) => ({
+        ...note,
+        startTime: note.startTime - minStartTime,
+        endTime: note.endTime - minStartTime,
+      }));
+      const normalizedSequence = { ...sequence, notes: normalizedNotes, totalTime: sequence.totalTime - minStartTime };
+
+      console.log(
+        `[Playback ${playbackId}] Starting: ${normalizedSequence.notes.length} notes, ${normalizedSequence.totalTime.toFixed(3)}s`,
+      );
+      const playbackStartTime = Date.now();
+
+      // Clear previous playback state
+      shouldStopAiRef.current = true;
+      noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      noteTimeoutsRef.current = [];
+      if (aiPlaybackTimeoutRef.current) {
+        clearTimeout(aiPlaybackTimeoutRef.current);
+        aiPlaybackTimeoutRef.current = null;
+      }
+      setActiveKeys(new Set());
+      isPlayingRef.current = true;
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      if (!isPlayingRef.current) {
+        console.log(`[Playback ${playbackId}] Cancelled during delay`);
+        return;
+      }
+
+      shouldStopAiRef.current = false;
+      setAppState("ai_playing");
+
+      // Handle visual state updates
+      if (segments && segments.length > 0) {
+        // Schedule updates for each segment
+        segments.forEach((segment) => {
+          // Calculate start and end times relative to playback start
+          // segment.startTime is already relative to the start of the combined sequence
+          // But we need to account for minStartTime if the combined sequence was normalized?
+          // Actually, getCombinedSequence usually starts at 0.
+          // Let's assume segment times are aligned with sequence times.
+
+          // However, we normalized the playing sequence by subtracting minStartTime.
+          // If the combined sequence started at 0, minStartTime is 0.
+          // If combined sequence had a delay at start, we shifted it.
+          // We should shift segment times too.
+
+          const segmentStartTime = Math.max(0, segment.startTime - minStartTime);
+          const segmentEndTime = Math.max(0, segment.endTime - minStartTime);
+
+          const startTimeout = setTimeout(() => {
+            if (!shouldStopAiRef.current) {
+              setPlayingSequence(segment.originalSequence);
+            }
+          }, segmentStartTime * 1000);
+          noteTimeoutsRef.current.push(startTimeout);
+
+          // We don't strictly need to clear it at end time if the next one picks up,
+          // but clearing it handles gaps correctly.
+          const endTimeout = setTimeout(() => {
+            if (!shouldStopAiRef.current) {
+              setPlayingSequence((prev) => (prev === segment.originalSequence ? null : prev));
+            }
+          }, segmentEndTime * 1000);
+          noteTimeoutsRef.current.push(endTimeout);
+        });
+      } else {
+        // Single sequence playback - highlight immediately
+        setPlayingSequence(sequence);
+      }
+
+      normalizedSequence.notes.forEach((note) => {
+        const noteKey = midiToNoteName(note.pitch);
+        const frequency = midiToFrequency(note.pitch);
+        const duration = note.endTime - note.startTime;
+
+        const startTimeout = setTimeout(() => {
+          if (!shouldStopAiRef.current && pianoRef.current) {
+            pianoRef.current.playNote(frequency, duration);
+            setActiveKeys((prev) => new Set([...prev, noteKey]));
+          }
+        }, note.startTime * 1000);
+        noteTimeoutsRef.current.push(startTimeout);
+
+        const endTimeout = setTimeout(() => {
+          if (!shouldStopAiRef.current) {
+            setActiveKeys((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(noteKey);
+              return newSet;
+            });
+          }
+        }, note.endTime * 1000);
+        noteTimeoutsRef.current.push(endTimeout);
+      });
+
+      aiPlaybackTimeoutRef.current = setTimeout(() => {
+        if (!shouldStopAiRef.current) {
+          const elapsed = (Date.now() - playbackStartTime) / 1000;
+          console.log(`[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`);
+          setAppState("idle");
+          setPlayingSequence(null);
+          setActiveKeys(new Set());
+          setIsPlayingAll(false);
+          noteTimeoutsRef.current = [];
+          isPlayingRef.current = false;
+        }
+      }, normalizedSequence.totalTime * 1000);
+    },
+    [],
+  );
 
   function handleReplaySequence(sequence: NoteSequence) {
     if (isPlayingRef.current) return;
@@ -298,36 +366,25 @@ const Index = () => {
 
   // Handle playing all sequences
   const handlePlayAllSequences = useCallback(
-    (combinedSequence: NoteSequence) => {
+    (combinedSequence: NoteSequence, segments?: PlaybackSegment[]) => {
       if (isPlayingRef.current) return;
 
       setIsPlayingAll(true);
       pianoRef.current?.ensureAudioReady();
-      setTimeout(() => playSequence(combinedSequence, undefined, true), 50);
+      setTimeout(() => playSequence(combinedSequence, undefined, true, segments), 50);
     },
     [playSequence],
   );
 
-  // Compose mode hook - defined here since it needs handleReplaySequence and playSequence
-  const composeMode = ComposeMode({
-    bpm: metronomeBpm,
-    timeSignature: metronomeTimeSignature,
-    onReplay: handleReplaySequence,
-    onPlayAll: handlePlayAllSequences,
-    onStopPlayback: stopAiPlayback,
-    onClearHistory: () => toast({ title: "History cleared" }),
-    liveNotes,
-    isRecording: appState === "user_playing" && activeMode === "compose",
-    isPlayingAll,
-    initialHistory: savedComposeHistory,
-    onHistoryChange: setSavedComposeHistory,
-    onRequestImprov: (sequence) => handleComposeAiRequest(sequence, "magenta/music-rnn", "create an improv"),
-    onRequestVariations: (sequence) =>
-      handleComposeAiRequest(sequence, "magenta/music-vae", "create variations"),
-  });
+  // Handle edit entry request
+  const handleEditEntry = useCallback((index: number, _sequence: NoteSequence) => {
+    setEditingEntryIndex(index);
+    setEditDialogMode('edit');
+    setPartitionDialogOpen(true);
+  }, []);
 
-  // Improv mode hook - also uses track display now
-  const improvMode = ImprovMode({
+  // Play mode hook
+  const playMode = PlayMode({
     bpm: metronomeBpm,
     timeSignature: metronomeTimeSignature,
     onReplay: handleReplaySequence,
@@ -335,17 +392,18 @@ const Index = () => {
     onStopPlayback: stopAiPlayback,
     onClearHistory: () => toast({ title: "History cleared" }),
     liveNotes,
-    isRecording: appState === "user_playing" && activeMode === "improv",
+    isRecording: appState === "user_playing" && activeMode === "play",
     isPlayingAll,
-    initialHistory: savedImprovHistory,
-    onHistoryChange: setSavedImprovHistory,
-    onRequestImprov: (sequence) => handleImprovAiRequest(sequence, "magenta/music-rnn", "create an improv"),
-    onRequestVariations: (sequence) => handleImprovAiRequest(sequence, "magenta/music-vae", "create variations"),
+    initialHistory: savedPlayHistory,
+    onHistoryChange: setSavedPlayHistory,
+    onRequestImprov: (sequence) => handleManualAiRequest(sequence, "magenta/music-rnn", "create an improv"),
+    onRequestVariations: (sequence) => handleManualAiRequest(sequence, "magenta/music-vae", "create variations"),
+    playingSequence,
+    onEditEntry: handleEditEntry,
   });
 
   // Assign to refs for use in handleRecordingComplete
-  composeModeRef.current = composeMode;
-  improvModeRef.current = improvMode;
+  playModeRef.current = playMode;
 
   // Handle note events from Piano
   const handleNoteStart = useCallback(
@@ -360,7 +418,7 @@ const Index = () => {
         setAppState("user_playing");
       }
 
-      if (activeMode === "improv" || activeMode === "compose") {
+      if (activeMode === "play") {
         recordingManager.addNoteStart(noteKey, velocity);
       }
     },
@@ -369,14 +427,14 @@ const Index = () => {
 
   const handleNoteEnd = useCallback(
     (noteKey: string, frequency: number) => {
-      if (activeMode === "improv" || activeMode === "compose") {
+      if (activeMode === "play") {
         recordingManager.addNoteEnd(noteKey);
       }
     },
     [activeMode, recordingManager],
   );
 
-  // Improv AI handling
+  // Automatic AI reply handling
   async function handleImprovPlay(userSequence: NoteSequence) {
     const requestId = crypto.randomUUID();
     currentRequestIdRef.current = requestId;
@@ -427,7 +485,7 @@ const Index = () => {
         if (currentRequestIdRef.current !== requestId) return;
 
         // Add AI response as a separate entry
-        improvMode.addEntry(aiSequence, true);
+        playModeRef.current?.addEntry(aiSequence, true);
         recordingManager.hideProgress();
         await playSequence(aiSequence, requestId);
       } else {
@@ -448,8 +506,8 @@ const Index = () => {
     }
   }
 
-  // Compose mode AI helpers (Magenta only)
-  async function handleComposeAiRequest(
+  // Manual AI request helper (Magenta only for now as per previous implementation)
+  async function handleManualAiRequest(
     userSequence: NoteSequence,
     modelType: MagentaModelType,
     requestLabel: string,
@@ -479,57 +537,11 @@ const Index = () => {
 
       if (currentRequestIdRef.current !== requestId) return;
 
-      composeMode.addUserSequence(aiSequence, true);
+      playModeRef.current?.addEntry(aiSequence, true);
       setGenerationLabel(null);
       await playSequence(aiSequence, requestId);
     } catch (error) {
-      console.error(`[Compose AI] Failed to ${requestLabel}:`, error);
-      toast({
-        title: `Failed to ${requestLabel}`,
-        description: error instanceof Error ? error.message : "Unable to generate music",
-        variant: "destructive",
-      });
-      setAppState("idle");
-      setGenerationLabel(null);
-    }
-  }
-
-  // Improv mode AI helpers (Magenta only)
-  async function handleImprovAiRequest(
-    userSequence: NoteSequence,
-    modelType: MagentaModelType,
-    requestLabel: string,
-  ) {
-    const requestId = crypto.randomUUID();
-    currentRequestIdRef.current = requestId;
-    requestStartTimeRef.current = Date.now();
-
-    setAppState("waiting_for_ai");
-    setGenerationLabel(modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging...");
-
-    try {
-      const aiSequence = await magenta.continueSequence(
-        userSequence,
-        modelType,
-        metronomeBpm,
-        metronomeTimeSignature,
-      );
-
-      if (currentRequestIdRef.current !== requestId) return;
-      if (!aiSequence) throw new Error("Magenta failed to generate a response");
-
-      const elapsed = Date.now() - requestStartTimeRef.current;
-      if (elapsed < MIN_WAIT_TIME_MS) {
-        await new Promise((resolve) => setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed));
-      }
-
-      if (currentRequestIdRef.current !== requestId) return;
-
-      improvMode.addEntry(aiSequence, true);
-      setGenerationLabel(null);
-      await playSequence(aiSequence, requestId);
-    } catch (error) {
-      console.error(`[Improv AI] Failed to ${requestLabel}:`, error);
+      console.error(`[Manual AI] Failed to ${requestLabel}:`, error);
       toast({
         title: `Failed to ${requestLabel}`,
         description: error instanceof Error ? error.message : "Unable to generate music",
@@ -557,7 +569,7 @@ const Index = () => {
 
       if (data.sequence?.notes?.length > 0) {
         const aiSequence = data.sequence as NoteSequence;
-        playerMode.addSession(prompt, aiSequence);
+        learnMode.addSession(prompt, aiSequence);
         await playSequence(aiSequence, undefined, true);
         toast({ title: "AI composed something!", description: `Playing: "${prompt}"` });
       } else {
@@ -577,32 +589,30 @@ const Index = () => {
   }
 
   const clearCurrentHistory = () => {
-    if (activeMode === "compose") composeMode.clearHistory();
-    else if (activeMode === "improv") improvMode.clearHistory();
-    else if (activeMode === "player") playerMode.clearHistory();
+    if (activeMode === "play") playMode.clearHistory();
+    else if (activeMode === "learn") learnMode.clearHistory();
   };
 
   const hasHistory =
-    (activeMode === "compose" && composeMode.history.length > 0) ||
-    (activeMode === "improv" && improvMode.history.length > 0) ||
-    (activeMode === "player" && playerMode.history.length > 0);
+    (activeMode === "play" && playMode.history.length > 0) ||
+    (activeMode === "learn" && learnMode.history.length > 0);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
-      <div id="topContainer" className="w-full flex flex-col items-center justify-start p-4 gap-4 relative">
+      <div id="topContainer" className="w-full flex flex-col items-center justify-start relative">
         {/* AI Playing / Replay indicator */}
         <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
 
         {/* Generation toast (Free and Duo modes) */}
         {generationLabel && <TopToastLabel show={true} label={generationLabel} pulse />}
 
-        {/* Recording ending progress toast (compose mode) */}
-        {activeMode === "compose" && (
+        {/* Recording ending progress toast (play mode) */}
+        {activeMode === "play" && (
           <TopToastProgress show={recordingManager.showEndingProgress} progress={recordingManager.endingProgress} />
         )}
 
-        {/* AI preparing progress (improv mode) */}
-        {activeMode === "improv" && (
+        {/* AI preparing progress (play mode with autoreply) */}
+        {activeMode === "play" && isAutoreplyActive && (
           <TopToastProgress
             show={recordingManager.showProgress}
             progress={recordingManager.progress}
@@ -611,11 +621,11 @@ const Index = () => {
         )}
 
         {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
-        <div className="w-full flex items-center justify-between gap-4">
+        <div className="w-full flex items-center justify-between gap-4 p-2">
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
+                <Button variant="outline" size="sm">
                   <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
@@ -667,183 +677,217 @@ const Index = () => {
           onNoteEnd={handleNoteEnd}
         />
 
-        <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full">
-          <div className="w-full flex flex-wrap items-center justify-between gap-4 py-2">
-            <TabsList className="bg-muted">
-              <TabsTrigger value="compose">
-                <span>Free</span>
-              </TabsTrigger>
-              <TabsTrigger value="improv">
-                <span>Duo</span>
-              </TabsTrigger>
-              <TabsTrigger value="player">
-                <span>Teacher</span>
-              </TabsTrigger>
-            </TabsList>
+        <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full relative z-10">
+          <div className="flex items-center justify-between px-2 py-4">
+            <div className="flex items-center gap-6">
+              <TabsList>
+                <TabsTrigger value="play">Play</TabsTrigger>
+                <TabsTrigger value="learn">Learn</TabsTrigger>
+              </TabsList>
+              {activeMode === "play" && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="autoreply-mode"
+                    checked={isAutoreplyActive}
+                    onCheckedChange={setIsAutoreplyActive}
+                    disabled={appState !== "idle" && appState !== "user_playing"}
+                  />
+                  <Label htmlFor="autoreply-mode" className="cursor-pointer">
+                    Autoreply
+                  </Label>
+                </div>
+              )}
 
-            <div className="flex items-center gap-2">
-              {(activeMode === "improv" || activeMode === "player") && (
+              {activeMode === "learn" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 gap-2"
-                      disabled={appState === "ai_playing" || magenta.isLoading}
-                    >
-                      {magenta.isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                      <span className="hidden sm:inline">
-                        {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label ||
-                          AI_MODELS.magenta.find((m) => m.value === selectedModel)?.label ||
-                          "Model"}
-                      </span>
+                    <Button variant="outline" size="sm" className="justify-between">
+                      {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label || selectedModel}
                       <ChevronDown className="h-4 w-4 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Cloud Models (LLM)</DropdownMenuLabel>
+                  <DropdownMenuContent>
                     {AI_MODELS.llm.map((model) => (
-                      <DropdownMenuItem
-                        key={model.value}
-                        onClick={() => setSelectedModel(model.value)}
-                        className={selectedModel === model.value ? "bg-accent" : ""}
-                      >
+                      <DropdownMenuItem key={model.value} onClick={() => setSelectedModel(model.value)}>
                         {model.label}
                       </DropdownMenuItem>
                     ))}
-
-                    {activeMode === "improv" && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <span>Magenta (Local)</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            {AI_MODELS.magenta.map((model) => (
-                              <DropdownMenuItem
-                                key={model.value}
-                                onClick={() => setSelectedModel(model.value)}
-                                className={selectedModel === model.value ? "bg-accent" : ""}
-                              >
-                                <div className="flex flex-col">
-                                  <span>{model.label}</span>
-                                  <span className="text-xs text-muted-foreground">{model.description}</span>
-                                </div>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                      </>
-                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
 
-              {/* Play/Stop button for compose and improv modes */}
-              {(activeMode === "compose" || activeMode === "improv") &&
-                (() => {
-                  const mode = activeMode === "compose" ? composeMode : improvMode;
-                  return mode.isPlayingAll ? (
-                    <Button variant="outline" size="sm" onClick={stopAiPlayback} className="gap-2">
-                      <Square className="h-4 w-4" />
-                      <span className="hidden sm:inline">Stop</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={mode.handlePlayAll}
-                      disabled={!mode.hasValidSessions}
-                      className="gap-2 disabled:opacity-50"
-                    >
-                      <Play className="h-4 w-4" />
-                      <span className="hidden sm:inline">Play</span>
-                    </Button>
-                  );
-                })()}
-
-              {/* Copy menu for compose and improv modes */}
-              {(activeMode === "compose" || activeMode === "improv") && (
+              {activeMode === "play" && isAutoreplyActive && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="justify-between">
+                      {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label ||
+                        AI_MODELS.magenta.find((m) => m.value === selectedModel)?.label ||
+                        selectedModel}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-popover">
-                    <DropdownMenuItem onClick={() => setPartitionDialogOpen(true)}>
-                      <Music className="w-4 h-4 mr-2" />
-                      Add partition
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        const mode = activeMode === "compose" ? composeMode : improvMode;
-                        const seq = mode.getCombinedSequence();
-                        if (seq) {
-                          await navigator.clipboard.writeText(JSON.stringify(seq, null, 2));
-                          toast({ title: "Copied all as NoteSequence" });
-                        }
-                      }}
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy all as NoteSequence
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        const mode = activeMode === "compose" ? composeMode : improvMode;
-                        const seq = mode.getCombinedSequence();
-                        if (seq) {
-                          const abc = noteSequenceToAbc(seq);
-                          await navigator.clipboard.writeText(abc);
-                          toast({ title: "Copied all as ABC" });
-                        }
-                      }}
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy all as ABC
-                    </DropdownMenuItem>
+                  <DropdownMenuContent>
+                    {AI_MODELS.llm.map((model) => (
+                      <DropdownMenuItem key={model.value} onClick={() => setSelectedModel(model.value)}>
+                        {model.label}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Magenta</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {AI_MODELS.magenta.map((model) => (
+                          <DropdownMenuItem key={model.value} onClick={() => setSelectedModel(model.value)}>
+                            {model.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between">
+                {playMode.history.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => {
+                        if (playMode.isPlayingAll) {
+                          playMode.onStopPlayback();
+                        } else {
+                          const seq = playMode.getCombinedSequence();
+                          if (seq?.sequence) {
+                            playMode.onPlayAll(seq.sequence, seq.segments);
+                          }
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {playMode.isPlayingAll ? <Square className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
+                      {playMode.isPlayingAll ? "Stop" : "Play"}
+                    </Button>
+                    <div className="inline-flex -space-x-px">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPartitionDialogOpen(true)}
+                        className="rounded-r-none"
+                      >
+                        <FileMusic className="h-4 w-4" />Add notes
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="rounded-l-none">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              const seq = playMode.getCombinedSequence();
+                              if (seq?.sequence) {
+                                await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
+                                toast({ title: "Copied all as NoteSequence" });
+                              }
+                            }}
+                          >
+                            Copy all as NoteSequence
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              const seq = playMode.getCombinedSequence();
+                              if (seq?.sequence) {
+                                // ABC conversion logic would go here
+                                toast({ title: "ABC export not implemented yet" });
+                              }
+                            }}
+                          >
+                            Copy all as ABC
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <X className="h-4 w-4" /> Clear
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will clear your current composition history. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => playMode.clearHistory()}>Clear</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
+              </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearCurrentHistory}
-                disabled={!hasHistory}
-                className="gap-2 disabled:opacity-50"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Clear</span>
-              </Button>
             </div>
           </div>
+          <TabsContent value="play" className="mt-0">
+            {playMode.render()}
+          </TabsContent>
+
+          <TabsContent value="learn" className="mt-0">
+            <Card className="border-none shadow-none bg-transparent">
+              <CardContent className="p-0">
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500/20 ring-4 ring-blue-500/10" />
+                  <span className="text-sm text-muted-foreground">Ask AI for exercises or theory</span>
+                </div>
+                {learnMode.render()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          {/* The following lines seem to be a syntax error in the original document and are removed for correctness */}
+          {/*                    ))}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+    </>
+  )
+} */}
+
         </Tabs>
       </div>
-      <div id="bottomContainer" className="w-full">
-        {/* Mode-specific content */}
-        {activeMode === "player" && playerMode.renderInput()}
 
-        {/* Mode-specific history */}
-        {activeMode === "compose" && composeMode.renderHistory()}
-        {activeMode === "improv" && improvMode.renderHistory()}
-        {activeMode === "player" && playerMode.renderHistory()}
-      </div>
-
-      {/* Add Partition Dialog */}
+      {/* Add/Edit Partition Sheet */}
       <AddPartitionDialog
         open={partitionDialogOpen}
-        onOpenChange={setPartitionDialogOpen}
+        onOpenChange={(open) => {
+          setPartitionDialogOpen(open);
+          if (!open) {
+            setEditingEntryIndex(null);
+            setEditDialogMode('add');
+          }
+        }}
         onAdd={(sequence) => {
-          if (activeMode === "compose") {
-            composeMode.addUserSequence(sequence);
-          } else if (activeMode === "improv") {
-            improvMode.addEntry(sequence, false);
+          if (activeMode === "play") {
+            playModeRef.current?.addEntry(sequence, false);
+          }
+        }}
+        onEdit={(sequence) => {
+          if (activeMode === "play" && editingEntryIndex !== null) {
+            playModeRef.current?.updateEntry(editingEntryIndex, sequence);
           }
         }}
         bpm={metronomeBpm}
+        mode={editDialogMode}
+        initialAbc={
+          editDialogMode === 'edit' && editingEntryIndex !== null && playMode.history[editingEntryIndex]
+            ? noteSequenceToAbc(playMode.history[editingEntryIndex].sequence)
+            : undefined
+        }
+        instrument={pianoSoundType}
       />
     </div>
   );

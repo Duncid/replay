@@ -46,3 +46,9 @@ export const DEFAULT_QPM = 120;
 
 /** Default time signature if not specified */
 export const DEFAULT_TIME_SIGNATURE = { numerator: 4, denominator: 4 };
+
+export interface PlaybackSegment {
+  originalSequence: NoteSequence;
+  startTime: number;
+  endTime: number;
+}

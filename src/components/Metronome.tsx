@@ -185,7 +185,7 @@ export const Metronome = ({
       <div className="flex items-center gap-6">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
+            <Button variant="outline" size="sm">
               {bpm}, {timeSignature}
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>

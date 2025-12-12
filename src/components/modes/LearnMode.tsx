@@ -10,7 +10,7 @@ interface PlayerEntry {
   aiSequence: NoteSequence;
 }
 
-interface PlayerModeProps {
+interface LearnModeProps {
   isLoading: boolean;
   isPlaying: boolean;
   onSubmit: (prompt: string) => void;
@@ -18,7 +18,7 @@ interface PlayerModeProps {
   onClearHistory: () => void;
 }
 
-export function PlayerMode({ isLoading, isPlaying, onSubmit, onReplay, onClearHistory }: PlayerModeProps) {
+export function LearnMode({ isLoading, isPlaying, onSubmit, onReplay, onClearHistory }: LearnModeProps) {
   const [prompt, setPrompt] = useState("");
   const [history, setHistory] = useState<PlayerEntry[]>([]);
 
@@ -37,13 +37,9 @@ export function PlayerMode({ isLoading, isPlaying, onSubmit, onReplay, onClearHi
     onClearHistory();
   }, [onClearHistory]);
 
-  return {
-    prompt,
-    setPrompt,
-    history,
-    addSession,
-    clearHistory,
-    renderInput: () => (
+  const render = () => (
+    <div className="space-y-8">
+      {/* Input Section */}
       <div className="w-full max-w-2xl mx-auto space-y-3">
         <Textarea
           placeholder="Describe what you'd like the AI to play..."
@@ -61,13 +57,19 @@ export function PlayerMode({ isLoading, isPlaying, onSubmit, onReplay, onClearHi
           Generate Music
         </Button>
       </div>
-    ),
-    renderHistory: () => (
-      history.length > 0 && (
-        <div className="w-full max-w-4xl space-y-4">
+
+      {/* History Section */}
+      {history.length > 0 && (
+        <div className="w-full max-w-4xl mx-auto space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">History</h3>
+            <Button variant="ghost" size="sm" onClick={clearHistory}>
+              Clear
+            </Button>
+          </div>
           {history.map((entry, index) => (
-            <div key={index} className="space-y-3">
-              <div className="text-sm font-medium text-muted-foreground">
+            <div key={index} className="space-y-3 border border-border rounded-lg p-4 bg-card/50">
+              <div className="text-sm font-medium text-muted-foreground mb-2">
                 Request {index + 1}: "{entry.prompt}"
               </div>
               <SheetMusic
@@ -76,11 +78,19 @@ export function PlayerMode({ isLoading, isPlaying, onSubmit, onReplay, onClearHi
                 isUserNotes={false}
                 onReplay={() => onReplay(entry.aiSequence)}
               />
-              {index < history.length - 1 && <div className="border-t border-border mt-4" />}
             </div>
           ))}
         </div>
-      )
-    ),
+      )}
+    </div>
+  );
+
+  return {
+    prompt,
+    setPrompt,
+    history,
+    addSession,
+    clearHistory,
+    render,
   };
 }

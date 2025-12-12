@@ -1,6 +1,6 @@
 {
-  "name": "Improv Jam Bot",
-  "short_name": "Improv Jam",
+  "name": "Replay",
+  "short_name": "Replay",
   "description": "Interactive piano and music improvisation app",
   "start_url": "/",
   "display": "standalone",

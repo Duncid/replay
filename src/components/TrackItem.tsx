@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2 } from "lucide-react";
+import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2, Pencil, ArrowLeftToLine, ArrowRightToLine } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ interface TrackItemProps {
   isAiGenerated?: boolean;
   onRequestImprov?: (sequence: NoteSequence) => void;
   onRequestVariations?: (sequence: NoteSequence) => void;
+  onEdit?: (sequence: NoteSequence) => void;
 }
 
 export function TrackItem({
@@ -43,6 +45,7 @@ export function TrackItem({
   isAiGenerated = false,
   onRequestImprov,
   onRequestVariations,
+  onEdit,
 }: TrackItemProps) {
   const { toast } = useToast();
 
@@ -50,9 +53,9 @@ export function TrackItem({
 
   // AI-generated styling uses a blue shade
   const controlBarBg = isAiGenerated ? "bg-blue-500/20" : "bg-muted/50";
-  const controlBarBorder = isAiGenerated ? "border-blue-500/30" : "border-border/50";
+  const controlBarBorder = isAiGenerated ? "border-blue-500/30" : "border-border";
   const contentBg = isAiGenerated ? "bg-blue-500/5" : "bg-card/50";
-  const contentBorder = isAiGenerated ? "border-blue-500/30" : "border-border/50";
+  const contentBorder = isAiGenerated ? "border-blue-500/30" : "border-border";
 
   const handleCopySequence = async () => {
     await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
@@ -66,18 +69,18 @@ export function TrackItem({
   };
 
   return (
-    <div className="flex flex-col w-fit shrink-0">
+    <div className={cn("flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md", isPlaying && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background")}>
       {/* Control bar */}
-      <div className={`flex items-center gap-1 px-2 h-9 ${controlBarBg} rounded-t-md border border-b-0 ${controlBarBorder}`}>
+      <div className={cn("flex items-center gap-1 px-2 h-9 rounded-t-md border-b-0", controlBarBg, "border", controlBarBorder)}>
         {!isRecording && (
           <>
             {isPlaying ? (
               <Button size="icon" variant="ghost" onClick={onStop} className="h-6 w-6">
-                <Square className="w-3 h-3" />
+                <Square className="w-3 h-3" fill="currentColor" />
               </Button>
             ) : (
               <Button size="icon" variant="ghost" onClick={onPlay} className="h-6 w-6">
-                <Play className="w-3 h-3" />
+                <Play className="w-3 h-3" fill="currentColor" />
               </Button>
             )}
             <DropdownMenu>
@@ -88,12 +91,23 @@ export function TrackItem({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="bg-popover">
                 <DropdownMenuItem disabled={isFirst} onClick={onMergePrevious}>
+                  <ArrowLeftToLine className="w-3 h-3 mr-2" />
                   Merge with previous
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={isLast} onClick={onMergeNext}>
+                  <ArrowRightToLine className="w-3 h-3 mr-2" />
                   Merge with next
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {onEdit && (
+                  <>
+                    <DropdownMenuItem onClick={() => onEdit(sequence)}>
+                      <Pencil className="w-3 h-3 mr-2" />
+                      Edit ABC
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 {onRequestImprov && (
                   <DropdownMenuItem onClick={() => onRequestImprov(sequence)}>
                     <Wand2 className="w-3 h-3 mr-2" />
@@ -127,7 +141,7 @@ export function TrackItem({
         {isRecording && <span className="text-xs text-muted-foreground px-1">Recording...</span>}
       </div>
       {/* Sheet music - no title, no controls */}
-      <div className={`${contentBg} border ${contentBorder} rounded-b-md overflow-hidden`}>
+      <div className={cn(contentBg, "rounded-b-md overflow-hidden", "border", contentBorder)}>
         <SheetMusic sequence={sequence} compact noTitle noControls />
       </div>
     </div>

@@ -91,7 +91,7 @@ export function noteSequenceToAbc(sequence: NoteSequence, title?: string): strin
   
   // ABC header - title is optional
   let abc = `X:1\n${title ? `T:${title}\n` : ""}M:4/4\nL:1/4\nK:C\n`;
-  
+
   // Group notes by start time to identify chords
   const notesByStartTime = new Map<number, Note[]>();
   sequence.notes.forEach(note => {
@@ -157,12 +157,14 @@ function pitchToAbcNote(pitch: number): string {
 }
 
 function getDurationString(durationInBeats: number): string {
-  // Round to nearest standard duration
-  if (durationInBeats <= 0.375) return "/2"; // sixteenth/eighth
-  if (durationInBeats <= 0.75) return ""; // quarter (default)
-  if (durationInBeats <= 1.5) return "2"; // half
-  if (durationInBeats <= 3) return "4"; // whole
-  return "8"; // double whole
+  // Round to nearest standard duration using midpoint thresholds
+  // Support for common note durations: /4, /2, quarter, half, whole, double whole
+  if (durationInBeats < 0.375) return "/4"; // sixteenth note (0.25 beats)
+  if (durationInBeats < 0.75) return "/2"; // eighth note (0.5 beats)
+  if (durationInBeats < 1.5) return ""; // quarter note (1 beat, default in ABC)
+  if (durationInBeats < 3) return "2"; // half note (2 beats)
+  if (durationInBeats < 6) return "4"; // whole note (4 beats)
+  return "8"; // double whole (8 beats)
 }
 
 /**
@@ -209,11 +211,15 @@ export function abcToNoteSequence(abc: string, qpm: number = DEFAULT_QPM): NoteS
   const lines = abc.split("\n");
   const headerPattern = /^[A-Z]:/;
   const hasHeaders = lines.some(line => headerPattern.test(line.trim()));
-  
+
   let noteLine: string;
   if (hasHeaders) {
     // Filter out header lines and join the rest
-    const noteLines = lines.filter(line => !headerPattern.test(line.trim()));
+    const noteLines = lines.filter(line => {
+      const trimmed = line.trim();
+      // Keep non-empty lines that don't start with header pattern
+      return trimmed.length > 0 && !headerPattern.test(trimmed);
+    });
     noteLine = noteLines.join(' ');
   } else {
     // Treat entire input as notes
