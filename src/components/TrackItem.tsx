@@ -13,8 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface TrackItemProps {
+  id?: string;
   sequence: NoteSequence;
   onPlay?: () => void;
   onStop?: () => void;
@@ -32,6 +35,7 @@ interface TrackItemProps {
 }
 
 export function TrackItem({
+  id,
   sequence,
   onPlay,
   onStop,
@@ -49,6 +53,25 @@ export function TrackItem({
 }: TrackItemProps) {
   const { toast } = useToast();
 
+  // Only make sortable if id is provided (not for live recording)
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: id || "non-sortable",
+    disabled: !id || isRecording,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   if (!sequence || sequence.notes.length === 0) return null;
 
   // AI-generated styling uses a blue shade
@@ -56,6 +79,15 @@ export function TrackItem({
   const controlBarBorder = isAiGenerated ? "border-blue-500/30" : "border-border";
   const contentBg = isAiGenerated ? "bg-blue-500/5" : "bg-card/50";
   const contentBorder = isAiGenerated ? "border-blue-500/30" : "border-border";
+
+  // Prevent drag when clicking on buttons
+  const handleButtonMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleButtonPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+  };
 
   const handleCopySequence = async () => {
     await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
@@ -68,24 +100,63 @@ export function TrackItem({
     toast({ title: "Copied as ABC" });
   };
 
+  const containerRef = id ? setNodeRef : undefined;
+
   return (
-    <div className={cn("flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md", isPlaying && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background")}>
+    <div 
+      ref={containerRef}
+      style={style}
+      className={cn(
+        "flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md",
+        isPlaying && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background",
+        isDragging && "z-50"
+      )}
+    >
       {/* Control bar */}
-      <div className={cn("flex items-center gap-1 px-2 h-9 rounded-t-md border-b-0", controlBarBg, "border", controlBarBorder)}>
+      <div 
+        {...(id && !isRecording ? { ...attributes, ...listeners } : {})}
+        className={cn(
+          "flex items-center gap-1 px-2 h-9 rounded-t-md border-b-0 cursor-grab active:cursor-grabbing",
+          controlBarBg,
+          "border",
+          controlBarBorder,
+          !id && "cursor-default"
+        )}
+      >
         {!isRecording && (
           <>
             {isPlaying ? (
-              <Button size="icon" variant="ghost" onClick={onStop} className="h-6 w-6">
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                onClick={onStop} 
+                className="h-6 w-6 cursor-pointer"
+                onMouseDown={handleButtonMouseDown}
+                onPointerDown={handleButtonPointerDown}
+              >
                 <Square className="w-3 h-3" fill="currentColor" />
               </Button>
             ) : (
-              <Button size="icon" variant="ghost" onClick={onPlay} className="h-6 w-6">
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                onClick={onPlay} 
+                className="h-6 w-6 cursor-pointer"
+                onMouseDown={handleButtonMouseDown}
+                onPointerDown={handleButtonPointerDown}
+              >
                 <Play className="w-3 h-3" fill="currentColor" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-6 w-6">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-6 w-6 cursor-pointer"
+                  onMouseDown={handleButtonMouseDown}
+                  onPointerDown={handleButtonPointerDown}
+                >
                   <MoreHorizontal className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>

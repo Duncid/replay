@@ -4,9 +4,24 @@ import { beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { TrackContainer } from "@/components/TrackContainer";
 import { TrackItem } from "@/components/TrackItem";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from "@dnd-kit/core";
+import {
+    SortableContext,
+    arrayMove,
+    horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 // Unified entry model
 export interface PlayEntry {
+    id: string;
     sequence: NoteSequence;
     isAiGenerated: boolean;
 }
@@ -49,8 +64,24 @@ export function PlayMode({
     playingSequence,
     onEditEntry,
 }: PlayModeProps) {
-    const [history, setHistory] = useState<PlayEntry[]>(initialHistory);
-    const trackRefs = useRef<(HTMLDivElement | null)[]>([]);
+    // Add IDs to initial history if they don't have them
+    const [history, setHistory] = useState<PlayEntry[]>(() => {
+        return initialHistory.map((entry, index) => ({
+            ...entry,
+            id: entry.id || `track-${Date.now()}-${index}`,
+        }));
+    });
+    const trackRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    
+    // Configure drag and drop sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Require 8px of movement before drag starts
+            },
+        }),
+        useSensor(KeyboardSensor)
+    );
 
     const beatsPerMeasure = parseInt(timeSignature.split('/')[0]);
 
@@ -62,20 +93,27 @@ export function PlayMode({
     // Scroll to currently playing track during "Play All"
     useEffect(() => {
         if (isPlayingAll && playingSequence) {
-            const playingIndex = history.findIndex(entry => entry.sequence === playingSequence);
-            if (playingIndex !== -1 && trackRefs.current[playingIndex]) {
-                trackRefs.current[playingIndex]?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest',
-                    inline: 'center'
-                });
+            const playingEntry = history.find(entry => entry.sequence === playingSequence);
+            if (playingEntry) {
+                const ref = trackRefs.current.get(playingEntry.id);
+                if (ref) {
+                    ref.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                    });
+                }
             }
         }
     }, [playingSequence, isPlayingAll, history]);
 
     // Add a single entry (user or AI)
     const addEntry = useCallback((sequence: NoteSequence, isAiGenerated: boolean) => {
-        setHistory((prev) => [...prev, { sequence, isAiGenerated }]);
+        setHistory((prev) => [...prev, { 
+            id: `track-${Date.now()}-${Math.random()}`,
+            sequence, 
+            isAiGenerated 
+        }]);
     }, []);
 
     // Update an existing entry
@@ -126,8 +164,9 @@ export function PlayMode({
                 totalTime: timeOffset + source.sequence.totalTime,
             };
 
-            // Result inherits isAiGenerated from TARGET (merge AI into human = human)
+            // Result inherits isAiGenerated and id from TARGET (merge AI into human = human)
             const mergedEntry: PlayEntry = {
+                id: target.id,
                 sequence: mergedSequence,
                 isAiGenerated: target.isAiGenerated,
             };
@@ -233,52 +272,90 @@ export function PlayMode({
         setHistory((prev) => prev.filter((_, i) => i !== index));
     }, []);
 
-    const render = () => (
-        <>
-            <TrackContainer
-                scrollDependency={[history.length, liveNotes.length]}
-                autoScroll={!isPlayingAll && isRecording}
-            >
-                {/* All entries - each with full controls */}
-                {history.map((entry, index) => (
-                    <div key={index} ref={(el) => (trackRefs.current[index] = el)}>
+    // Handle drag end to reorder tracks
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            setHistory((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+    };
+
+    const render = () => {
+        const trackIds = history.map((entry) => entry.id);
+        
+        return (
+            <>
+                <TrackContainer
+                    scrollDependency={[history.length, liveNotes.length]}
+                    autoScroll={!isPlayingAll && isRecording}
+                >
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext
+                            items={trackIds}
+                            strategy={horizontalListSortingStrategy}
+                        >
+                            {/* All entries - each with full controls */}
+                            {history.map((entry, index) => (
+                                <div 
+                                    key={entry.id} 
+                                    ref={(el) => {
+                                        if (el) {
+                                            trackRefs.current.set(entry.id, el);
+                                        } else {
+                                            trackRefs.current.delete(entry.id);
+                                        }
+                                    }}
+                                >
+                                    <TrackItem
+                                        id={entry.id}
+                                        sequence={entry.sequence}
+                                        isPlaying={entry.sequence === playingSequence}
+                                        onPlay={() => onReplay(entry.sequence)}
+                                        isFirst={index === 0}
+                                        isLast={index === history.length - 1 && !isRecording}
+                                        isAiGenerated={entry.isAiGenerated}
+                                        onMergePrevious={index > 0 ? () => openMergeDialog(index, "previous") : undefined}
+                                        onMergeNext={index < history.length - 1 ? () => openMergeDialog(index, "next") : undefined}
+                                        onRemove={() => removeEntry(index)}
+                                        onRequestImprov={onRequestImprov}
+                                        onRequestVariations={onRequestVariations}
+                                        onEdit={onEditEntry ? (sequence) => onEditEntry(index, sequence) : undefined}
+                                    />
+                                </div>
+                            ))}
+                        </SortableContext>
+                    </DndContext>
+
+                    {/* Current recording (live) - rightmost */}
+                    {isRecording && liveSequence && (
                         <TrackItem
-                            sequence={entry.sequence}
-                            isPlaying={entry.sequence === playingSequence}
-                            onPlay={() => onReplay(entry.sequence)}
-                            isFirst={index === 0}
-                            isLast={index === history.length - 1 && !isRecording}
-                            isAiGenerated={entry.isAiGenerated}
-                            onMergePrevious={index > 0 ? () => openMergeDialog(index, "previous") : undefined}
-                            onMergeNext={index < history.length - 1 ? () => openMergeDialog(index, "next") : undefined}
-                            onRemove={() => removeEntry(index)}
-                            onRequestImprov={onRequestImprov}
-                            onRequestVariations={onRequestVariations}
-                            onEdit={onEditEntry ? (sequence) => onEditEntry(index, sequence) : undefined}
+                            sequence={liveSequence}
+                            isRecording={true}
                         />
-                    </div>
-                ))}
+                    )}
+                </TrackContainer>
 
-                {/* Current recording (live) - rightmost */}
-                {isRecording && liveSequence && (
-                    <TrackItem
-                        sequence={liveSequence}
-                        isRecording={true}
-                    />
-                )}
-            </TrackContainer>
-
-            {/* Merge dialog */}
-            <MergeSessionDialog
-                sessionIndex={mergeEntryIndex}
-                totalSessions={history.length}
-                onMerge={(direction, gapValue, gapUnit) => handleMergeConfirm(gapValue, gapUnit)}
-                open={mergeDialogOpen}
-                onOpenChange={setMergeDialogOpen}
-                initialDirection={mergeDirection}
-            />
-        </>
-    );
+                {/* Merge dialog */}
+                <MergeSessionDialog
+                    sessionIndex={mergeEntryIndex}
+                    totalSessions={history.length}
+                    onMerge={(direction, gapValue, gapUnit) => handleMergeConfirm(gapValue, gapUnit)}
+                    open={mergeDialogOpen}
+                    onOpenChange={setMergeDialogOpen}
+                    initialDirection={mergeDirection}
+                />
+            </>
+        );
+    };
 
     return {
         history,
