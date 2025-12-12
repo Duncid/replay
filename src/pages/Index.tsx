@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, FileMusic, X } from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
@@ -716,14 +717,48 @@ const Index = () => {
                       {playMode.isPlayingAll ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                       {playMode.isPlayingAll ? "Stop" : "Play"}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPartitionDialogOpen(true)}
-                      className="h-8 gap-2"
-                    >
-                      <FileMusic className="h-4 w-4" /> Add notes
-                    </Button>
+                    <div className="inline-flex -space-x-px">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPartitionDialogOpen(true)}
+                        className="h-8 gap-2 rounded-r-none"
+                      >
+                        <FileMusic className="h-4 w-4" />Add notes
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 gap-2 rounded-l-none">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              const seq = playMode.getCombinedSequence();
+                              if (seq?.sequence) {
+                                await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
+                                toast({ title: "Copied all as NoteSequence" });
+                              }
+                            }}
+                          >
+                            Copy all as NoteSequence
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              const seq = playMode.getCombinedSequence();
+                              if (seq?.sequence) {
+                                // ABC conversion logic would go here
+                                toast({ title: "ABC export not implemented yet" });
+                              }
+                            }}
+                          >
+                            Copy all as ABC
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" className="h-8 gap-2">
@@ -743,38 +778,6 @@ const Index = () => {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 gap-2">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const seq = playMode.getCombinedSequence();
-                            if (seq?.sequence) {
-                              await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
-                              toast({ title: "Copied all as NoteSequence" });
-                            }
-                          }}
-                        >
-                          Copy all as NoteSequence
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const seq = playMode.getCombinedSequence();
-                            if (seq?.sequence) {
-                              // ABC conversion logic would go here
-                              toast({ title: "ABC export not implemented yet" });
-                            }
-                          }}
-                        >
-                          Copy all as ABC
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
                 )}
               </div>
