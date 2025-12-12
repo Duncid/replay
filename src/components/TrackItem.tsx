@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2, Pencil } from "lucide-react";
+import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2, Pencil, ArrowLeftToLine, ArrowRightToLine } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
@@ -91,9 +91,11 @@ export function TrackItem({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="bg-popover">
                 <DropdownMenuItem disabled={isFirst} onClick={onMergePrevious}>
+                  <ArrowLeftToLine className="w-3 h-3 mr-2" />
                   Merge with previous
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={isLast} onClick={onMergeNext}>
+                  <ArrowRightToLine className="w-3 h-3 mr-2" />
                   Merge with next
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
