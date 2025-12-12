@@ -34,7 +34,7 @@ export const MidiConnector = ({
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           <span className="text-foreground font-medium">{deviceName}</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={onDisconnect} className="gap-2 h-8">
+        <Button variant="ghost" size="sm" onClick={onDisconnect} className="gap-2">
           <Unplug className="w-4 h-4" />
           Disconnect
         </Button>
@@ -44,7 +44,7 @@ export const MidiConnector = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <Button variant="outline" size="sm" onClick={onConnect} className="gap-2 h-8">
+      <Button variant="outline" size="sm" onClick={onConnect}>
         <KeyboardMusic className="w-4 h-4" />
         Connect MIDI
       </Button>

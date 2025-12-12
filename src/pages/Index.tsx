@@ -24,6 +24,7 @@ import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import {
   midiToFrequency,
   midiToNoteName,
+  noteSequenceToAbc,
 } from "@/utils/noteSequenceUtils";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
@@ -78,6 +79,8 @@ const Index = () => {
   const [liveNotes, setLiveNotes] = useState<Note[]>([]);
   const [generationLabel, setGenerationLabel] = useState<string | null>(null);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
+  const [editingEntryIndex, setEditingEntryIndex] = useState<number | null>(null);
+  const [editDialogMode, setEditDialogMode] = useState<'add' | 'edit'>('add');
 
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
@@ -368,6 +371,13 @@ const Index = () => {
     [playSequence],
   );
 
+  // Handle edit entry request
+  const handleEditEntry = useCallback((index: number, _sequence: NoteSequence) => {
+    setEditingEntryIndex(index);
+    setEditDialogMode('edit');
+    setPartitionDialogOpen(true);
+  }, []);
+
   // Play mode hook
   const playMode = PlayMode({
     bpm: metronomeBpm,
@@ -384,6 +394,7 @@ const Index = () => {
     onRequestImprov: (sequence) => handleManualAiRequest(sequence, "magenta/music-rnn", "create an improv"),
     onRequestVariations: (sequence) => handleManualAiRequest(sequence, "magenta/music-vae", "create variations"),
     playingSequence,
+    onEditEntry: handleEditEntry,
   });
 
   // Assign to refs for use in handleRecordingComplete
@@ -609,7 +620,7 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-3 gap-2">
+                <Button variant="outline" size="sm">
                   <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
@@ -684,7 +695,7 @@ const Index = () => {
 
               {(activeMode === "learn" || (activeMode === "play" && isAutoreplyActive)) && (
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger className="w-[120px] h-8">
+                  <SelectTrigger className="w-[120px]">
                     <SelectValue placeholder="Select Model" />
                   </SelectTrigger>
                   <SelectContent>
@@ -711,10 +722,10 @@ const Index = () => {
                           }
                         }
                       }}
-                      className="h-8 gap-2"
                       variant="outline"
+                      size="sm"
                     >
-                      {playMode.isPlayingAll ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      {playMode.isPlayingAll ? <Square className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
                       {playMode.isPlayingAll ? "Stop" : "Play"}
                     </Button>
                     <div className="inline-flex -space-x-px">
@@ -722,13 +733,13 @@ const Index = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => setPartitionDialogOpen(true)}
-                        className="h-8 gap-2 rounded-r-none"
+                        className="rounded-r-none"
                       >
                         <FileMusic className="h-4 w-4" />Add notes
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-8 gap-2 rounded-l-none">
+                          <Button variant="outline" size="sm" className="rounded-l-none">
                             <MoreHorizontal className="h-4 w-4" />
                             <span className="sr-only">Actions</span>
                           </Button>
@@ -761,7 +772,7 @@ const Index = () => {
                     </div>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 gap-2">
+                        <Button variant="outline" size="sm">
                           <X className="h-4 w-4" /> Clear
                         </Button>
                       </AlertDialogTrigger>
@@ -814,16 +825,34 @@ const Index = () => {
         </Tabs>
       </div>
 
-      {/* Add Partition Dialog */}
+      {/* Add/Edit Partition Sheet */}
       <AddPartitionDialog
         open={partitionDialogOpen}
-        onOpenChange={setPartitionDialogOpen}
+        onOpenChange={(open) => {
+          setPartitionDialogOpen(open);
+          if (!open) {
+            setEditingEntryIndex(null);
+            setEditDialogMode('add');
+          }
+        }}
         onAdd={(sequence) => {
           if (activeMode === "play") {
             playModeRef.current?.addEntry(sequence, false);
           }
         }}
+        onEdit={(sequence) => {
+          if (activeMode === "play" && editingEntryIndex !== null) {
+            playModeRef.current?.updateEntry(editingEntryIndex, sequence);
+          }
+        }}
         bpm={metronomeBpm}
+        mode={editDialogMode}
+        initialAbc={
+          editDialogMode === 'edit' && editingEntryIndex !== null && playMode.history[editingEntryIndex]
+            ? noteSequenceToAbc(playMode.history[editingEntryIndex].sequence)
+            : undefined
+        }
+        instrument={pianoSoundType}
       />
     </div>
   );

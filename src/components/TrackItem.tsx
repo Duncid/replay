@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2 } from "lucide-react";
+import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2, Pencil } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
@@ -27,6 +27,7 @@ interface TrackItemProps {
   isAiGenerated?: boolean;
   onRequestImprov?: (sequence: NoteSequence) => void;
   onRequestVariations?: (sequence: NoteSequence) => void;
+  onEdit?: (sequence: NoteSequence) => void;
 }
 
 export function TrackItem({
@@ -43,6 +44,7 @@ export function TrackItem({
   isAiGenerated = false,
   onRequestImprov,
   onRequestVariations,
+  onEdit,
 }: TrackItemProps) {
   const { toast } = useToast();
 
@@ -73,11 +75,11 @@ export function TrackItem({
           <>
             {isPlaying ? (
               <Button size="icon" variant="ghost" onClick={onStop} className="h-6 w-6">
-                <Square className="w-3 h-3" />
+                <Square className="w-3 h-3" fill="currentColor" />
               </Button>
             ) : (
               <Button size="icon" variant="ghost" onClick={onPlay} className="h-6 w-6">
-                <Play className="w-3 h-3" />
+                <Play className="w-3 h-3" fill="currentColor" />
               </Button>
             )}
             <DropdownMenu>
@@ -94,6 +96,15 @@ export function TrackItem({
                   Merge with next
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {onEdit && (
+                  <>
+                    <DropdownMenuItem onClick={() => onEdit(sequence)}>
+                      <Pencil className="w-3 h-3 mr-2" />
+                      Edit ABC
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 {onRequestImprov && (
                   <DropdownMenuItem onClick={() => onRequestImprov(sequence)}>
                     <Wand2 className="w-3 h-3 mr-2" />

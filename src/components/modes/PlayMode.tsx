@@ -29,6 +29,7 @@ interface PlayModeProps {
     onRequestImprov?: (sequence: NoteSequence) => void;
     onRequestVariations?: (sequence: NoteSequence) => void;
     playingSequence?: NoteSequence | null;
+    onEditEntry?: (index: number, sequence: NoteSequence) => void;
 }
 
 export function PlayMode({
@@ -46,6 +47,7 @@ export function PlayMode({
     onRequestImprov,
     onRequestVariations,
     playingSequence,
+    onEditEntry,
 }: PlayModeProps) {
     const [history, setHistory] = useState<PlayEntry[]>(initialHistory);
 
@@ -59,6 +61,17 @@ export function PlayMode({
     // Add a single entry (user or AI)
     const addEntry = useCallback((sequence: NoteSequence, isAiGenerated: boolean) => {
         setHistory((prev) => [...prev, { sequence, isAiGenerated }]);
+    }, []);
+
+    // Update an existing entry
+    const updateEntry = useCallback((index: number, sequence: NoteSequence) => {
+        setHistory((prev) => {
+            const newHistory = [...prev];
+            if (index >= 0 && index < newHistory.length) {
+                newHistory[index] = { ...newHistory[index], sequence };
+            }
+            return newHistory;
+        });
     }, []);
 
     const clearHistory = useCallback(() => {
@@ -223,6 +236,7 @@ export function PlayMode({
                         onRemove={() => removeEntry(index)}
                         onRequestImprov={onRequestImprov}
                         onRequestVariations={onRequestVariations}
+                        onEdit={onEditEntry ? (sequence) => onEditEntry(index, sequence) : undefined}
                     />
                 ))}
 
@@ -250,6 +264,7 @@ export function PlayMode({
     return {
         history,
         addEntry,
+        updateEntry,
         clearHistory,
         hasValidSessions,
         handlePlayAll,

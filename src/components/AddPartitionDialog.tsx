@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { abcToNoteSequence, midiToFrequency } from "@/utils/noteSequenceUtils";
 import { NoteSequence } from "@/types/noteSequence";
@@ -14,14 +14,36 @@ interface AddPartitionDialogProps {
   onOpenChange: (open: boolean) => void;
   onAdd: (sequence: NoteSequence) => void;
   bpm: number;
+  initialAbc?: string;
+  mode?: 'add' | 'edit';
+  onEdit?: (sequence: NoteSequence) => void;
+  instrument?: string;
 }
 
-export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartitionDialogProps) {
-  const [abcText, setAbcText] = useState("");
+// Helper function to strip ABC headers and return only notes
+function stripAbcHeaders(abc: string): string {
+  const lines = abc.split("\n");
+  const headerPattern = /^[A-Z]:/;
+  const noteLines = lines.filter(line => {
+    const trimmed = line.trim();
+    return trimmed.length > 0 && !headerPattern.test(trimmed);
+  });
+  return noteLines.join("\n");
+}
+
+export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc, mode = 'add', onEdit, instrument = 'classic' }: AddPartitionDialogProps) {
+  const [abcText, setAbcText] = useState(initialAbc ? stripAbcHeaders(initialAbc) : "");
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const { toast } = useToast();
-  const { ensureAudioReady, playNote } = usePianoAudio();
+  const { ensureAudioReady, playNote } = usePianoAudio(instrument as any);
+
+  // Update abcText when dialog opens with initialAbc (edit mode)
+  useEffect(() => {
+    if (open && initialAbc) {
+      setAbcText(stripAbcHeaders(initialAbc));
+    }
+  }, [open, initialAbc]);
 
   const previewSequence = useMemo(() => {
     if (!abcText.trim()) return null;
@@ -76,7 +98,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartit
     setIsPlaying(false);
   }, []);
 
-  const handleAdd = () => {
+  const handleSubmit = () => {
     if (!abcText.trim()) {
       toast({ title: "Please enter ABC notation", variant: "destructive" });
       return;
@@ -88,63 +110,79 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm }: AddPartit
         toast({ title: "No valid notes found in ABC notation", variant: "destructive" });
         return;
       }
-      onAdd(sequence);
+
+      if (mode === 'edit' && onEdit) {
+        onEdit(sequence);
+        toast({ title: "Recording updated" });
+      } else {
+        onAdd(sequence);
+        toast({ title: "Partition added" });
+      }
+
       setAbcText("");
       onOpenChange(false);
-      toast({ title: "Partition added" });
     } catch (error) {
-      toast({ title: "Invalid ABC notation", variant: "destructive" });
+      console.error("ABC parsing error:", error);
+      toast({
+        title: "Invalid ABC notation",
+        description: error instanceof Error ? error.message : "Unable to parse ABC",
+        variant: "destructive"
+      });
     }
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
+    if (!newOpen && mode === 'add') {
       setAbcText("");
     }
     onOpenChange(newOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">Add Partition</DialogTitle>
-        </DialogHeader>
-        {previewSequence && (
-          <>
-            <Button variant="outline" size="icon" className="gap-2" onClick={isPlaying ? handleStop : handlePlay}>
-              {isPlaying ? (
-                <>
-                  <Square className="h-4 w-4" />
-                  Stop
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Play
-                </>
-              )}
-            </Button>
-            <div className="flex items-start gap-2 border border-border rounded-md p-2 bg-muted/30">
-              <div className="overflow-x-auto flex-1">
-                <SheetMusic sequence={previewSequence} compact noControls noTitle />
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-xl flex flex-col">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            {mode === 'edit' ? 'Edit Recording' : 'Add Partition'}
+          </SheetTitle>
+        </SheetHeader>
+        <div className="flex-1 flex flex-col space-y-4 py-4 overflow-y-auto min-h-0">
+          {previewSequence && (
+            <div className="space-y-2 flex-shrink-0">
+              <Button variant="outline" className="gap-2" onClick={isPlaying ? handleStop : handlePlay}>
+                {isPlaying ? (
+                  <>
+                    <Square className="h-4 w-4" fill="currentColor" />
+                    Stop
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" fill="currentColor" />
+                    Play
+                  </>
+                )}
+              </Button>
+              <div className="flex items-start gap-2">
+                <div className="overflow-x-auto flex-1">
+                  <SheetMusic sequence={previewSequence} compact noControls noTitle />
+                </div>
               </div>
             </div>
-          </>
-        )}
-        <Textarea
-          placeholder="E E G E | C C C/2 D/2 E/2 z/ | E E G E | A,2"
-          value={abcText}
-          onChange={(e) => setAbcText(e.target.value)}
-          className="min-h-[100px] font-mono text-sm"
-        />
-        <DialogFooter>
+          )}
+          <Textarea
+            placeholder="E E G E | C C C/2 D/2 E/2 z/ | E E G E | A,2"
+            value={abcText}
+            onChange={(e) => setAbcText(e.target.value)}
+            className="flex-1 min-h-[200px] font-mono text-sm border-none border-top border-bottom rounded-none"
+          />
+        </div>
+        <SheetFooter className="gap-2 flex-shrink-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleAdd}>Add</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <Button onClick={handleSubmit}>{mode === 'edit' ? 'Save' : 'Add'}</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -84,7 +84,7 @@ export const SheetMusic = ({
           <div className="flex items-center gap-1 shrink-0">
             {onReplay && (
               <Button variant="ghost" size="sm" onClick={onReplay} className="h-7 w-7 p-0">
-                <Play className="w-3.5 h-3.5" />
+                <Play className="w-3.5 h-3.5" fill="currentColor" />
               </Button>
             )}
             <DropdownMenu>
@@ -114,14 +114,14 @@ export const SheetMusic = ({
         </h3>
         <div className="flex items-center gap-1">
           {onReplay && (
-            <Button variant="outline" size="sm" onClick={onReplay} className="gap-2">
-              <Play className="w-3 h-3" />
+            <Button variant="outline" size="sm" onClick={onReplay}>
+              <Play className="w-4 h-4" fill="currentColor" />
               Replay
             </Button>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm">
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
