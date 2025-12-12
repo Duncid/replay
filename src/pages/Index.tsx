@@ -18,17 +18,29 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, FileMusic, Save, FilePlus, Download } from "lucide-react";
+import {
+  Trash2,
+  Brain,
+  ChevronDown,
+  Loader2,
+  PencilLine,
+  Play,
+  Square,
+  Sparkles,
+  MoreHorizontal,
+  Copy,
+  Music,
+  FileMusic,
+  Save,
+  FilePlus,
+  Download,
+} from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
-import {
-  midiToFrequency,
-  midiToNoteName,
-  noteSequenceToAbc,
-} from "@/utils/noteSequenceUtils";
+import { midiToFrequency, midiToNoteName, noteSequenceToAbc } from "@/utils/noteSequenceUtils";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
@@ -37,7 +49,15 @@ import { PlayMode, PlayEntry } from "@/components/modes/PlayMode";
 import { LearnMode } from "@/components/modes/LearnMode";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -56,7 +76,6 @@ import {
 import { useCompositions } from "@/hooks/useCompositions";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { CompositionSubmenu } from "@/components/CompositionSubmenu";
-
 
 const AI_MODELS = {
   llm: [
@@ -86,9 +105,9 @@ const Index = () => {
   const [generationLabel, setGenerationLabel] = useState<string | null>(null);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
   const [editingEntryIndex, setEditingEntryIndex] = useState<number | null>(null);
-  const [editDialogMode, setEditDialogMode] = useState<'add' | 'edit'>('add');
+  const [editDialogMode, setEditDialogMode] = useState<"add" | "edit">("add");
   const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [saveModalMode, setSaveModalMode] = useState<'save' | 'saveAs'>('save');
+  const [saveModalMode, setSaveModalMode] = useState<"save" | "saveAs">("save");
 
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
@@ -101,19 +120,27 @@ const Index = () => {
 
   const { toast } = useToast();
   const magenta = useMagenta();
-  
+
   // Compositions hook for cloud save/load
-  const handleCompositionLoad = useCallback((composition: { data: PlayEntry[]; instrument: string | null; bpm: number | null; time_signature: string | null }) => {
-    setSavedPlayHistory(composition.data);
-    if (composition.instrument) setPianoSoundType(composition.instrument as PianoSoundType);
-    if (composition.bpm) setMetronomeBpm(composition.bpm);
-    if (composition.time_signature) setMetronomeTimeSignature(composition.time_signature);
-  }, [setSavedPlayHistory, setPianoSoundType, setMetronomeBpm, setMetronomeTimeSignature]);
-  
+  const handleCompositionLoad = useCallback(
+    (composition: {
+      data: PlayEntry[];
+      instrument: string | null;
+      bpm: number | null;
+      time_signature: string | null;
+    }) => {
+      setSavedPlayHistory(composition.data);
+      if (composition.instrument) setPianoSoundType(composition.instrument as PianoSoundType);
+      if (composition.bpm) setMetronomeBpm(composition.bpm);
+      if (composition.time_signature) setMetronomeTimeSignature(composition.time_signature);
+    },
+    [setSavedPlayHistory, setPianoSoundType, setMetronomeBpm, setMetronomeTimeSignature],
+  );
+
   const compositions = useCompositions({
     onLoad: handleCompositionLoad,
   });
-  
+
   const pianoRef = useRef<PianoHandle>(null);
   const currentRequestIdRef = useRef<string | null>(null);
   const requestStartTimeRef = useRef<number>(0);
@@ -230,12 +257,7 @@ const Index = () => {
   }, []);
 
   const playSequence = useCallback(
-    async (
-      sequence: NoteSequence,
-      requestId?: string,
-      isReplay: boolean = false,
-      segments?: PlaybackSegment[],
-    ) => {
+    async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false, segments?: PlaybackSegment[]) => {
       setIsReplaying(isReplay);
       const playbackId = Math.random().toString(36).substring(7);
 
@@ -397,7 +419,7 @@ const Index = () => {
   // Handle edit entry request
   const handleEditEntry = useCallback((index: number, _sequence: NoteSequence) => {
     setEditingEntryIndex(index);
-    setEditDialogMode('edit');
+    setEditDialogMode("edit");
     setPartitionDialogOpen(true);
   }, []);
 
@@ -525,11 +547,7 @@ const Index = () => {
   }
 
   // Manual AI request helper (Magenta only for now as per previous implementation)
-  async function handleManualAiRequest(
-    userSequence: NoteSequence,
-    modelType: MagentaModelType,
-    requestLabel: string,
-  ) {
+  async function handleManualAiRequest(userSequence: NoteSequence, modelType: MagentaModelType, requestLabel: string) {
     const requestId = crypto.randomUUID();
     currentRequestIdRef.current = requestId;
     requestStartTimeRef.current = Date.now();
@@ -538,12 +556,7 @@ const Index = () => {
     setGenerationLabel(modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging...");
 
     try {
-      const aiSequence = await magenta.continueSequence(
-        userSequence,
-        modelType,
-        metronomeBpm,
-        metronomeTimeSignature,
-      );
+      const aiSequence = await magenta.continueSequence(userSequence, modelType, metronomeBpm, metronomeTimeSignature);
 
       if (currentRequestIdRef.current !== requestId) return;
       if (!aiSequence) throw new Error("Magenta failed to generate a response");
@@ -612,8 +625,7 @@ const Index = () => {
   };
 
   const hasHistory =
-    (activeMode === "play" && playMode.history.length > 0) ||
-    (activeMode === "learn" && learnMode.history.length > 0);
+    (activeMode === "play" && playMode.history.length > 0) || (activeMode === "learn" && learnMode.history.length > 0);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
@@ -695,7 +707,11 @@ const Index = () => {
           onNoteEnd={handleNoteEnd}
         />
 
-        <Tabs value={activeMode} onValueChange={(v) => handleModeChange(v as ActiveMode)} className="w-full relative z-10">
+        <Tabs
+          value={activeMode}
+          onValueChange={(v) => handleModeChange(v as ActiveMode)}
+          className="w-full relative z-10"
+        >
           <div className="flex items-center justify-between px-2 py-4">
             <div className="flex items-center gap-6">
               <TabsList>
@@ -781,20 +797,21 @@ const Index = () => {
                   variant="outline"
                   size="sm"
                 >
-                  {playMode.isPlayingAll ? <Square className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
+                  {playMode.isPlayingAll ? (
+                    <Square className="h-4 w-4" fill="currentColor" />
+                  ) : (
+                    <Play className="h-4 w-4" fill="currentColor" />
+                  )}
                   {playMode.isPlayingAll ? "Stop" : "Play"}
                 </Button>
               )}
-              
+
               {/* Add notes - standalone */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPartitionDialogOpen(true)}
-              >
-                <FileMusic className="h-4 w-4" />Add notes
+              <Button variant="outline" size="sm" onClick={() => setPartitionDialogOpen(true)}>
+                <PencilLine className="h-4 w-4" />
+                Add notes
               </Button>
-              
+
               {/* Unified "..." menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -806,10 +823,7 @@ const Index = () => {
                   {/* New */}
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <DropdownMenuItem 
-                        onSelect={(e) => e.preventDefault()}
-                        disabled={playMode.history.length === 0}
-                      >
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={playMode.history.length === 0}>
                         <FilePlus className="h-4 w-4 mr-2" />
                         New
                       </DropdownMenuItem>
@@ -823,16 +837,18 @@ const Index = () => {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => {
-                          playMode.clearHistory();
-                          compositions.clearCurrentComposition();
-                        }}>
+                        <AlertDialogAction
+                          onClick={() => {
+                            playMode.clearHistory();
+                            compositions.clearCurrentComposition();
+                          }}
+                        >
                           New
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  
+
                   {/* Save */}
                   <DropdownMenuItem
                     onClick={() => {
@@ -842,10 +858,10 @@ const Index = () => {
                           playMode.history,
                           pianoSoundType,
                           metronomeBpm,
-                          metronomeTimeSignature
+                          metronomeTimeSignature,
                         );
                       } else if (playMode.history.length > 0) {
-                        setSaveModalMode('save');
+                        setSaveModalMode("save");
                         setSaveModalOpen(true);
                       }
                     }}
@@ -854,11 +870,11 @@ const Index = () => {
                     <Save className="h-4 w-4 mr-2" />
                     Save
                   </DropdownMenuItem>
-                  
+
                   {/* Save as */}
                   <DropdownMenuItem
                     onClick={() => {
-                      setSaveModalMode('saveAs');
+                      setSaveModalMode("saveAs");
                       setSaveModalOpen(true);
                     }}
                     disabled={playMode.history.length === 0}
@@ -866,9 +882,9 @@ const Index = () => {
                     <Save className="h-4 w-4 mr-2" />
                     Save as...
                   </DropdownMenuItem>
-                  
+
                   <DropdownMenuSeparator />
-                  
+
                   {/* Export submenu */}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger disabled={playMode.history.length === 0}>
@@ -899,9 +915,9 @@ const Index = () => {
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
-                  
+
                   <DropdownMenuSeparator />
-                  
+
                   {/* Open submenu */}
                   <CompositionSubmenu
                     compositions={compositions.compositions}
@@ -911,14 +927,14 @@ const Index = () => {
                     }}
                     isLoading={compositions.isLoading}
                   />
-                  
+
                   {/* Delete - only when composition loaded */}
                   {compositions.currentComposition && (
                     <>
                       <DropdownMenuSeparator />
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onSelect={(e) => e.preventDefault()}
                             className="text-destructive focus:text-destructive"
                           >
@@ -930,7 +946,8 @@ const Index = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete composition?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete "{compositions.currentComposition?.title}" from the cloud. This action cannot be undone.
+                              This will permanently delete "{compositions.currentComposition?.title}" from the cloud.
+                              This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -975,7 +992,6 @@ const Index = () => {
     </>
   )
 } */}
-
         </Tabs>
       </div>
 
@@ -986,7 +1002,7 @@ const Index = () => {
           setPartitionDialogOpen(open);
           if (!open) {
             setEditingEntryIndex(null);
-            setEditDialogMode('add');
+            setEditDialogMode("add");
           }
         }}
         onAdd={(sequence) => {
@@ -1002,25 +1018,25 @@ const Index = () => {
         bpm={metronomeBpm}
         mode={editDialogMode}
         initialAbc={
-          editDialogMode === 'edit' && editingEntryIndex !== null && playMode.history[editingEntryIndex]
+          editDialogMode === "edit" && editingEntryIndex !== null && playMode.history[editingEntryIndex]
             ? noteSequenceToAbc(playMode.history[editingEntryIndex].sequence)
             : undefined
         }
         instrument={pianoSoundType}
       />
-      
+
       {/* Save Composition Modal */}
       <SaveCompositionModal
         open={saveModalOpen}
         onOpenChange={setSaveModalOpen}
         onSave={async (title) => {
-          if (saveModalMode === 'saveAs' || !compositions.currentComposition) {
+          if (saveModalMode === "saveAs" || !compositions.currentComposition) {
             await compositions.saveComposition(
               title,
               playMode.history,
               pianoSoundType,
               metronomeBpm,
-              metronomeTimeSignature
+              metronomeTimeSignature,
             );
           }
           setSaveModalOpen(false);
