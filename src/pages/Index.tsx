@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, FileMusic, X } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, FileMusic, X, Save, FolderOpen } from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
@@ -53,6 +53,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useCompositions } from "@/hooks/useCompositions";
+import { SaveCompositionModal } from "@/components/SaveCompositionModal";
+import { CompositionDropdown } from "@/components/CompositionDropdown";
 
 
 const AI_MODELS = {
@@ -84,6 +87,8 @@ const Index = () => {
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
   const [editingEntryIndex, setEditingEntryIndex] = useState<number | null>(null);
   const [editDialogMode, setEditDialogMode] = useState<'add' | 'edit'>('add');
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [saveModalMode, setSaveModalMode] = useState<'save' | 'saveAs'>('save');
 
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
@@ -96,6 +101,19 @@ const Index = () => {
 
   const { toast } = useToast();
   const magenta = useMagenta();
+  
+  // Compositions hook for cloud save/load
+  const handleCompositionLoad = useCallback((composition: { data: PlayEntry[]; instrument: string | null; bpm: number | null; time_signature: string | null }) => {
+    setSavedPlayHistory(composition.data);
+    if (composition.instrument) setPianoSoundType(composition.instrument as PianoSoundType);
+    if (composition.bpm) setMetronomeBpm(composition.bpm);
+    if (composition.time_signature) setMetronomeTimeSignature(composition.time_signature);
+  }, [setSavedPlayHistory, setPianoSoundType, setMetronomeBpm, setMetronomeTimeSignature]);
+  
+  const compositions = useCompositions({
+    onLoad: handleCompositionLoad,
+  });
+  
   const pianoRef = useRef<PianoHandle>(null);
   const currentRequestIdRef = useRef<string | null>(null);
   const requestStartTimeRef = useRef<number>(0);
@@ -831,6 +849,87 @@ const Index = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
+                  
+                  {/* Cloud Save/Open/More buttons */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (compositions.currentComposition && playMode.history.length > 0) {
+                        // Update existing
+                        compositions.updateComposition(
+                          compositions.currentComposition.id,
+                          playMode.history,
+                          pianoSoundType,
+                          metronomeBpm,
+                          metronomeTimeSignature
+                        );
+                      } else if (playMode.history.length > 0) {
+                        // Open save modal for new
+                        setSaveModalMode('save');
+                        setSaveModalOpen(true);
+                      }
+                    }}
+                    disabled={playMode.history.length === 0 || compositions.isLoading}
+                  >
+                    <Save className="h-4 w-4" />
+                    Save
+                  </Button>
+                  
+                  <CompositionDropdown
+                    compositions={compositions.compositions}
+                    onSelect={(composition) => {
+                      compositions.loadComposition(composition);
+                      toast({ title: `Loaded "${composition.title}"` });
+                    }}
+                    isLoading={compositions.isLoading}
+                  />
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={!compositions.currentComposition}>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSaveModalMode('saveAs');
+                          setSaveModalOpen(true);
+                        }}
+                        disabled={playMode.history.length === 0}
+                      >
+                        Save as...
+                      </DropdownMenuItem>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            Delete
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete composition?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete "{compositions.currentComposition?.title}" from the cloud. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => {
+                                if (compositions.currentComposition) {
+                                  compositions.deleteComposition(compositions.currentComposition.id);
+                                }
+                              }}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
@@ -890,6 +989,25 @@ const Index = () => {
             : undefined
         }
         instrument={pianoSoundType}
+      />
+      
+      {/* Save Composition Modal */}
+      <SaveCompositionModal
+        open={saveModalOpen}
+        onOpenChange={setSaveModalOpen}
+        onSave={async (title) => {
+          if (saveModalMode === 'saveAs' || !compositions.currentComposition) {
+            await compositions.saveComposition(
+              title,
+              playMode.history,
+              pianoSoundType,
+              metronomeBpm,
+              metronomeTimeSignature
+            );
+          }
+          setSaveModalOpen(false);
+        }}
+        isLoading={compositions.isLoading}
       />
     </div>
   );
