@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, FileMusic, X, Save, FolderOpen } from "lucide-react";
+import { Trash2, Brain, ChevronDown, Loader2, Play, Square, Sparkles, MoreHorizontal, Copy, Music, FileMusic, Save, FilePlus, Download } from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCompositions } from "@/hooks/useCompositions";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
-import { CompositionDropdown } from "@/components/CompositionDropdown";
+import { CompositionSubmenu } from "@/components/CompositionSubmenu";
 
 
 const AI_MODELS = {
@@ -765,98 +765,78 @@ const Index = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {playMode.history.length > 0 && (
-                    <>
-                      <Button
-                        onClick={() => {
-                          if (playMode.isPlayingAll) {
-                            playMode.onStopPlayback();
-                          } else {
-                            const seq = playMode.getCombinedSequence();
-                            if (seq?.sequence) {
-                              playMode.onPlayAll(seq.sequence, seq.segments);
-                            }
-                          }
-                        }}
-                        variant="outline"
-                        size="sm"
+              {/* Play/Stop - only shown when there's history */}
+              {playMode.history.length > 0 && (
+                <Button
+                  onClick={() => {
+                    if (playMode.isPlayingAll) {
+                      playMode.onStopPlayback();
+                    } else {
+                      const seq = playMode.getCombinedSequence();
+                      if (seq?.sequence) {
+                        playMode.onPlayAll(seq.sequence, seq.segments);
+                      }
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  {playMode.isPlayingAll ? <Square className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
+                  {playMode.isPlayingAll ? "Stop" : "Play"}
+                </Button>
+              )}
+              
+              {/* Add notes - standalone */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPartitionDialogOpen(true)}
+              >
+                <FileMusic className="h-4 w-4" />Add notes
+              </Button>
+              
+              {/* Unified "..." menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {/* New */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem 
+                        onSelect={(e) => e.preventDefault()}
+                        disabled={playMode.history.length === 0}
                       >
-                        {playMode.isPlayingAll ? <Square className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
-                        {playMode.isPlayingAll ? "Stop" : "Play"}
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <X className="h-4 w-4" /> Clear
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will clear your current composition history. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => playMode.clearHistory()}>Clear</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  )}
-                  <div className="inline-flex -space-x-px">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPartitionDialogOpen(true)}
-                      className="rounded-r-none"
-                    >
-                      <FileMusic className="h-4 w-4" />Add notes
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="rounded-l-none">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const seq = playMode.getCombinedSequence();
-                            if (seq?.sequence) {
-                              await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
-                              toast({ title: "Copied all as NoteSequence" });
-                            }
-                          }}
-                        >
-                          Copy all as NoteSequence
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const seq = playMode.getCombinedSequence();
-                            if (seq?.sequence) {
-                              // ABC conversion logic would go here
-                              toast({ title: "ABC export not implemented yet" });
-                            }
-                          }}
-                        >
-                          Copy all as ABC
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                        <FilePlus className="h-4 w-4 mr-2" />
+                        New
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Start new composition?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will clear your current composition. Make sure to save first if you want to keep it.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => {
+                          playMode.clearHistory();
+                          compositions.clearCurrentComposition();
+                        }}>
+                          New
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   
-                  {/* Cloud Save/Open/More buttons */}
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  {/* Save */}
+                  <DropdownMenuItem
                     onClick={() => {
                       if (compositions.currentComposition && playMode.history.length > 0) {
-                        // Update existing
                         compositions.updateComposition(
                           compositions.currentComposition.id,
                           playMode.history,
@@ -865,18 +845,65 @@ const Index = () => {
                           metronomeTimeSignature
                         );
                       } else if (playMode.history.length > 0) {
-                        // Open save modal for new
                         setSaveModalMode('save');
                         setSaveModalOpen(true);
                       }
                     }}
                     disabled={playMode.history.length === 0 || compositions.isLoading}
                   >
-                    <Save className="h-4 w-4" />
+                    <Save className="h-4 w-4 mr-2" />
                     Save
-                  </Button>
+                  </DropdownMenuItem>
                   
-                  <CompositionDropdown
+                  {/* Save as */}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSaveModalMode('saveAs');
+                      setSaveModalOpen(true);
+                    }}
+                    disabled={playMode.history.length === 0}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save as...
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Export submenu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger disabled={playMode.history.length === 0}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const seq = playMode.getCombinedSequence();
+                          if (seq?.sequence) {
+                            toast({ title: "ABC export not implemented yet" });
+                          }
+                        }}
+                      >
+                        ABC
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const seq = playMode.getCombinedSequence();
+                          if (seq?.sequence) {
+                            await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
+                            toast({ title: "Copied as NoteSequence" });
+                          }
+                        }}
+                      >
+                        Note Sequence
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Open submenu */}
+                  <CompositionSubmenu
                     compositions={compositions.compositions}
                     onSelect={(composition) => {
                       compositions.loadComposition(composition);
@@ -885,25 +912,17 @@ const Index = () => {
                     isLoading={compositions.isLoading}
                   />
                   
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" disabled={!compositions.currentComposition}>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSaveModalMode('saveAs');
-                          setSaveModalOpen(true);
-                        }}
-                        disabled={playMode.history.length === 0}
-                      >
-                        Save as...
-                      </DropdownMenuItem>
+                  {/* Delete - only when composition loaded */}
+                  {compositions.currentComposition && (
+                    <>
+                      <DropdownMenuSeparator />
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <DropdownMenuItem 
+                            onSelect={(e) => e.preventDefault()}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
                         </AlertDialogTrigger>
@@ -928,11 +947,10 @@ const Index = () => {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           <TabsContent value="play" className="mt-0">
