@@ -320,6 +320,9 @@ const Index = () => {
     isPlayingAll,
     initialHistory: savedComposeHistory,
     onHistoryChange: setSavedComposeHistory,
+    onRequestImprov: (sequence) => handleComposeAiRequest(sequence, "magenta/music-rnn", "create an improv"),
+    onRequestVariations: (sequence) =>
+      handleComposeAiRequest(sequence, "magenta/music-vae", "create variations"),
   });
 
   // Improv mode hook - also uses track display now
@@ -439,6 +442,49 @@ const Index = () => {
         setAppState("idle");
         recordingManager.hideProgress();
       }
+    }
+  }
+
+  // Compose mode AI helpers (Magenta only)
+  async function handleComposeAiRequest(
+    userSequence: NoteSequence,
+    modelType: MagentaModelType,
+    requestLabel: string,
+  ) {
+    const requestId = crypto.randomUUID();
+    currentRequestIdRef.current = requestId;
+    requestStartTimeRef.current = Date.now();
+
+    setAppState("waiting_for_ai");
+
+    try {
+      const aiSequence = await magenta.continueSequence(
+        userSequence,
+        modelType,
+        metronomeBpm,
+        metronomeTimeSignature,
+      );
+
+      if (currentRequestIdRef.current !== requestId) return;
+      if (!aiSequence) throw new Error("Magenta failed to generate a response");
+
+      const elapsed = Date.now() - requestStartTimeRef.current;
+      if (elapsed < MIN_WAIT_TIME_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed));
+      }
+
+      if (currentRequestIdRef.current !== requestId) return;
+
+      composeMode.addUserSequence(aiSequence, true);
+      await playSequence(aiSequence, requestId);
+    } catch (error) {
+      console.error(`[Compose AI] Failed to ${requestLabel}:`, error);
+      toast({
+        title: `Failed to ${requestLabel}`,
+        description: error instanceof Error ? error.message : "Unable to generate music",
+        variant: "destructive",
+      });
+      setAppState("idle");
     }
   }
 

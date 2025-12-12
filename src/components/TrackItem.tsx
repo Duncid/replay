@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal, Trash2, Copy } from "lucide-react";
+import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2 } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -24,6 +25,8 @@ interface TrackItemProps {
   onMergeNext?: () => void;
   onRemove?: () => void;
   isAiGenerated?: boolean;
+  onRequestImprov?: (sequence: NoteSequence) => void;
+  onRequestVariations?: (sequence: NoteSequence) => void;
 }
 
 export function TrackItem({
@@ -38,6 +41,8 @@ export function TrackItem({
   onMergeNext,
   onRemove,
   isAiGenerated = false,
+  onRequestImprov,
+  onRequestVariations,
 }: TrackItemProps) {
   const { toast } = useToast();
 
@@ -89,6 +94,20 @@ export function TrackItem({
                   Merge with next
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {(onRequestImprov || onRequestVariations) && <DropdownMenuLabel>Ask AI</DropdownMenuLabel>}
+                {onRequestImprov && (
+                  <DropdownMenuItem onClick={() => onRequestImprov(sequence)}>
+                    <Wand2 className="w-3 h-3 mr-2" />
+                    Improvise on this recording
+                  </DropdownMenuItem>
+                )}
+                {onRequestVariations && (
+                  <DropdownMenuItem onClick={() => onRequestVariations(sequence)}>
+                    <Shuffle className="w-3 h-3 mr-2" />
+                    Create variations
+                  </DropdownMenuItem>
+                )}
+                {(onRequestImprov || onRequestVariations) && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={handleCopySequence}>
                   <Copy className="w-3 h-3 mr-2" />
                   Copy as NoteSequence
