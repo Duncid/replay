@@ -893,10 +893,23 @@ const Index = () => {
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem
-                        onClick={async () => {
+                        onClick={() => {
                           const seq = playMode.getCombinedSequence();
                           if (seq?.sequence) {
-                            toast({ title: "ABC export not implemented yet" });
+                            const title = compositions.currentComposition?.title || "Composition";
+                            const abcContent = noteSequenceToAbc(seq.sequence, title);
+                            
+                            const blob = new Blob([abcContent], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `${title}.abc`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                            
+                            toast({ title: "Exported as ABC file" });
                           }
                         }}
                       >
