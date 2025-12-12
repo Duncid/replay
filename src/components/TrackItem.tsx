@@ -66,7 +66,7 @@ export function TrackItem({
   };
 
   return (
-    <div className="flex flex-col w-fit shrink-0">
+    <div className={`flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md ${isPlaying ? "ring-2 ring-primary ring-offset-2" : ""}`}>
       {/* Control bar */}
       <div className={`flex items-center gap-1 px-2 h-9 ${controlBarBg} rounded-t-md border border-b-0 ${controlBarBorder}`}>
         {!isRecording && (

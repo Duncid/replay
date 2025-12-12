@@ -22,7 +22,7 @@ import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
-import { NoteSequence, Note } from "@/types/noteSequence";
+import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import {
   midiToFrequency,
   midiToNoteName,
@@ -97,6 +97,8 @@ const Index = () => {
 
   // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
   // (they will be initialized after those functions are defined)
+
+  const [playingSequence, setPlayingSequence] = useState<NoteSequence | null>(null);
 
   // Refs for circular dependency handling
   const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>();
@@ -188,94 +190,143 @@ const Index = () => {
     }
     setActiveKeys(new Set());
     setAppState("idle");
+    setPlayingSequence(null);
     setIsPlayingAll(false);
   }, []);
 
-  const playSequence = useCallback(async (sequence: NoteSequence, requestId?: string, isReplay: boolean = false) => {
-    setIsReplaying(isReplay);
-    const playbackId = Math.random().toString(36).substring(7);
+  const playSequence = useCallback(
+    async (
+      sequence: NoteSequence,
+      requestId?: string,
+      isReplay: boolean = false,
+      segments?: PlaybackSegment[],
+    ) => {
+      setIsReplaying(isReplay);
+      const playbackId = Math.random().toString(36).substring(7);
 
-    if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
-      console.log(`[Playback ${playbackId}] Request invalidated`);
-      return;
-    }
-
-    if (isPlayingRef.current) {
-      console.log(`[Playback ${playbackId}] Already playing, stopping previous`);
-    }
-
-    // Normalize times so first note starts at 0
-    const minStartTime = sequence.notes.length > 0 ? Math.min(...sequence.notes.map((n) => n.startTime)) : 0;
-    const normalizedNotes = sequence.notes.map((note) => ({
-      ...note,
-      startTime: note.startTime - minStartTime,
-      endTime: note.endTime - minStartTime,
-    }));
-    const normalizedSequence = { ...sequence, notes: normalizedNotes, totalTime: sequence.totalTime - minStartTime };
-
-    console.log(
-      `[Playback ${playbackId}] Starting: ${normalizedSequence.notes.length} notes, ${normalizedSequence.totalTime.toFixed(3)}s`,
-    );
-    const playbackStartTime = Date.now();
-
-    // Clear previous playback state
-    shouldStopAiRef.current = true;
-    noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-    noteTimeoutsRef.current = [];
-    if (aiPlaybackTimeoutRef.current) {
-      clearTimeout(aiPlaybackTimeoutRef.current);
-      aiPlaybackTimeoutRef.current = null;
-    }
-    setActiveKeys(new Set());
-    isPlayingRef.current = true;
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    if (!isPlayingRef.current) {
-      console.log(`[Playback ${playbackId}] Cancelled during delay`);
-      return;
-    }
-
-    shouldStopAiRef.current = false;
-    setAppState("ai_playing");
-
-    normalizedSequence.notes.forEach((note) => {
-      const noteKey = midiToNoteName(note.pitch);
-      const frequency = midiToFrequency(note.pitch);
-      const duration = note.endTime - note.startTime;
-
-      const startTimeout = setTimeout(() => {
-        if (!shouldStopAiRef.current && pianoRef.current) {
-          pianoRef.current.playNote(frequency, duration);
-          setActiveKeys((prev) => new Set([...prev, noteKey]));
-        }
-      }, note.startTime * 1000);
-      noteTimeoutsRef.current.push(startTimeout);
-
-      const endTimeout = setTimeout(() => {
-        if (!shouldStopAiRef.current) {
-          setActiveKeys((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(noteKey);
-            return newSet;
-          });
-        }
-      }, note.endTime * 1000);
-      noteTimeoutsRef.current.push(endTimeout);
-    });
-
-    aiPlaybackTimeoutRef.current = setTimeout(() => {
-      if (!shouldStopAiRef.current) {
-        const elapsed = (Date.now() - playbackStartTime) / 1000;
-        console.log(`[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`);
-        setAppState("idle");
-        setActiveKeys(new Set());
-        setIsPlayingAll(false);
-        noteTimeoutsRef.current = [];
-        isPlayingRef.current = false;
+      if (!isReplay && requestId && currentRequestIdRef.current !== requestId) {
+        console.log(`[Playback ${playbackId}] Request invalidated`);
+        return;
       }
-    }, normalizedSequence.totalTime * 1000);
-  }, []);
+
+      if (isPlayingRef.current) {
+        console.log(`[Playback ${playbackId}] Already playing, stopping previous`);
+      }
+
+      // Normalize times so first note starts at 0
+      const minStartTime = sequence.notes.length > 0 ? Math.min(...sequence.notes.map((n) => n.startTime)) : 0;
+      const normalizedNotes = sequence.notes.map((note) => ({
+        ...note,
+        startTime: note.startTime - minStartTime,
+        endTime: note.endTime - minStartTime,
+      }));
+      const normalizedSequence = { ...sequence, notes: normalizedNotes, totalTime: sequence.totalTime - minStartTime };
+
+      console.log(
+        `[Playback ${playbackId}] Starting: ${normalizedSequence.notes.length} notes, ${normalizedSequence.totalTime.toFixed(3)}s`,
+      );
+      const playbackStartTime = Date.now();
+
+      // Clear previous playback state
+      shouldStopAiRef.current = true;
+      noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      noteTimeoutsRef.current = [];
+      if (aiPlaybackTimeoutRef.current) {
+        clearTimeout(aiPlaybackTimeoutRef.current);
+        aiPlaybackTimeoutRef.current = null;
+      }
+      setActiveKeys(new Set());
+      isPlayingRef.current = true;
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      if (!isPlayingRef.current) {
+        console.log(`[Playback ${playbackId}] Cancelled during delay`);
+        return;
+      }
+
+      shouldStopAiRef.current = false;
+      setAppState("ai_playing");
+
+      // Handle visual state updates
+      if (segments && segments.length > 0) {
+        // Schedule updates for each segment
+        segments.forEach((segment) => {
+          // Calculate start and end times relative to playback start
+          // segment.startTime is already relative to the start of the combined sequence
+          // But we need to account for minStartTime if the combined sequence was normalized?
+          // Actually, getCombinedSequence usually starts at 0.
+          // Let's assume segment times are aligned with sequence times.
+
+          // However, we normalized the playing sequence by subtracting minStartTime.
+          // If the combined sequence started at 0, minStartTime is 0.
+          // If combined sequence had a delay at start, we shifted it.
+          // We should shift segment times too.
+
+          const segmentStartTime = Math.max(0, segment.startTime - minStartTime);
+          const segmentEndTime = Math.max(0, segment.endTime - minStartTime);
+
+          const startTimeout = setTimeout(() => {
+            if (!shouldStopAiRef.current) {
+              setPlayingSequence(segment.originalSequence);
+            }
+          }, segmentStartTime * 1000);
+          noteTimeoutsRef.current.push(startTimeout);
+
+          // We don't strictly need to clear it at end time if the next one picks up,
+          // but clearing it handles gaps correctly.
+          const endTimeout = setTimeout(() => {
+            if (!shouldStopAiRef.current) {
+              setPlayingSequence((prev) => (prev === segment.originalSequence ? null : prev));
+            }
+          }, segmentEndTime * 1000);
+          noteTimeoutsRef.current.push(endTimeout);
+        });
+      } else {
+        // Single sequence playback - highlight immediately
+        setPlayingSequence(sequence);
+      }
+
+      normalizedSequence.notes.forEach((note) => {
+        const noteKey = midiToNoteName(note.pitch);
+        const frequency = midiToFrequency(note.pitch);
+        const duration = note.endTime - note.startTime;
+
+        const startTimeout = setTimeout(() => {
+          if (!shouldStopAiRef.current && pianoRef.current) {
+            pianoRef.current.playNote(frequency, duration);
+            setActiveKeys((prev) => new Set([...prev, noteKey]));
+          }
+        }, note.startTime * 1000);
+        noteTimeoutsRef.current.push(startTimeout);
+
+        const endTimeout = setTimeout(() => {
+          if (!shouldStopAiRef.current) {
+            setActiveKeys((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(noteKey);
+              return newSet;
+            });
+          }
+        }, note.endTime * 1000);
+        noteTimeoutsRef.current.push(endTimeout);
+      });
+
+      aiPlaybackTimeoutRef.current = setTimeout(() => {
+        if (!shouldStopAiRef.current) {
+          const elapsed = (Date.now() - playbackStartTime) / 1000;
+          console.log(`[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`);
+          setAppState("idle");
+          setPlayingSequence(null);
+          setActiveKeys(new Set());
+          setIsPlayingAll(false);
+          noteTimeoutsRef.current = [];
+          isPlayingRef.current = false;
+        }
+      }, normalizedSequence.totalTime * 1000);
+    },
+    [],
+  );
 
   function handleReplaySequence(sequence: NoteSequence) {
     if (isPlayingRef.current) return;
@@ -298,12 +349,12 @@ const Index = () => {
 
   // Handle playing all sequences
   const handlePlayAllSequences = useCallback(
-    (combinedSequence: NoteSequence) => {
+    (combinedSequence: NoteSequence, segments?: PlaybackSegment[]) => {
       if (isPlayingRef.current) return;
 
       setIsPlayingAll(true);
       pianoRef.current?.ensureAudioReady();
-      setTimeout(() => playSequence(combinedSequence, undefined, true), 50);
+      setTimeout(() => playSequence(combinedSequence, undefined, true, segments), 50);
     },
     [playSequence],
   );
@@ -324,6 +375,7 @@ const Index = () => {
     onRequestImprov: (sequence) => handleComposeAiRequest(sequence, "magenta/music-rnn", "create an improv"),
     onRequestVariations: (sequence) =>
       handleComposeAiRequest(sequence, "magenta/music-vae", "create variations"),
+    playingSequence,
   });
 
   // Improv mode hook - also uses track display now
@@ -341,6 +393,7 @@ const Index = () => {
     onHistoryChange: setSavedImprovHistory,
     onRequestImprov: (sequence) => handleImprovAiRequest(sequence, "magenta/music-rnn", "create an improv"),
     onRequestVariations: (sequence) => handleImprovAiRequest(sequence, "magenta/music-vae", "create variations"),
+    playingSequence,
   });
 
   // Assign to refs for use in handleRecordingComplete
@@ -780,9 +833,9 @@ const Index = () => {
                     <DropdownMenuItem
                       onClick={async () => {
                         const mode = activeMode === "compose" ? composeMode : improvMode;
-                        const seq = mode.getCombinedSequence();
-                        if (seq) {
-                          await navigator.clipboard.writeText(JSON.stringify(seq, null, 2));
+                        const result = mode.getCombinedSequence();
+                        if (result) {
+                          await navigator.clipboard.writeText(JSON.stringify(result.sequence, null, 2));
                           toast({ title: "Copied all as NoteSequence" });
                         }
                       }}
@@ -793,9 +846,9 @@ const Index = () => {
                     <DropdownMenuItem
                       onClick={async () => {
                         const mode = activeMode === "compose" ? composeMode : improvMode;
-                        const seq = mode.getCombinedSequence();
-                        if (seq) {
-                          const abc = noteSequenceToAbc(seq);
+                        const result = mode.getCombinedSequence();
+                        if (result) {
+                          const abc = noteSequenceToAbc(result.sequence);
                           await navigator.clipboard.writeText(abc);
                           toast({ title: "Copied all as ABC" });
                         }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { NoteSequence, Note } from "@/types/noteSequence";
+import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import { beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { TrackContainer } from "@/components/TrackContainer";
 import { TrackItem } from "@/components/TrackItem";
@@ -18,7 +18,7 @@ interface ImprovModeProps {
   bpm: number;
   timeSignature: string;
   onReplay: (sequence: NoteSequence) => void;
-  onPlayAll: (combinedSequence: NoteSequence) => void;
+  onPlayAll: (combinedSequence: NoteSequence, segments?: PlaybackSegment[]) => void;
   onStopPlayback: () => void;
   onClearHistory: () => void;
   liveNotes?: Note[];
@@ -28,6 +28,7 @@ interface ImprovModeProps {
   onHistoryChange?: (history: TrackEntry[]) => void;
   onRequestImprov?: (sequence: NoteSequence) => void;
   onRequestVariations?: (sequence: NoteSequence) => void;
+  playingSequence?: NoteSequence | null;
 }
 
 export function ImprovMode({
@@ -44,6 +45,7 @@ export function ImprovMode({
   onHistoryChange,
   onRequestImprov,
   onRequestVariations,
+  playingSequence,
 }: ImprovModeProps) {
   const [history, setHistory] = useState<TrackEntry[]>(initialHistory);
 
@@ -112,16 +114,26 @@ export function ImprovMode({
   }, [bpm, beatsPerMeasure]);
 
   // Build combined sequence from all entries
-  const getCombinedSequence = useCallback((): NoteSequence | null => {
+  const getCombinedSequence = useCallback((): { sequence: NoteSequence; segments: PlaybackSegment[] } | null => {
     if (history.length === 0) return null;
 
     // Half measure gap between entries
     const measureGapSeconds = beatsToSeconds(beatsPerMeasure / 2, bpm);
 
     let combinedNotes: Note[] = [];
+    const segments: PlaybackSegment[] = [];
     let currentTime = 0;
 
     history.forEach((entry, index) => {
+      const startTime = currentTime;
+      const endTime = currentTime + entry.sequence.totalTime;
+
+      segments.push({
+        originalSequence: entry.sequence,
+        startTime,
+        endTime,
+      });
+
       // Add notes with time offset
       const offsetNotes = entry.sequence.notes.map((note) => ({
         ...note,
@@ -138,19 +150,21 @@ export function ImprovMode({
       }
     });
 
-    return {
+    const sequence: NoteSequence = {
       notes: combinedNotes,
       totalTime: currentTime,
       tempos: [{ time: 0, qpm: bpm }],
       timeSignatures: [{ time: 0, numerator: beatsPerMeasure, denominator: parseInt(timeSignature.split('/')[1]) }],
     };
+
+    return { sequence, segments };
   }, [history, bpm, beatsPerMeasure, timeSignature]);
 
   // Handle playing all sequences
   const handlePlayAll = useCallback(() => {
-    const combinedSequence = getCombinedSequence();
-    if (combinedSequence) {
-      onPlayAll(combinedSequence);
+    const result = getCombinedSequence();
+    if (result) {
+      onPlayAll(result.sequence, result.segments);
     }
   }, [getCombinedSequence, onPlayAll]);
 
@@ -208,6 +222,7 @@ export function ImprovMode({
             <TrackItem
               key={index}
               sequence={entry.sequence}
+              isPlaying={entry.sequence === playingSequence}
               onPlay={() => onReplay(entry.sequence)}
               isFirst={index === 0}
               isLast={index === history.length - 1 && !isRecording}

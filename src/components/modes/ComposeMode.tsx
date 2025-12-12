@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { NoteSequence, Note } from "@/types/noteSequence";
+import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import { createEmptyNoteSequence, beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
 import { TrackItem } from "@/components/TrackItem";
@@ -17,7 +17,7 @@ interface ComposeModeProps {
   bpm: number;
   timeSignature: string;
   onReplay: (sequence: NoteSequence) => void;
-  onPlayAll: (combinedSequence: NoteSequence) => void;
+  onPlayAll: (combinedSequence: NoteSequence, segments?: PlaybackSegment[]) => void;
   onStopPlayback: () => void;
   onClearHistory: () => void;
   liveNotes?: Note[];
@@ -27,12 +27,13 @@ interface ComposeModeProps {
   onHistoryChange?: (history: ComposeEntry[]) => void;
   onRequestImprov?: (sequence: NoteSequence) => void;
   onRequestVariations?: (sequence: NoteSequence) => void;
+  playingSequence?: NoteSequence | null;
 }
 
-export function ComposeMode({ 
-  bpm, 
-  timeSignature, 
-  onReplay, 
+export function ComposeMode({
+  bpm,
+  timeSignature,
+  onReplay,
   onPlayAll,
   onStopPlayback,
   onClearHistory,
@@ -43,6 +44,7 @@ export function ComposeMode({
   onHistoryChange,
   onRequestImprov,
   onRequestVariations,
+  playingSequence,
 }: ComposeModeProps) {
   const [history, setHistory] = useState<ComposeEntry[]>(initialHistory);
 
@@ -105,23 +107,33 @@ export function ComposeMode({
       const newHistory = [...prev];
       newHistory[targetIndex] = { userSequence: mergedSequence, isAiGenerated: targetSession.isAiGenerated };
       newHistory.splice(sourceIndex, 1);
-      
+
       return newHistory;
     });
   }, [bpm, beatsPerMeasure]);
 
   // Build combined sequence from all sessions
-  const getCombinedSequence = useCallback((): NoteSequence | null => {
+  const getCombinedSequence = useCallback((): { sequence: NoteSequence; segments: PlaybackSegment[] } | null => {
     if (history.length === 0) return null;
 
     // Half measure gap between sessions
     const measureGapSeconds = beatsToSeconds(beatsPerMeasure / 2, bpm);
 
     let combinedNotes: Note[] = [];
+    const segments: PlaybackSegment[] = [];
     let currentTime = 0;
 
     history.forEach((entry, index) => {
       if (entry.userSequence.notes.length === 0) return;
+
+      const startTime = currentTime;
+      const endTime = currentTime + entry.userSequence.totalTime;
+
+      segments.push({
+        originalSequence: entry.userSequence,
+        startTime,
+        endTime,
+      });
 
       // Add notes with time offset
       const offsetNotes = entry.userSequence.notes.map((note) => ({
@@ -130,28 +142,30 @@ export function ComposeMode({
         endTime: note.endTime + currentTime,
       }));
       combinedNotes = [...combinedNotes, ...offsetNotes];
-      
+
       currentTime += entry.userSequence.totalTime;
-      
+
       // Add measure gap if not last
       if (index < history.length - 1) {
         currentTime += measureGapSeconds;
       }
     });
 
-    return {
+    const sequence: NoteSequence = {
       notes: combinedNotes,
       totalTime: currentTime,
       tempos: [{ time: 0, qpm: bpm }],
       timeSignatures: [{ time: 0, numerator: beatsPerMeasure, denominator: parseInt(timeSignature.split('/')[1]) }],
     };
+
+    return { sequence, segments };
   }, [history, bpm, beatsPerMeasure, timeSignature]);
 
   // Create combined sequence for playing all
   const handlePlayAll = useCallback(() => {
-    const combinedSequence = getCombinedSequence();
-    if (combinedSequence) {
-      onPlayAll(combinedSequence);
+    const result = getCombinedSequence();
+    if (result) {
+      onPlayAll(result.sequence, result.segments);
     }
   }, [getCombinedSequence, onPlayAll]);
 
@@ -160,10 +174,10 @@ export function ComposeMode({
     notes: liveNotes,
     totalTime: Math.max(...liveNotes.map(n => n.endTime), 0),
     tempos: [{ time: 0, qpm: bpm }],
-    timeSignatures: [{ 
-      time: 0, 
-      numerator: beatsPerMeasure, 
-      denominator: parseInt(timeSignature.split('/')[1]) 
+    timeSignatures: [{
+      time: 0,
+      numerator: beatsPerMeasure,
+      denominator: parseInt(timeSignature.split('/')[1])
     }],
   } : null;
 
@@ -179,7 +193,7 @@ export function ComposeMode({
     setMergeDirection(direction);
     setMergeDialogOpen(true);
   };
-  
+
   const handleMergeConfirm = (gapValue: number, gapUnit: GapUnit) => {
     mergeSessions(mergeSessionIndex, mergeDirection, gapValue, gapUnit);
     setMergeDialogOpen(false);
@@ -212,21 +226,22 @@ export function ComposeMode({
             return (
               <TrackItem
                 key={actualIndex}
-              sequence={entry.userSequence}
-              onPlay={() => onReplay(entry.userSequence)}
-              isFirst={displayIndex === 0}
-              isLast={displayIndex === validHistory.length - 1 && !isRecording}
-              onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
-              onMergeNext={() => openMergeDialog(actualIndex, "next")}
-              onRemove={() => removeSession(actualIndex)}
-              isAiGenerated={entry.isAiGenerated}
-              onRequestImprov={onRequestImprov ? () => onRequestImprov(entry.userSequence) : undefined}
-              onRequestVariations={
-                onRequestVariations ? () => onRequestVariations(entry.userSequence) : undefined
-              }
-            />
-          );
-        })}
+                sequence={entry.userSequence}
+                isPlaying={entry.userSequence === playingSequence}
+                onPlay={() => onReplay(entry.userSequence)}
+                isFirst={displayIndex === 0}
+                isLast={displayIndex === validHistory.length - 1 && !isRecording}
+                onMergePrevious={() => openMergeDialog(actualIndex, "previous")}
+                onMergeNext={() => openMergeDialog(actualIndex, "next")}
+                onRemove={() => removeSession(actualIndex)}
+                isAiGenerated={entry.isAiGenerated}
+                onRequestImprov={onRequestImprov ? () => onRequestImprov(entry.userSequence) : undefined}
+                onRequestVariations={
+                  onRequestVariations ? () => onRequestVariations(entry.userSequence) : undefined
+                }
+              />
+            );
+          })}
 
           {/* Current recording (live) - rightmost */}
           {isRecording && liveSequence && (
