@@ -748,88 +748,90 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-between">
-                {playMode.history.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={() => {
-                        if (playMode.isPlayingAll) {
-                          playMode.onStopPlayback();
-                        } else {
-                          const seq = playMode.getCombinedSequence();
-                          if (seq?.sequence) {
-                            playMode.onPlayAll(seq.sequence, seq.segments);
-                          }
-                        }
-                      }}
-                      variant="outline"
-                      size="sm"
-                    >
-                      {playMode.isPlayingAll ? <Square className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
-                      {playMode.isPlayingAll ? "Stop" : "Play"}
-                    </Button>
-                    <div className="inline-flex -space-x-px">
+                <div className="flex items-center gap-2">
+                  {playMode.history.length > 0 && (
+                    <>
                       <Button
+                        onClick={() => {
+                          if (playMode.isPlayingAll) {
+                            playMode.onStopPlayback();
+                          } else {
+                            const seq = playMode.getCombinedSequence();
+                            if (seq?.sequence) {
+                              playMode.onPlayAll(seq.sequence, seq.segments);
+                            }
+                          }
+                        }}
                         variant="outline"
                         size="sm"
-                        onClick={() => setPartitionDialogOpen(true)}
-                        className="rounded-r-none"
                       >
-                        <FileMusic className="h-4 w-4" />Add notes
+                        {playMode.isPlayingAll ? <Square className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
+                        {playMode.isPlayingAll ? "Stop" : "Play"}
                       </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="rounded-l-none">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <X className="h-4 w-4" /> Clear
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={async () => {
-                              const seq = playMode.getCombinedSequence();
-                              if (seq?.sequence) {
-                                await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
-                                toast({ title: "Copied all as NoteSequence" });
-                              }
-                            }}
-                          >
-                            Copy all as NoteSequence
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={async () => {
-                              const seq = playMode.getCombinedSequence();
-                              if (seq?.sequence) {
-                                // ABC conversion logic would go here
-                                toast({ title: "ABC export not implemented yet" });
-                              }
-                            }}
-                          >
-                            Copy all as ABC
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <X className="h-4 w-4" /> Clear
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will clear your current composition history. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => playMode.clearHistory()}>Clear</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                  <div className="inline-flex -space-x-px">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPartitionDialogOpen(true)}
+                      className="rounded-r-none"
+                    >
+                      <FileMusic className="h-4 w-4" />Add notes
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="rounded-l-none">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will clear your current composition history. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => playMode.clearHistory()}>Clear</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            const seq = playMode.getCombinedSequence();
+                            if (seq?.sequence) {
+                              await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
+                              toast({ title: "Copied all as NoteSequence" });
+                            }
+                          }}
+                        >
+                          Copy all as NoteSequence
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            const seq = playMode.getCombinedSequence();
+                            if (seq?.sequence) {
+                              // ABC conversion logic would go here
+                              toast({ title: "ABC export not implemented yet" });
+                            }
+                          }}
+                        >
+                          Copy all as ABC
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                )}
+                </div>
               </div>
 
             </div>
