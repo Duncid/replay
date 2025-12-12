@@ -893,23 +893,44 @@ const Index = () => {
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem
-                        onClick={() => {
+                        onClick={async () => {
                           const seq = playMode.getCombinedSequence();
                           if (seq?.sequence) {
                             const title = compositions.currentComposition?.title || "Composition";
                             const abcContent = noteSequenceToAbc(seq.sequence, title);
                             
-                            const blob = new Blob([abcContent], { type: 'text/plain' });
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `${title}.abc`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            URL.revokeObjectURL(url);
-                            
-                            toast({ title: "Exported as ABC file" });
+                            try {
+                              if ('showSaveFilePicker' in window) {
+                                const handle = await (window as any).showSaveFilePicker({
+                                  suggestedName: `${title}.txt`,
+                                  types: [{
+                                    description: 'Text File',
+                                    accept: { 'text/plain': ['.txt'] }
+                                  }]
+                                });
+                                const writable = await handle.createWritable();
+                                await writable.write(abcContent);
+                                await writable.close();
+                                toast({ title: "Exported as ABC file" });
+                              } else {
+                                // Fallback for browsers without File System Access API
+                                const blob = new Blob([abcContent], { type: 'text/plain' });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = `${title}.txt`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                                toast({ title: "Exported as ABC file" });
+                              }
+                            } catch (err) {
+                              // User cancelled the save dialog
+                              if ((err as Error).name !== 'AbortError') {
+                                toast({ title: "Export failed", variant: "destructive" });
+                              }
+                            }
                           }
                         }}
                       >
