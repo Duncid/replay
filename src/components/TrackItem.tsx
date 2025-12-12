@@ -111,7 +111,7 @@ export function TrackItem({
       ref={containerRef}
       style={style}
       className={cn(
-        "flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md",
+        "flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md h-full",
         isPlaying && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background",
         isDragging && "z-50",
       )}
@@ -120,7 +120,7 @@ export function TrackItem({
       <div
         {...(id && !isRecording ? { ...attributes, ...listeners } : {})}
         className={cn(
-          "flex items-center gap-1 px-2 h-9 rounded-t-md border-b-0 cursor-grab active:cursor-grabbing",
+          "flex items-center gap-1 px-2 h-9 shrink-0 rounded-t-md border-b-0 cursor-grab active:cursor-grabbing",
           controlBarBg,
           "border",
           controlBarBorder,
