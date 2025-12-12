@@ -899,6 +899,19 @@ const Index = () => {
                             const title = compositions.currentComposition?.title || "Composition";
                             const abcContent = noteSequenceToAbc(seq.sequence, title);
                             
+                            const downloadFallback = () => {
+                              const blob = new Blob([abcContent], { type: 'text/plain' });
+                              const url = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = `${title}.txt`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(url);
+                              toast({ title: "Exported as ABC file" });
+                            };
+                            
                             try {
                               if ('showSaveFilePicker' in window) {
                                 const handle = await (window as any).showSaveFilePicker({
@@ -913,22 +926,14 @@ const Index = () => {
                                 await writable.close();
                                 toast({ title: "Exported as ABC file" });
                               } else {
-                                // Fallback for browsers without File System Access API
-                                const blob = new Blob([abcContent], { type: 'text/plain' });
-                                const url = URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = `${title}.txt`;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-                                toast({ title: "Exported as ABC file" });
+                                downloadFallback();
                               }
                             } catch (err) {
-                              // User cancelled the save dialog
-                              if ((err as Error).name !== 'AbortError') {
-                                toast({ title: "Export failed", variant: "destructive" });
+                              if ((err as Error).name === 'AbortError') {
+                                // User cancelled - do nothing
+                              } else {
+                                // API not available or other error - use fallback
+                                downloadFallback();
                               }
                             }
                           }
