@@ -11,6 +11,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -157,6 +160,8 @@ const Index = () => {
   const handleModeChange = (newMode: ActiveMode) => {
     if (newMode === "learn" && magenta.isMagentaModel(selectedModel)) {
       setSelectedModel("google/gemini-2.5-flash");
+    } else if (newMode === "play" && !magenta.isMagentaModel(selectedModel)) {
+      setSelectedModel("magenta/music-rnn");
     }
     recordingManager.cancelRecording();
     setActiveMode(newMode);
@@ -693,18 +698,52 @@ const Index = () => {
                 </div>
               )}
 
-              {(activeMode === "learn" || (activeMode === "play" && isAutoreplyActive)) && (
-                <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Select Model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="magenta/music-rnn">MusicRNN</SelectItem>
-                      <SelectItem value="magenta/music-vae">MusicVAE</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+              {activeMode === "learn" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="justify-between">
+                      {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label || selectedModel}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {AI_MODELS.llm.map((model) => (
+                      <DropdownMenuItem key={model.value} onClick={() => setSelectedModel(model.value)}>
+                        {model.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {activeMode === "play" && isAutoreplyActive && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="justify-between">
+                      {AI_MODELS.llm.find((m) => m.value === selectedModel)?.label ||
+                        AI_MODELS.magenta.find((m) => m.value === selectedModel)?.label ||
+                        selectedModel}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {AI_MODELS.llm.map((model) => (
+                      <DropdownMenuItem key={model.value} onClick={() => setSelectedModel(model.value)}>
+                        {model.label}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Magenta</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {AI_MODELS.magenta.map((model) => (
+                          <DropdownMenuItem key={model.value} onClick={() => setSelectedModel(model.value)}>
+                            {model.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
             <div className="flex items-center gap-2">

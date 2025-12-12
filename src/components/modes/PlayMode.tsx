@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import { beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { TrackContainer } from "@/components/TrackContainer";
@@ -50,6 +50,7 @@ export function PlayMode({
     onEditEntry,
 }: PlayModeProps) {
     const [history, setHistory] = useState<PlayEntry[]>(initialHistory);
+    const trackRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     const beatsPerMeasure = parseInt(timeSignature.split('/')[0]);
 
@@ -57,6 +58,20 @@ export function PlayMode({
     useEffect(() => {
         onHistoryChange?.(history);
     }, [history, onHistoryChange]);
+
+    // Scroll to currently playing track during "Play All"
+    useEffect(() => {
+        if (isPlayingAll && playingSequence) {
+            const playingIndex = history.findIndex(entry => entry.sequence === playingSequence);
+            if (playingIndex !== -1 && trackRefs.current[playingIndex]) {
+                trackRefs.current[playingIndex]?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center'
+                });
+            }
+        }
+    }, [playingSequence, isPlayingAll, history]);
 
     // Add a single entry (user or AI)
     const addEntry = useCallback((sequence: NoteSequence, isAiGenerated: boolean) => {
@@ -220,24 +235,28 @@ export function PlayMode({
 
     const render = () => (
         <>
-            <TrackContainer scrollDependency={[history.length, liveNotes.length]}>
+            <TrackContainer
+                scrollDependency={[history.length, liveNotes.length]}
+                autoScroll={!isPlayingAll && isRecording}
+            >
                 {/* All entries - each with full controls */}
                 {history.map((entry, index) => (
-                    <TrackItem
-                        key={index}
-                        sequence={entry.sequence}
-                        isPlaying={entry.sequence === playingSequence}
-                        onPlay={() => onReplay(entry.sequence)}
-                        isFirst={index === 0}
-                        isLast={index === history.length - 1 && !isRecording}
-                        isAiGenerated={entry.isAiGenerated}
-                        onMergePrevious={index > 0 ? () => openMergeDialog(index, "previous") : undefined}
-                        onMergeNext={index < history.length - 1 ? () => openMergeDialog(index, "next") : undefined}
-                        onRemove={() => removeEntry(index)}
-                        onRequestImprov={onRequestImprov}
-                        onRequestVariations={onRequestVariations}
-                        onEdit={onEditEntry ? (sequence) => onEditEntry(index, sequence) : undefined}
-                    />
+                    <div key={index} ref={(el) => (trackRefs.current[index] = el)}>
+                        <TrackItem
+                            sequence={entry.sequence}
+                            isPlaying={entry.sequence === playingSequence}
+                            onPlay={() => onReplay(entry.sequence)}
+                            isFirst={index === 0}
+                            isLast={index === history.length - 1 && !isRecording}
+                            isAiGenerated={entry.isAiGenerated}
+                            onMergePrevious={index > 0 ? () => openMergeDialog(index, "previous") : undefined}
+                            onMergeNext={index < history.length - 1 ? () => openMergeDialog(index, "next") : undefined}
+                            onRemove={() => removeEntry(index)}
+                            onRequestImprov={onRequestImprov}
+                            onRequestVariations={onRequestVariations}
+                            onEdit={onEditEntry ? (sequence) => onEditEntry(index, sequence) : undefined}
+                        />
+                    </div>
                 ))}
 
                 {/* Current recording (live) - rightmost */}
