@@ -1,5 +1,16 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, MoreHorizontal, Trash2, Copy, Shuffle, Wand2, Pencil, ArrowLeftToLine, ArrowRightToLine } from "lucide-react";
+import {
+  Play,
+  Square,
+  MoreHorizontal,
+  Trash2,
+  Copy,
+  Shuffle,
+  Wand2,
+  Pencil,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+} from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
@@ -54,14 +65,7 @@ export function TrackItem({
   const { toast } = useToast();
 
   // Only make sortable if id is provided (not for live recording)
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: id || "non-sortable",
     disabled: !id || isRecording,
   });
@@ -103,33 +107,33 @@ export function TrackItem({
   const containerRef = id ? setNodeRef : undefined;
 
   return (
-    <div 
+    <div
       ref={containerRef}
       style={style}
       className={cn(
         "flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md",
         isPlaying && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background",
-        isDragging && "z-50"
+        isDragging && "z-50",
       )}
     >
       {/* Control bar */}
-      <div 
+      <div
         {...(id && !isRecording ? { ...attributes, ...listeners } : {})}
         className={cn(
           "flex items-center gap-1 px-2 h-9 rounded-t-md border-b-0 cursor-grab active:cursor-grabbing",
           controlBarBg,
           "border",
           controlBarBorder,
-          !id && "cursor-default"
+          !id && "cursor-default",
         )}
       >
         {!isRecording && (
           <>
             {isPlaying ? (
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                onClick={onStop} 
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onStop}
                 className="h-6 w-6 cursor-pointer"
                 onMouseDown={handleButtonMouseDown}
                 onPointerDown={handleButtonPointerDown}
@@ -137,10 +141,10 @@ export function TrackItem({
                 <Square className="w-3 h-3" fill="currentColor" />
               </Button>
             ) : (
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                onClick={onPlay} 
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onPlay}
                 className="h-6 w-6 cursor-pointer"
                 onMouseDown={handleButtonMouseDown}
                 onPointerDown={handleButtonPointerDown}
@@ -150,9 +154,9 @@ export function TrackItem({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
+                <Button
+                  size="icon"
+                  variant="ghost"
                   className="h-6 w-6 cursor-pointer"
                   onMouseDown={handleButtonMouseDown}
                   onPointerDown={handleButtonPointerDown}
@@ -212,7 +216,7 @@ export function TrackItem({
         {isRecording && <span className="text-xs text-muted-foreground px-1">Recording...</span>}
       </div>
       {/* Sheet music - no title, no controls */}
-      <div className={cn(contentBg, "rounded-b-md overflow-hidden", "border", contentBorder)}>
+      <div className={cn(contentBg, "rounded-b-md overflow-hidden h-full", "border", contentBorder)}>
         <SheetMusic sequence={sequence} compact noTitle noControls />
       </div>
     </div>
