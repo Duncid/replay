@@ -171,6 +171,11 @@ export function LearnMode({
     onClearRecording();
   }, [onClearRecording]);
 
+  const suggestions = [
+    "Teach me a long jazzy sequence",
+    "Teach me a moody classic sequence",
+  ];
+
   const render = () => (
     <div className="space-y-8">
       {lesson.phase === "prompt" ? (
@@ -183,6 +188,20 @@ export function LearnMode({
             disabled={isLoading || isPlaying}
             className="min-h-[120px] text-lg resize-none"
           />
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((suggestion) => (
+              <Button
+                key={suggestion}
+                variant="outline"
+                size="sm"
+                onClick={() => setPrompt(suggestion)}
+                disabled={isLoading || isPlaying}
+                className="text-muted-foreground"
+              >
+                {suggestion}
+              </Button>
+            ))}
+          </div>
           <Button
             onClick={handleSubmit}
             disabled={!prompt.trim() || isLoading || isPlaying}
