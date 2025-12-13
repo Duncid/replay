@@ -30,28 +30,6 @@ export function LearnMode({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
-  const previousRecordingRef = useRef<NoteSequence | null>(null);
-
-  // Watch for recording completion to trigger evaluation
-  useEffect(() => {
-    // Only evaluate if:
-    // 1. We're in "your_turn" phase
-    // 2. We have a user recording
-    // 3. Recording has stopped
-    // 4. We haven't already evaluated this recording
-    if (
-      lesson.phase === "your_turn" &&
-      userRecording &&
-      userRecording.notes.length > 0 &&
-      !isRecording &&
-      !hasEvaluatedRef.current &&
-      previousRecordingRef.current !== userRecording
-    ) {
-      previousRecordingRef.current = userRecording;
-      hasEvaluatedRef.current = true;
-      evaluateAttempt(userRecording);
-    }
-  }, [lesson.phase, userRecording, isRecording]);
 
   const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
     setIsLoading(true);
@@ -107,7 +85,6 @@ export function LearnMode({
     if (lesson.phase === "demo") {
       setLesson(prev => ({ ...prev, phase: "your_turn" }));
       hasEvaluatedRef.current = false;
-      previousRecordingRef.current = null;
       onClearRecording();
     }
   }, [lesson.phase, onClearRecording]);
@@ -163,10 +140,23 @@ export function LearnMode({
     }
   }, [lesson.targetSequence, lesson.instruction, toast]);
 
+  // Watch for recording completion to trigger evaluation
+  useEffect(() => {
+    if (
+      lesson.phase === "your_turn" &&
+      userRecording &&
+      userRecording.notes.length > 0 &&
+      !isRecording &&
+      !hasEvaluatedRef.current
+    ) {
+      hasEvaluatedRef.current = true;
+      evaluateAttempt(userRecording);
+    }
+  }, [lesson.phase, userRecording, isRecording, evaluateAttempt]);
+
   const handleTryAgain = useCallback(() => {
     setLesson(prev => ({ ...prev, phase: "your_turn", feedback: null }));
     hasEvaluatedRef.current = false;
-    previousRecordingRef.current = null;
     onClearRecording();
   }, [onClearRecording]);
 
