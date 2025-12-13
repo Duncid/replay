@@ -167,13 +167,10 @@ const Index = () => {
   const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>();
   const playModeRef = useRef<ReturnType<typeof PlayMode>>();
   const handlePlayAllSequencesRef = useRef<(combinedSequence: NoteSequence, segments?: PlaybackSegment[]) => void>();
-  const learnMode = LearnMode({
-    isLoading: isAskLoading,
-    isPlaying: appState === "ai_playing",
-    onSubmit: handleAskSubmit,
-    onReplay: (seq) => handleReplaySequenceRef.current?.(seq),
-    onClearHistory: () => toast({ title: "History cleared" }),
-  });
+
+  // Learn mode recording state
+  const [learnModeRecording, setLearnModeRecording] = useState<NoteSequence | null>(null);
+  const learnModeRecordingRef = useRef<NoteSequence | null>(null);
 
   // Recording manager for play mode
   const handleRecordingComplete = useCallback(
@@ -515,6 +512,37 @@ const Index = () => {
   // Assign to refs for use in handleRecordingComplete
   playModeRef.current = playMode;
 
+  // Learn mode recording manager
+  const learnRecordingManager = useRecordingManager({
+    bpm: metronomeBpm,
+    timeSignature: metronomeTimeSignature,
+    onRecordingComplete: (result) => {
+      setLearnModeRecording(result.sequence);
+      learnModeRecordingRef.current = result.sequence;
+      setAppState("idle");
+    },
+    pauseTimeoutMs: 2000,
+    resumeGapMs: 1000,
+  });
+
+  // Learn mode hook
+  const learnMode = LearnMode({
+    isPlaying: appState === "ai_playing",
+    onPlaySequence: (sequence) => {
+      pianoRef.current?.ensureAudioReady();
+      setTimeout(() => playSequence(sequence, undefined, true), 50);
+    },
+    onStartRecording: () => {
+      // Recording starts automatically when user plays
+    },
+    isRecording: appState === "user_playing" && activeMode === "learn",
+    userRecording: learnModeRecording,
+    onClearRecording: () => {
+      setLearnModeRecording(null);
+      learnModeRecordingRef.current = null;
+    },
+  });
+
   // Handle note events from Piano
   const handleNoteStart = useCallback(
     (noteKey: string, frequency: number, velocity: number) => {
@@ -525,23 +553,28 @@ const Index = () => {
       if (appState !== "user_playing") {
         currentRequestIdRef.current = null;
         recordingManager.hideProgress();
+        learnRecordingManager.hideProgress();
         setAppState("user_playing");
       }
 
       if (activeMode === "play") {
         recordingManager.addNoteStart(noteKey, velocity);
+      } else if (activeMode === "learn" && learnMode.lesson.phase === "your_turn") {
+        learnRecordingManager.addNoteStart(noteKey, velocity);
       }
     },
-    [appState, activeMode, recordingManager, stopAiPlayback],
+    [appState, activeMode, recordingManager, learnRecordingManager, stopAiPlayback, learnMode.lesson.phase],
   );
 
   const handleNoteEnd = useCallback(
     (noteKey: string, frequency: number) => {
       if (activeMode === "play") {
         recordingManager.addNoteEnd(noteKey);
+      } else if (activeMode === "learn" && learnMode.lesson.phase === "your_turn") {
+        learnRecordingManager.addNoteEnd(noteKey);
       }
     },
-    [activeMode, recordingManager],
+    [activeMode, recordingManager, learnRecordingManager, learnMode.lesson.phase],
   );
 
   // Automatic AI reply handling
@@ -653,49 +686,15 @@ const Index = () => {
     }
   }
 
-  // Player mode AI handling
-  async function handleAskSubmit(prompt: string) {
-    stopAiPlayback();
-    await pianoRef.current?.ensureAudioReady();
-    setAppState("waiting_for_ai");
-    setIsAskLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("piano-ask", {
-        body: { prompt, model: selectedModel },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      if (data.sequence?.notes?.length > 0) {
-        const aiSequence = data.sequence as NoteSequence;
-        learnMode.addSession(prompt, aiSequence);
-        await playSequence(aiSequence, undefined, true);
-        toast({ title: "AI composed something!", description: `Playing: "${prompt}"` });
-      } else {
-        setAppState("idle");
-      }
-    } catch (error) {
-      console.error("Error getting AI composition:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to get AI composition",
-        variant: "destructive",
-      });
-      setAppState("idle");
-    } finally {
-      setIsAskLoading(false);
-    }
-  }
+  // Note: handleAskSubmit is now unused as learn mode handles its own AI calls
+  // Keeping for potential future use in other modes
 
   const clearCurrentHistory = () => {
     if (activeMode === "play") playMode.clearHistory();
-    else if (activeMode === "learn") learnMode.clearHistory();
+    // Learn mode doesn't have a history to clear in the same way
   };
 
-  const hasHistory =
-    (activeMode === "play" && playMode.history.length > 0) || (activeMode === "learn" && learnMode.history.length > 0);
+  const hasHistory = activeMode === "play" && playMode.history.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">

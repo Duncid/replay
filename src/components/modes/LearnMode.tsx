@@ -1,96 +1,242 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SheetMusic } from "@/components/SheetMusic";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, RotateCcw } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
-
-interface PlayerEntry {
-  prompt: string;
-  aiSequence: NoteSequence;
-}
+import { LessonState, LessonPhase, createInitialLessonState } from "@/types/learningSession";
+import { LessonCard } from "@/components/LessonCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface LearnModeProps {
-  isLoading: boolean;
   isPlaying: boolean;
-  onSubmit: (prompt: string) => void;
-  onReplay: (sequence: NoteSequence) => void;
-  onClearHistory: () => void;
+  onPlaySequence: (sequence: NoteSequence) => void;
+  onStartRecording: () => void;
+  isRecording: boolean;
+  userRecording: NoteSequence | null;
+  onClearRecording: () => void;
 }
 
-export function LearnMode({ isLoading, isPlaying, onSubmit, onReplay, onClearHistory }: LearnModeProps) {
+export function LearnMode({
+  isPlaying,
+  onPlaySequence,
+  onStartRecording,
+  isRecording,
+  userRecording,
+  onClearRecording,
+}: LearnModeProps) {
   const [prompt, setPrompt] = useState("");
-  const [history, setHistory] = useState<PlayerEntry[]>([]);
+  const [lesson, setLesson] = useState<LessonState>(createInitialLessonState());
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const hasEvaluatedRef = useRef(false);
+  const previousRecordingRef = useRef<NoteSequence | null>(null);
+
+  // Watch for recording completion to trigger evaluation
+  useEffect(() => {
+    // Only evaluate if:
+    // 1. We're in "your_turn" phase
+    // 2. We have a user recording
+    // 3. Recording has stopped
+    // 4. We haven't already evaluated this recording
+    if (
+      lesson.phase === "your_turn" &&
+      userRecording &&
+      userRecording.notes.length > 0 &&
+      !isRecording &&
+      !hasEvaluatedRef.current &&
+      previousRecordingRef.current !== userRecording
+    ) {
+      previousRecordingRef.current = userRecording;
+      hasEvaluatedRef.current = true;
+      evaluateAttempt(userRecording);
+    }
+  }, [lesson.phase, userRecording, isRecording]);
+
+  const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("piano-learn", {
+        body: { prompt: userPrompt, difficulty, previousSequence },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (!data?.instruction || !data?.sequence) {
+        throw new Error("Invalid lesson response");
+      }
+
+      setLesson({
+        instruction: data.instruction,
+        targetSequence: data.sequence,
+        phase: "demo",
+        attempts: 0,
+        validations: 0,
+        feedback: null,
+        difficulty,
+        userPrompt,
+      });
+
+      // Automatically play the demo
+      setTimeout(() => onPlaySequence(data.sequence), 500);
+    } catch (error) {
+      console.error("Failed to generate lesson:", error);
+      toast({
+        title: "Failed to generate lesson",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onPlaySequence, toast]);
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim() || isLoading) return;
-    onSubmit(prompt);
-  }, [prompt, isLoading, onSubmit]);
+    generateLesson(prompt.trim());
+  }, [prompt, isLoading, generateLesson]);
 
-  const addSession = useCallback((promptText: string, aiSequence: NoteSequence) => {
-    setHistory((prev) => [...prev, { prompt: promptText, aiSequence }]);
+  const handlePlayDemo = useCallback(() => {
+    if (lesson.targetSequence.notes.length > 0) {
+      onPlaySequence(lesson.targetSequence);
+    }
+  }, [lesson.targetSequence, onPlaySequence]);
+
+  const handleDemoComplete = useCallback(() => {
+    if (lesson.phase === "demo") {
+      setLesson(prev => ({ ...prev, phase: "your_turn" }));
+      hasEvaluatedRef.current = false;
+      previousRecordingRef.current = null;
+      onClearRecording();
+    }
+  }, [lesson.phase, onClearRecording]);
+
+  // Watch for playback completion to transition from demo to your_turn
+  useEffect(() => {
+    if (lesson.phase === "demo" && !isPlaying && lesson.targetSequence.notes.length > 0) {
+      // Small delay after demo ends
+      const timer = setTimeout(() => {
+        handleDemoComplete();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isPlaying, lesson.phase, lesson.targetSequence.notes.length, handleDemoComplete]);
+
+  const evaluateAttempt = useCallback(async (userSequence: NoteSequence) => {
+    setLesson(prev => ({ ...prev, phase: "evaluating" }));
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("piano-evaluate", {
+        body: {
+          targetSequence: lesson.targetSequence,
+          userSequence,
+          instruction: lesson.instruction,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const evaluation = data.evaluation as "correct" | "close" | "wrong";
+      const feedback = data.feedback as string;
+
+      setLesson(prev => ({
+        ...prev,
+        phase: "feedback",
+        attempts: prev.attempts + 1,
+        validations: evaluation === "correct" ? prev.validations + 1 : prev.validations,
+        feedback,
+      }));
+    } catch (error) {
+      console.error("Failed to evaluate attempt:", error);
+      toast({
+        title: "Evaluation failed",
+        description: "We couldn't evaluate your attempt. Try again!",
+        variant: "destructive",
+      });
+      setLesson(prev => ({ ...prev, phase: "your_turn" }));
+      hasEvaluatedRef.current = false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [lesson.targetSequence, lesson.instruction, toast]);
+
+  const handleTryAgain = useCallback(() => {
+    setLesson(prev => ({ ...prev, phase: "your_turn", feedback: null }));
+    hasEvaluatedRef.current = false;
+    previousRecordingRef.current = null;
+    onClearRecording();
+  }, [onClearRecording]);
+
+  const handleNext = useCallback(() => {
+    // Generate a new, slightly harder lesson
+    generateLesson(lesson.userPrompt, lesson.difficulty + 1, lesson.targetSequence);
+  }, [lesson.userPrompt, lesson.difficulty, lesson.targetSequence, generateLesson]);
+
+  const handleReset = useCallback(() => {
+    setLesson(createInitialLessonState());
     setPrompt("");
-  }, []);
-
-  const clearHistory = useCallback(() => {
-    setHistory([]);
-    onClearHistory();
-  }, [onClearHistory]);
+    onClearRecording();
+  }, [onClearRecording]);
 
   const render = () => (
     <div className="space-y-8">
-      {/* Input Section */}
-      <div className="w-full max-w-2xl mx-auto space-y-3">
-        <Textarea
-          placeholder="Describe what you'd like the AI to play..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          disabled={isLoading || isPlaying}
-          className="min-h-[120px] text-lg resize-none"
-        />
-        <Button
-          onClick={handleSubmit}
-          disabled={!prompt.trim() || isLoading || isPlaying}
-          className="w-full gap-2"
-        >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          Generate Music
-        </Button>
-      </div>
+      {lesson.phase === "prompt" ? (
+        /* Initial Prompt Input */
+        <div className="w-full max-w-2xl mx-auto space-y-3">
+          <Textarea
+            placeholder="What would you like to learn? (e.g., 'a simple jazz chord progression' or 'basic blues riff')"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            disabled={isLoading || isPlaying}
+            className="min-h-[120px] text-lg resize-none"
+          />
+          <Button
+            onClick={handleSubmit}
+            disabled={!prompt.trim() || isLoading || isPlaying}
+            className="w-full gap-2"
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Start Learning
+          </Button>
+        </div>
+      ) : (
+        /* Active Lesson */
+        <div className="space-y-6">
+          <LessonCard
+            instruction={lesson.instruction}
+            phase={lesson.phase}
+            attempts={lesson.attempts}
+            validations={lesson.validations}
+            feedback={lesson.feedback}
+            isLoading={isLoading || isPlaying}
+            onPlayDemo={handlePlayDemo}
+            onTryAgain={handleTryAgain}
+            onNext={handleNext}
+          />
 
-      {/* History Section */}
-      {history.length > 0 && (
-        <div className="w-full max-w-4xl mx-auto space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">History</h3>
-            <Button variant="ghost" size="sm" onClick={clearHistory}>
-              Clear
+          {/* Reset Button */}
+          <div className="flex justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              disabled={isLoading || isPlaying}
+              className="gap-2 text-muted-foreground"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Start Over
             </Button>
           </div>
-          {history.map((entry, index) => (
-            <div key={index} className="space-y-3 border border-border rounded-lg p-4 bg-card/50">
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                Request {index + 1}: "{entry.prompt}"
-              </div>
-              <SheetMusic
-                sequence={entry.aiSequence}
-                label={`AI played: "${entry.prompt}"`}
-                isUserNotes={false}
-                onReplay={() => onReplay(entry.aiSequence)}
-              />
-            </div>
-          ))}
         </div>
       )}
     </div>
   );
 
   return {
-    prompt,
-    setPrompt,
-    history,
-    addSession,
-    clearHistory,
+    lesson,
     render,
   };
 }

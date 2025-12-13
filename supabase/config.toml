@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.piano-ask]
 verify_jwt = false
+
+[functions.piano-learn]
+verify_jwt = false
+
+[functions.piano-evaluate]
+verify_jwt = false
