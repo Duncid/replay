@@ -76,17 +76,18 @@ Evaluate the attempt and respond with ONLY a JSON object:
   "feedback": "Brief encouraging feedback (max 15 words)"
 }
 
-EVALUATION CRITERIA:
-- "correct": All notes match (pitch order correct, timing roughly similar within 0.5s tolerance)
-- "close": Most notes correct but minor timing issues or 1 wrong note
-- "wrong": Multiple wrong notes or completely different sequence
+EVALUATION CRITERIA (BE LENIENT - this is for learning!):
+- "correct": The note PITCHES are played in the correct ORDER. Timing does NOT matter at all! If user played the right notes in the right order, it's CORRECT.
+- "close": Most pitches correct but 1 note is wrong or missing
+- "wrong": Multiple wrong notes, wrong order, or completely different sequence
 
+IMPORTANT: Ignore timing completely! Only check if the PITCHES match in ORDER.
 Be encouraging! Focus on what they did right.
 
 EXAMPLES:
-- Correct: {"evaluation": "correct", "feedback": "Perfect! You nailed it!"}
-- Close: {"evaluation": "close", "feedback": "Almost! Try holding the last note a bit longer."}
-- Wrong: {"evaluation": "wrong", "feedback": "Good try! Focus on the note order: C, D, E, F."}`;
+- Correct: {"evaluation": "correct", "feedback": "Perfect! You got all the notes!"}
+- Close: {"evaluation": "close", "feedback": "Almost! You missed one note."}
+- Wrong: {"evaluation": "wrong", "feedback": "Try again! Listen to the note pattern."}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
