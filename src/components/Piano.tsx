@@ -33,7 +33,9 @@ export interface PianoHandle {
 
 const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, soundType = "classic", onNoteStart, onNoteEnd }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
+  const [sustainedKeys, setSustainedKeys] = useState<Set<string>>(new Set());
   const pressedKeysRef = useRef<Set<string>>(new Set());
+  const keyActivationTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const audio = usePianoAudio(soundType);
 
   const noteToMidi = useCallback((noteKey: string) => {
@@ -130,10 +132,61 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
     onNoteEnd?.(noteKey, frequency);
   }, [allowInput, audio, isNotePlayable, onNoteEnd]);
 
+  // Manage sustained key state for visual feedback
+  useEffect(() => {
+    // Combine both activeKeys (from playback) and userPressedKeys (from user input)
+    const allActiveKeys = new Set([...activeKeys, ...userPressedKeys]);
+    console.log('Effect running, allActiveKeys:', Array.from(allActiveKeys));
+
+    // Clear timers for keys that are no longer active
+    keyActivationTimers.current.forEach((timer, key) => {
+      if (!allActiveKeys.has(key)) {
+        console.log('Clearing timer for:', key);
+        clearTimeout(timer);
+        keyActivationTimers.current.delete(key);
+      }
+    });
+
+    // Remove keys from sustained set if they're no longer active
+    setSustainedKeys((prev) => {
+      const newSet = new Set(prev);
+      let changed = false;
+      prev.forEach((key) => {
+        if (!allActiveKeys.has(key)) {
+          newSet.delete(key);
+          changed = true;
+        }
+      });
+      return changed ? newSet : prev;
+    });
+
+    // Set timers for newly activated keys to transition to sustained state
+    allActiveKeys.forEach((key) => {
+      if (!keyActivationTimers.current.has(key)) {
+        console.log('Setting timer for:', key);
+        // After 50ms of being pressed, transition to sustained state
+        const timer = setTimeout(() => {
+          console.log('Timer fired for:', key, 'adding to sustained');
+          setSustainedKeys((prev) => {
+            console.log('Previous sustained keys:', Array.from(prev));
+            const newSet = new Set([...prev, key]);
+            console.log('New sustained keys:', Array.from(newSet));
+            return newSet;
+          });
+          keyActivationTimers.current.delete(key);
+        }, 50);
+        keyActivationTimers.current.set(key, timer);
+      }
+    });
+  }, [activeKeys, userPressedKeys]);
+
   // Clear pressed keys when sound type changes to avoid stuck notes
   useEffect(() => {
     pressedKeysRef.current.clear();
     setUserPressedKeys(new Set());
+    setSustainedKeys(new Set());
+    keyActivationTimers.current.forEach((timer) => clearTimeout(timer));
+    keyActivationTimers.current.clear();
   }, [soundType]);
 
   useEffect(() => {
@@ -219,7 +272,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
             const noteKey = `${note.note}${note.octave}`;
             const isPlayable = isNotePlayable(noteKey);
             const isActive = isPlayable && (activeKeys.has(noteKey) || userPressedKeys.has(noteKey));
-            const isAiActive = activeKeys.has(noteKey) && !allowInput;
+            const isSustained = sustainedKeys.has(noteKey);
 
             return (
               <PianoKey
@@ -228,7 +281,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
                 frequency={note.frequency}
                 isBlack={false}
                 isActive={isActive}
-                isAiActive={isAiActive}
+                isSustained={isSustained}
                 isPlayable={isPlayable}
                 onPress={() => handleKeyPress(noteKey, note.frequency)}
                 onRelease={() => handleKeyRelease(noteKey, note.frequency)}
@@ -243,7 +296,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
             const noteKey = `${note.note}${note.octave}`;
             const isPlayable = isNotePlayable(noteKey);
             const isActive = isPlayable && (activeKeys.has(noteKey) || userPressedKeys.has(noteKey));
-            const isAiActive = activeKeys.has(noteKey) && !allowInput;
+            const isSustained = sustainedKeys.has(noteKey);
             const column = getBlackKeyColumn(note);
 
             return (
@@ -253,7 +306,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
                 frequency={note.frequency}
                 isBlack={true}
                 isActive={isActive}
-                isAiActive={isAiActive}
+                isSustained={isSustained}
                 isPlayable={isPlayable}
                 onPress={() => handleKeyPress(noteKey, note.frequency)}
                 onRelease={() => handleKeyRelease(noteKey, note.frequency)}

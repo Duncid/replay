@@ -34,14 +34,16 @@ import {
   Save,
   FilePlus,
   Download,
+  Upload,
 } from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { Metronome } from "@/components/Metronome";
 import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
-import { midiToFrequency, midiToNoteName, noteSequenceToAbc } from "@/utils/noteSequenceUtils";
+import { midiToFrequency, midiToNoteName, noteSequenceToAbc, abcToNoteSequence } from "@/utils/noteSequenceUtils";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
+import { AddNoteSequenceDialog } from "@/components/AddNoteSequenceDialog";
 import { useMagenta, MagentaModelType } from "@/hooks/useMagenta";
 import { useRecordingManager, RecordingResult } from "@/hooks/useRecordingManager";
 import { TopToastProgress, TopToastLabel } from "@/components/TopToast";
@@ -108,6 +110,9 @@ const Index = () => {
   const [editDialogMode, setEditDialogMode] = useState<"add" | "edit">("add");
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saveModalMode, setSaveModalMode] = useState<"save" | "saveAs">("save");
+  const [noteSequenceDialogOpen, setNoteSequenceDialogOpen] = useState(false);
+  const [noteSequenceEditIndex, setNoteSequenceEditIndex] = useState<number | null>(null);
+  const [noteSequenceEditMode, setNoteSequenceEditMode] = useState<"add" | "edit">("add");
 
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
@@ -422,6 +427,71 @@ const Index = () => {
     setEditDialogMode("edit");
     setPartitionDialogOpen(true);
   }, []);
+
+  // Handle upload ABC file
+  const handleUploadAbc = useCallback(async () => {
+    try {
+      if (!('showOpenFilePicker' in window)) {
+        toast({
+          title: "File picker not supported",
+          description: "Your browser doesn't support the File System Access API. Please use 'Write ABC' instead.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fileHandles = await (window as any).showOpenFilePicker({
+        types: [
+          {
+            description: "Text files",
+            accept: { "text/plain": [".txt"] },
+          },
+        ],
+        multiple: false,
+      });
+
+      if (!fileHandles || fileHandles.length === 0) return;
+
+      const file = await fileHandles[0].getFile();
+      const text = await file.text();
+
+      // Validate ABC format by attempting to parse
+      try {
+        const sequence = abcToNoteSequence(text, metronomeBpm);
+        if (sequence.notes.length === 0) {
+          toast({
+            title: "Invalid ABC file",
+            description: "The file contains no valid notes. Please check the ABC format.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Add to history
+        if (activeMode === "play") {
+          playModeRef.current?.addEntry(sequence, false);
+          toast({ title: "ABC file uploaded and added" });
+        }
+      } catch (error) {
+        toast({
+          title: "Invalid ABC format",
+          description: error instanceof Error ? error.message : "Unable to parse ABC notation from file",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("File upload error:", error);
+        toast({
+          title: "Error uploading file",
+          description: error instanceof Error ? error.message : "Failed to read file",
+          variant: "destructive",
+        });
+      }
+      // AbortError means user cancelled - no need to show error
+    }
+  }, [metronomeBpm, activeMode, toast]);
 
   // Play mode hook
   const playMode = PlayMode({
@@ -806,12 +876,6 @@ const Index = () => {
                 </Button>
               )}
 
-              {/* Add notes - standalone */}
-              <Button variant="outline" size="sm" onClick={() => setPartitionDialogOpen(true)}>
-                <PencilLine className="h-4 w-4" />
-                Manual
-              </Button>
-
               {/* Unified "..." menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -820,6 +884,30 @@ const Index = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  {/* Insert submenu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <FilePlus className="h-4 w-4 mr-2" />
+                      Insert
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={handleUploadAbc}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload ABC
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPartitionDialogOpen(true)}>
+                        <PencilLine className="h-4 w-4 mr-2" />
+                        Write ABC
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setNoteSequenceDialogOpen(true)}>
+                        <Music className="h-4 w-4 mr-2" />
+                        Write NoteSequence
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  <DropdownMenuSeparator />
+
                   {/* New */}
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -1009,28 +1097,12 @@ const Index = () => {
               </DropdownMenu>
             </div>
           </div>
-          <TabsContent value="play" className="mt-0">
+          <TabsContent value="play">
             {playMode.render()}
           </TabsContent>
-
-          <TabsContent value="learn" className="mt-0">
-            <Card className="border-none shadow-none bg-transparent">
-              <CardContent className="p-0">
-                <div className="mb-4 flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500/20 ring-4 ring-blue-500/10" />
-                  <span className="text-sm text-muted-foreground">Ask AI for exercises or theory</span>
-                </div>
-                {learnMode.render()}
-              </CardContent>
-            </Card>
+          <TabsContent value="learn">
+            {learnMode.render()}
           </TabsContent>
-          {/* The following lines seem to be a syntax error in the original document and are removed for correctness */}
-          {/*                    ))}
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-    </>
-  )
-} */}
         </Tabs>
       </div>
 
@@ -1062,6 +1134,34 @@ const Index = () => {
             : undefined
         }
         instrument={pianoSoundType}
+      />
+
+      {/* Add/Edit NoteSequence Dialog */}
+      <AddNoteSequenceDialog
+        open={noteSequenceDialogOpen}
+        onOpenChange={(open) => {
+          setNoteSequenceDialogOpen(open);
+          if (!open) {
+            setNoteSequenceEditIndex(null);
+            setNoteSequenceEditMode("add");
+          }
+        }}
+        onAdd={(sequence) => {
+          if (activeMode === "play") {
+            playModeRef.current?.addEntry(sequence, false);
+          }
+        }}
+        onEdit={(sequence) => {
+          if (activeMode === "play" && noteSequenceEditIndex !== null) {
+            playModeRef.current?.updateEntry(noteSequenceEditIndex, sequence);
+          }
+        }}
+        mode={noteSequenceEditMode}
+        initialSequence={
+          noteSequenceEditMode === "edit" && noteSequenceEditIndex !== null && playMode.history[noteSequenceEditIndex]
+            ? playMode.history[noteSequenceEditIndex].sequence
+            : undefined
+        }
       />
 
       {/* Save Composition Modal */}
