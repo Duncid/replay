@@ -194,7 +194,10 @@ export function LearnMode({
                 key={suggestion}
                 variant="outline"
                 size="sm"
-                onClick={() => setPrompt(suggestion)}
+                onClick={() => {
+                  setPrompt(suggestion);
+                  generateLesson(suggestion);
+                }}
                 disabled={isLoading || isPlaying}
                 className="text-muted-foreground"
               >
