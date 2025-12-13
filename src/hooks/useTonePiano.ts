@@ -84,11 +84,17 @@ function createClassicEngine(): AudioEngine {
     },
     dispose: () => {
       activeOscillators.forEach(({ oscillator, gain }) => {
-        oscillator.stop();
-        oscillator.disconnect();
-        gain.disconnect();
+        try {
+          oscillator.stop();
+          oscillator.disconnect();
+          gain.disconnect();
+        } catch (e) {
+          // Ignore errors from already stopped oscillators
+        }
       });
       activeOscillators.clear();
+      // Close the AudioContext to fully release resources
+      audioContext.close().catch(() => {});
     },
   };
 }
