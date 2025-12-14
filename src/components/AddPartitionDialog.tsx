@@ -38,8 +38,8 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const { toast } = useToast();
   // Only create audio engine when dialog is open to avoid background classic engine interference
-  const audio = usePianoAudio(open ? instrument : "classic");
-  const { ensureAudioReady, playNote } = open ? audio : { ensureAudioReady: async () => {}, playNote: async () => {} };
+  const audio = usePianoAudio(open ? instrument : null);
+  const { ensureAudioReady, playNote } = audio;
 
   // Update abcText when dialog opens with initialAbc (edit mode)
   useEffect(() => {

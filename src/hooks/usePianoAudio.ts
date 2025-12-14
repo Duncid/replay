@@ -13,29 +13,32 @@ function frequencyToNote(frequency: number): string {
   return `${noteNames[noteIndex]}${octave}`;
 }
 
-export function usePianoAudio(soundType: PianoSoundType = "classic") {
+export function usePianoAudio(soundType: PianoSoundType | null = "classic") {
   const tonePiano = useTonePiano(soundType);
 
   const ensureAudioReady = useCallback(async () => {
-    await tonePiano.ensureAudioReady();
+    if (tonePiano) await tonePiano.ensureAudioReady();
   }, [tonePiano]);
 
   const playNote = useCallback(async (frequency: number, duration: number = 0.3) => {
+    if (!tonePiano) return;
     const noteKey = frequencyToNote(frequency);
     await tonePiano.playNote(noteKey, duration);
   }, [tonePiano]);
 
   const startNote = useCallback((noteKey: string, _frequency: number) => {
+    if (!tonePiano) return;
     // noteKey is already in format like "C4", so use it directly
     tonePiano.startNote(noteKey);
   }, [tonePiano]);
 
   const stopNote = useCallback((noteKey: string) => {
+    if (!tonePiano) return;
     tonePiano.stopNote(noteKey);
   }, [tonePiano]);
 
   return {
-    isLoaded: tonePiano.isLoaded,
+    isLoaded: tonePiano?.isLoaded ?? false,
     ensureAudioReady,
     playNote,
     startNote,
