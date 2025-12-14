@@ -66,7 +66,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useCompositions } from "@/hooks/useCompositions";
+import { Composition, useCompositions } from "@/hooks/useCompositions";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { CompositionSubmenu } from "@/components/CompositionSubmenu";
 import { useTranslation } from "react-i18next";
@@ -104,6 +104,9 @@ const Index = () => {
   const [editDialogMode, setEditDialogMode] = useState<"add" | "edit">("add");
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saveModalMode, setSaveModalMode] = useState<"save" | "saveAs">("save");
+  const [saveBeforeOpenDialogOpen, setSaveBeforeOpenDialogOpen] = useState(false);
+  const [pendingCompositionToLoad, setPendingCompositionToLoad] = useState<Composition | null>(null);
+  const [loadPendingAfterSave, setLoadPendingAfterSave] = useState(false);
   const [noteSequenceDialogOpen, setNoteSequenceDialogOpen] = useState(false);
   const [noteSequenceEditIndex, setNoteSequenceEditIndex] = useState<number | null>(null);
   const [noteSequenceEditMode, setNoteSequenceEditMode] = useState<"add" | "edit">("add");
@@ -525,6 +528,42 @@ const Index = () => {
 
   // Assign to refs for use in handleRecordingComplete
   playModeRef.current = playMode;
+
+  const loadCompositionWithToast = useCallback((composition: Composition) => {
+    compositions.loadComposition(composition);
+    toast({ title: `Loaded "${composition.title}"` });
+    setPendingCompositionToLoad(null);
+    setSaveBeforeOpenDialogOpen(false);
+  }, [compositions, toast]);
+
+  const handleContinueWithoutSaving = useCallback(() => {
+    if (pendingCompositionToLoad) {
+      loadCompositionWithToast(pendingCompositionToLoad);
+    }
+  }, [loadCompositionWithToast, pendingCompositionToLoad]);
+
+  const handleSaveAndLoadExisting = useCallback(async () => {
+    if (!pendingCompositionToLoad || !compositions.currentComposition) return;
+
+    const success = await compositions.updateComposition(
+      compositions.currentComposition.id,
+      playMode.history,
+      pianoSoundType,
+      metronomeBpm,
+      metronomeTimeSignature,
+    );
+
+    if (success) {
+      loadCompositionWithToast(pendingCompositionToLoad);
+    }
+  }, [compositions, loadCompositionWithToast, metronomeBpm, metronomeTimeSignature, pendingCompositionToLoad, pianoSoundType, playMode]);
+
+  const handleSaveAsNewBeforeLoad = useCallback(() => {
+    setSaveModalMode("save");
+    setLoadPendingAfterSave(true);
+    setSaveModalOpen(true);
+    setSaveBeforeOpenDialogOpen(false);
+  }, []);
 
   // Learn mode recording manager
   const learnRecordingManager = useRecordingManager({
@@ -1095,8 +1134,12 @@ const Index = () => {
                     <CompositionSubmenu
                       compositions={compositions.compositions}
                       onSelect={(composition) => {
-                        compositions.loadComposition(composition);
-                        toast({ title: `Loaded "${composition.title}"` });
+                        if (playMode.history.length > 0) {
+                          setPendingCompositionToLoad(composition);
+                          setSaveBeforeOpenDialogOpen(true);
+                        } else {
+                          loadCompositionWithToast(composition);
+                        }
                       }}
                       isLoading={compositions.isLoading}
                     />
@@ -1211,13 +1254,62 @@ const Index = () => {
         }
       />
 
+      {/* Save before opening another composition */}
+      <AlertDialog
+        open={saveBeforeOpenDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingCompositionToLoad(null);
+          }
+          setSaveBeforeOpenDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("menus.saveBeforeOpeningTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {compositions.currentComposition
+                ? t("menus.saveBeforeOpeningDescriptionExisting")
+                : t("menus.saveBeforeOpeningDescriptionNew")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:flex-row sm:justify-end sm:space-x-2">
+            <AlertDialogCancel onClick={() => setPendingCompositionToLoad(null)}>
+              {t("menus.cancel")}
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={handleContinueWithoutSaving}
+              disabled={compositions.isLoading}
+            >
+              {t("menus.continueWithoutSaving")}
+            </Button>
+            {compositions.currentComposition ? (
+              <AlertDialogAction onClick={handleSaveAndLoadExisting} disabled={compositions.isLoading}>
+                {t("menus.saveAndOpen")}
+              </AlertDialogAction>
+            ) : (
+              <AlertDialogAction onClick={handleSaveAsNewBeforeLoad} disabled={compositions.isLoading}>
+                {t("menus.saveAsNewAndOpen")}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Save Composition Modal */}
       <SaveCompositionModal
         open={saveModalOpen}
-        onOpenChange={setSaveModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLoadPendingAfterSave(false);
+          }
+          setSaveModalOpen(open);
+        }}
         onSave={async (title) => {
+          let savedComposition: Composition | null = null;
           if (saveModalMode === "saveAs" || !compositions.currentComposition) {
-            await compositions.saveComposition(
+            savedComposition = await compositions.saveComposition(
               title,
               playMode.history,
               pianoSoundType,
@@ -1226,8 +1318,13 @@ const Index = () => {
             );
           }
           setSaveModalOpen(false);
+          if (loadPendingAfterSave && pendingCompositionToLoad && savedComposition) {
+            loadCompositionWithToast(pendingCompositionToLoad);
+          }
+          setLoadPendingAfterSave(false);
         }}
         isLoading={compositions.isLoading}
+        defaultTitle={compositions.currentComposition?.title || ""}
       />
     </div>
   );

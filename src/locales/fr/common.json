@@ -29,6 +29,12 @@
     "cancel": "Annuler",
     "save": "Enregistrer",
     "saveAs": "Enregistrer sous...",
+    "saveAndOpen": "Enregistrer et ouvrir",
+    "saveAsNewAndOpen": "Enregistrer comme nouveau et ouvrir",
+    "saveBeforeOpeningTitle": "Enregistrer la composition actuelle ?",
+    "saveBeforeOpeningDescriptionExisting": "Vous avez des modifications non enregistrées. Les enregistrer avant d'ouvrir une autre composition ?",
+    "saveBeforeOpeningDescriptionNew": "Vous n'avez pas encore enregistré cette composition. L'enregistrer avant d'en ouvrir une autre ?",
+    "continueWithoutSaving": "Continuer sans enregistrer",
     "export": "Exporter",
     "exportedAbc": "Exporté en fichier ABC",
     "compositionFallbackTitle": "Composition"
