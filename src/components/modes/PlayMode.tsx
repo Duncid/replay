@@ -48,6 +48,17 @@ interface PlayModeProps {
     onEditEntry?: (index: number, sequence: NoteSequence) => void;
 }
 
+function normalizeHistory(entries: PlayEntry[]): PlayEntry[] {
+    return entries.map((entry) => ({
+        ...entry,
+        id:
+            entry.id ||
+            (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                ? crypto.randomUUID()
+                : `track-${Date.now()}-${Math.random()}`),
+    }));
+}
+
 export function PlayMode({
     bpm,
     timeSignature,
@@ -66,22 +77,27 @@ export function PlayMode({
     playingSequence,
     onEditEntry,
 }: PlayModeProps) {
-    // Add IDs to initial history if they don't have them
-    const [history, setHistory] = useState<PlayEntry[]>(() => {
-        return initialHistory.map((entry, index) => ({
-            ...entry,
-            id: entry.id || `track-${Date.now()}-${index}`,
-        }));
-    });
+    const [history, setHistory] = useState<PlayEntry[]>(() => normalizeHistory(initialHistory));
 
     // Keep internal history in sync when the parent provides new data
     useEffect(() => {
-        setHistory(
-            initialHistory.map((entry, index) => ({
-                ...entry,
-                id: entry.id || `track-${Date.now()}-${index}`,
-            }))
-        );
+        setHistory((prev) => {
+            const normalized = normalizeHistory(initialHistory);
+
+            const isSame =
+                prev.length === normalized.length &&
+                prev.every((entry, index) => {
+                    const candidate = normalized[index];
+
+                    return (
+                        entry.id === candidate.id &&
+                        entry.sequence === candidate.sequence &&
+                        entry.isAiGenerated === candidate.isAiGenerated
+                    );
+                });
+
+            return isSame ? prev : normalized;
+        });
     }, [initialHistory]);
     const trackRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     
