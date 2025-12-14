@@ -64,25 +64,21 @@ serve(async (req) => {
 
     const languageDirective =
       locale === "fr"
-        ? `Use French for the feedback text while keeping the evaluation keys in English.`
-        : `Use natural English for the feedback text.`;
+        ? `ONLY WRITE THE feedback field in French. Do not use English words in feedback. Keep evaluation keys in English.`
+        : `Write the feedback field in clear, natural English.`;
 
     const feedbackExamples =
       locale === "fr"
-        ? `- "Super !" / "Parfait !" / "Bien joué !"
-- "Les notes sont bonnes, ajuste le rythme"
-- "La deuxième note est fausse — réessaie"
-- "Presque ! La troisième note est à corriger"
-- "Tu progresses !"
-- "Encore un petit effort, une note est fausse"
-- "Continue, réécoute l'exemple"`
-        : `- "Great!" / "Perfect!" / "Nailed it!" / "Nice work!"
-- "The notes are right, watch the timing"
-- "Second note was off - try again"
-- "Close! Third note needs work"
-- "You're getting there!"
-- "Almost! One note was wrong"
-- "Keep at it, listen again"`;
+        ? `- { "evaluation": "correct", "feedback": "Super, tout est juste !" }
+- { "evaluation": "close", "feedback": "Presque, vérifie la dernière note." }
+- { "evaluation": "close", "feedback": "Bien joué, rythme à ajuster." }
+- { "evaluation": "wrong", "feedback": "Réessaie, plusieurs notes sont fausses." }
+- { "evaluation": "wrong", "feedback": "Écoute encore et recommence." }`
+        : `- { "evaluation": "correct", "feedback": "Great, everything lined up!" }
+- { "evaluation": "close", "feedback": "Almost there, last note was off." }
+- { "evaluation": "close", "feedback": "Nice try, tighten the timing." }
+- { "evaluation": "wrong", "feedback": "Try again, a few notes were off." }
+- { "evaluation": "wrong", "feedback": "Listen once more and retry." }`;
 
     const systemPrompt = `You are a friendly, casual piano teacher giving quick feedback on a student's attempt.
 
@@ -96,7 +92,7 @@ ${JSON.stringify(targetSummary, null, 2)}
 USER'S ATTEMPT:
 ${JSON.stringify(userSummary, null, 2)}
 
-Respond with ONLY a JSON object:
+Respond with ONLY a JSON object in this exact shape (no extra words):
 {
   "evaluation": "correct" | "close" | "wrong",
   "feedback": "Short casual comment (max 8 words)"
@@ -110,7 +106,12 @@ EVALUATION CRITERIA (BE LENIENT):
 FEEDBACK STYLE - Be conversational and varied! Examples:
 ${feedbackExamples}
 
-Keep it SHORT and natural, like a friend giving feedback.`;
+Keep it SHORT and natural, like a friend giving feedback.
+
+EXPLICIT LANGUAGE RULES:
+- When locale is French, do NOT include English words or phrases in feedback.
+- When locale is English, avoid French.
+- Never translate the evaluation keys; they must always be "correct", "close", or "wrong".`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -184,7 +185,7 @@ Keep it SHORT and natural, like a friend giving feedback.`;
       evaluation.evaluation = "close";
     }
     if (!evaluation.feedback || typeof evaluation.feedback !== "string") {
-      evaluation.feedback = "Keep practicing!";
+      evaluation.feedback = locale === "fr" ? "Continue à pratiquer !" : "Keep practicing!";
     }
 
     console.log("Final evaluation:", JSON.stringify(evaluation));
