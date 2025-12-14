@@ -1,0 +1,27 @@
+{
+  "language": {
+    "label": "Langue",
+    "english": "Anglais",
+    "french": "Français"
+  },
+  "tabs": {
+    "play": "Jouer",
+    "learn": "Apprendre"
+  },
+  "controls": {
+    "autoreply": "Réponse auto",
+    "play": "Lire",
+    "stop": "Arrêter"
+  },
+  "learnMode": {
+    "promptPlaceholder": "Que voulez-vous apprendre ? (par ex. 'une progression d'accords de jazz simple' ou 'un riff de blues de base')",
+    "suggestions": [
+      "Apprends-moi une longue séquence jazz",
+      "Apprends-moi une séquence classique sombre"
+    ],
+    "startLearning": "Commencer l'apprentissage",
+    "generateErrorTitle": "Échec de la création de la leçon",
+    "generateErrorDescription": "Veuillez réessayer",
+    "evaluationFallback": "Évaluation impossible - réessayez !"
+  }
+}

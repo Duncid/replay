@@ -11,4 +11,5 @@ export const STORAGE_KEYS = {
   METRONOME_SOUND: "replay-metronome-sound",
   AUTOREPLY: "replay-autoreply",
   LEARN_DIFFICULTY: "replay-learn-difficulty",
+  LANGUAGE: "replay-language",
 } as const;

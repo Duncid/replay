@@ -1,0 +1,27 @@
+{
+  "language": {
+    "label": "Language",
+    "english": "English",
+    "french": "French"
+  },
+  "tabs": {
+    "play": "Play",
+    "learn": "Learn"
+  },
+  "controls": {
+    "autoreply": "Autoreply",
+    "play": "Play",
+    "stop": "Stop"
+  },
+  "learnMode": {
+    "promptPlaceholder": "What would you like to learn? (e.g., 'a simple jazz chord progression' or 'basic blues riff')",
+    "suggestions": [
+      "Teach me a long jazzy sequence",
+      "Teach me a moody classic sequence"
+    ],
+    "startLearning": "Start Learning",
+    "generateErrorTitle": "Failed to generate lesson",
+    "generateErrorDescription": "Please try again",
+    "evaluationFallback": "Couldn't evaluate - try again!"
+  }
+}

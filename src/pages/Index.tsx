@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +78,7 @@ import {
 import { useCompositions } from "@/hooks/useCompositions";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { CompositionSubmenu } from "@/components/CompositionSubmenu";
+import { useTranslation } from "react-i18next";
 
 const AI_MODELS = {
   llm: [
@@ -95,6 +96,7 @@ type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 type ActiveMode = "play" | "learn";
 
 const Index = () => {
+  const { t, i18n } = useTranslation();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(STORAGE_KEYS.ACTIVE_MODE, "play");
@@ -114,6 +116,8 @@ const Index = () => {
   const [noteSequenceEditIndex, setNoteSequenceEditIndex] = useState<number | null>(null);
   const [noteSequenceEditMode, setNoteSequenceEditMode] = useState<"add" | "edit">("add");
 
+  const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
+
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(STORAGE_KEYS.BPM, 120);
@@ -125,6 +129,15 @@ const Index = () => {
 
   const { toast } = useToast();
   const magenta = useMagenta();
+
+  useEffect(() => {
+    i18n.changeLanguage(language);
+  }, [i18n, language]);
+
+  const languageOptions = [
+    { value: "en", label: t("language.english") },
+    { value: "fr", label: t("language.french") },
+  ];
 
   // Compositions hook for cloud save/load
   const handleCompositionLoad = useCallback(
@@ -541,6 +554,7 @@ const Index = () => {
       setLearnModeRecording(null);
       learnModeRecordingRef.current = null;
     },
+    language,
   });
 
   // Handle note events from Piano
@@ -779,27 +793,27 @@ const Index = () => {
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
-          className="w-full relative z-10"
-        >
-          <div className="flex items-center justify-between px-2 py-4">
-            <div className="flex items-center gap-6">
-              <TabsList>
-                <TabsTrigger value="play">Play</TabsTrigger>
-                <TabsTrigger value="learn">Learn</TabsTrigger>
-              </TabsList>
-              {activeMode === "play" && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="autoreply-mode"
-                    checked={isAutoreplyActive}
-                    onCheckedChange={setIsAutoreplyActive}
-                    disabled={appState !== "idle" && appState !== "user_playing"}
-                  />
-                  <Label htmlFor="autoreply-mode" className="cursor-pointer">
-                    Autoreply
-                  </Label>
-                </div>
-              )}
+            className="w-full relative z-10"
+          >
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="flex items-center gap-6">
+                <TabsList>
+                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
+                  <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
+                </TabsList>
+                {activeMode === "play" && (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="autoreply-mode"
+                      checked={isAutoreplyActive}
+                      onCheckedChange={setIsAutoreplyActive}
+                      disabled={appState !== "idle" && appState !== "user_playing"}
+                    />
+                    <Label htmlFor="autoreply-mode" className="cursor-pointer">
+                      {t("controls.autoreply")}
+                    </Label>
+                  </div>
+                )}
 
               {activeMode === "learn" && (
                 <DropdownMenu>
@@ -848,11 +862,28 @@ const Index = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Play/Stop - only shown when there's history */}
-              {playMode.history.length > 0 && (
-                <Button
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="language-select" className="whitespace-nowrap">
+                    {t("language.label")}
+                  </Label>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger id="language-select" className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languageOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Play/Stop - only shown when there's history */}
+                {playMode.history.length > 0 && (
+                  <Button
                   onClick={() => {
                     if (playMode.isPlayingAll) {
                       playMode.onStopPlayback();
@@ -863,17 +894,17 @@ const Index = () => {
                       }
                     }
                   }}
-                  variant="outline"
-                  size="sm"
-                >
-                  {playMode.isPlayingAll ? (
-                    <Square className="h-4 w-4" fill="currentColor" />
-                  ) : (
-                    <Play className="h-4 w-4" fill="currentColor" />
-                  )}
-                  {playMode.isPlayingAll ? "Stop" : "Play"}
-                </Button>
-              )}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {playMode.isPlayingAll ? (
+                      <Square className="h-4 w-4" fill="currentColor" />
+                    ) : (
+                      <Play className="h-4 w-4" fill="currentColor" />
+                    )}
+                    {playMode.isPlayingAll ? t("controls.stop") : t("controls.play")}
+                  </Button>
+                )}
 
               {/* Unified "..." menu */}
               <DropdownMenu>
