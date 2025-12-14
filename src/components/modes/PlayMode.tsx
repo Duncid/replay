@@ -38,6 +38,7 @@ interface PlayModeProps {
     onClearHistory: () => void;
     liveNotes?: Note[];
     isRecording?: boolean;
+    isPlaying?: boolean;
     isPlayingAll?: boolean;
     initialHistory?: PlayEntry[];
     onHistoryChange?: (history: PlayEntry[]) => void;
@@ -56,6 +57,7 @@ export function PlayMode({
     onClearHistory,
     liveNotes = [],
     isRecording = false,
+    isPlaying = false,
     isPlayingAll = false,
     initialHistory = [],
     onHistoryChange,
@@ -71,6 +73,16 @@ export function PlayMode({
             id: entry.id || `track-${Date.now()}-${index}`,
         }));
     });
+
+    // Keep internal history in sync when the parent provides new data
+    useEffect(() => {
+        setHistory(
+            initialHistory.map((entry, index) => ({
+                ...entry,
+                id: entry.id || `track-${Date.now()}-${index}`,
+            }))
+        );
+    }, [initialHistory]);
     const trackRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     
     // Configure drag and drop sensors
@@ -320,6 +332,7 @@ export function PlayMode({
                                         sequence={entry.sequence}
                                         isPlaying={entry.sequence === playingSequence}
                                         onPlay={() => onReplay(entry.sequence)}
+                                        onStop={onStopPlayback}
                                         isFirst={index === 0}
                                         isLast={index === history.length - 1 && !isRecording}
                                         isAiGenerated={entry.isAiGenerated}
@@ -364,6 +377,7 @@ export function PlayMode({
         clearHistory,
         hasValidSessions,
         handlePlayAll,
+        isPlaying,
         isPlayingAll,
         onStopPlayback,
         getCombinedSequence,

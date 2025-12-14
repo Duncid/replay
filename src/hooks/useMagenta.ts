@@ -46,6 +46,7 @@ const loadMagentaScript = (): Promise<void> => {
 // Magenta MusicRNN valid pitch range (model-specific)
 const MAGENTA_MIN_PITCH = 36; // C2
 const MAGENTA_MAX_PITCH = 81; // A5
+const STEPS_PER_QUARTER = 4;
 
 // Clamp pitch to valid range for Magenta models
 const clampPitch = (pitch: number): number => {
@@ -70,8 +71,22 @@ const toMagentaSequence = (sequence: NoteSequence): any => {
     })),
     totalTime: sequence.totalTime,
     tempos: [{ time: 0, qpm: sequence.tempos?.[0]?.qpm || 120 }],
-    quantizationInfo: { stepsPerQuarter: 4 },
+    quantizationInfo: { stepsPerQuarter: STEPS_PER_QUARTER },
   };
+};
+
+// Estimate how many quantized steps a NoteSequence spans using tempo and total time
+const estimateQuantizedSteps = (
+  sequence: NoteSequence,
+  stepsPerQuarter: number = STEPS_PER_QUARTER
+): number => {
+  const bpm = sequence.tempos?.[0]?.qpm ?? 120;
+  const totalTime = sequence.totalTime ?? 0;
+
+  if (!totalTime || !bpm) return 0;
+
+  const estimatedSteps = Math.round((totalTime * bpm * stepsPerQuarter) / 60);
+  return Number.isFinite(estimatedSteps) ? estimatedSteps : 0;
 };
 
 // Convert Magenta's output back to our NoteSequence
@@ -198,15 +213,25 @@ export const useMagenta = () => {
         }
         
         const magentaInput = toMagentaSequence(inputSequence);
-        
+
         // Quantize the input sequence
-        const quantizedInput = mm.sequences.quantizeNoteSequence(magentaInput, 4);
+        const quantizedInput = mm.sequences.quantizeNoteSequence(
+          magentaInput,
+          STEPS_PER_QUARTER
+        );
+
+        const quantizedSteps = quantizedInput.totalQuantizedSteps ?? 0;
+        const estimatedSteps = estimateQuantizedSteps(inputSequence);
+        const baseSteps = Math.max(quantizedSteps, estimatedSteps);
+        const clampedSteps = Math.max(Math.min(baseSteps, 2048), 32);
 
         let outputSequence: any;
 
         if (modelType === "magenta/music-rnn" && musicRnnRef.current) {
           // MusicRNN continuation
-          const steps = options?.steps || 32;
+          // Use the quantized length of the user's phrase so generated ideas roughly
+          // match the size of the source instead of defaulting to a very short clip.
+          const steps = options?.steps ?? clampedSteps;
           const temperature = options?.temperature || 1.0;
           const chordProgression = options?.chordProgression || ["C", "G", "Am", "F"];
 
@@ -219,14 +244,71 @@ export const useMagenta = () => {
           console.log("[Magenta] MusicRNN generated", outputSequence.notes?.length, "notes");
         } else if (modelType === "magenta/music-vae" && musicVaeRef.current) {
           // MusicVAE - sample similar sequences
-          const numSamples = 1;
           const temperature = options?.temperature || 0.5;
+          const targetSteps = options?.steps ?? clampedSteps;
+
+          // mel_2bar_small always decodes to its configured numSteps (32).
+          // To better match the user's clip length, tile multiple decoded
+          // samples end-to-end until we reach the requested duration.
+          const segmentSteps = musicVaeRef.current.dataConverter?.numSteps ?? 32;
+          const segmentCount = Math.max(1, Math.ceil(targetSteps / segmentSteps));
 
           // Encode input and sample around it
           const z = await musicVaeRef.current.encode([quantizedInput]);
-          const samples = await musicVaeRef.current.decode(z, temperature);
-          outputSequence = samples[0];
-          console.log("[Magenta] MusicVAE generated", outputSequence.notes?.length, "notes");
+
+          const decodedSegments: any[] = [];
+          for (let i = 0; i < segmentCount; i += 1) {
+            const samples = await musicVaeRef.current.decode(z, temperature, segmentSteps);
+            const sample = samples[0];
+            const offset = i * segmentSteps;
+
+            const offsetNotes = (sample.notes || []).map((note: any) => {
+              const quantizedStart = note.quantizedStartStep ?? note.startTime ?? 0;
+              const quantizedEnd = note.quantizedEndStep ?? note.endTime ?? quantizedStart;
+
+              return {
+                ...note,
+                quantizedStartStep: quantizedStart + offset,
+                quantizedEndStep: quantizedEnd + offset,
+                startTime: (note.startTime ?? quantizedStart) + offset,
+                endTime: (note.endTime ?? quantizedEnd) + offset,
+              };
+            });
+
+            decodedSegments.push({
+              ...sample,
+              notes: offsetNotes,
+            });
+          }
+
+          const mergedNotes = decodedSegments.flatMap((segment) => segment.notes || []);
+
+          const maxQuantizedEnd = mergedNotes.length
+            ? Math.max(...mergedNotes.map((note: any) => note.quantizedEndStep ?? 0))
+            : 0;
+          const maxEndTime = mergedNotes.length
+            ? Math.max(...mergedNotes.map((note: any) => note.endTime ?? 0))
+            : 0;
+
+          const totalQuantizedSteps = Math.max(maxQuantizedEnd, segmentCount * segmentSteps);
+
+          outputSequence = {
+            ...decodedSegments[0],
+            notes: mergedNotes,
+            totalQuantizedSteps,
+            totalTime: Math.max(maxEndTime, totalQuantizedSteps),
+            quantizationInfo: decodedSegments[0]?.quantizationInfo ?? {
+              stepsPerQuarter: STEPS_PER_QUARTER,
+            },
+          };
+
+          console.log(
+            "[Magenta] MusicVAE generated",
+            outputSequence.notes?.length,
+            "notes across",
+            segmentCount,
+            "segments"
+          );
         }
 
         if (!outputSequence || !outputSequence.notes?.length) {
