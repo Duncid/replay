@@ -102,11 +102,22 @@ export function LearnMode({
       if (data?.error) throw new Error(data.error);
 
       const feedback = data.feedback as string;
+      const evaluation = data.evaluation as "correct" | "close" | "wrong";
+      
       setLastComment(feedback);
       setLesson(prev => ({
         ...prev,
         attempts: prev.attempts + 1,
       }));
+
+      // Auto-replay example when notes were wrong
+      if (evaluation === "wrong" || evaluation === "close") {
+        setTimeout(() => {
+          if (lesson.targetSequence.notes.length > 0) {
+            onPlaySequence(lesson.targetSequence);
+          }
+        }, 1000); // Small delay so user can read feedback first
+      }
     } catch (error) {
       console.error("Failed to evaluate attempt:", error);
       setLastComment("Couldn't evaluate - try again!");
@@ -115,7 +126,7 @@ export function LearnMode({
       hasEvaluatedRef.current = false; // Allow next recording to be evaluated
       onClearRecording();
     }
-  }, [lesson.targetSequence, lesson.instruction, onClearRecording]);
+  }, [lesson.targetSequence, lesson.instruction, onClearRecording, onPlaySequence]);
 
   // Watch for recording completion to trigger evaluation
   useEffect(() => {
