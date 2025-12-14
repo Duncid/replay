@@ -103,6 +103,7 @@ const Index = () => {
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [liveNotes, setLiveNotes] = useState<Note[]>([]);
   const [generationLabel, setGenerationLabel] = useState<string | null>(null);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
@@ -246,6 +247,7 @@ const Index = () => {
   const stopAiPlayback = useCallback(() => {
     shouldStopAiRef.current = true;
     isPlayingRef.current = false;
+    setIsPlaying(false);
     noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
     noteTimeoutsRef.current = [];
     if (aiPlaybackTimeoutRef.current) {
@@ -296,6 +298,7 @@ const Index = () => {
       }
       setActiveKeys(new Set());
       isPlayingRef.current = true;
+      setIsPlaying(true);
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -379,6 +382,7 @@ const Index = () => {
           setPlayingSequence(null);
           setActiveKeys(new Set());
           setIsPlayingAll(false);
+          setIsPlaying(false);
           noteTimeoutsRef.current = [];
           isPlayingRef.current = false;
         }
@@ -500,6 +504,7 @@ const Index = () => {
     onClearHistory: () => toast({ title: "History cleared" }),
     liveNotes,
     isRecording: appState === "user_playing" && activeMode === "play",
+    isPlaying,
     isPlayingAll,
     initialHistory: savedPlayHistory,
     onHistoryChange: setSavedPlayHistory,
@@ -854,7 +859,7 @@ const Index = () => {
               {playMode.history.length > 0 && (
                 <Button
                   onClick={() => {
-                    if (playMode.isPlayingAll) {
+                    if (playMode.isPlaying) {
                       playMode.onStopPlayback();
                     } else {
                       const seq = playMode.getCombinedSequence();
@@ -866,12 +871,12 @@ const Index = () => {
                   variant="outline"
                   size="sm"
                 >
-                  {playMode.isPlayingAll ? (
+                  {playMode.isPlaying ? (
                     <Square className="h-4 w-4" fill="currentColor" />
                   ) : (
                     <Play className="h-4 w-4" fill="currentColor" />
                   )}
-                  {playMode.isPlayingAll ? "Stop" : "Play"}
+                  {playMode.isPlaying ? "Stop" : "Play"}
                 </Button>
               )}
 
