@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -25,7 +25,55 @@ const beatsPerBar: Record<string, number> = {
   "2/4": 2,
   "3/4": 3,
   "4/4": 4,
+  "5/4": 5,
+  "5/8": 5,
   "6/8": 6,
+  "7/8": 7,
+  "9/8": 9,
+  "12/8": 12,
+};
+
+const accentPresetOptions: Record<string, { id: string; label: string; accents: number[] }[]> = {
+  "2/4": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "march", label: "Both beats", accents: [1, 2] },
+  ],
+  "3/4": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "waltz", label: "Strong-weak-weak", accents: [1] },
+    { id: "one-three", label: "1 & 3", accents: [1, 3] },
+  ],
+  "4/4": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "backbeat", label: "Backbeat (1 & 3)", accents: [1, 3] },
+    { id: "all", label: "All beats", accents: [1, 2, 3, 4] },
+  ],
+  "5/4": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "three-two", label: "3+2 grouping", accents: [1, 4] },
+  ],
+  "5/8": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "three-two", label: "3+2 grouping", accents: [1, 4] },
+    { id: "two-three", label: "2+3 grouping", accents: [1, 3] },
+  ],
+  "6/8": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "jig", label: "1 & 4", accents: [1, 4] },
+  ],
+  "7/8": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "223", label: "2+2+3", accents: [1, 3, 5] },
+    { id: "322", label: "3+2+2", accents: [1, 4, 6] },
+  ],
+  "9/8": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "waltz-triplet", label: "3+3+3", accents: [1, 4, 7] },
+  ],
+  "12/8": [
+    { id: "downbeat", label: "Downbeat only", accents: [1] },
+    { id: "four-feel", label: "4 feel (1-4-7-10)", accents: [1, 4, 7, 10] },
+  ],
 };
 
 const getBpmDescription = (bpm: number): string => {
@@ -37,7 +85,8 @@ const getBpmDescription = (bpm: number): string => {
   if (bpm <= 130) return "⚡ Upbeat — Energetic and driving.";
   if (bpm <= 160) return "🔥 Fast — Intense and lively.";
   if (bpm <= 200) return "🚀 Very fast — For advanced players.";
-  return "🧠 Extreme — Ultra-fast or double-time feel.";
+  if (bpm <= 240) return "🧠 Extreme — Ultra-fast or double-time feel.";
+  return "🎯 Precision drill — Subdivide or half-time feel recommended.";
 };
 
 const soundTypeLabels: Record<MetronomeSoundType, string> = {
@@ -45,6 +94,7 @@ const soundTypeLabels: Record<MetronomeSoundType, string> = {
   woodblock: "Woodblock",
   digital: "Digital Tick",
   hihat: "Hi-Hat",
+  clave: "Clave Bell",
 };
 
 export interface MetronomeSettings {
@@ -79,6 +129,16 @@ export const Metronome = ({
   const [volume, setVolume] = useLocalStorage(STORAGE_KEYS.METRONOME_VOLUME, 50);
   const [currentBeat, setCurrentBeat] = useState(0);
 
+  const [accentPresetBySignature, setAccentPresetBySignature] = useState<Record<string, string>>(() => {
+    const initialPresets: Record<string, string> = {};
+    Object.entries(accentPresetOptions).forEach(([signature, presets]) => {
+      if (presets.length) {
+        initialPresets[signature] = presets[0].id;
+      }
+    });
+    return initialPresets;
+  });
+
   const [storedSoundType, setStoredSoundType] = useLocalStorage<MetronomeSoundType>(
     STORAGE_KEYS.METRONOME_SOUND,
     "classic",
@@ -94,6 +154,7 @@ export const Metronome = ({
   const bpmRef = useRef(bpm);
   const timeSignatureRef = useRef(timeSignature);
   const volumeRef = useRef(volume);
+  const tapTimesRef = useRef<number[]>([]);
 
   useEffect(() => {
     bpmRef.current = bpm;
@@ -104,47 +165,65 @@ export const Metronome = ({
   }, [timeSignature]);
 
   useEffect(() => {
+    if (accentPresetBySignature[timeSignature]) return;
+
+    const defaultPreset = accentPresetOptions[timeSignature]?.[0]?.id;
+    if (defaultPreset) {
+      setAccentPresetBySignature((prev) => ({ ...prev, [timeSignature]: defaultPreset }));
+    }
+  }, [accentPresetBySignature, timeSignature]);
+
+  useEffect(() => {
     volumeRef.current = volume;
     // Update Tone.js master volume
     Tone.getDestination().volume.value = Tone.gainToDb(volume / 100);
   }, [volume]);
 
-  const scheduleBeat = useCallback((beatNumber: number, time: number) => {
-    const isAccent = beatNumber === 0;
-    playClick(isAccent, time);
+  const scheduleBeat = useCallback(
+    (beatNumber: number, time: number, accentBeats: Set<number>) => {
+      const isAccent = accentBeats.has(beatNumber + 1);
+      playClick(isAccent, time);
 
-    const delayMs = Math.max(0, (time - Tone.now()) * 1000);
-    setTimeout(() => {
-      if (isPlayingRef.current) {
-        setCurrentBeat(beatNumber + 1);
+      const delayMs = Math.max(0, (time - Tone.now()) * 1000);
+      setTimeout(() => {
+        if (isPlayingRef.current) {
+          setCurrentBeat(beatNumber + 1);
+        }
+      }, delayMs);
+    },
+    [playClick],
+  );
+
+  const scheduler = useCallback(
+    (accentBeats: Set<number>) => {
+      if (!isPlayingRef.current) return;
+
+      const beats = beatsPerBar[timeSignatureRef.current];
+      const secondsPerBeat = 60 / bpmRef.current;
+      const currentTime = Tone.now();
+
+      while (nextNoteTimeRef.current < currentTime + SCHEDULE_AHEAD_TIME) {
+        scheduleBeat(currentScheduledBeatRef.current, nextNoteTimeRef.current, accentBeats);
+        nextNoteTimeRef.current += secondsPerBeat;
+        currentScheduledBeatRef.current = (currentScheduledBeatRef.current + 1) % beats;
       }
-    }, delayMs);
-  }, [playClick]);
+    },
+    [scheduleBeat],
+  );
 
-  const scheduler = useCallback(() => {
-    if (!isPlayingRef.current) return;
+  const startMetronome = useCallback(
+    async (accentBeats: Set<number>) => {
+      await ensureAudioReady();
 
-    const beats = beatsPerBar[timeSignatureRef.current];
-    const secondsPerBeat = 60 / bpmRef.current;
-    const currentTime = Tone.now();
+      isPlayingRef.current = true;
+      nextNoteTimeRef.current = Tone.now();
+      currentScheduledBeatRef.current = 0;
 
-    while (nextNoteTimeRef.current < currentTime + SCHEDULE_AHEAD_TIME) {
-      scheduleBeat(currentScheduledBeatRef.current, nextNoteTimeRef.current);
-      nextNoteTimeRef.current += secondsPerBeat;
-      currentScheduledBeatRef.current = (currentScheduledBeatRef.current + 1) % beats;
-    }
-  }, [scheduleBeat]);
-
-  const startMetronome = useCallback(async () => {
-    await ensureAudioReady();
-    
-    isPlayingRef.current = true;
-    nextNoteTimeRef.current = Tone.now();
-    currentScheduledBeatRef.current = 0;
-
-    scheduler();
-    schedulerIntervalRef.current = setInterval(scheduler, LOOKAHEAD_INTERVAL);
-  }, [ensureAudioReady, scheduler]);
+      scheduler(accentBeats);
+      schedulerIntervalRef.current = setInterval(() => scheduler(accentBeats), LOOKAHEAD_INTERVAL);
+    },
+    [ensureAudioReady, scheduler],
+  );
 
   const stopMetronome = useCallback(() => {
     isPlayingRef.current = false;
@@ -156,14 +235,21 @@ export const Metronome = ({
     setCurrentBeat(0);
   }, []);
 
+  const beats = beatsPerBar[timeSignature];
+
+  const accentPresets = useMemo(() => accentPresetOptions[timeSignature] ?? [], [timeSignature]);
+  const currentAccentPresetId = accentPresetBySignature[timeSignature] ?? accentPresets[0]?.id ?? "";
+  const currentAccentPreset = accentPresets.find((preset) => preset.id === currentAccentPresetId) ?? accentPresets[0];
+  const accentBeats = useMemo(() => new Set(currentAccentPreset?.accents ?? [1]), [currentAccentPreset]);
+
   useEffect(() => {
     if (isPlaying) {
-      startMetronome();
+      startMetronome(accentBeats);
     } else {
       stopMetronome();
     }
     return () => stopMetronome();
-  }, [isPlaying, startMetronome, stopMetronome]);
+  }, [accentBeats, isPlaying, startMetronome, stopMetronome]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -172,12 +258,36 @@ export const Metronome = ({
     }
   }, [bpm, timeSignature, isPlaying]);
 
-  const beats = beatsPerBar[timeSignature];
-
   const handleSoundTypeChange = (value: string) => {
     const newSoundType = value as MetronomeSoundType;
     setSoundType(newSoundType);
     setStoredSoundType(newSoundType);
+  };
+
+  const handleAccentPresetChange = (presetId: string) => {
+    setAccentPresetBySignature((prev) => ({ ...prev, [timeSignature]: presetId }));
+  };
+
+  const handleTapTempo = () => {
+    const now = Date.now();
+    const filtered = tapTimesRef.current.filter((time) => now - time < 4000);
+    filtered.push(now);
+    tapTimesRef.current = filtered;
+
+    if (filtered.length < 2) return;
+
+    const intervals = [] as number[];
+    for (let i = 1; i < filtered.length; i += 1) {
+      intervals.push(filtered[i] - filtered[i - 1]);
+    }
+
+    const avgMs = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
+    const newBpm = Math.min(300, Math.max(20, Math.round(60000 / avgMs)));
+    setBpm(newBpm);
+  };
+
+  const adjustBpm = (delta: number) => {
+    setBpm((prev) => Math.min(300, Math.max(20, prev + delta)));
   };
 
   return (
@@ -193,8 +303,25 @@ export const Metronome = ({
           <DropdownMenuContent align="start" className="w-64 bg-popover">
             <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
             <div className="px-2 pb-2">
-              <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={40} max={220} step={1} />
+              <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={20} max={300} step={1} />
               <p className="text-xs text-muted-foreground mt-2">{getBpmDescription(bpm)}</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Button size="sm" variant="outline" onClick={() => adjustBpm(-5)}>
+                  -5
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => adjustBpm(-1)}>
+                  -1
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => adjustBpm(1)}>
+                  +1
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => adjustBpm(5)}>
+                  +5
+                </Button>
+                <Button size="sm" onClick={handleTapTempo} className="ml-auto">
+                  Tap tempo
+                </Button>
+              </div>
             </div>
 
             <DropdownMenuSeparator />
@@ -206,7 +333,32 @@ export const Metronome = ({
                   <DropdownMenuRadioItem value="2/4">2/4</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="3/4">3/4</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="4/4">4/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="5/4">5/4</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="5/8">5/8</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="6/8">6/8</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="7/8">7/8</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="9/8">9/8</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="12/8">12/8</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                Accent pattern: {currentAccentPreset?.label ?? "Downbeat"}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover">
+                <DropdownMenuRadioGroup
+                  value={currentAccentPresetId}
+                  onValueChange={(value) => handleAccentPresetChange(value)}
+                >
+                  {accentPresets.map((preset) => (
+                    <DropdownMenuRadioItem key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </DropdownMenuRadioItem>
+                  ))}
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
@@ -221,6 +373,7 @@ export const Metronome = ({
                   <DropdownMenuRadioItem value="woodblock">Woodblock</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="digital">Digital Tick</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="hihat">Hi-Hat</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="clave">Clave Bell</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>

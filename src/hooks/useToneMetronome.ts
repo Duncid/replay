@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import * as Tone from "tone";
 
-export type MetronomeSoundType = "classic" | "woodblock" | "digital" | "hihat";
+export type MetronomeSoundType = "classic" | "woodblock" | "digital" | "hihat" | "clave";
 
 interface SoundNodes {
   cleanup: () => void;
@@ -140,6 +140,36 @@ function createHihatSound(): SoundNodes {
   };
 }
 
+function createClaveSound(): SoundNodes {
+  const synth = new Tone.MetalSynth({
+    frequency: 2000,
+    envelope: { attack: 0.001, decay: 0.15, release: 0.02 },
+    harmonicity: 5.1,
+    resonance: 6000,
+  }).toDestination();
+
+  const accentSynth = new Tone.MetalSynth({
+    frequency: 2300,
+    envelope: { attack: 0.001, decay: 0.18, release: 0.03 },
+    harmonicity: 5.4,
+    resonance: 6500,
+  }).toDestination();
+
+  return {
+    cleanup: () => {
+      synth.dispose();
+      accentSynth.dispose();
+    },
+    triggerClick: (time: number, isAccent: boolean) => {
+      if (isAccent) {
+        accentSynth.triggerAttackRelease("16n", time, 0.8);
+      } else {
+        synth.triggerAttackRelease("16n", time, 0.6);
+      }
+    },
+  };
+}
+
 export function useToneMetronome(initialSoundType: MetronomeSoundType = "classic") {
   const [soundType, setSoundType] = useState<MetronomeSoundType>(initialSoundType);
   const soundNodesRef = useRef<SoundNodes | null>(null);
@@ -153,6 +183,8 @@ export function useToneMetronome(initialSoundType: MetronomeSoundType = "classic
         return createDigitalSound();
       case "hihat":
         return createHihatSound();
+      case "clave":
+        return createClaveSound();
       case "classic":
       default:
         return createClassicSound();
