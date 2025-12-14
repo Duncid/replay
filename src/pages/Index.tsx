@@ -922,225 +922,226 @@ const Index = () => {
                 </Button>
               )}
 
-              {/* Unified "..." menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                  {/* Insert submenu */}
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <FilePlus className="h-4 w-4 mr-2" />
-                      {t("menus.insert")}
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuItem onClick={handleUploadAbc}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        {t("menus.uploadAbc")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setPartitionDialogOpen(true)}>
-                        <PencilLine className="h-4 w-4 mr-2" />
-                        {t("menus.writeAbc")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setNoteSequenceDialogOpen(true)}>
-                        <Music className="h-4 w-4 mr-2" />
-                        {t("menus.writeNoteSequence")}
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-
-                  <DropdownMenuSeparator />
-
-                  {/* New */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={playMode.history.length === 0}>
+              {activeMode === "play" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                    {/* Insert submenu */}
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
                         <FilePlus className="h-4 w-4 mr-2" />
-                        {t("menus.new")}
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t("menus.startNewTitle")}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t("menus.startNewDescription")}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t("menus.cancel")}</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => {
-                            playMode.clearHistory();
-                            compositions.clearCurrentComposition();
-                          }}
-                        >
+                        {t("menus.insert")}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={handleUploadAbc}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {t("menus.uploadAbc")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setPartitionDialogOpen(true)}>
+                          <PencilLine className="h-4 w-4 mr-2" />
+                          {t("menus.writeAbc")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setNoteSequenceDialogOpen(true)}>
+                          <Music className="h-4 w-4 mr-2" />
+                          {t("menus.writeNoteSequence")}
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+
+                    <DropdownMenuSeparator />
+
+                    {/* New */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={playMode.history.length === 0}>
+                          <FilePlus className="h-4 w-4 mr-2" />
                           {t("menus.new")}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{t("menus.startNewTitle")}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t("menus.startNewDescription")}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t("menus.cancel")}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => {
+                              playMode.clearHistory();
+                              compositions.clearCurrentComposition();
+                            }}
+                          >
+                            {t("menus.new")}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
 
-                  {/* Save */}
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (compositions.currentComposition && playMode.history.length > 0) {
-                        compositions.updateComposition(
-                          compositions.currentComposition.id,
-                          playMode.history,
-                          pianoSoundType,
-                          metronomeBpm,
-                          metronomeTimeSignature,
-                        );
-                      } else if (playMode.history.length > 0) {
-                        setSaveModalMode("save");
+                    {/* Save */}
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (compositions.currentComposition && playMode.history.length > 0) {
+                          compositions.updateComposition(
+                            compositions.currentComposition.id,
+                            playMode.history,
+                            pianoSoundType,
+                            metronomeBpm,
+                            metronomeTimeSignature,
+                          );
+                        } else if (playMode.history.length > 0) {
+                          setSaveModalMode("save");
+                          setSaveModalOpen(true);
+                        }
+                      }}
+                      disabled={playMode.history.length === 0 || compositions.isLoading}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {t("menus.save")}
+                    </DropdownMenuItem>
+
+                    {/* Save as */}
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSaveModalMode("saveAs");
                         setSaveModalOpen(true);
-                      }
-                    }}
-                    disabled={playMode.history.length === 0 || compositions.isLoading}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {t("menus.save")}
-                  </DropdownMenuItem>
+                      }}
+                      disabled={playMode.history.length === 0}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {t("menus.saveAs")}
+                    </DropdownMenuItem>
 
-                  {/* Save as */}
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSaveModalMode("saveAs");
-                      setSaveModalOpen(true);
-                    }}
-                    disabled={playMode.history.length === 0}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {t("menus.saveAs")}
-                  </DropdownMenuItem>
+                    <DropdownMenuSeparator />
 
-                  <DropdownMenuSeparator />
+                    {/* Export submenu */}
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger disabled={playMode.history.length === 0}>
+                        <Download className="h-4 w-4 mr-2" />
+                        {t("menus.export")}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            const seq = playMode.getCombinedSequence();
+                            if (seq?.sequence) {
+                              const title = compositions.currentComposition?.title || t("menus.compositionFallbackTitle");
+                              const abcContent = noteSequenceToAbc(seq.sequence, title);
 
-                  {/* Export submenu */}
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger disabled={playMode.history.length === 0}>
-                      <Download className="h-4 w-4 mr-2" />
-                      {t("menus.export")}
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuItem
-                        onClick={async () => {
-                          const seq = playMode.getCombinedSequence();
-                          if (seq?.sequence) {
-                            const title = compositions.currentComposition?.title || t("menus.compositionFallbackTitle");
-                            const abcContent = noteSequenceToAbc(seq.sequence, title);
-                            
-                            const downloadFallback = () => {
-                              const blob = new Blob([abcContent], { type: 'text/plain' });
-                              const url = URL.createObjectURL(blob);
-                              const link = document.createElement('a');
-                              link.href = url;
-                              link.download = `${title}.txt`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                              URL.revokeObjectURL(url);
-                              toast({ title: t("menus.exportedAbc") });
-                            };
-                            
-                            try {
-                              if ('showSaveFilePicker' in window) {
-                                const handle = await (window as any).showSaveFilePicker({
-                                  suggestedName: `${title}.txt`,
-                                  types: [{
-                                    description: 'Text File',
-                                    accept: { 'text/plain': ['.txt'] }
-                                  }]
-                                });
-                                const writable = await handle.createWritable();
-                                await writable.write(abcContent);
-                                await writable.close();
+                              const downloadFallback = () => {
+                                const blob = new Blob([abcContent], { type: 'text/plain' });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = `${title}.txt`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
                                 toast({ title: t("menus.exportedAbc") });
-                              } else {
-                                downloadFallback();
-                              }
-                            } catch (err) {
-                              if ((err as Error).name === 'AbortError') {
-                                // User cancelled - do nothing
-                              } else {
-                                // API not available or other error - use fallback
-                                downloadFallback();
+                              };
+
+                              try {
+                                if ('showSaveFilePicker' in window) {
+                                  const handle = await (window as any).showSaveFilePicker({
+                                    suggestedName: `${title}.txt`,
+                                    types: [{
+                                      description: 'Text File',
+                                      accept: { 'text/plain': ['.txt'] }
+                                    }]
+                                  });
+                                  const writable = await handle.createWritable();
+                                  await writable.write(abcContent);
+                                  await writable.close();
+                                  toast({ title: t("menus.exportedAbc") });
+                                } else {
+                                  downloadFallback();
+                                }
+                              } catch (err) {
+                                if ((err as Error).name === 'AbortError') {
+                                  // User cancelled - do nothing
+                                } else {
+                                  // API not available or other error - use fallback
+                                  downloadFallback();
+                                }
                               }
                             }
-                          }
-                        }}
-                      >
-                        ABC
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={async () => {
-                          const seq = playMode.getCombinedSequence();
-                          if (seq?.sequence) {
-                            await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
-                            toast({ title: "Copied as NoteSequence" });
-                          }
-                        }}
-                      >
-                        Note Sequence
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
+                          }}
+                        >
+                          ABC
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            const seq = playMode.getCombinedSequence();
+                            if (seq?.sequence) {
+                              await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
+                              toast({ title: "Copied as NoteSequence" });
+                            }
+                          }}
+                        >
+                          Note Sequence
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
 
-                  <DropdownMenuSeparator />
+                    <DropdownMenuSeparator />
 
-                  {/* Open submenu */}
-                  <CompositionSubmenu
-                    compositions={compositions.compositions}
-                    onSelect={(composition) => {
-                      compositions.loadComposition(composition);
-                      toast({ title: `Loaded "${composition.title}"` });
-                    }}
-                    isLoading={compositions.isLoading}
-                  />
+                    {/* Open submenu */}
+                    <CompositionSubmenu
+                      compositions={compositions.compositions}
+                      onSelect={(composition) => {
+                        compositions.loadComposition(composition);
+                        toast({ title: `Loaded "${composition.title}"` });
+                      }}
+                      isLoading={compositions.isLoading}
+                    />
 
-                  {/* Delete - only when composition loaded */}
-                  {compositions.currentComposition && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem
-                            onSelect={(e) => e.preventDefault()}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete composition?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete "{compositions.currentComposition?.title}" from the cloud.
-                              This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => {
-                                if (compositions.currentComposition) {
-                                  compositions.deleteComposition(compositions.currentComposition.id);
-                                }
-                              }}
+                    {/* Delete - only when composition loaded */}
+                    {compositions.currentComposition && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem
+                              onSelect={(e) => e.preventDefault()}
+                              className="text-destructive focus:text-destructive"
                             >
+                              <Trash2 className="h-4 w-4 mr-2" />
                               Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete composition?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete "{compositions.currentComposition?.title}" from the cloud.
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => {
+                                  if (compositions.currentComposition) {
+                                    compositions.deleteComposition(compositions.currentComposition.id);
+                                  }
+                                }}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
           <TabsContent value="play">
