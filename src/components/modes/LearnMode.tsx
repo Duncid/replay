@@ -7,6 +7,7 @@ import { LessonState, createInitialLessonState } from "@/types/learningSession";
 import { LessonCard } from "@/components/LessonCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 interface LearnModeProps {
   isPlaying: boolean;
@@ -15,6 +16,7 @@ interface LearnModeProps {
   isRecording: boolean;
   userRecording: NoteSequence | null;
   onClearRecording: () => void;
+  language: string;
 }
 
 export function LearnMode({
@@ -23,6 +25,7 @@ export function LearnMode({
   isRecording,
   userRecording,
   onClearRecording,
+  language,
 }: LearnModeProps) {
   const [prompt, setPrompt] = useState("");
   const [lesson, setLesson] = useState<LessonState>(createInitialLessonState());
@@ -31,13 +34,19 @@ export function LearnMode({
   const [isEvaluating, setIsEvaluating] = useState(false);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
+  const { t } = useTranslation();
 
   const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
     setIsLoading(true);
     setLastComment(null);
+    const localizedPrompt =
+      language === "fr"
+        ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
+        : userPrompt;
+
     try {
       const { data, error } = await supabase.functions.invoke("piano-learn", {
-        body: { prompt: userPrompt, difficulty, previousSequence },
+        body: { prompt: localizedPrompt, difficulty, previousSequence, language },
       });
 
       if (error) throw error;
@@ -66,14 +75,14 @@ export function LearnMode({
     } catch (error) {
       console.error("Failed to generate lesson:", error);
       toast({
-        title: "Failed to generate lesson",
-        description: error instanceof Error ? error.message : "Please try again",
+        title: t("learnMode.generateErrorTitle"),
+        description: error instanceof Error ? error.message : t("learnMode.generateErrorDescription"),
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
-  }, [onPlaySequence, onClearRecording, toast]);
+  }, [language, onClearRecording, onPlaySequence, t, toast]);
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim() || isLoading) return;
@@ -95,6 +104,7 @@ export function LearnMode({
           targetSequence: lesson.targetSequence,
           userSequence,
           instruction: lesson.instruction,
+          language,
         },
       });
 
@@ -120,13 +130,13 @@ export function LearnMode({
       }
     } catch (error) {
       console.error("Failed to evaluate attempt:", error);
-      setLastComment("Couldn't evaluate - try again!");
+      setLastComment(t("learnMode.evaluationFallback"));
     } finally {
       setIsEvaluating(false);
       hasEvaluatedRef.current = false; // Allow next recording to be evaluated
       onClearRecording();
     }
-  }, [lesson.targetSequence, lesson.instruction, onClearRecording, onPlaySequence]);
+  }, [language, lesson.targetSequence, lesson.instruction, onClearRecording, onPlaySequence, t]);
 
   // Watch for recording completion to trigger evaluation
   useEffect(() => {
@@ -155,8 +165,7 @@ export function LearnMode({
   }, [onClearRecording]);
 
   const suggestions = [
-    "Teach me a long jazzy sequence",
-    "Teach me a moody classic sequence",
+    ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) || []),
   ];
 
   const render = () => (
@@ -165,7 +174,7 @@ export function LearnMode({
         /* Initial Prompt Input */
         <div className="w-full max-w-2xl mx-auto space-y-3">
           <Textarea
-            placeholder="What would you like to learn? (e.g., 'a simple jazz chord progression' or 'basic blues riff')"
+            placeholder={t("learnMode.promptPlaceholder")}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={isLoading || isPlaying}
@@ -194,7 +203,7 @@ export function LearnMode({
             className="w-full gap-2"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Start Learning
+            {t("learnMode.startLearning")}
           </Button>
         </div>
       ) : (

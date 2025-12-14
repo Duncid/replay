@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -51,15 +51,6 @@ import { PlayMode, PlayEntry } from "@/components/modes/PlayMode";
 import { LearnMode } from "@/components/modes/LearnMode";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -78,6 +69,7 @@ import {
 import { useCompositions } from "@/hooks/useCompositions";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { CompositionSubmenu } from "@/components/CompositionSubmenu";
+import { useTranslation } from "react-i18next";
 
 const AI_MODELS = {
   llm: [
@@ -95,6 +87,7 @@ type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
 type ActiveMode = "play" | "learn";
 
 const Index = () => {
+  const { t, i18n } = useTranslation();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(STORAGE_KEYS.ACTIVE_MODE, "play");
@@ -115,6 +108,8 @@ const Index = () => {
   const [noteSequenceEditIndex, setNoteSequenceEditIndex] = useState<number | null>(null);
   const [noteSequenceEditMode, setNoteSequenceEditMode] = useState<"add" | "edit">("add");
 
+  const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
+
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(STORAGE_KEYS.INSTRUMENT, "classic");
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(STORAGE_KEYS.BPM, 120);
@@ -126,6 +121,20 @@ const Index = () => {
 
   const { toast } = useToast();
   const magenta = useMagenta();
+
+  useEffect(() => {
+    i18n.changeLanguage(language);
+  }, [i18n, language]);
+
+  const languageOptions = [
+    { value: "en", label: t("language.english") },
+    { value: "fr", label: t("language.french") },
+  ];
+
+  const languageFlags: Record<string, string> = {
+    en: "🇺🇸",
+    fr: "🇫🇷",
+  };
 
   // Compositions hook for cloud save/load
   const handleCompositionLoad = useCallback(
@@ -546,6 +555,7 @@ const Index = () => {
       setLearnModeRecording(null);
       learnModeRecordingRef.current = null;
     },
+    language,
   });
 
   // Handle note events from Piano
@@ -705,7 +715,11 @@ const Index = () => {
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
       <div id="topContainer" className="w-full flex flex-col items-center justify-start relative">
         {/* AI Playing / Replay indicator */}
-        <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
+        <TopToastLabel
+          show={appState === "ai_playing"}
+          label={isReplaying ? t("status.replay") : t("status.playing")}
+          pulse
+        />
 
         {/* Generation toast (Free and Duo modes) */}
         {generationLabel && <TopToastLabel show={true} label={generationLabel} pulse />}
@@ -720,7 +734,7 @@ const Index = () => {
           <TopToastProgress
             show={recordingManager.showProgress}
             progress={recordingManager.progress}
-            label="Improvising..."
+            label={t("status.improvising")}
           />
         )}
 
@@ -729,20 +743,48 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-between min-w-[56px]"
+                  aria-label={language === "fr" ? t("language.french") : t("language.english")}
+                >
+                  <span className="text-lg" aria-hidden="true">
+                    {languageFlags[language] ?? "🏳️"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {languageOptions.map((option) => (
+                  <DropdownMenuItem key={option.value} onClick={() => setLanguage(option.value)}>
+                    <span className="mr-2" aria-hidden="true">
+                      {languageFlags[option.value] ?? "🏳️"}
+                    </span>
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
                   <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 bg-popover">
-                <DropdownMenuLabel>Piano Sound</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={pianoSoundType}
                   onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
                 >
-                  <DropdownMenuRadioItem value="classic">Basic</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="classic">{t("piano.basic")}</DropdownMenuRadioItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Sampled Instruments</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    {t("piano.sampledInstruments")}
+                  </DropdownMenuLabel>
                   {SAMPLED_INSTRUMENTS.map((instrument) => (
                     <DropdownMenuRadioItem key={instrument} value={instrument}>
                       {PIANO_SOUND_LABELS[instrument]}
@@ -784,27 +826,27 @@ const Index = () => {
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
-          className="w-full relative z-10"
-        >
-          <div className="flex items-center justify-between px-2 py-4">
-            <div className="flex items-center gap-6">
-              <TabsList>
-                <TabsTrigger value="play">Play</TabsTrigger>
-                <TabsTrigger value="learn">Learn</TabsTrigger>
-              </TabsList>
-              {activeMode === "play" && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="autoreply-mode"
-                    checked={isAutoreplyActive}
-                    onCheckedChange={setIsAutoreplyActive}
-                    disabled={appState !== "idle" && appState !== "user_playing"}
-                  />
-                  <Label htmlFor="autoreply-mode" className="cursor-pointer">
-                    Autoreply
-                  </Label>
-                </div>
-              )}
+            className="w-full relative z-10"
+          >
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="flex items-center gap-6">
+                <TabsList>
+                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
+                  <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
+                </TabsList>
+                {activeMode === "play" && (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="autoreply-mode"
+                      checked={isAutoreplyActive}
+                      onCheckedChange={setIsAutoreplyActive}
+                      disabled={appState !== "idle" && appState !== "user_playing"}
+                    />
+                    <Label htmlFor="autoreply-mode" className="cursor-pointer">
+                      {t("controls.autoreply")}
+                    </Label>
+                  </div>
+                )}
 
               {activeMode === "learn" && (
                 <DropdownMenu>
@@ -853,7 +895,6 @@ const Index = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-            </div>
             <div className="flex items-center gap-2">
               {/* Play/Stop - only shown when there's history */}
               {playMode.history.length > 0 && (
@@ -876,7 +917,7 @@ const Index = () => {
                   ) : (
                     <Play className="h-4 w-4" fill="currentColor" />
                   )}
-                  {playMode.isPlaying ? "Stop" : "Play"}
+                  {playMode.isPlayingAll ? t("controls.stop") : t("controls.play")}
                 </Button>
               )}
 
@@ -886,26 +927,34 @@ const Index = () => {
                   <Button variant="outline" size="sm">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                )}
+
+                {/* Unified "..." menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
                   {/* Insert submenu */}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <FilePlus className="h-4 w-4 mr-2" />
-                      Insert
+                      {t("menus.insert")}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem onClick={handleUploadAbc}>
                         <Upload className="h-4 w-4 mr-2" />
-                        Upload ABC
+                        {t("menus.uploadAbc")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setPartitionDialogOpen(true)}>
                         <PencilLine className="h-4 w-4 mr-2" />
-                        Write ABC
+                        {t("menus.writeAbc")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setNoteSequenceDialogOpen(true)}>
                         <Music className="h-4 w-4 mr-2" />
-                        Write NoteSequence
+                        {t("menus.writeNoteSequence")}
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
@@ -917,25 +966,25 @@ const Index = () => {
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={playMode.history.length === 0}>
                         <FilePlus className="h-4 w-4 mr-2" />
-                        New
+                        {t("menus.new")}
                       </DropdownMenuItem>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Start new composition?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("menus.startNewTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will clear your current composition. Make sure to save first if you want to keep it.
+                          {t("menus.startNewDescription")}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t("menus.cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
                             playMode.clearHistory();
                             compositions.clearCurrentComposition();
                           }}
                         >
-                          New
+                          {t("menus.new")}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -960,7 +1009,7 @@ const Index = () => {
                     disabled={playMode.history.length === 0 || compositions.isLoading}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    Save
+                    {t("menus.save")}
                   </DropdownMenuItem>
 
                   {/* Save as */}
@@ -972,7 +1021,7 @@ const Index = () => {
                     disabled={playMode.history.length === 0}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    Save as...
+                    {t("menus.saveAs")}
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -981,14 +1030,14 @@ const Index = () => {
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger disabled={playMode.history.length === 0}>
                       <Download className="h-4 w-4 mr-2" />
-                      Export
+                      {t("menus.export")}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem
                         onClick={async () => {
                           const seq = playMode.getCombinedSequence();
                           if (seq?.sequence) {
-                            const title = compositions.currentComposition?.title || "Composition";
+                            const title = compositions.currentComposition?.title || t("menus.compositionFallbackTitle");
                             const abcContent = noteSequenceToAbc(seq.sequence, title);
                             
                             const downloadFallback = () => {
@@ -1001,7 +1050,7 @@ const Index = () => {
                               link.click();
                               document.body.removeChild(link);
                               URL.revokeObjectURL(url);
-                              toast({ title: "Exported as ABC file" });
+                              toast({ title: t("menus.exportedAbc") });
                             };
                             
                             try {
@@ -1016,7 +1065,7 @@ const Index = () => {
                                 const writable = await handle.createWritable();
                                 await writable.write(abcContent);
                                 await writable.close();
-                                toast({ title: "Exported as ABC file" });
+                                toast({ title: t("menus.exportedAbc") });
                               } else {
                                 downloadFallback();
                               }

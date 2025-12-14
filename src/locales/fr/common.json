@@ -1,0 +1,57 @@
+{
+  "language": {
+    "label": "Langue",
+    "english": "Anglais",
+    "french": "Français"
+  },
+  "status": {
+    "playing": "Lecture",
+    "replay": "Relecture",
+    "improvising": "Improvisation en cours..."
+  },
+  "tabs": {
+    "play": "Jouer",
+    "learn": "Apprendre"
+  },
+  "piano": {
+    "sound": "Son du piano",
+    "basic": "Classique",
+    "sampledInstruments": "Instruments échantillonnés"
+  },
+  "menus": {
+    "insert": "Insérer",
+    "uploadAbc": "Importer un fichier ABC",
+    "writeAbc": "Écrire en ABC",
+    "writeNoteSequence": "Écrire une NoteSequence",
+    "new": "Nouveau",
+    "startNewTitle": "Démarrer une nouvelle composition ?",
+    "startNewDescription": "Cela effacera votre composition actuelle. Pensez à la sauvegarder si vous voulez la conserver.",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saveAs": "Enregistrer sous...",
+    "export": "Exporter",
+    "exportedAbc": "Exporté en fichier ABC",
+    "compositionFallbackTitle": "Composition"
+  },
+  "controls": {
+    "autoreply": "Réponse automatique",
+    "play": "Lecture",
+    "stop": "Arrêt"
+  },
+  "learnMode": {
+    "promptPlaceholder": "Que voulez-vous apprendre ? (par ex. \"une progression d'accords de jazz simple\" ou \"un riff de blues de base\")",
+    "suggestions": [
+      "Apprends-moi une longue séquence jazz",
+      "Apprends-moi une séquence classique sombre"
+    ],
+    "startLearning": "Commencer l'apprentissage",
+    "generateErrorTitle": "Échec de la création de la leçon",
+    "generateErrorDescription": "Veuillez réessayer",
+    "evaluationFallback": "Évaluation impossible - réessayez !",
+    "listening": "À l'écoute...",
+    "waitingForUser": "Jouez sur le clavier ci-dessous",
+    "playButton": "Écouter",
+    "nextButton": "Suivant",
+    "leaveButton": "Quitter"
+  }
+}
