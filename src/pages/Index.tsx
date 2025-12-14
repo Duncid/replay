@@ -214,18 +214,18 @@ const Index = () => {
     setActiveMode(newMode);
   };
 
-  // MIDI note handlers - memoized to ensure stable references for useMidiInput
-  const handleMidiNoteOn = useCallback((noteKey: string, frequency: number, velocity: number) => {
+  // MIDI note handlers
+  const handleMidiNoteOn = (noteKey: string, frequency: number, velocity: number) => {
     if ((appState !== "idle" && appState !== "user_playing") || midiPressedKeysRef.current.has(noteKey)) return;
     midiPressedKeysRef.current.add(noteKey);
     pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
-  }, [appState]);
+  };
 
-  const handleMidiNoteOff = useCallback((noteKey: string, frequency: number) => {
+  const handleMidiNoteOff = (noteKey: string, frequency: number) => {
     if (!midiPressedKeysRef.current.has(noteKey)) return;
     midiPressedKeysRef.current.delete(noteKey);
     pianoRef.current?.handleKeyRelease(noteKey, frequency);
-  }, []);
+  };
 
   const handleNoMidiDevices = () => {
     toast({

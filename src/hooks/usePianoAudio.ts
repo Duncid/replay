@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useTonePiano } from "./useTonePiano";
 import { PianoSoundType } from "./usePianoSound";
 
@@ -13,37 +13,29 @@ function frequencyToNote(frequency: number): string {
   return `${noteNames[noteIndex]}${octave}`;
 }
 
-export function usePianoAudio(soundType: PianoSoundType | null = "classic") {
+export function usePianoAudio(soundType: PianoSoundType = "classic") {
   const tonePiano = useTonePiano(soundType);
-  
-  // Store tonePiano in ref for stable callbacks
-  const tonePianoRef = useRef(tonePiano);
-  tonePianoRef.current = tonePiano;
 
-  // Stable callbacks using refs - no dependencies means reference never changes
   const ensureAudioReady = useCallback(async () => {
-    if (tonePianoRef.current) await tonePianoRef.current.ensureAudioReady();
-  }, []);
+    await tonePiano.ensureAudioReady();
+  }, [tonePiano]);
 
   const playNote = useCallback(async (frequency: number, duration: number = 0.3) => {
-    if (!tonePianoRef.current) return;
     const noteKey = frequencyToNote(frequency);
-    await tonePianoRef.current.playNote(noteKey, duration);
-  }, []);
+    await tonePiano.playNote(noteKey, duration);
+  }, [tonePiano]);
 
   const startNote = useCallback((noteKey: string, _frequency: number) => {
-    if (!tonePianoRef.current) return;
     // noteKey is already in format like "C4", so use it directly
-    tonePianoRef.current.startNote(noteKey);
-  }, []);
+    tonePiano.startNote(noteKey);
+  }, [tonePiano]);
 
   const stopNote = useCallback((noteKey: string) => {
-    if (!tonePianoRef.current) return;
-    tonePianoRef.current.stopNote(noteKey);
-  }, []);
+    tonePiano.stopNote(noteKey);
+  }, [tonePiano]);
 
   return {
-    isLoaded: tonePiano?.isLoaded ?? false,
+    isLoaded: tonePiano.isLoaded,
     ensureAudioReady,
     playNote,
     startNote,

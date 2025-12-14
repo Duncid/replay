@@ -195,17 +195,10 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
   };
 }
 
-export function useTonePiano(soundType: PianoSoundType | null = "classic") {
+export function useTonePiano(soundType: PianoSoundType = "classic") {
   const [isLoaded, setIsLoaded] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
-  const soundTypeRef = useRef<PianoSoundType | null>(soundType);
-  // Use ref to track isLoaded for stable callbacks
-  const isLoadedRef = useRef(false);
-
-  // Keep isLoadedRef in sync with isLoaded state
-  useEffect(() => {
-    isLoadedRef.current = isLoaded;
-  }, [isLoaded]);
+  const soundTypeRef = useRef<PianoSoundType>(soundType);
 
   useEffect(() => {
     // Clean up previous engine
@@ -215,25 +208,17 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
     }
     
     setIsLoaded(false);
-    isLoadedRef.current = false;
     soundTypeRef.current = soundType;
-
-    // Skip engine creation if soundType is null
-    if (soundType === null) {
-      return;
-    }
 
     if (soundType === "classic") {
       engineRef.current = createClassicEngine();
       setIsLoaded(true);
-      isLoadedRef.current = true;
     } else if (SAMPLED_INSTRUMENTS.includes(soundType)) {
       const { engine, loadPromise } = createSamplerEngine(soundType);
       engineRef.current = engine;
       loadPromise.then(() => {
         if (soundTypeRef.current === soundType) {
           setIsLoaded(true);
-          isLoadedRef.current = true;
         }
       });
     }
@@ -246,25 +231,24 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
     };
   }, [soundType]);
 
-  // Stable callbacks using refs - no dependencies means reference never changes
   const ensureAudioReady = useCallback(async () => {
     await Tone.start();
   }, []);
 
   const startNote = useCallback((noteKey: string) => {
-    if (!engineRef.current || !isLoadedRef.current) return;
+    if (!engineRef.current || !isLoaded) return;
     engineRef.current.startNote(noteKey);
-  }, []);
+  }, [isLoaded]);
 
   const stopNote = useCallback((noteKey: string) => {
-    if (!engineRef.current || !isLoadedRef.current) return;
+    if (!engineRef.current || !isLoaded) return;
     engineRef.current.stopNote(noteKey);
-  }, []);
+  }, [isLoaded]);
 
   const playNote = useCallback(async (noteKey: string, duration: number = 0.3) => {
-    if (!engineRef.current || !isLoadedRef.current) return;
+    if (!engineRef.current || !isLoaded) return;
     engineRef.current.playNote(noteKey, duration);
-  }, []);
+  }, [isLoaded]);
 
   return {
     isLoaded,
