@@ -48,6 +48,7 @@ export const useMidiInput = (
   const [error, setError] = useState<string | null>(null);
   const midiAccessRef = useRef<MIDIAccess | null>(null);
   const activeInputRef = useRef<MIDIInput | null>(null);
+  const hasAutoConnectedRef = useRef(false);
 
   // Check if Web MIDI is supported
   const isSupported = typeof navigator !== "undefined" && "requestMIDIAccess" in navigator;
@@ -87,6 +88,9 @@ export const useMidiInput = (
   }, []);
 
   const connectToDevices = useCallback(async (isManual: boolean) => {
+    // Ensure we don't accumulate multiple connections (e.g., from Strict Mode double-invocation)
+    disconnect();
+
     if (!isSupported) {
       if (isManual) {
         setError("Web MIDI API is not supported in this browser. Try Chrome, Edge, or Opera.");
@@ -138,7 +142,7 @@ export const useMidiInput = (
       }
       console.error("[MIDI] Error:", err);
     }
-  }, [isSupported, handleMidiMessage, onManualConnectNoDevices]);
+  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices]);
 
   const requestAccess = useCallback(async () => {
     await connectToDevices(true);
@@ -146,10 +150,11 @@ export const useMidiInput = (
 
   // Auto-connect on mount if supported (silent - no error display)
   useEffect(() => {
-    if (isSupported) {
+    if (isSupported && !hasAutoConnectedRef.current) {
+      hasAutoConnectedRef.current = true;
       connectToDevices(false);
     }
-  }, []);
+  }, [connectToDevices, isSupported]);
 
   // Update MIDI message handler when callbacks change to avoid stale closures
   useEffect(() => {
