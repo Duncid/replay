@@ -262,11 +262,18 @@ export const useMagenta = () => {
             const sample = samples[0];
             const offset = i * segmentSteps;
 
-            const offsetNotes = (sample.notes || []).map((note: any) => ({
-              ...note,
-              startTime: note.startTime + offset,
-              endTime: note.endTime + offset,
-            }));
+            const offsetNotes = (sample.notes || []).map((note: any) => {
+              const quantizedStart = note.quantizedStartStep ?? note.startTime ?? 0;
+              const quantizedEnd = note.quantizedEndStep ?? note.endTime ?? quantizedStart;
+
+              return {
+                ...note,
+                quantizedStartStep: quantizedStart + offset,
+                quantizedEndStep: quantizedEnd + offset,
+                startTime: (note.startTime ?? quantizedStart) + offset,
+                endTime: (note.endTime ?? quantizedEnd) + offset,
+              };
+            });
 
             decodedSegments.push({
               ...sample,
@@ -275,15 +282,21 @@ export const useMagenta = () => {
           }
 
           const mergedNotes = decodedSegments.flatMap((segment) => segment.notes || []);
-          const maxEndTime = mergedNotes.length
-            ? Math.max(...mergedNotes.map((note: any) => note.endTime))
+
+          const maxQuantizedEnd = mergedNotes.length
+            ? Math.max(...mergedNotes.map((note: any) => note.quantizedEndStep ?? 0))
             : 0;
+          const maxEndTime = mergedNotes.length
+            ? Math.max(...mergedNotes.map((note: any) => note.endTime ?? 0))
+            : 0;
+
+          const totalQuantizedSteps = Math.max(maxQuantizedEnd, segmentCount * segmentSteps);
 
           outputSequence = {
             ...decodedSegments[0],
             notes: mergedNotes,
-            totalQuantizedSteps: Math.max(maxEndTime, segmentCount * segmentSteps),
-            totalTime: Math.max(maxEndTime, segmentCount * segmentSteps),
+            totalQuantizedSteps,
+            totalTime: Math.max(maxEndTime, totalQuantizedSteps),
             quantizationInfo: decodedSegments[0]?.quantizationInfo ?? {
               stepsPerQuarter: STEPS_PER_QUARTER,
             },
