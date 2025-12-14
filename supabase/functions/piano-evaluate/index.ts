@@ -62,10 +62,14 @@ serve(async (req) => {
       start: Math.round(n.startTime * 10) / 10,
     }));
 
-    const languageDirective =
+    const localeRule =
       locale === "fr"
-        ? `ONLY WRITE THE feedback field in French. Do not use English words in feedback. Keep evaluation keys in English.`
-        : `Write the feedback field in clear, natural English.`;
+        ? `ACTIVE LOCALE: French (fr)
+- Feedback MUST be entirely in French. No English words or code-switching.
+- If you cannot stay in French, return: { "evaluation": "wrong", "feedback": "Réessaie, plusieurs notes sont fausses." }
+- Evaluation keys stay English: correct | close | wrong.`
+        : `ACTIVE LOCALE: English (en)
+- Feedback should be natural, friendly English.`;
 
     const feedbackExamples =
       locale === "fr"
@@ -82,7 +86,7 @@ serve(async (req) => {
 
     const systemPrompt = `You are a friendly, casual piano teacher giving quick feedback on a student's attempt.
 
-${languageDirective}
+${localeRule}
 
 The lesson was: "${instruction || 'Play the sequence'}"
 
@@ -109,8 +113,7 @@ ${feedbackExamples}
 Keep it SHORT and natural, like a friend giving feedback.
 
 EXPLICIT LANGUAGE RULES:
-- When locale is French, do NOT include English words or phrases in feedback.
-- When locale is English, avoid French.
+- Use the ACTIVE LOCALE rules above without exceptions.
 - Never translate the evaluation keys; they must always be "correct", "close", or "wrong".`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
