@@ -4,9 +4,34 @@
     "english": "English",
     "french": "French"
   },
+  "status": {
+    "playing": "Playing",
+    "replay": "Replay",
+    "improvising": "Improvising..."
+  },
   "tabs": {
     "play": "Play",
     "learn": "Learn"
+  },
+  "piano": {
+    "sound": "Piano Sound",
+    "basic": "Basic",
+    "sampledInstruments": "Sampled Instruments"
+  },
+  "menus": {
+    "insert": "Insert",
+    "uploadAbc": "Upload ABC",
+    "writeAbc": "Write ABC",
+    "writeNoteSequence": "Write NoteSequence",
+    "new": "New",
+    "startNewTitle": "Start new composition?",
+    "startNewDescription": "This will clear your current composition. Make sure to save first if you want to keep it.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saveAs": "Save as...",
+    "export": "Export",
+    "exportedAbc": "Exported as ABC file",
+    "compositionFallbackTitle": "Composition"
   },
   "controls": {
     "autoreply": "Autoreply",

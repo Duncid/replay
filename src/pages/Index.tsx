@@ -51,15 +51,6 @@ import { PlayMode, PlayEntry } from "@/components/modes/PlayMode";
 import { LearnMode } from "@/components/modes/LearnMode";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -138,6 +129,11 @@ const Index = () => {
     { value: "en", label: t("language.english") },
     { value: "fr", label: t("language.french") },
   ];
+
+  const languageFlags: Record<string, string> = {
+    en: "🇺🇸",
+    fr: "🇫🇷",
+  };
 
   // Compositions hook for cloud save/load
   const handleCompositionLoad = useCallback(
@@ -713,8 +709,38 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
       <div id="topContainer" className="w-full flex flex-col items-center justify-start relative">
+        <div className="absolute left-2 top-2 z-20">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full border"
+                aria-label={language === "fr" ? t("language.french") : t("language.english")}
+              >
+                <span className="text-xl" aria-hidden="true">
+                  {languageFlags[language] ?? "🏳️"}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {languageOptions.map((option) => (
+                <DropdownMenuItem key={option.value} onClick={() => setLanguage(option.value)}>
+                  <span className="mr-2" aria-hidden="true">
+                    {languageFlags[option.value] ?? "🏳️"}
+                  </span>
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         {/* AI Playing / Replay indicator */}
-        <TopToastLabel show={appState === "ai_playing"} label={isReplaying ? "Replay" : "Playing"} pulse />
+        <TopToastLabel
+          show={appState === "ai_playing"}
+          label={isReplaying ? t("status.replay") : t("status.playing")}
+          pulse
+        />
 
         {/* Generation toast (Free and Duo modes) */}
         {generationLabel && <TopToastLabel show={true} label={generationLabel} pulse />}
@@ -729,7 +755,7 @@ const Index = () => {
           <TopToastProgress
             show={recordingManager.showProgress}
             progress={recordingManager.progress}
-            label="Improvising..."
+            label={t("status.improvising")}
           />
         )}
 
@@ -744,14 +770,16 @@ const Index = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 bg-popover">
-                <DropdownMenuLabel>Piano Sound</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={pianoSoundType}
                   onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
                 >
-                  <DropdownMenuRadioItem value="classic">Basic</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="classic">{t("piano.basic")}</DropdownMenuRadioItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Sampled Instruments</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    {t("piano.sampledInstruments")}
+                  </DropdownMenuLabel>
                   {SAMPLED_INSTRUMENTS.map((instrument) => (
                     <DropdownMenuRadioItem key={instrument} value={instrument}>
                       {PIANO_SOUND_LABELS[instrument]}
@@ -864,36 +892,19 @@ const Index = () => {
               )}
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="language-select" className="whitespace-nowrap">
-                    {t("language.label")}
-                  </Label>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger id="language-select" className="w-[140px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languageOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 {/* Play/Stop - only shown when there's history */}
                 {playMode.history.length > 0 && (
                   <Button
-                  onClick={() => {
-                    if (playMode.isPlayingAll) {
-                      playMode.onStopPlayback();
-                    } else {
-                      const seq = playMode.getCombinedSequence();
-                      if (seq?.sequence) {
-                        playMode.onPlayAll(seq.sequence, seq.segments);
+                    onClick={() => {
+                      if (playMode.isPlayingAll) {
+                        playMode.onStopPlayback();
+                      } else {
+                        const seq = playMode.getCombinedSequence();
+                        if (seq?.sequence) {
+                          playMode.onPlayAll(seq.sequence, seq.segments);
+                        }
                       }
-                    }
-                  }}
+                    }}
                     variant="outline"
                     size="sm"
                   >
@@ -906,32 +917,32 @@ const Index = () => {
                   </Button>
                 )}
 
-              {/* Unified "..." menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                {/* Unified "..." menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
                   {/* Insert submenu */}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <FilePlus className="h-4 w-4 mr-2" />
-                      Insert
+                      {t("menus.insert")}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem onClick={handleUploadAbc}>
                         <Upload className="h-4 w-4 mr-2" />
-                        Upload ABC
+                        {t("menus.uploadAbc")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setPartitionDialogOpen(true)}>
                         <PencilLine className="h-4 w-4 mr-2" />
-                        Write ABC
+                        {t("menus.writeAbc")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setNoteSequenceDialogOpen(true)}>
                         <Music className="h-4 w-4 mr-2" />
-                        Write NoteSequence
+                        {t("menus.writeNoteSequence")}
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
@@ -943,25 +954,25 @@ const Index = () => {
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={playMode.history.length === 0}>
                         <FilePlus className="h-4 w-4 mr-2" />
-                        New
+                        {t("menus.new")}
                       </DropdownMenuItem>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Start new composition?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("menus.startNewTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will clear your current composition. Make sure to save first if you want to keep it.
+                          {t("menus.startNewDescription")}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t("menus.cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
                             playMode.clearHistory();
                             compositions.clearCurrentComposition();
                           }}
                         >
-                          New
+                          {t("menus.new")}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -986,7 +997,7 @@ const Index = () => {
                     disabled={playMode.history.length === 0 || compositions.isLoading}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    Save
+                    {t("menus.save")}
                   </DropdownMenuItem>
 
                   {/* Save as */}
@@ -998,7 +1009,7 @@ const Index = () => {
                     disabled={playMode.history.length === 0}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    Save as...
+                    {t("menus.saveAs")}
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -1007,14 +1018,14 @@ const Index = () => {
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger disabled={playMode.history.length === 0}>
                       <Download className="h-4 w-4 mr-2" />
-                      Export
+                      {t("menus.export")}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem
                         onClick={async () => {
                           const seq = playMode.getCombinedSequence();
                           if (seq?.sequence) {
-                            const title = compositions.currentComposition?.title || "Composition";
+                            const title = compositions.currentComposition?.title || t("menus.compositionFallbackTitle");
                             const abcContent = noteSequenceToAbc(seq.sequence, title);
                             
                             const downloadFallback = () => {
@@ -1027,7 +1038,7 @@ const Index = () => {
                               link.click();
                               document.body.removeChild(link);
                               URL.revokeObjectURL(url);
-                              toast({ title: "Exported as ABC file" });
+                              toast({ title: t("menus.exportedAbc") });
                             };
                             
                             try {
@@ -1042,7 +1053,7 @@ const Index = () => {
                                 const writable = await handle.createWritable();
                                 await writable.write(abcContent);
                                 await writable.close();
-                                toast({ title: "Exported as ABC file" });
+                                toast({ title: t("menus.exportedAbc") });
                               } else {
                                 downloadFallback();
                               }
