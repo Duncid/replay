@@ -709,32 +709,6 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
       <div id="topContainer" className="w-full flex flex-col items-center justify-start relative">
-        <div className="absolute left-2 top-2 z-20">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 rounded-full border"
-                aria-label={language === "fr" ? t("language.french") : t("language.english")}
-              >
-                <span className="text-xl" aria-hidden="true">
-                  {languageFlags[language] ?? "🏳️"}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {languageOptions.map((option) => (
-                <DropdownMenuItem key={option.value} onClick={() => setLanguage(option.value)}>
-                  <span className="mr-2" aria-hidden="true">
-                    {languageFlags[option.value] ?? "🏳️"}
-                  </span>
-                  {option.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
         {/* AI Playing / Replay indicator */}
         <TopToastLabel
           show={appState === "ai_playing"}
@@ -762,6 +736,32 @@ const Index = () => {
         {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
         <div className="w-full flex items-center justify-between gap-4 p-2">
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-between min-w-[56px]"
+                  aria-label={language === "fr" ? t("language.french") : t("language.english")}
+                >
+                  <span className="text-lg" aria-hidden="true">
+                    {languageFlags[language] ?? "🏳️"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {languageOptions.map((option) => (
+                  <DropdownMenuItem key={option.value} onClick={() => setLanguage(option.value)}>
+                    <span className="mr-2" aria-hidden="true">
+                      {languageFlags[option.value] ?? "🏳️"}
+                    </span>
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">

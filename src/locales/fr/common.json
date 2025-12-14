@@ -47,6 +47,11 @@
     "startLearning": "Commencer l'apprentissage",
     "generateErrorTitle": "Échec de la création de la leçon",
     "generateErrorDescription": "Veuillez réessayer",
-    "evaluationFallback": "Évaluation impossible - réessayez !"
+    "evaluationFallback": "Évaluation impossible - réessayez !",
+    "listening": "À l'écoute...",
+    "waitingForUser": "Jouez sur le clavier ci-dessous",
+    "playButton": "Écouter",
+    "nextButton": "Suivant",
+    "leaveButton": "Quitter"
   }
 }

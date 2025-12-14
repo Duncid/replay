@@ -39,9 +39,14 @@ export function LearnMode({
   const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
     setIsLoading(true);
     setLastComment(null);
+    const localizedPrompt =
+      language === "fr"
+        ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
+        : userPrompt;
+
     try {
       const { data, error } = await supabase.functions.invoke("piano-learn", {
-        body: { prompt: userPrompt, difficulty, previousSequence, language },
+        body: { prompt: localizedPrompt, difficulty, previousSequence, language },
       });
 
       if (error) throw error;

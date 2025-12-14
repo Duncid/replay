@@ -47,6 +47,11 @@
     "startLearning": "Start Learning",
     "generateErrorTitle": "Failed to generate lesson",
     "generateErrorDescription": "Please try again",
-    "evaluationFallback": "Couldn't evaluate - try again!"
+    "evaluationFallback": "Couldn't evaluate - try again!",
+    "listening": "Listening...",
+    "waitingForUser": "Play on the keyboard below",
+    "playButton": "Play",
+    "nextButton": "Next",
+    "leaveButton": "Leave"
   }
 }
