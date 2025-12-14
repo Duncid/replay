@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, RotateCcw } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
-import { LessonState, LessonPhase, createInitialLessonState } from "@/types/learningSession";
+import { LessonState, createInitialLessonState } from "@/types/learningSession";
 import { LessonCard } from "@/components/LessonCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,6 @@ interface LearnModeProps {
 export function LearnMode({
   isPlaying,
   onPlaySequence,
-  onStartRecording,
   isRecording,
   userRecording,
   onClearRecording,
@@ -28,11 +27,14 @@ export function LearnMode({
   const [prompt, setPrompt] = useState("");
   const [lesson, setLesson] = useState<LessonState>(createInitialLessonState());
   const [isLoading, setIsLoading] = useState(false);
+  const [lastComment, setLastComment] = useState<string | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
 
   const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
     setIsLoading(true);
+    setLastComment(null);
     try {
       const { data, error } = await supabase.functions.invoke("piano-learn", {
         body: { prompt: userPrompt, difficulty, previousSequence },
@@ -48,13 +50,16 @@ export function LearnMode({
       setLesson({
         instruction: data.instruction,
         targetSequence: data.sequence,
-        phase: "demo",
+        phase: "your_turn",
         attempts: 0,
         validations: 0,
         feedback: null,
         difficulty,
         userPrompt,
       });
+
+      hasEvaluatedRef.current = false;
+      onClearRecording();
 
       // Automatically play the demo
       setTimeout(() => onPlaySequence(data.sequence), 500);
@@ -68,41 +73,21 @@ export function LearnMode({
     } finally {
       setIsLoading(false);
     }
-  }, [onPlaySequence, toast]);
+  }, [onPlaySequence, onClearRecording, toast]);
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim() || isLoading) return;
     generateLesson(prompt.trim());
   }, [prompt, isLoading, generateLesson]);
 
-  const handlePlayDemo = useCallback(() => {
+  const handlePlay = useCallback(() => {
     if (lesson.targetSequence.notes.length > 0) {
       onPlaySequence(lesson.targetSequence);
     }
   }, [lesson.targetSequence, onPlaySequence]);
 
-  const handleDemoComplete = useCallback(() => {
-    if (lesson.phase === "demo") {
-      setLesson(prev => ({ ...prev, phase: "your_turn" }));
-      hasEvaluatedRef.current = false;
-      onClearRecording();
-    }
-  }, [lesson.phase, onClearRecording]);
-
-  // Watch for playback completion to transition from demo to your_turn
-  useEffect(() => {
-    if (lesson.phase === "demo" && !isPlaying && lesson.targetSequence.notes.length > 0) {
-      // Small delay after demo ends
-      const timer = setTimeout(() => {
-        handleDemoComplete();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isPlaying, lesson.phase, lesson.targetSequence.notes.length, handleDemoComplete]);
-
   const evaluateAttempt = useCallback(async (userSequence: NoteSequence) => {
-    setLesson(prev => ({ ...prev, phase: "evaluating" }));
-    setIsLoading(true);
+    setIsEvaluating(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("piano-evaluate", {
@@ -116,29 +101,21 @@ export function LearnMode({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const evaluation = data.evaluation as "correct" | "close" | "wrong";
       const feedback = data.feedback as string;
-
+      setLastComment(feedback);
       setLesson(prev => ({
         ...prev,
-        phase: "feedback",
         attempts: prev.attempts + 1,
-        validations: evaluation === "correct" ? prev.validations + 1 : prev.validations,
-        feedback,
       }));
     } catch (error) {
       console.error("Failed to evaluate attempt:", error);
-      toast({
-        title: "Evaluation failed",
-        description: "We couldn't evaluate your attempt. Try again!",
-        variant: "destructive",
-      });
-      setLesson(prev => ({ ...prev, phase: "your_turn" }));
-      hasEvaluatedRef.current = false;
+      setLastComment("Couldn't evaluate - try again!");
     } finally {
-      setIsLoading(false);
+      setIsEvaluating(false);
+      hasEvaluatedRef.current = false; // Allow next recording to be evaluated
+      onClearRecording();
     }
-  }, [lesson.targetSequence, lesson.instruction, toast]);
+  }, [lesson.targetSequence, lesson.instruction, onClearRecording]);
 
   // Watch for recording completion to trigger evaluation
   useEffect(() => {
@@ -147,27 +124,22 @@ export function LearnMode({
       userRecording &&
       userRecording.notes.length > 0 &&
       !isRecording &&
-      !hasEvaluatedRef.current
+      !hasEvaluatedRef.current &&
+      !isEvaluating
     ) {
       hasEvaluatedRef.current = true;
       evaluateAttempt(userRecording);
     }
-  }, [lesson.phase, userRecording, isRecording, evaluateAttempt]);
-
-  const handleTryAgain = useCallback(() => {
-    setLesson(prev => ({ ...prev, phase: "your_turn", feedback: null }));
-    hasEvaluatedRef.current = false;
-    onClearRecording();
-  }, [onClearRecording]);
+  }, [lesson.phase, userRecording, isRecording, isEvaluating, evaluateAttempt]);
 
   const handleNext = useCallback(() => {
-    // Generate a new, slightly harder lesson
     generateLesson(lesson.userPrompt, lesson.difficulty + 1, lesson.targetSequence);
   }, [lesson.userPrompt, lesson.difficulty, lesson.targetSequence, generateLesson]);
 
-  const handleReset = useCallback(() => {
+  const handleLeave = useCallback(() => {
     setLesson(createInitialLessonState());
     setPrompt("");
+    setLastComment(null);
     onClearRecording();
   }, [onClearRecording]);
 
@@ -216,33 +188,15 @@ export function LearnMode({
         </div>
       ) : (
         /* Active Lesson */
-        <div className="space-y-6">
-          <LessonCard
-            instruction={lesson.instruction}
-            phase={lesson.phase}
-            attempts={lesson.attempts}
-            validations={lesson.validations}
-            feedback={lesson.feedback}
-            isLoading={isLoading || isPlaying}
-            onPlayDemo={handlePlayDemo}
-            onTryAgain={handleTryAgain}
-            onNext={handleNext}
-          />
-
-          {/* Reset Button */}
-          <div className="flex justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              disabled={isLoading || isPlaying}
-              className="gap-2 text-muted-foreground"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Start Over
-            </Button>
-          </div>
-        </div>
+        <LessonCard
+          instruction={lesson.instruction}
+          lastComment={lastComment}
+          isEvaluating={isEvaluating}
+          isLoading={isLoading || isPlaying}
+          onPlay={handlePlay}
+          onNext={handleNext}
+          onLeave={handleLeave}
+        />
       )}
     </div>
   );

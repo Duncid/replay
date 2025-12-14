@@ -1,6 +1,6 @@
 import { NoteSequence } from "./noteSequence";
 
-export type LessonPhase = "prompt" | "demo" | "your_turn" | "evaluating" | "feedback";
+export type LessonPhase = "prompt" | "your_turn";
 
 export interface LessonState {
   /** AI's explanation of what the user will play */
@@ -11,7 +11,7 @@ export interface LessonState {
   phase: LessonPhase;
   /** Current attempt count */
   attempts: number;
-  /** Successful validations (need 3 to pass) */
+  /** Successful validations */
   validations: number;
   /** AI feedback on last attempt */
   feedback: string | null;
