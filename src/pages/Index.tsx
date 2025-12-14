@@ -895,7 +895,6 @@ const Index = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-            </div>
             <div className="flex items-center gap-2">
               {/* Play/Stop - only shown when there's history */}
               {playMode.history.length > 0 && (
