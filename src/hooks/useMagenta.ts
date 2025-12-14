@@ -46,6 +46,7 @@ const loadMagentaScript = (): Promise<void> => {
 // Magenta MusicRNN valid pitch range (model-specific)
 const MAGENTA_MIN_PITCH = 36; // C2
 const MAGENTA_MAX_PITCH = 81; // A5
+const STEPS_PER_QUARTER = 4;
 
 // Clamp pitch to valid range for Magenta models
 const clampPitch = (pitch: number): number => {
@@ -70,8 +71,22 @@ const toMagentaSequence = (sequence: NoteSequence): any => {
     })),
     totalTime: sequence.totalTime,
     tempos: [{ time: 0, qpm: sequence.tempos?.[0]?.qpm || 120 }],
-    quantizationInfo: { stepsPerQuarter: 4 },
+    quantizationInfo: { stepsPerQuarter: STEPS_PER_QUARTER },
   };
+};
+
+// Estimate how many quantized steps a NoteSequence spans using tempo and total time
+const estimateQuantizedSteps = (
+  sequence: NoteSequence,
+  stepsPerQuarter: number = STEPS_PER_QUARTER
+): number => {
+  const bpm = sequence.tempos?.[0]?.qpm ?? 120;
+  const totalTime = sequence.totalTime ?? 0;
+
+  if (!totalTime || !bpm) return 0;
+
+  const estimatedSteps = Math.round((totalTime * bpm * stepsPerQuarter) / 60);
+  return Number.isFinite(estimatedSteps) ? estimatedSteps : 0;
 };
 
 // Convert Magenta's output back to our NoteSequence
@@ -200,7 +215,10 @@ export const useMagenta = () => {
         const magentaInput = toMagentaSequence(inputSequence);
         
         // Quantize the input sequence
-        const quantizedInput = mm.sequences.quantizeNoteSequence(magentaInput, 4);
+        const quantizedInput = mm.sequences.quantizeNoteSequence(
+          magentaInput,
+          STEPS_PER_QUARTER
+        );
 
         let outputSequence: any;
 
@@ -209,7 +227,9 @@ export const useMagenta = () => {
           // Use the quantized length of the user's phrase so generated ideas roughly
           // match the size of the source instead of defaulting to a very short clip.
           const inputSteps = quantizedInput.totalQuantizedSteps ?? 0;
-          const steps = options?.steps ?? Math.max(inputSteps, 32);
+          const estimatedSteps = estimateQuantizedSteps(inputSequence);
+          const baseSteps = Math.max(inputSteps, estimatedSteps);
+          const steps = options?.steps ?? Math.max(Math.min(baseSteps, 2048), 32);
           const temperature = options?.temperature || 1.0;
           const chordProgression = options?.chordProgression || ["C", "G", "Am", "F"];
 
