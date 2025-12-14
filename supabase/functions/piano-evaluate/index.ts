@@ -60,7 +60,7 @@ serve(async (req) => {
       start: Math.round(n.startTime * 10) / 10,
     }));
 
-    const systemPrompt = `You are a friendly piano teacher evaluating a student's attempt to play a sequence.
+    const systemPrompt = `You are a friendly, casual piano teacher giving quick feedback on a student's attempt.
 
 The lesson was: "${instruction || 'Play the sequence'}"
 
@@ -70,24 +70,27 @@ ${JSON.stringify(targetSummary, null, 2)}
 USER'S ATTEMPT:
 ${JSON.stringify(userSummary, null, 2)}
 
-Evaluate the attempt and respond with ONLY a JSON object:
+Respond with ONLY a JSON object:
 {
   "evaluation": "correct" | "close" | "wrong",
-  "feedback": "Brief encouraging feedback (max 15 words)"
+  "feedback": "Short casual comment (max 8 words)"
 }
 
-EVALUATION CRITERIA (BE LENIENT - this is for learning!):
-- "correct": The note PITCHES are played in the correct ORDER. Timing does NOT matter at all! If user played the right notes in the right order, it's CORRECT.
+EVALUATION CRITERIA (BE LENIENT):
+- "correct": The pitches are in the correct order. Timing doesn't matter!
 - "close": Most pitches correct but 1 note is wrong or missing
-- "wrong": Multiple wrong notes, wrong order, or completely different sequence
+- "wrong": Multiple wrong notes or completely different sequence
 
-IMPORTANT: Ignore timing completely! Only check if the PITCHES match in ORDER.
-Be encouraging! Focus on what they did right.
+FEEDBACK STYLE - Be conversational and varied! Examples:
+- "Great!" / "Perfect!" / "Nailed it!" / "Nice work!"
+- "The notes are right, watch the timing"
+- "Second note was off - try again"
+- "Close! Third note needs work"
+- "You're getting there!"
+- "Almost! One note was wrong"
+- "Keep at it, listen again"
 
-EXAMPLES:
-- Correct: {"evaluation": "correct", "feedback": "Perfect! You got all the notes!"}
-- Close: {"evaluation": "close", "feedback": "Almost! You missed one note."}
-- Wrong: {"evaluation": "wrong", "feedback": "Try again! Listen to the note pattern."}`;
+Keep it SHORT and natural, like a friend giving feedback.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -147,9 +150,9 @@ EXAMPLES:
       const userNotes = userSequence.notes?.length || 0;
       
       if (Math.abs(targetNotes - userNotes) <= 1) {
-        evaluation = { evaluation: "close", feedback: "Good attempt! Keep practicing." };
+        evaluation = { evaluation: "close", feedback: "Good try! Keep practicing." };
       } else {
-        evaluation = { evaluation: "wrong", feedback: "Try again! Listen carefully to the pattern." };
+        evaluation = { evaluation: "wrong", feedback: "Try again!" };
       }
     }
 
