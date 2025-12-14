@@ -29,6 +29,12 @@
     "cancel": "Cancel",
     "save": "Save",
     "saveAs": "Save as...",
+    "saveAndOpen": "Save & open",
+    "saveAsNewAndOpen": "Save as new & open",
+    "saveBeforeOpeningTitle": "Save your current composition?",
+    "saveBeforeOpeningDescriptionExisting": "You have unsaved changes. Save them before opening another composition?",
+    "saveBeforeOpeningDescriptionNew": "You haven't saved this composition yet. Save it before opening another one?",
+    "continueWithoutSaving": "Continue without saving",
     "export": "Export",
     "exportedAbc": "Exported as ABC file",
     "compositionFallbackTitle": "Composition"

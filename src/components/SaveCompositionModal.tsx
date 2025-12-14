@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 interface SaveCompositionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (title: string) => void;
+  onSave: (title: string) => Promise<void> | void;
   isLoading?: boolean;
   defaultTitle?: string;
 }
@@ -27,9 +27,9 @@ export function SaveCompositionModal({
 }: SaveCompositionModalProps) {
   const [title, setTitle] = useState(defaultTitle);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (title.trim()) {
-      onSave(title.trim());
+      await onSave(title.trim());
       setTitle('');
     }
   };
@@ -40,6 +40,12 @@ export function SaveCompositionModal({
     }
     onOpenChange(open);
   };
+
+  useEffect(() => {
+    if (open) {
+      setTitle(defaultTitle);
+    }
+  }, [defaultTitle, open]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
