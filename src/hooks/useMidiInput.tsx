@@ -151,6 +151,13 @@ export const useMidiInput = (
     }
   }, []);
 
+  // Update MIDI message handler when callbacks change to avoid stale closures
+  useEffect(() => {
+    if (activeInputRef.current) {
+      activeInputRef.current.onmidimessage = handleMidiMessage;
+    }
+  }, [handleMidiMessage]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
