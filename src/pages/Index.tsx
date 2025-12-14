@@ -895,6 +895,7 @@ const Index = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+            </div>
             <div className="flex items-center gap-2">
               {/* Play/Stop - only shown when there's history */}
               {playMode.history.length > 0 && (
@@ -927,15 +928,7 @@ const Index = () => {
                   <Button variant="outline" size="sm">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                )}
-
-                {/* Unified "..." menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                   {/* Insert submenu */}
                   <DropdownMenuSub>
