@@ -195,10 +195,10 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
   };
 }
 
-export function useTonePiano(soundType: PianoSoundType = "classic") {
+export function useTonePiano(soundType: PianoSoundType | null = "classic") {
   const [isLoaded, setIsLoaded] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
-  const soundTypeRef = useRef<PianoSoundType>(soundType);
+  const soundTypeRef = useRef<PianoSoundType | null>(soundType);
 
   useEffect(() => {
     // Clean up previous engine
@@ -209,6 +209,11 @@ export function useTonePiano(soundType: PianoSoundType = "classic") {
     
     setIsLoaded(false);
     soundTypeRef.current = soundType;
+
+    // Skip engine creation if soundType is null
+    if (soundType === null) {
+      return;
+    }
 
     if (soundType === "classic") {
       engineRef.current = createClassicEngine();
