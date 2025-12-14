@@ -213,12 +213,17 @@ export const useMagenta = () => {
         }
         
         const magentaInput = toMagentaSequence(inputSequence);
-        
+
         // Quantize the input sequence
         const quantizedInput = mm.sequences.quantizeNoteSequence(
           magentaInput,
           STEPS_PER_QUARTER
         );
+
+        const quantizedSteps = quantizedInput.totalQuantizedSteps ?? 0;
+        const estimatedSteps = estimateQuantizedSteps(inputSequence);
+        const baseSteps = Math.max(quantizedSteps, estimatedSteps);
+        const clampedSteps = Math.max(Math.min(baseSteps, 2048), 32);
 
         let outputSequence: any;
 
@@ -226,10 +231,7 @@ export const useMagenta = () => {
           // MusicRNN continuation
           // Use the quantized length of the user's phrase so generated ideas roughly
           // match the size of the source instead of defaulting to a very short clip.
-          const inputSteps = quantizedInput.totalQuantizedSteps ?? 0;
-          const estimatedSteps = estimateQuantizedSteps(inputSequence);
-          const baseSteps = Math.max(inputSteps, estimatedSteps);
-          const steps = options?.steps ?? Math.max(Math.min(baseSteps, 2048), 32);
+          const steps = options?.steps ?? clampedSteps;
           const temperature = options?.temperature || 1.0;
           const chordProgression = options?.chordProgression || ["C", "G", "Am", "F"];
 
@@ -242,12 +244,12 @@ export const useMagenta = () => {
           console.log("[Magenta] MusicRNN generated", outputSequence.notes?.length, "notes");
         } else if (modelType === "magenta/music-vae" && musicVaeRef.current) {
           // MusicVAE - sample similar sequences
-          const numSamples = 1;
           const temperature = options?.temperature || 0.5;
+          const length = options?.steps ?? clampedSteps;
 
           // Encode input and sample around it
           const z = await musicVaeRef.current.encode([quantizedInput]);
-          const samples = await musicVaeRef.current.decode(z, temperature);
+          const samples = await musicVaeRef.current.decode(z, temperature, length);
           outputSequence = samples[0];
           console.log("[Magenta] MusicVAE generated", outputSequence.notes?.length, "notes");
         }
