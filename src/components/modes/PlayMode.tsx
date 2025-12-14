@@ -73,6 +73,16 @@ export function PlayMode({
             id: entry.id || `track-${Date.now()}-${index}`,
         }));
     });
+
+    // Keep internal history in sync when the parent provides new data
+    useEffect(() => {
+        setHistory(
+            initialHistory.map((entry, index) => ({
+                ...entry,
+                id: entry.id || `track-${Date.now()}-${index}`,
+            }))
+        );
+    }, [initialHistory]);
     const trackRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     
     // Configure drag and drop sensors
