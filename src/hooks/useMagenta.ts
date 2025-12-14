@@ -245,13 +245,57 @@ export const useMagenta = () => {
         } else if (modelType === "magenta/music-vae" && musicVaeRef.current) {
           // MusicVAE - sample similar sequences
           const temperature = options?.temperature || 0.5;
-          const length = options?.steps ?? clampedSteps;
+          const targetSteps = options?.steps ?? clampedSteps;
+
+          // mel_2bar_small always decodes to its configured numSteps (32).
+          // To better match the user's clip length, tile multiple decoded
+          // samples end-to-end until we reach the requested duration.
+          const segmentSteps = musicVaeRef.current.dataConverter?.numSteps ?? 32;
+          const segmentCount = Math.max(1, Math.ceil(targetSteps / segmentSteps));
 
           // Encode input and sample around it
           const z = await musicVaeRef.current.encode([quantizedInput]);
-          const samples = await musicVaeRef.current.decode(z, temperature, length);
-          outputSequence = samples[0];
-          console.log("[Magenta] MusicVAE generated", outputSequence.notes?.length, "notes");
+
+          const decodedSegments: any[] = [];
+          for (let i = 0; i < segmentCount; i += 1) {
+            const samples = await musicVaeRef.current.decode(z, temperature, segmentSteps);
+            const sample = samples[0];
+            const offset = i * segmentSteps;
+
+            const offsetNotes = (sample.notes || []).map((note: any) => ({
+              ...note,
+              startTime: note.startTime + offset,
+              endTime: note.endTime + offset,
+            }));
+
+            decodedSegments.push({
+              ...sample,
+              notes: offsetNotes,
+            });
+          }
+
+          const mergedNotes = decodedSegments.flatMap((segment) => segment.notes || []);
+          const maxEndTime = mergedNotes.length
+            ? Math.max(...mergedNotes.map((note: any) => note.endTime))
+            : 0;
+
+          outputSequence = {
+            ...decodedSegments[0],
+            notes: mergedNotes,
+            totalQuantizedSteps: Math.max(maxEndTime, segmentCount * segmentSteps),
+            totalTime: Math.max(maxEndTime, segmentCount * segmentSteps),
+            quantizationInfo: decodedSegments[0]?.quantizationInfo ?? {
+              stepsPerQuarter: STEPS_PER_QUARTER,
+            },
+          };
+
+          console.log(
+            "[Magenta] MusicVAE generated",
+            outputSequence.notes?.length,
+            "notes across",
+            segmentCount,
+            "segments"
+          );
         }
 
         if (!outputSequence || !outputSequence.notes?.length) {
