@@ -29,7 +29,7 @@ serve(async (req) => {
   }
 
   try {
-    const { targetSequence, userSequence, instruction } = await req.json();
+    const { targetSequence, userSequence, instruction, language } = await req.json();
 
     if (!targetSequence || !userSequence) {
       return new Response(JSON.stringify({ error: "Missing target or user sequence" }), {
@@ -38,7 +38,9 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Evaluating user attempt`);
+    const locale = language === "fr" ? "fr" : "en";
+
+    console.log(`Evaluating user attempt (${locale})`);
     console.log("Target notes:", targetSequence.notes?.length || 0);
     console.log("User notes:", userSequence.notes?.length || 0);
 
@@ -60,7 +62,31 @@ serve(async (req) => {
       start: Math.round(n.startTime * 10) / 10,
     }));
 
+    const languageDirective =
+      locale === "fr"
+        ? `Use French for the feedback text while keeping the evaluation keys in English.`
+        : `Use natural English for the feedback text.`;
+
+    const feedbackExamples =
+      locale === "fr"
+        ? `- "Super !" / "Parfait !" / "Bien joué !"
+- "Les notes sont bonnes, ajuste le rythme"
+- "La deuxième note est fausse — réessaie"
+- "Presque ! La troisième note est à corriger"
+- "Tu progresses !"
+- "Encore un petit effort, une note est fausse"
+- "Continue, réécoute l'exemple"`
+        : `- "Great!" / "Perfect!" / "Nailed it!" / "Nice work!"
+- "The notes are right, watch the timing"
+- "Second note was off - try again"
+- "Close! Third note needs work"
+- "You're getting there!"
+- "Almost! One note was wrong"
+- "Keep at it, listen again"`;
+
     const systemPrompt = `You are a friendly, casual piano teacher giving quick feedback on a student's attempt.
+
+${languageDirective}
 
 The lesson was: "${instruction || 'Play the sequence'}"
 
@@ -82,13 +108,7 @@ EVALUATION CRITERIA (BE LENIENT):
 - "wrong": Multiple wrong notes or completely different sequence
 
 FEEDBACK STYLE - Be conversational and varied! Examples:
-- "Great!" / "Perfect!" / "Nailed it!" / "Nice work!"
-- "The notes are right, watch the timing"
-- "Second note was off - try again"
-- "Close! Third note needs work"
-- "You're getting there!"
-- "Almost! One note was wrong"
-- "Keep at it, listen again"
+${feedbackExamples}
 
 Keep it SHORT and natural, like a friend giving feedback.`;
 
@@ -149,10 +169,13 @@ Keep it SHORT and natural, like a friend giving feedback.`;
       const targetNotes = targetSequence.notes?.length || 0;
       const userNotes = userSequence.notes?.length || 0;
       
+      const defaultFeedback = locale === "fr" ? "Bon essai ! Continue à pratiquer." : "Good try! Keep practicing.";
+      const retryFeedback = locale === "fr" ? "Réessaie encore !" : "Try again!";
+
       if (Math.abs(targetNotes - userNotes) <= 1) {
-        evaluation = { evaluation: "close", feedback: "Good try! Keep practicing." };
+        evaluation = { evaluation: "close", feedback: defaultFeedback };
       } else {
-        evaluation = { evaluation: "wrong", feedback: "Try again!" };
+        evaluation = { evaluation: "wrong", feedback: retryFeedback };
       }
     }
 
