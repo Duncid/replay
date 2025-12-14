@@ -206,7 +206,10 @@ export const useMagenta = () => {
 
         if (modelType === "magenta/music-rnn" && musicRnnRef.current) {
           // MusicRNN continuation
-          const steps = options?.steps || 32;
+          // Use the quantized length of the user's phrase so generated ideas roughly
+          // match the size of the source instead of defaulting to a very short clip.
+          const inputSteps = quantizedInput.totalQuantizedSteps ?? 0;
+          const steps = options?.steps ?? Math.max(inputSteps, 32);
           const temperature = options?.temperature || 1.0;
           const chordProgression = options?.chordProgression || ["C", "G", "Am", "F"];
 
