@@ -2,22 +2,44 @@ import { NoteSequence, Note, DEFAULT_QPM } from "@/types/noteSequence";
 
 // MIDI note number constants
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const NOTE_OFFSETS: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+};
 
 /**
  * Convert note name (e.g., "C4", "F#5") to MIDI pitch number
  */
 export function noteNameToMidi(noteName: string): number {
-  const match = noteName.match(/^([A-G]#?)(\d)$/);
+  const match = noteName.match(/^([A-Ga-g])([#b]?)(\d)$/);
   if (!match) throw new Error(`Invalid note name: ${noteName}`);
-  
-  const [, note, octaveStr] = match;
-  const octave = parseInt(octaveStr);
-  const noteIndex = NOTE_NAMES.indexOf(note);
-  
-  if (noteIndex === -1) throw new Error(`Invalid note: ${note}`);
-  
+
+  const [, noteLetterRaw, accidental, octaveStr] = match;
+  const noteLetter = noteLetterRaw.toUpperCase();
+  const baseOffset = NOTE_OFFSETS[noteLetter];
+
+  if (baseOffset === undefined) throw new Error(`Invalid note: ${noteLetter}`);
+
+  let semitone = baseOffset + (accidental === "#" ? 1 : accidental === "b" ? -1 : 0);
+  let octave = parseInt(octaveStr);
+
+  // Wrap accidentals that cross octave boundaries, e.g., B# -> C of next octave
+  while (semitone < 0) {
+    semitone += 12;
+    octave -= 1;
+  }
+  while (semitone >= 12) {
+    semitone -= 12;
+    octave += 1;
+  }
+
   // MIDI note number: C4 = 60
-  return (octave + 1) * 12 + noteIndex;
+  return (octave + 1) * 12 + semitone;
 }
 
 /**
@@ -367,27 +389,18 @@ function mergeConsecutiveNotes(notes: Note[]): Note[] {
 }
 
 function abcNoteToPitch(accidental: string, noteLetter: string, octaveMarkers: string): number {
-  let noteName = noteLetter.toUpperCase();
-  if (accidental === "^") noteName += "#";
-  if (accidental === "_") noteName += "b";
-  
+  const accidentalSymbol = accidental === "^" ? "#" : accidental === "_" ? "b" : "";
+  const noteName = `${noteLetter.toUpperCase()}${accidentalSymbol}`;
+
   // Base octave: uppercase = 4, lowercase = 5
   let octave = noteLetter === noteLetter.toUpperCase() ? 4 : 5;
-  
+
   // Adjust for octave markers: , = down, ' = up
   for (const marker of octaveMarkers) {
     if (marker === ",") octave--;
     else if (marker === "'") octave++;
   }
-  
-  // Handle flats by converting to equivalent sharp
-  if (noteName.endsWith("b")) {
-    const baseNote = noteName.charAt(0);
-    const noteIndex = NOTE_NAMES.indexOf(baseNote);
-    const flatIndex = (noteIndex - 1 + 12) % 12;
-    noteName = NOTE_NAMES[flatIndex];
-  }
-  
+
   return noteNameToMidi(`${noteName}${octave}`);
 }
 

@@ -21,6 +21,15 @@ interface NoteSequence {
 }
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const NOTE_OFFSETS: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+};
 
 function midiToNoteName(pitch: number): string {
   const octave = Math.floor(pitch / 12) - 1;
@@ -29,12 +38,29 @@ function midiToNoteName(pitch: number): string {
 }
 
 function noteNameToMidi(noteName: string): number {
-  const match = noteName.match(/^([A-G]#?)(\d)$/);
+  const match = noteName.match(/^([A-Ga-g])([#b]?)(\d)$/);
   if (!match) throw new Error(`Invalid note name: ${noteName}`);
-  const [, note, octaveStr] = match;
-  const octave = parseInt(octaveStr);
-  const noteIndex = NOTE_NAMES.indexOf(note);
-  return (octave + 1) * 12 + noteIndex;
+
+  const [, noteLetterRaw, accidental, octaveStr] = match;
+  const noteLetter = noteLetterRaw.toUpperCase();
+  const baseOffset = NOTE_OFFSETS[noteLetter];
+
+  if (baseOffset === undefined) throw new Error(`Invalid note: ${noteLetter}`);
+
+  let semitone = baseOffset + (accidental === "#" ? 1 : accidental === "b" ? -1 : 0);
+  let octave = parseInt(octaveStr);
+
+  // Wrap across octave boundaries, e.g., B# -> C in next octave
+  while (semitone < 0) {
+    semitone += 12;
+    octave -= 1;
+  }
+  while (semitone >= 12) {
+    semitone -= 12;
+    octave += 1;
+  }
+
+  return (octave + 1) * 12 + semitone;
 }
 
 // Instrument-specific guidance for idiomatic playing
