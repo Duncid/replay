@@ -6,7 +6,7 @@ import { SheetMusic } from "@/components/SheetMusic";
 import { NoteSequence } from "@/types/noteSequence";
 import { createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
-import { AlertCircle, Mic, RefreshCw, Square, Waveform } from "lucide-react";
+import { AlertCircle, AudioLines, Mic, RefreshCw, Square } from "lucide-react";
 
 interface WhistleImportSheetProps {
   open: boolean;
@@ -414,7 +414,7 @@ export function WhistleImportSheet({
           <Card>
             <CardContent className="py-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Waveform className="h-4 w-4" /> Live pitch & signal
+                <AudioLines className="h-4 w-4" /> Live pitch & signal
               </div>
               <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
