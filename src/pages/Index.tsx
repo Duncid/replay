@@ -171,6 +171,26 @@ const Index = () => {
 
   const MIN_WAIT_TIME_MS = 1000;
 
+  useEffect(() => {
+    const warmupAudio = () => {
+      pianoRef.current?.ensureAudioReady();
+    };
+
+    const handleFirstInteraction = () => {
+      warmupAudio();
+      document.removeEventListener("pointerdown", handleFirstInteraction);
+      document.removeEventListener("touchstart", handleFirstInteraction);
+    };
+
+    document.addEventListener("pointerdown", handleFirstInteraction, { once: true });
+    document.addEventListener("touchstart", handleFirstInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener("pointerdown", handleFirstInteraction);
+      document.removeEventListener("touchstart", handleFirstInteraction);
+    };
+  }, []);
+
   // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
   // (they will be initialized after those functions are defined)
 
