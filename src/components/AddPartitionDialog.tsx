@@ -50,6 +50,19 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
     }
   }, [open, initialAbc]);
 
+  // Seed preview with the provided ABC when editing, even if the live preview hits a parse error
+  useEffect(() => {
+    if (!open || !initialAbc) return;
+    try {
+      const parsed = abcToNoteSequence(initialAbc, bpm);
+      if (parsed.notes.length) {
+        setLastValidPreview(parsed);
+      }
+    } catch {
+      // Ignore; parse errors will be surfaced by the live preview
+    }
+  }, [open, initialAbc, bpm]);
+
   const previewResult = useMemo(() => {
     if (!abcText.trim()) return { sequence: null, error: null };
     try {
@@ -151,8 +164,11 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen && mode === 'add') {
-      setAbcText("");
+    if (!newOpen) {
+      handleStop();
+      if (mode === 'add') {
+        setAbcText("");
+      }
     }
     onOpenChange(newOpen);
   };
