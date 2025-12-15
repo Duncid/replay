@@ -22,6 +22,7 @@
     "insert": "Insérer",
     "uploadAbc": "Importer un fichier ABC",
     "writeAbc": "Écrire en ABC",
+    "whistleImport": "Siffler (micro)",
     "writeNoteSequence": "Écrire une NoteSequence",
     "new": "Nouveau",
     "startNewTitle": "Démarrer une nouvelle composition ?",
@@ -58,5 +59,23 @@
     "playButton": "Écouter",
     "nextButton": "Suivant",
     "leaveButton": "Quitter"
+  },
+  "whistleImport": {
+    "title": "Import par sifflement",
+    "permissionTip": "Astuce : vérifiez l'invite d'autorisation de votre navigateur ou les paramètres pour activer l'accès au microphone.",
+    "level": "Niveau",
+    "instruction": "Commencez l'enregistrement pour voir le signal de sifflement entrant et le nom de la note détectée se mettre à jour en temps réel.",
+    "detectedNotes": "Notes détectées",
+    "noNotesYet": "Aucune note capturée pour le moment. Appuyez sur Rec et commencez à siffler pour commencer.",
+    "buttons": {
+      "rec": "Enregistrer",
+      "stop": "Arrêter",
+      "clear": "Effacer"
+    },
+    "errors": {
+      "permissionDenied": "L'accès au microphone a été refusé. Veuillez autoriser les permissions du microphone et réessayer.",
+      "accessFailed": "Impossible d'accéder au microphone : {{error}}",
+      "unknown": "Erreur inconnue"
+    }
   }
 }

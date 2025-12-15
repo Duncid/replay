@@ -35,6 +35,7 @@ import {
   FilePlus,
   Download,
   Upload,
+  Mic,
 } from "lucide-react";
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
@@ -70,6 +71,7 @@ import { Composition, useCompositions } from "@/hooks/useCompositions";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { CompositionSubmenu } from "@/components/CompositionSubmenu";
 import { useTranslation } from "react-i18next";
+import { WhistleImportSheet } from "@/components/WhistleImportSheet";
 
 const AI_MODELS = {
   llm: [
@@ -110,6 +112,7 @@ const Index = () => {
   const [noteSequenceDialogOpen, setNoteSequenceDialogOpen] = useState(false);
   const [noteSequenceEditIndex, setNoteSequenceEditIndex] = useState<number | null>(null);
   const [noteSequenceEditMode, setNoteSequenceEditMode] = useState<"add" | "edit">("add");
+  const [whistleSheetOpen, setWhistleSheetOpen] = useState(false);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
 
@@ -1001,6 +1004,10 @@ const Index = () => {
                           <PencilLine className="h-4 w-4 mr-2" />
                           {t("menus.writeAbc")}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setWhistleSheetOpen(true)}>
+                          <Mic className="h-4 w-4 mr-2" />
+                          {t("menus.whistleImport")}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setNoteSequenceDialogOpen(true)}>
                           <Music className="h-4 w-4 mr-2" />
                           {t("menus.writeNoteSequence")}
@@ -1220,6 +1227,18 @@ const Index = () => {
             ? playMode.history[noteSequenceEditIndex].sequence
             : undefined
         }
+      />
+
+      <WhistleImportSheet
+        open={whistleSheetOpen}
+        onOpenChange={setWhistleSheetOpen}
+        bpm={metronomeBpm}
+        timeSignature={metronomeTimeSignature}
+        onSave={(sequence) => {
+          if (activeMode === "play") {
+            playModeRef.current?.addEntry(sequence, false);
+          }
+        }}
       />
 
       {/* Save before opening another composition */}
