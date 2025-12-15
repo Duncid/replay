@@ -117,44 +117,32 @@ export function noteSequenceToAbc(sequence: NoteSequence, title?: string): strin
   // ABC header - title is optional
   let abc = `X:1\n${title ? `T:${title}\n` : ""}M:4/4\nL:1/4\nK:C\n`;
 
-  // Build a timeline of all start/end points to preserve overlapping durations
-  const timePoints = new Set<number>([0]);
-  validNotes.forEach(note => {
-    timePoints.add(note.startTime);
-    timePoints.add(note.endTime);
+  // Quantize to a 16th-note grid to stabilize rhythmic spelling
+  const stepsPerBeat = 4;
+  const quantized = quantizeNotes(validNotes, qpm, stepsPerBeat);
+  const melodyLine = extractMelody(quantized, stepsPerBeat);
+
+  const abcElements: string[] = [];
+  let currentStep = 0;
+
+  melodyLine.forEach((melodyNote, i) => {
+    if (melodyNote.startStep > currentStep) {
+      const restBeats = (melodyNote.startStep - currentStep) / stepsPerBeat;
+      abcElements.push("z" + getDurationString(restBeats));
+    }
+
+    // Prevent overlaps by clipping a note to the next melody onset
+    const nextStart = melodyLine[i + 1]?.startStep ?? melodyNote.endStep;
+    const endStep = Math.min(melodyNote.endStep, nextStart);
+    const durationBeats = (endStep - melodyNote.startStep) / stepsPerBeat;
+    if (durationBeats > epsilon) {
+      abcElements.push(pitchToAbcNote(melodyNote.pitch) + getDurationString(durationBeats));
+      currentStep = endStep;
+    }
   });
 
-  const sortedTimes = Array.from(timePoints).sort((a, b) => a - b);
-  const abcElements: string[] = [];
-
-  for (let i = 0; i < sortedTimes.length - 1; i++) {
-    const start = sortedTimes[i];
-    const end = sortedTimes[i + 1];
-    const durationSeconds = end - start;
-
-    if (durationSeconds <= 0) continue;
-
-    const activeNotes = validNotes.filter(
-      n => n.startTime <= start + epsilon && n.endTime > start + epsilon
-    );
-
-    const durationInBeats = secondsToBeats(durationSeconds, qpm);
-    if (activeNotes.length === 0) {
-      // Rest segment
-      abcElements.push("z" + getDurationString(durationInBeats));
-    } else if (activeNotes.length === 1) {
-      // Single active note during this slice
-      const abcNote = pitchToAbcNote(activeNotes[0].pitch);
-      abcElements.push(abcNote + getDurationString(durationInBeats));
-    } else {
-      // Multiple notes sounding together
-      const chordNotes = activeNotes.map(n => pitchToAbcNote(n.pitch)).join("");
-      abcElements.push("[" + chordNotes + "]" + getDurationString(durationInBeats));
-    }
-  }
-
+  // If quantization/selection failed, fall back to grouping by onset
   if (abcElements.length === 0) {
-    // Fallback to a simpler grouping approach if slicing somehow produced nothing
     const grouped = groupNotesByStart(validNotes);
     const groupedElements = grouped.map(notes => {
       if (notes.length === 1) {
@@ -173,6 +161,122 @@ export function noteSequenceToAbc(sequence: NoteSequence, title?: string): strin
     abc += abcElements.join(" ");
   }
   return abc;
+}
+
+type QuantizedNote = Note & { startStep: number; endStep: number };
+
+function quantizeNotes(notes: Note[], qpm: number, stepsPerBeat: number): QuantizedNote[] {
+  return notes
+    .map(note => {
+      const startBeats = secondsToBeats(note.startTime, qpm);
+      const endBeats = secondsToBeats(note.endTime, qpm);
+
+      const startStep = Math.round(startBeats * stepsPerBeat);
+      const endStep = Math.max(startStep + 1, Math.round(endBeats * stepsPerBeat));
+
+      return { ...note, startStep, endStep };
+    })
+    .sort((a, b) => a.startStep - b.startStep || a.pitch - b.pitch);
+}
+
+function extractMelody(notes: QuantizedNote[], stepsPerBeat: number): QuantizedNote[] {
+  if (notes.length === 0) return [];
+
+  const groups = groupQuantizedByStart(notes);
+  if (groups.length === 0) return [];
+
+  const paths: { score: number; prevGroup: number | null; prevIndex: number | null }[][] = [];
+
+  groups.forEach((group, groupIdx) => {
+    paths[groupIdx] = group.map(candidate => {
+      const localScore = scoreLocal(candidate, stepsPerBeat);
+
+      if (groupIdx === 0) {
+        return { score: localScore, prevGroup: null, prevIndex: null };
+      }
+
+      let bestScore = -Infinity;
+      let bestPrevGroup: number | null = null;
+      let bestPrevIndex: number | null = null;
+
+      const prevCandidates = paths[groupIdx - 1];
+      prevCandidates.forEach((prevPath, prevIdx) => {
+        const prevNote = groups[groupIdx - 1][prevIdx];
+        const transitionScore = scoreTransition(prevNote, candidate, stepsPerBeat);
+        const candidateScore = prevPath.score + localScore + transitionScore;
+
+        if (candidateScore > bestScore) {
+          bestScore = candidateScore;
+          bestPrevGroup = groupIdx - 1;
+          bestPrevIndex = prevIdx;
+        }
+      });
+
+      return { score: bestScore, prevGroup: bestPrevGroup, prevIndex: bestPrevIndex };
+    });
+  });
+
+  // Backtrack to find the best path
+  const lastGroup = paths[paths.length - 1];
+  let bestFinalIdx = 0;
+  lastGroup.forEach((candidate, idx) => {
+    if (candidate.score > lastGroup[bestFinalIdx].score) bestFinalIdx = idx;
+  });
+
+  const melody: QuantizedNote[] = [];
+  let currentGroup = paths.length - 1;
+  let currentIdx: number | null = bestFinalIdx;
+
+  while (currentIdx !== null && currentGroup >= 0) {
+    melody.unshift(groups[currentGroup][currentIdx]);
+    const prev = paths[currentGroup][currentIdx];
+    currentIdx = prev.prevIndex;
+    currentGroup = prev.prevGroup ?? -1;
+  }
+
+  return melody;
+}
+
+function groupQuantizedByStart(notes: QuantizedNote[]): QuantizedNote[][] {
+  const grouped = new Map<number, QuantizedNote[]>();
+  notes.forEach(note => {
+    const bucket = grouped.get(note.startStep) ?? [];
+    bucket.push(note);
+    grouped.set(note.startStep, bucket);
+  });
+
+  return Array.from(grouped.keys())
+    .sort((a, b) => a - b)
+    .map(start => grouped.get(start)!.sort((a, b) => b.velocity - a.velocity || b.pitch - a.pitch));
+}
+
+function scoreLocal(note: QuantizedNote, stepsPerBeat: number): number {
+  const durationSteps = Math.max(1, note.endStep - note.startStep);
+  const durationBeats = durationSteps / stepsPerBeat;
+
+  const durationScore = Math.log2(1 + durationBeats) * 0.8;
+  const velocityScore = note.velocity * 0.6;
+  const pitchScore = (note.pitch - 60) / 48; // prefer higher pitches gently
+
+  const onBeat = note.startStep % stepsPerBeat === 0;
+  const halfBeat = note.startStep % (stepsPerBeat / 2) === 0;
+  const meterScore = onBeat ? 0.4 : halfBeat ? 0.2 : 0;
+
+  return durationScore + velocityScore + pitchScore + meterScore;
+}
+
+function scoreTransition(
+  prev: QuantizedNote,
+  current: QuantizedNote,
+  stepsPerBeat: number
+): number {
+  const interval = Math.abs(current.pitch - prev.pitch);
+  const gapSteps = Math.max(0, current.startStep - prev.endStep);
+
+  const intervalScore = interval <= 2 ? 0.6 : interval <= 5 ? 0.3 : -interval * 0.04;
+  const gapPenalty = gapSteps === 0 ? 0.2 : -gapSteps / stepsPerBeat;
+
+  return intervalScore + gapPenalty;
 }
 
 function groupNotesByStart(notes: Note[]): Note[][] {
