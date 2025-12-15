@@ -86,53 +86,51 @@ export function addNote(
  */
 export function noteSequenceToAbc(sequence: NoteSequence, title?: string): string {
   if (sequence.notes.length === 0) return "";
-  
+
   const qpm = sequence.tempos?.[0]?.qpm ?? DEFAULT_QPM;
-  
+  const epsilon = 1e-6;
+
   // ABC header - title is optional
   let abc = `X:1\n${title ? `T:${title}\n` : ""}M:4/4\nL:1/4\nK:C\n`;
 
-  // Group notes by start time to identify chords
-  const notesByStartTime = new Map<number, Note[]>();
+  // Build a timeline of all start/end points to preserve overlapping durations
+  const timePoints = new Set<number>([0]);
   sequence.notes.forEach(note => {
-    // Round to nearest 0.001 to handle floating point
-    const key = Math.round(note.startTime * 1000);
-    if (!notesByStartTime.has(key)) {
-      notesByStartTime.set(key, []);
-    }
-    notesByStartTime.get(key)!.push(note);
+    timePoints.add(note.startTime);
+    timePoints.add(note.endTime);
   });
-  
-  // Sort by start time
-  const sortedKeys = Array.from(notesByStartTime.keys()).sort((a, b) => a - b);
-  
-  // Convert each group to ABC notation
+
+  const sortedTimes = Array.from(timePoints).sort((a, b) => a - b);
   const abcElements: string[] = [];
-  
-  sortedKeys.forEach(key => {
-    const notes = notesByStartTime.get(key)!;
-    
-    if (notes.length === 1) {
-      // Single note
-      const note = notes[0];
-      abcElements.push(noteToAbcString(note, qpm));
+
+  for (let i = 0; i < sortedTimes.length - 1; i++) {
+    const start = sortedTimes[i];
+    const end = sortedTimes[i + 1];
+    const durationSeconds = end - start;
+
+    if (durationSeconds <= 0) continue;
+
+    const activeNotes = sequence.notes.filter(
+      n => n.startTime <= start + epsilon && n.endTime > start + epsilon
+    );
+
+    const durationInBeats = secondsToBeats(durationSeconds, qpm);
+    if (activeNotes.length === 0) {
+      // Rest segment
+      abcElements.push("z" + getDurationString(durationInBeats));
+    } else if (activeNotes.length === 1) {
+      // Single active note during this slice
+      const abcNote = pitchToAbcNote(activeNotes[0].pitch);
+      abcElements.push(abcNote + getDurationString(durationInBeats));
     } else {
-      // Chord - use the shortest duration among the notes
-      const minDuration = Math.min(...notes.map(n => n.endTime - n.startTime));
-      const durationInBeats = secondsToBeats(minDuration, qpm);
-      const abcChord = "[" + notes.map(n => pitchToAbcNote(n.pitch)).join("") + "]";
-      abcElements.push(abcChord + getDurationString(durationInBeats));
+      // Multiple notes sounding together
+      const chordNotes = activeNotes.map(n => pitchToAbcNote(n.pitch)).join("");
+      abcElements.push("[" + chordNotes + "]" + getDurationString(durationInBeats));
     }
-  });
-  
+  }
+
   abc += abcElements.join(" ");
   return abc;
-}
-
-function noteToAbcString(note: Note, qpm: number): string {
-  const abcNote = pitchToAbcNote(note.pitch);
-  const durationInBeats = secondsToBeats(note.endTime - note.startTime, qpm);
-  return abcNote + getDurationString(durationInBeats);
 }
 
 function pitchToAbcNote(pitch: number): string {
@@ -295,9 +293,39 @@ export function abcToNoteSequence(abc: string, qpm: number = DEFAULT_QPM): NoteS
       currentTime += durationSeconds;
     }
   }
-  
+
+  // Merge consecutive segments for the same pitch to restore sustained notes
+  sequence.notes = mergeConsecutiveNotes(sequence.notes);
   sequence.totalTime = currentTime;
   return sequence;
+}
+
+function mergeConsecutiveNotes(notes: Note[]): Note[] {
+  if (notes.length === 0) return notes;
+
+  // Sort by pitch then start time
+  const sorted = [...notes].sort((a, b) =>
+    a.pitch === b.pitch ? a.startTime - b.startTime : a.pitch - b.pitch
+  );
+
+  const merged: Note[] = [];
+  const epsilon = 1e-6;
+
+  sorted.forEach(note => {
+    const last = merged[merged.length - 1];
+    if (
+      last &&
+      last.pitch === note.pitch &&
+      Math.abs(last.endTime - note.startTime) < epsilon &&
+      Math.abs(last.velocity - note.velocity) < epsilon
+    ) {
+      last.endTime = Math.max(last.endTime, note.endTime);
+    } else {
+      merged.push({ ...note });
+    }
+  });
+
+  return merged;
 }
 
 function abcNoteToPitch(accidental: string, noteLetter: string, octaveMarkers: string): number {
