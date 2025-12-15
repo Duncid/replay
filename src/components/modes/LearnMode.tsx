@@ -17,6 +17,7 @@ interface LearnModeProps {
   userRecording: NoteSequence | null;
   onClearRecording: () => void;
   language: string;
+  model: string;
 }
 
 export function LearnMode({
@@ -26,6 +27,7 @@ export function LearnMode({
   userRecording,
   onClearRecording,
   language,
+  model,
 }: LearnModeProps) {
   const [prompt, setPrompt] = useState("");
   const [lesson, setLesson] = useState<LessonState>(createInitialLessonState());
@@ -34,9 +36,13 @@ export function LearnMode({
   const [isEvaluating, setIsEvaluating] = useState(false);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
+  const generationRequestIdRef = useRef<string | null>(null);
+  const evaluationRequestIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
 
   const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
+    const requestId = crypto.randomUUID();
+    generationRequestIdRef.current = requestId;
     setIsLoading(true);
     setLastComment(null);
     const localizedPrompt =
@@ -46,8 +52,10 @@ export function LearnMode({
 
     try {
       const { data, error } = await supabase.functions.invoke("piano-learn", {
-        body: { prompt: localizedPrompt, difficulty, previousSequence, language },
+        body: { prompt: localizedPrompt, difficulty, previousSequence, language, model },
       });
+
+      if (generationRequestIdRef.current !== requestId) return;
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -80,9 +88,11 @@ export function LearnMode({
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      if (generationRequestIdRef.current === requestId) {
+        setIsLoading(false);
+      }
     }
-  }, [language, onClearRecording, onPlaySequence, t, toast]);
+  }, [language, model, onClearRecording, onPlaySequence, t, toast]);
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim() || isLoading) return;
@@ -96,6 +106,8 @@ export function LearnMode({
   }, [lesson.targetSequence, onPlaySequence]);
 
   const evaluateAttempt = useCallback(async (userSequence: NoteSequence) => {
+    const requestId = crypto.randomUUID();
+    evaluationRequestIdRef.current = requestId;
     setIsEvaluating(true);
 
     try {
@@ -105,8 +117,11 @@ export function LearnMode({
           userSequence,
           instruction: lesson.instruction,
           language,
+          model,
         },
       });
+
+      if (evaluationRequestIdRef.current !== requestId) return;
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -132,11 +147,13 @@ export function LearnMode({
       console.error("Failed to evaluate attempt:", error);
       setLastComment(t("learnMode.evaluationFallback"));
     } finally {
-      setIsEvaluating(false);
-      hasEvaluatedRef.current = false; // Allow next recording to be evaluated
-      onClearRecording();
+      if (evaluationRequestIdRef.current === requestId) {
+        setIsEvaluating(false);
+        hasEvaluatedRef.current = false; // Allow next recording to be evaluated
+        onClearRecording();
+      }
     }
-  }, [language, lesson.targetSequence, lesson.instruction, onClearRecording, onPlaySequence, t]);
+  }, [language, lesson.targetSequence, lesson.instruction, model, onClearRecording, onPlaySequence, t]);
 
   // Watch for recording completion to trigger evaluation
   useEffect(() => {

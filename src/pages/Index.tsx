@@ -595,6 +595,7 @@ const Index = () => {
       learnModeRecordingRef.current = null;
     },
     language,
+    model: selectedModel,
   });
 
   // Handle note events from Piano
