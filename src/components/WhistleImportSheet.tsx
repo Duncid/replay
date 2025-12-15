@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SheetMusic } from "@/components/SheetMusic";
 import { NoteSequence } from "@/types/noteSequence";
 import { createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
-import { AlertCircle, Mic, RefreshCw, Square } from "lucide-react";
+import { midiToNoteName } from "@/utils/noteSequenceUtils";
+import { AlertCircle, Mic, RefreshCw, Square, Waveform } from "lucide-react";
 
 interface WhistleImportSheetProps {
   open: boolean;
@@ -97,6 +98,36 @@ function velocityFromRms(rms: number) {
   return Math.min(1, Math.max(0.2, rms * 8));
 }
 
+function drawWaveform(canvas: HTMLCanvasElement, buffer: Float32Array) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const { width, height } = canvas;
+  ctx.clearRect(0, 0, width, height);
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "hsl(var(--primary))";
+  ctx.beginPath();
+
+  const sliceWidth = width / buffer.length;
+  let x = 0;
+
+  for (let i = 0; i < buffer.length; i++) {
+    const v = buffer[i] * 0.5 + 0.5;
+    const y = v * height;
+
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+
+    x += sliceWidth;
+  }
+
+  ctx.stroke();
+}
+
 export function WhistleImportSheet({
   open,
   onOpenChange,
@@ -108,12 +139,16 @@ export function WhistleImportSheet({
   const [notes, setNotes] = useState<NoteSequence["notes"]>([]);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [livePitch, setLivePitch] = useState<number | null>(null);
+  const [liveRms, setLiveRms] = useState<number>(0);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const recordingStartRef = useRef<number>(0);
+  const waveformCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastLiveUpdateRef = useRef<number>(0);
 
   const currentNoteRef = useRef<{
     pitch: number;
@@ -151,6 +186,8 @@ export function WhistleImportSheet({
     currentNoteRef.current = null;
     voicedStreakRef.current = 0;
     unvoicedStreakRef.current = 0;
+    setLivePitch(null);
+    setLiveRms(0);
   }, []);
 
   const finalizeCurrentNote = useCallback((endTime: number) => {
@@ -177,6 +214,10 @@ export function WhistleImportSheet({
     const buffer = new Float32Array(analyser.fftSize);
     analyser.getFloatTimeDomainData(buffer);
 
+    if (waveformCanvasRef.current) {
+      drawWaveform(waveformCanvasRef.current, buffer);
+    }
+
     const { frequency, confidence, rms } = detectPitch(buffer, audioContextRef.current.sampleRate);
     const now = audioContextRef.current.currentTime - recordingStartRef.current;
 
@@ -187,11 +228,18 @@ export function WhistleImportSheet({
       frequency > 500 &&
       frequency < 5000;
 
+    const nowMillis = performance.now();
     if (isVoiced) {
       voicedStreakRef.current += 1;
       unvoicedStreakRef.current = 0;
       const pitch = hzToMidi(frequency!);
       const velocity = velocityFromRms(rms);
+
+      if (nowMillis - lastLiveUpdateRef.current > 50) {
+        setLivePitch(pitch);
+        setLiveRms(rms);
+        lastLiveUpdateRef.current = nowMillis;
+      }
 
       if (!currentNoteRef.current) {
         if (voicedStreakRef.current >= STABILITY_FRAMES) {
@@ -219,6 +267,12 @@ export function WhistleImportSheet({
     } else {
       unvoicedStreakRef.current += 1;
       voicedStreakRef.current = 0;
+
+      if (nowMillis - lastLiveUpdateRef.current > 50) {
+        setLivePitch(null);
+        setLiveRms(rms);
+        lastLiveUpdateRef.current = nowMillis;
+      }
 
       if (currentNoteRef.current && unvoicedStreakRef.current >= RELEASE_FRAMES) {
         finalizeCurrentNote(now);
@@ -255,6 +309,8 @@ export function WhistleImportSheet({
       mediaStreamRef.current = stream;
       recordingStartRef.current = audioContext.currentTime;
       setNotes([]);
+      setLivePitch(null);
+      setLiveRms(0);
       setIsRecording(true);
       rafRef.current = requestAnimationFrame(processAudio);
     } catch (err) {
@@ -290,6 +346,8 @@ export function WhistleImportSheet({
     currentNoteRef.current = null;
     voicedStreakRef.current = 0;
     unvoicedStreakRef.current = 0;
+    setLivePitch(null);
+    setLiveRms(0);
   }, []);
 
   useEffect(() => {
@@ -303,6 +361,7 @@ export function WhistleImportSheet({
   }, [open, stopRecording, handleClear]);
 
   const hasRecording = notes.length > 0;
+  const liveNoteLabel = livePitch !== null ? midiToNoteName(Math.round(livePitch)) : "--";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -349,6 +408,35 @@ export function WhistleImportSheet({
                   Tip: check your browser permission prompt or settings to enable microphone access.
                 </p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="py-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Waveform className="h-4 w-4" /> Live pitch & signal
+              </div>
+              <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-wide">Note</span>
+                  <span className="text-lg font-semibold text-foreground">{liveNoteLabel}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-wide">Level</span>
+                  <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${Math.min(1, liveRms * 12) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="border rounded-md bg-muted/40">
+                <canvas ref={waveformCanvasRef} width={640} height={120} className="w-full h-24" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Start recording to see the incoming whistle signal and the detected note name update in real time.
+              </p>
             </CardContent>
           </Card>
 
