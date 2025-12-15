@@ -7,20 +7,17 @@ import {
   Copy,
   Shuffle,
   Wand2,
-  Pencil,
   ArrowLeftToLine,
   ArrowRightToLine,
 } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
-import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -42,7 +39,6 @@ interface TrackItemProps {
   isAiGenerated?: boolean;
   onRequestImprov?: (sequence: NoteSequence) => void;
   onRequestVariations?: (sequence: NoteSequence) => void;
-  onEdit?: (sequence: NoteSequence) => void;
 }
 
 export function TrackItem({
@@ -60,7 +56,6 @@ export function TrackItem({
   isAiGenerated = false,
   onRequestImprov,
   onRequestVariations,
-  onEdit,
 }: TrackItemProps) {
   const { toast } = useToast();
 
@@ -96,12 +91,6 @@ export function TrackItem({
   const handleCopySequence = async () => {
     await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
     toast({ title: "Copied as NoteSequence" });
-  };
-
-  const handleCopyAbc = async () => {
-    const abc = noteSequenceToAbc(sequence);
-    await navigator.clipboard.writeText(abc);
-    toast({ title: "Copied as ABC" });
   };
 
   const containerRef = id ? setNodeRef : undefined;
@@ -174,15 +163,6 @@ export function TrackItem({
                   Merge with next
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {onEdit && (
-                  <>
-                    <DropdownMenuItem onClick={() => onEdit(sequence)}>
-                      <Pencil className="w-3 h-3 mr-2" />
-                      Edit ABC
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
                 {onRequestImprov && (
                   <DropdownMenuItem onClick={() => onRequestImprov(sequence)}>
                     <Wand2 className="w-3 h-3 mr-2" />
@@ -200,11 +180,6 @@ export function TrackItem({
                   <Copy className="w-3 h-3 mr-2" />
                   Copy as NoteSequence
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyAbc}>
-                  <Copy className="w-3 h-3 mr-2" />
-                  Copy as ABC
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onRemove} className="text-destructive focus:text-destructive">
                   <Trash2 className="w-3 h-3 mr-2" />
                   Remove

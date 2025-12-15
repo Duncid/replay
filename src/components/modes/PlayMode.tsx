@@ -45,7 +45,6 @@ interface PlayModeProps {
     onRequestImprov?: (sequence: NoteSequence) => void;
     onRequestVariations?: (sequence: NoteSequence) => void;
     playingSequence?: NoteSequence | null;
-    onEditEntry?: (index: number, sequence: NoteSequence) => void;
 }
 
 function normalizeHistory(entries: PlayEntry[]): PlayEntry[] {
@@ -75,7 +74,6 @@ export function PlayMode({
     onRequestImprov,
     onRequestVariations,
     playingSequence,
-    onEditEntry,
 }: PlayModeProps) {
     const [history, setHistory] = useState<PlayEntry[]>(() => normalizeHistory(initialHistory));
 
@@ -357,7 +355,6 @@ export function PlayMode({
                                         onRemove={() => removeEntry(index)}
                                         onRequestImprov={onRequestImprov}
                                         onRequestVariations={onRequestVariations}
-                                        onEdit={onEditEntry ? (sequence) => onEditEntry(index, sequence) : undefined}
                                     />
                                 </div>
                             ))}

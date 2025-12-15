@@ -454,13 +454,6 @@ const Index = () => {
     [playSequence],
   );
 
-  // Handle edit entry request
-  const handleEditEntry = useCallback((index: number, _sequence: NoteSequence) => {
-    setEditingEntryIndex(index);
-    setEditDialogMode("edit");
-    setPartitionDialogOpen(true);
-  }, []);
-
   // Handle upload ABC file
   const handleUploadAbc = useCallback(async () => {
     try {
@@ -543,7 +536,6 @@ const Index = () => {
     onRequestImprov: (sequence) => handleManualAiRequest(sequence, "magenta/music-rnn", "create an improv"),
     onRequestVariations: (sequence) => handleManualAiRequest(sequence, "magenta/music-vae", "create variations"),
     playingSequence,
-    onEditEntry: handleEditEntry,
   });
 
   // Assign to refs for use in handleRecordingComplete
