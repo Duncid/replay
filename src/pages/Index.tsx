@@ -605,6 +605,10 @@ const Index = () => {
         stopAiPlayback();
       }
 
+      if (activeMode === "learn") {
+        learnMode.handleUserAction();
+      }
+
       if (appState !== "user_playing") {
         currentRequestIdRef.current = null;
         recordingManager.hideProgress();
@@ -618,7 +622,7 @@ const Index = () => {
         learnRecordingManager.addNoteStart(noteKey, velocity);
       }
     },
-    [appState, activeMode, recordingManager, learnRecordingManager, stopAiPlayback, learnMode.lesson.phase],
+    [appState, activeMode, recordingManager, learnMode.handleUserAction, learnMode.lesson.phase, learnRecordingManager, stopAiPlayback],
   );
 
   const handleNoteEnd = useCallback(

@@ -38,9 +38,21 @@ export function LearnMode({
   const hasEvaluatedRef = useRef(false);
   const generationRequestIdRef = useRef<string | null>(null);
   const evaluationRequestIdRef = useRef<string | null>(null);
+  const userActionTokenRef = useRef<string>(crypto.randomUUID());
   const { t } = useTranslation();
 
+  const markUserAction = useCallback(() => {
+    userActionTokenRef.current = crypto.randomUUID();
+    generationRequestIdRef.current = null;
+    evaluationRequestIdRef.current = null;
+    hasEvaluatedRef.current = false;
+    setIsLoading(false);
+    setIsEvaluating(false);
+  }, []);
+
   const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
+    markUserAction();
+    const actionToken = userActionTokenRef.current;
     const requestId = crypto.randomUUID();
     generationRequestIdRef.current = requestId;
     setIsLoading(true);
@@ -55,7 +67,7 @@ export function LearnMode({
         body: { prompt: localizedPrompt, difficulty, previousSequence, language, model },
       });
 
-      if (generationRequestIdRef.current !== requestId) return;
+      if (generationRequestIdRef.current !== requestId || userActionTokenRef.current !== actionToken) return;
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -88,11 +100,11 @@ export function LearnMode({
         variant: "destructive",
       });
     } finally {
-      if (generationRequestIdRef.current === requestId) {
+      if (generationRequestIdRef.current === requestId && userActionTokenRef.current === actionToken) {
         setIsLoading(false);
       }
     }
-  }, [language, model, onClearRecording, onPlaySequence, t, toast]);
+  }, [language, markUserAction, model, onClearRecording, onPlaySequence, t, toast]);
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim() || isLoading) return;
@@ -106,6 +118,7 @@ export function LearnMode({
   }, [lesson.targetSequence, onPlaySequence]);
 
   const evaluateAttempt = useCallback(async (userSequence: NoteSequence) => {
+    const actionToken = userActionTokenRef.current;
     const requestId = crypto.randomUUID();
     evaluationRequestIdRef.current = requestId;
     setIsEvaluating(true);
@@ -121,7 +134,7 @@ export function LearnMode({
         },
       });
 
-      if (evaluationRequestIdRef.current !== requestId) return;
+      if (evaluationRequestIdRef.current !== requestId || userActionTokenRef.current !== actionToken) return;
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -147,7 +160,7 @@ export function LearnMode({
       console.error("Failed to evaluate attempt:", error);
       setLastComment(t("learnMode.evaluationFallback"));
     } finally {
-      if (evaluationRequestIdRef.current === requestId) {
+      if (evaluationRequestIdRef.current === requestId && userActionTokenRef.current === actionToken) {
         setIsEvaluating(false);
         hasEvaluatedRef.current = false; // Allow next recording to be evaluated
         onClearRecording();
@@ -175,11 +188,12 @@ export function LearnMode({
   }, [lesson.userPrompt, lesson.difficulty, lesson.targetSequence, generateLesson]);
 
   const handleLeave = useCallback(() => {
+    markUserAction();
     setLesson(createInitialLessonState());
     setPrompt("");
     setLastComment(null);
     onClearRecording();
-  }, [onClearRecording]);
+  }, [markUserAction, onClearRecording]);
 
   const suggestions = [
     ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) || []),
@@ -241,5 +255,6 @@ export function LearnMode({
   return {
     lesson,
     render,
+    handleUserAction: markUserAction,
   };
 }
