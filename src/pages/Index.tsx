@@ -595,6 +595,7 @@ const Index = () => {
       learnModeRecordingRef.current = null;
     },
     language,
+    model: selectedModel,
   });
 
   // Handle note events from Piano
@@ -602,6 +603,10 @@ const Index = () => {
     (noteKey: string, frequency: number, velocity: number) => {
       if (appState === "ai_playing") {
         stopAiPlayback();
+      }
+
+      if (activeMode === "learn") {
+        learnMode.handleUserAction();
       }
 
       if (appState !== "user_playing") {
@@ -617,7 +622,7 @@ const Index = () => {
         learnRecordingManager.addNoteStart(noteKey, velocity);
       }
     },
-    [appState, activeMode, recordingManager, learnRecordingManager, stopAiPlayback, learnMode.lesson.phase],
+    [appState, activeMode, recordingManager, learnMode.handleUserAction, learnMode.lesson.phase, learnRecordingManager, stopAiPlayback],
   );
 
   const handleNoteEnd = useCallback(
