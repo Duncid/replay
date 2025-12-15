@@ -120,46 +120,30 @@ export function noteSequenceToAbc(sequence: NoteSequence, title?: string): strin
   // Quantize to a 16th-note grid to stabilize rhythmic spelling
   const stepsPerBeat = 4;
   const quantized = quantizeNotes(validNotes, qpm, stepsPerBeat);
-  const melodyLine = extractMelody(quantized, stepsPerBeat);
+  const segments = buildTimelineSegments(quantized);
 
   const abcElements: string[] = [];
   let currentStep = 0;
 
-  melodyLine.forEach((melodyNote, i) => {
-    if (melodyNote.startStep > currentStep) {
-      const restBeats = (melodyNote.startStep - currentStep) / stepsPerBeat;
+  segments.forEach(segment => {
+    if (segment.startStep > currentStep) {
+      const restBeats = (segment.startStep - currentStep) / stepsPerBeat;
       abcElements.push("z" + getDurationString(restBeats));
     }
 
-    // Prevent overlaps by clipping a note to the next melody onset
-    const nextStart = melodyLine[i + 1]?.startStep ?? melodyNote.endStep;
-    const endStep = Math.min(melodyNote.endStep, nextStart);
-    const durationBeats = (endStep - melodyNote.startStep) / stepsPerBeat;
-    if (durationBeats > epsilon) {
-      abcElements.push(pitchToAbcNote(melodyNote.pitch) + getDurationString(durationBeats));
-      currentStep = endStep;
-    }
+    const durationBeats = (segment.endStep - segment.startStep) / stepsPerBeat;
+    if (durationBeats <= epsilon) return;
+
+    const pitches = segment.pitches.sort((a, b) => a - b);
+    const chord = pitches.length > 1
+      ? `[${pitches.map(pitchToAbcNote).join("")}]`
+      : pitchToAbcNote(pitches[0]);
+
+    abcElements.push(chord + getDurationString(durationBeats));
+    currentStep = segment.endStep;
   });
 
-  // If quantization/selection failed, fall back to grouping by onset
-  if (abcElements.length === 0) {
-    const grouped = groupNotesByStart(validNotes);
-    const groupedElements = grouped.map(notes => {
-      if (notes.length === 1) {
-        const note = notes[0];
-        const durationInBeats = secondsToBeats(note.endTime - note.startTime, qpm);
-        return pitchToAbcNote(note.pitch) + getDurationString(durationInBeats);
-      }
-
-      const minDuration = Math.min(...notes.map(n => n.endTime - n.startTime));
-      const durationInBeats = secondsToBeats(minDuration, qpm);
-      return "[" + notes.map(n => pitchToAbcNote(n.pitch)).join("") + "]" + getDurationString(durationInBeats);
-    });
-
-    abc += groupedElements.join(" ");
-  } else {
-    abc += abcElements.join(" ");
-  }
+  abc += abcElements.join(" ");
   return abc;
 }
 
@@ -279,22 +263,46 @@ function scoreTransition(
   return intervalScore + gapPenalty;
 }
 
-function groupNotesByStart(notes: Note[]): Note[][] {
-  const byStart = new Map<number, Note[]>();
+type TimelineSegment = { startStep: number; endStep: number; pitches: number[] };
 
+function buildTimelineSegments(notes: QuantizedNote[]): TimelineSegment[] {
+  if (notes.length === 0) return [];
+
+  const boundaries = new Set<number>();
   notes.forEach(note => {
-    const key = Math.round(note.startTime * 1000);
-    const bucket = byStart.get(key);
-    if (bucket) {
-      bucket.push(note);
-    } else {
-      byStart.set(key, [note]);
-    }
+    boundaries.add(note.startStep);
+    boundaries.add(note.endStep);
   });
 
-  return Array.from(byStart.keys())
-    .sort((a, b) => a - b)
-    .map(key => byStart.get(key) ?? []);
+  const ordered = Array.from(boundaries).sort((a, b) => a - b);
+  const segments: TimelineSegment[] = [];
+
+  // Sweep active notes across boundaries so overlapping durations become stacked chords
+  const startsAt = new Map<number, QuantizedNote[]>();
+  const endsAt = new Map<number, QuantizedNote[]>();
+  notes.forEach(note => {
+    startsAt.set(note.startStep, [...(startsAt.get(note.startStep) ?? []), note]);
+    endsAt.set(note.endStep, [...(endsAt.get(note.endStep) ?? []), note]);
+  });
+
+  const active = new Set<number>();
+  for (let i = 0; i < ordered.length - 1; i++) {
+    const boundary = ordered[i];
+    const nextBoundary = ordered[i + 1];
+
+    (startsAt.get(boundary) ?? []).forEach(note => active.add(note.pitch));
+    (endsAt.get(boundary) ?? []).forEach(note => active.delete(note.pitch));
+
+    if (active.size > 0) {
+      segments.push({
+        startStep: boundary,
+        endStep: nextBoundary,
+        pitches: Array.from(active),
+      });
+    }
+  }
+
+  return segments;
 }
 
 function pitchToAbcNote(pitch: number): string {
