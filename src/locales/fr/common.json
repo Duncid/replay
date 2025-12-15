@@ -36,7 +36,6 @@
     "saveBeforeOpeningDescriptionNew": "Vous n'avez pas encore enregistré cette composition. L'enregistrer avant d'en ouvrir une autre ?",
     "continueWithoutSaving": "Continuer sans enregistrer",
     "export": "Exporter",
-    "exportedAbc": "Exporté en fichier ABC",
     "compositionFallbackTitle": "Composition"
   },
   "controls": {

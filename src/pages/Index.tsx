@@ -454,13 +454,6 @@ const Index = () => {
     [playSequence],
   );
 
-  // Handle edit entry request
-  const handleEditEntry = useCallback((index: number, _sequence: NoteSequence) => {
-    setEditingEntryIndex(index);
-    setEditDialogMode("edit");
-    setPartitionDialogOpen(true);
-  }, []);
-
   // Handle upload ABC file
   const handleUploadAbc = useCallback(async () => {
     try {
@@ -543,7 +536,6 @@ const Index = () => {
     onRequestImprov: (sequence) => handleManualAiRequest(sequence, "magenta/music-rnn", "create an improv"),
     onRequestVariations: (sequence) => handleManualAiRequest(sequence, "magenta/music-vae", "create variations"),
     playingSequence,
-    onEditEntry: handleEditEntry,
   });
 
   // Assign to refs for use in handleRecordingComplete
@@ -1090,55 +1082,6 @@ const Index = () => {
                         {t("menus.export")}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const seq = playMode.getCombinedSequence();
-                            if (seq?.sequence) {
-                              const title = compositions.currentComposition?.title || t("menus.compositionFallbackTitle");
-                              const abcContent = noteSequenceToAbc(seq.sequence, title);
-
-                              const downloadFallback = () => {
-                                const blob = new Blob([abcContent], { type: 'text/plain' });
-                                const url = URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = `${title}.txt`;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-                                toast({ title: t("menus.exportedAbc") });
-                              };
-
-                              try {
-                                if ('showSaveFilePicker' in window) {
-                                  const handle = await (window as any).showSaveFilePicker({
-                                    suggestedName: `${title}.txt`,
-                                    types: [{
-                                      description: 'Text File',
-                                      accept: { 'text/plain': ['.txt'] }
-                                    }]
-                                  });
-                                  const writable = await handle.createWritable();
-                                  await writable.write(abcContent);
-                                  await writable.close();
-                                  toast({ title: t("menus.exportedAbc") });
-                                } else {
-                                  downloadFallback();
-                                }
-                              } catch (err) {
-                                if ((err as Error).name === 'AbortError') {
-                                  // User cancelled - do nothing
-                                } else {
-                                  // API not available or other error - use fallback
-                                  downloadFallback();
-                                }
-                              }
-                            }
-                          }}
-                        >
-                          ABC
-                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={async () => {
                             const seq = playMode.getCombinedSequence();
