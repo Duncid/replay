@@ -136,12 +136,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
   useEffect(() => {
     // Combine both activeKeys (from playback) and userPressedKeys (from user input)
     const allActiveKeys = new Set([...activeKeys, ...userPressedKeys]);
-    console.log('Effect running, allActiveKeys:', Array.from(allActiveKeys));
 
     // Clear timers for keys that are no longer active
     keyActivationTimers.current.forEach((timer, key) => {
       if (!allActiveKeys.has(key)) {
-        console.log('Clearing timer for:', key);
         clearTimeout(timer);
         keyActivationTimers.current.delete(key);
       }
@@ -163,14 +161,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
     // Set timers for newly activated keys to transition to sustained state
     allActiveKeys.forEach((key) => {
       if (!keyActivationTimers.current.has(key)) {
-        console.log('Setting timer for:', key);
         // After 50ms of being pressed, transition to sustained state
         const timer = setTimeout(() => {
-          console.log('Timer fired for:', key, 'adding to sustained');
           setSustainedKeys((prev) => {
-            console.log('Previous sustained keys:', Array.from(prev));
             const newSet = new Set([...prev, key]);
-            console.log('New sustained keys:', Array.from(newSet));
             return newSet;
           });
           keyActivationTimers.current.delete(key);

@@ -1,11 +1,29 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import * as Tone from "tone";
-import { 
-  PianoSoundType, 
-  SAMPLED_INSTRUMENTS, 
-  getSamplerUrls, 
-  getSamplerBaseUrl 
+import {
+  PianoSoundType,
+  SAMPLED_INSTRUMENTS,
+  getSamplerUrls,
+  getSamplerBaseUrl
 } from "./usePianoSound";
+
+let sharedAudioContext: AudioContext | null = null;
+
+function getSharedAudioContext() {
+  if (!sharedAudioContext) {
+    const AudioContextClass =
+      window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+    if (!AudioContextClass) {
+      throw new Error("No AudioContext available in this environment");
+    }
+
+    sharedAudioContext = new AudioContextClass({
+      latencyHint: "interactive",
+    });
+  }
+  return sharedAudioContext;
+}
 
 type AudioEngine = {
   type: "classic" | "fm-synth" | "sampler";
@@ -17,7 +35,7 @@ type AudioEngine = {
 
 // Classic oscillator-based engine (original sound)
 function createClassicEngine(): AudioEngine {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const audioContext = getSharedAudioContext();
   const activeOscillators = new Map<string, { oscillator: OscillatorNode; gain: GainNode }>();
   
   const noteToFrequency = (noteKey: string): number => {
@@ -93,8 +111,6 @@ function createClassicEngine(): AudioEngine {
         }
       });
       activeOscillators.clear();
-      // Close the AudioContext to fully release resources
-      audioContext.close().catch(() => {});
     },
   };
 }
@@ -107,24 +123,24 @@ function createFMSynthEngine(): { engine: AudioEngine; loadPromise: Promise<void
     detune: 0,
     oscillator: { type: "sine" },
     envelope: {
-      attack: 0.01,
+      attack: 0.002,
       decay: 0.2,
       sustain: 0.3,
       release: 1.2
     },
     modulation: { type: "square" },
     modulationEnvelope: {
-      attack: 0.5,
-      decay: 0,
-      sustain: 1,
-      release: 0.5
+      attack: 0.01,
+      decay: 0.05,
+      sustain: 0.9,
+      release: 0.3
     }
   });
 
   const reverb = new Tone.Reverb({
     decay: 1.5,
-    preDelay: 0.01,
-    wet: 0.3
+    preDelay: 0,
+    wet: 0.2
   });
 
   synth.connect(reverb);
@@ -248,6 +264,19 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
 
   // Stable callbacks using refs - no dependencies means reference never changes
   const ensureAudioReady = useCallback(async () => {
+    const audioContext = getSharedAudioContext();
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    const toneContext = Tone.getContext();
+    toneContext.lookAhead = Math.min(toneContext.lookAhead, 0.01);
+    toneContext.latencyHint = "interactive";
+
+    if (toneContext.state === "suspended") {
+      await toneContext.resume();
+    }
+
     await Tone.start();
   }, []);
 
