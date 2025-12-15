@@ -271,7 +271,7 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
 
     const toneContext = Tone.getContext();
     toneContext.lookAhead = Math.min(toneContext.lookAhead, 0.01);
-    toneContext.latencyHint = "interactive";
+    // Note: latencyHint is read-only and can only be set during context creation
 
     if (toneContext.state === "suspended") {
       await toneContext.resume();

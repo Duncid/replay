@@ -60,5 +60,23 @@
     "playButton": "Play",
     "nextButton": "Next",
     "leaveButton": "Leave"
+  },
+  "whistleImport": {
+    "title": "Whistle Import",
+    "permissionTip": "Tip: check your browser permission prompt or settings to enable microphone access.",
+    "level": "Level",
+    "instruction": "Start recording to see the incoming whistle signal and the detected note name update in real time.",
+    "detectedNotes": "Detected notes",
+    "noNotesYet": "No notes captured yet. Press Rec and start whistling to begin.",
+    "buttons": {
+      "rec": "Rec",
+      "stop": "Stop",
+      "clear": "Clear"
+    },
+    "errors": {
+      "permissionDenied": "Microphone access was denied. Please allow microphone permissions and try again.",
+      "accessFailed": "Unable to access microphone: {{error}}",
+      "unknown": "Unknown error"
+    }
   }
 }

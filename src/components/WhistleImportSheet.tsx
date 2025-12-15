@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Card, CardContent } from "@/components/ui/card";
 import { SheetMusic } from "@/components/SheetMusic";
 import { NoteSequence } from "@/types/noteSequence";
 import { createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
-import { midiToNoteName } from "@/utils/noteSequenceUtils";
-import { AlertCircle, AudioLines, Mic, RefreshCw, Square } from "lucide-react";
+import { midiToNoteName, midiToFrequency } from "@/utils/noteSequenceUtils";
+import { AlertCircle, AudioLines, Mic, Play, RefreshCw, Square, X } from "lucide-react";
+import { usePianoAudio } from "@/hooks/usePianoAudio";
 
 interface WhistleImportSheetProps {
   open: boolean;
@@ -28,8 +30,44 @@ const MIN_DURATION = 0.1; // seconds
 const STABILITY_FRAMES = 3;
 const RELEASE_FRAMES = 6;
 
+// Solfege syllables for C major scale
+const SOLFEGE_NAMES = ["Do", "Di", "Re", "Ri", "Mi", "Fa", "Fi", "Sol", "Si", "La", "Li", "Ti"];
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
 function hzToMidi(hz: number): number {
   return 69 + 12 * Math.log2(hz / 440);
+}
+
+function midiToSolfege(pitch: number): string {
+  const noteIndex = pitch % 12;
+  return SOLFEGE_NAMES[noteIndex];
+}
+
+function pitchToAbcNote(pitch: number): string {
+  const noteName = midiToNoteName(pitch);
+  const note = noteName.slice(0, -1); // e.g., "C#"
+  const octave = parseInt(noteName.slice(-1)); // e.g., 4
+  
+  // Convert to ABC notation
+  let abcNote = note.replace("#", "^").replace("b", "_");
+  
+  if (octave === 3) {
+    abcNote = abcNote.toUpperCase() + ",";
+  } else if (octave === 4) {
+    abcNote = abcNote.toUpperCase();
+  } else if (octave === 5) {
+    abcNote = abcNote.toLowerCase();
+  } else if (octave === 6) {
+    abcNote = abcNote.toLowerCase() + "'";
+  }
+  
+  return abcNote;
+}
+
+function formatNoteWithSolfegeAndAbc(pitch: number): string {
+  const solfege = midiToSolfege(pitch);
+  const abc = pitchToAbcNote(pitch);
+  return `${solfege} (${abc})`;
 }
 
 function detectPitch(buffer: Float32Array, sampleRate: number): PitchDetectionResult {
@@ -102,19 +140,41 @@ function drawWaveform(canvas: HTMLCanvasElement, buffer: Float32Array) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const { width, height } = canvas;
-  ctx.clearRect(0, 0, width, height);
+  // Get the actual display size
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  
+  // Set internal canvas size accounting for device pixel ratio
+  const displayWidth = rect.width;
+  const displayHeight = rect.height;
+  const internalWidth = displayWidth * dpr;
+  const internalHeight = displayHeight * dpr;
+
+  // Only resize if dimensions have changed
+  if (canvas.width !== internalWidth || canvas.height !== internalHeight) {
+    canvas.width = internalWidth;
+    canvas.height = internalHeight;
+    ctx.scale(dpr, dpr);
+  }
+
+  // Clear with display dimensions
+  ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+  // Get accent color from computed styles (CSS variables don't work directly in canvas)
+  const computedStyle = getComputedStyle(canvas);
+  const accentColor = computedStyle.getPropertyValue("--accent").trim();
+  const strokeColor = accentColor ? `hsl(${accentColor})` : "hsl(45, 95%, 60%)"; // Fallback to accent default
 
   ctx.lineWidth = 2;
-  ctx.strokeStyle = "hsl(var(--primary))";
+  ctx.strokeStyle = strokeColor;
   ctx.beginPath();
 
-  const sliceWidth = width / buffer.length;
+  const sliceWidth = displayWidth / buffer.length;
   let x = 0;
 
   for (let i = 0; i < buffer.length; i++) {
     const v = buffer[i] * 0.5 + 0.5;
-    const y = v * height;
+    const y = v * displayHeight;
 
     if (i === 0) {
       ctx.moveTo(x, y);
@@ -135,12 +195,19 @@ export function WhistleImportSheet({
   bpm,
   timeSignature,
 }: WhistleImportSheetProps) {
+  const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [notes, setNotes] = useState<NoteSequence["notes"]>([]);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [livePitch, setLivePitch] = useState<number | null>(null);
   const [liveRms, setLiveRms] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  // Audio engine for playback (only create when sheet is open)
+  const audio = usePianoAudio(open ? "classic" : null);
+  const { ensureAudioReady, playNote } = audio;
+  const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -149,6 +216,7 @@ export function WhistleImportSheet({
   const recordingStartRef = useRef<number>(0);
   const waveformCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastLiveUpdateRef = useRef<number>(0);
+  const isRecordingRef = useRef<boolean>(false);
 
   const currentNoteRef = useRef<{
     pitch: number;
@@ -192,15 +260,16 @@ export function WhistleImportSheet({
 
   const finalizeCurrentNote = useCallback((endTime: number) => {
     if (!currentNoteRef.current) return;
-    const duration = endTime - currentNoteRef.current.startTime;
+    const currentNote = currentNoteRef.current;
+    const duration = endTime - currentNote.startTime;
     if (duration >= MIN_DURATION) {
       setNotes(prev => [
         ...prev,
         {
-          pitch: Math.round(currentNoteRef.current!.pitch),
-          startTime: currentNoteRef.current!.startTime,
+          pitch: Math.round(currentNote.pitch),
+          startTime: currentNote.startTime,
           endTime,
-          velocity: currentNoteRef.current!.velocity,
+          velocity: currentNote.velocity,
         },
       ]);
     }
@@ -208,11 +277,24 @@ export function WhistleImportSheet({
   }, []);
 
   const processAudio = useCallback(() => {
-    if (!isRecording || !analyserRef.current || !audioContextRef.current) return;
+    if (!isRecordingRef.current || !analyserRef.current || !audioContextRef.current) return;
+
+    // Ensure AudioContext is running
+    if (audioContextRef.current.state !== "running") {
+      audioContextRef.current.resume().catch(console.error);
+      rafRef.current = requestAnimationFrame(processAudio);
+      return;
+    }
 
     const analyser = analyserRef.current;
     const buffer = new Float32Array(analyser.fftSize);
     analyser.getFloatTimeDomainData(buffer);
+
+    // Debug logging (temporary)
+    const bufferRms = Math.sqrt(buffer.reduce((sum, val) => sum + val * val, 0) / buffer.length);
+    if (bufferRms > 0.001) {
+      console.debug("Audio buffer RMS:", bufferRms.toFixed(4), "Max:", Math.max(...Array.from(buffer.map(Math.abs))).toFixed(4));
+    }
 
     if (waveformCanvasRef.current) {
       drawWaveform(waveformCanvasRef.current, buffer);
@@ -269,7 +351,7 @@ export function WhistleImportSheet({
       voicedStreakRef.current = 0;
 
       if (nowMillis - lastLiveUpdateRef.current > 50) {
-        setLivePitch(null);
+        // Keep the last detected note visible, only update RMS level
         setLiveRms(rms);
         lastLiveUpdateRef.current = nowMillis;
       }
@@ -280,15 +362,34 @@ export function WhistleImportSheet({
     }
 
     rafRef.current = requestAnimationFrame(processAudio);
-  }, [finalizeCurrentNote, isRecording]);
+  }, [finalizeCurrentNote]);
 
   const startRecording = useCallback(async () => {
     try {
       setError(null);
       setPermissionDenied(false);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("Microphone stream obtained:", stream.getAudioTracks().length, "audio track(s)");
+      
       const audioContext = new AudioContext();
+      console.log("AudioContext created, state:", audioContext.state);
+      
+      // Ensure AudioContext is running (resume if suspended)
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+        console.log("AudioContext resumed, new state:", audioContext.state);
+      }
+      
+      // Wait a bit to ensure AudioContext is fully ready
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Verify AudioContext is running
+      if (audioContext.state !== "running") {
+        throw new Error(`AudioContext failed to start. State: ${audioContext.state}`);
+      }
+      
       const source = audioContext.createMediaStreamSource(stream);
+      console.log("MediaStreamSource created");
 
       const highpass = audioContext.createBiquadFilter();
       highpass.type = "highpass";
@@ -303,6 +404,7 @@ export function WhistleImportSheet({
       analyser.smoothingTimeConstant = 0;
 
       source.connect(highpass).connect(lowpass).connect(analyser);
+      console.log("Audio graph connected: source -> highpass -> lowpass -> analyser");
 
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
@@ -311,27 +413,39 @@ export function WhistleImportSheet({
       setNotes([]);
       setLivePitch(null);
       setLiveRms(0);
+      isRecordingRef.current = true;
       setIsRecording(true);
-      rafRef.current = requestAnimationFrame(processAudio);
+      
+      // Start processing after a brief delay to ensure everything is ready
+      setTimeout(() => {
+        if (isRecordingRef.current && analyserRef.current && audioContextRef.current && audioContextRef.current.state === "running") {
+          rafRef.current = requestAnimationFrame(processAudio);
+        }
+      }, 100);
     } catch (err) {
       console.error("Microphone error", err);
       if (err instanceof DOMException && err.name === "NotAllowedError") {
         setPermissionDenied(true);
-        setError("Microphone access was denied. Please allow microphone permissions and try again.");
+        setError(t("whistleImport.errors.permissionDenied"));
       } else {
-        setError("Unable to access microphone. Please check your device and try again.");
+        const errorMessage = err instanceof Error ? err.message : t("whistleImport.errors.unknown");
+        setError(t("whistleImport.errors.accessFailed", { error: errorMessage }));
       }
       cleanupAudio();
     }
-  }, [cleanupAudio, processAudio]);
+      }, [cleanupAudio, processAudio, t]);
 
   const stopRecording = useCallback(() => {
+    isRecordingRef.current = false;
     setIsRecording(false);
     if (audioContextRef.current) {
       const now = audioContextRef.current.currentTime - recordingStartRef.current;
       finalizeCurrentNote(now);
     }
     cleanupAudio();
+    // Stop playback if playing
+    playbackRef.current.cancelled = true;
+    setIsPlaying(false);
   }, [cleanupAudio, finalizeCurrentNote]);
 
   const handleSave = useCallback(() => {
@@ -348,20 +462,87 @@ export function WhistleImportSheet({
     unvoicedStreakRef.current = 0;
     setLivePitch(null);
     setLiveRms(0);
+    // Stop playback if playing
+    playbackRef.current.cancelled = true;
+    setIsPlaying(false);
   }, []);
+
+  const handlePlay = useCallback(async () => {
+    if (!sequence || sequence.notes.length === 0) return;
+
+    await ensureAudioReady();
+    setIsPlaying(true);
+    playbackRef.current = { cancelled: false };
+
+    const sortedNotes = [...sequence.notes].sort((a, b) => a.startTime - b.startTime);
+    const startTime = performance.now();
+
+    for (const note of sortedNotes) {
+      if (playbackRef.current.cancelled) break;
+
+      const noteStartMs = note.startTime * 1000;
+      const elapsed = performance.now() - startTime;
+      const delay = noteStartMs - elapsed;
+
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+
+      if (playbackRef.current.cancelled) break;
+
+      const frequency = midiToFrequency(note.pitch);
+      const duration = note.endTime - note.startTime;
+      await playNote(frequency, duration);
+    }
+
+    // Wait for last note to finish
+    const lastNote = sortedNotes[sortedNotes.length - 1];
+    if (lastNote && !playbackRef.current.cancelled) {
+      const lastNoteDuration = (lastNote.endTime - lastNote.startTime) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, lastNoteDuration));
+    }
+
+    setIsPlaying(false);
+  }, [sequence, ensureAudioReady, playNote]);
+
+  const handleStop = useCallback(() => {
+    playbackRef.current.cancelled = true;
+    setIsPlaying(false);
+  }, []);
+
+  // Initialize canvas dimensions when component mounts or opens
+  useEffect(() => {
+    if (open && waveformCanvasRef.current) {
+      const canvas = waveformCanvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.scale(dpr, dpr);
+      }
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
       stopRecording();
       handleClear();
+      // Stop playback when sheet closes
+      playbackRef.current.cancelled = true;
+      setIsPlaying(false);
     }
     return () => {
       stopRecording();
+      // Stop playback on unmount
+      playbackRef.current.cancelled = true;
+      setIsPlaying(false);
     };
   }, [open, stopRecording, handleClear]);
 
   const hasRecording = notes.length > 0;
-  const liveNoteLabel = livePitch !== null ? midiToNoteName(Math.round(livePitch)) : "--";
+  const liveNoteLabel = livePitch !== null ? formatNoteWithSolfegeAndAbc(Math.round(livePitch)) : "";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -369,7 +550,7 @@ export function WhistleImportSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Mic className="h-5 w-5" />
-            Whistle Import
+            {t("whistleImport.title")}
           </SheetTitle>
         </SheetHeader>
 
@@ -382,82 +563,74 @@ export function WhistleImportSheet({
               </CardContent>
             </Card>
           )}
-
-          <Card>
-            <CardContent className="py-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  className="gap-2"
-                  variant={isRecording ? "destructive" : "default"}
-                >
-                  {isRecording ? <Square className="h-4 w-4" fill="currentColor" /> : <Mic className="h-4 w-4" />}
-                  {isRecording ? "Stop" : "Rec"}
-                </Button>
-                <Button variant="outline" onClick={handleClear} disabled={!hasRecording && !isRecording} className="gap-2">
-                  <RefreshCw className="h-4 w-4" />
-                  Clear
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Whistle one note at a time into your microphone. We track the pitch and duration to build a NoteSequence you can
-                add to your composition.
-              </p>
+            <div className="flex flex-col h-full items-center w-full justify-center gap-6">
               {permissionDenied && (
                 <p className="text-xs text-muted-foreground">
-                  Tip: check your browser permission prompt or settings to enable microphone access.
+                  {t("whistleImport.permissionTip")}
                 </p>
               )}
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="py-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <AudioLines className="h-4 w-4" /> Live pitch & signal
+              <div id="noteIndicator" className="relative flex items-center justify-center w-32 h-32 rounded-full bg-muted/20">
+                <span className="text-2xl font-semibold text-foreground z-10">{liveNoteLabel}</span>
+                {/* Ring that varies with RMS level */}
+                <div
+                  className="absolute inset-0 rounded-full border-2 border-accent transition-all duration-75"
+                  style={{
+                    borderWidth: `${2 + Math.min(1, liveRms * 12) * 6}px`,
+                    opacity: Math.min(1, liveRms * 12),
+                  }}
+                />
               </div>
-              <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase tracking-wide">Note</span>
-                  <span className="text-lg font-semibold text-foreground">{liveNoteLabel}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase tracking-wide">Level</span>
-                  <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{ width: `${Math.min(1, liveRms * 12) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="border rounded-md bg-muted/40">
-                <canvas ref={waveformCanvasRef} width={640} height={120} className="w-full h-24" />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Start recording to see the incoming whistle signal and the detected note name update in real time.
-              </p>
-            </CardContent>
-          </Card>
-
-          {hasRecording ? (
-            <div className="space-y-2 flex-shrink-0">
-              <div className="text-sm font-medium">Detected notes</div>
-              <div className="overflow-x-auto flex-1">
-                <SheetMusic sequence={sequence} compact noControls noTitle />
-              </div>
+              <Button
+                onClick={isRecording ? stopRecording : startRecording}
+                className="gap-2"
+                variant={isRecording ? "destructive" : "default"}
+              >
+                {isRecording ? <Square className="h-4 w-4" fill="currentColor" /> : <Mic className="h-4 w-4" />}
+                {isRecording ? t("whistleImport.buttons.stop") : t("whistleImport.buttons.rec")}
+              </Button>
+              <canvas ref={waveformCanvasRef} className="w-full h-24" />
             </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">No notes captured yet. Press Rec and start whistling to begin.</div>
-          )}
+
+            <div className="space-y-2 flex-shrink-0 min-h-36">
+            {hasRecording && (
+                <>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-medium">{t("whistleImport.detectedNotes")}</div>
+                  <div className="flex items-center justify-between gap-2">
+                  {isPlaying ? (
+                    <Button
+                      variant="outline"
+                      onClick={handleStop}
+                    >
+                      <Square className="w-4 h-4" fill="currentColor" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={handlePlay}
+                      disabled={!hasRecording || sequence.notes.length === 0}
+                    >
+                      <Play className="w-4 h-4" fill="currentColor" />
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={handleClear} disabled={!hasRecording && !isRecording} className="gap-2">
+                    <X className="h-4 w-4" />
+                  </Button></div>
+                </div>
+                <div className="overflow-x-auto flex-1">
+                  <SheetMusic sequence={sequence} compact noControls noTitle />
+                </div></>
+            )}
+            </div>
         </div>
 
         <SheetFooter className="gap-2 flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("menus.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!hasRecording}>
-            Save
+            {t("menus.save")}
           </Button>
         </SheetFooter>
       </SheetContent>
