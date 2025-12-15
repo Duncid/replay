@@ -85,17 +85,19 @@ export function addNote(
  * Convert NoteSequence to ABC notation for sheet music display
  */
 export function noteSequenceToAbc(sequence: NoteSequence, title?: string): string {
-  if (sequence.notes.length === 0) return "";
-
   const qpm = sequence.tempos?.[0]?.qpm ?? DEFAULT_QPM;
   const epsilon = 1e-6;
+
+  // Ignore notes with zero or negative duration to avoid emitting empty ABC bodies
+  const validNotes = sequence.notes.filter(n => n.endTime - n.startTime > epsilon);
+  if (validNotes.length === 0) return "";
 
   // ABC header - title is optional
   let abc = `X:1\n${title ? `T:${title}\n` : ""}M:4/4\nL:1/4\nK:C\n`;
 
   // Build a timeline of all start/end points to preserve overlapping durations
   const timePoints = new Set<number>([0]);
-  sequence.notes.forEach(note => {
+  validNotes.forEach(note => {
     timePoints.add(note.startTime);
     timePoints.add(note.endTime);
   });
@@ -110,7 +112,7 @@ export function noteSequenceToAbc(sequence: NoteSequence, title?: string): strin
 
     if (durationSeconds <= 0) continue;
 
-    const activeNotes = sequence.notes.filter(
+    const activeNotes = validNotes.filter(
       n => n.startTime <= start + epsilon && n.endTime > start + epsilon
     );
 
@@ -129,8 +131,44 @@ export function noteSequenceToAbc(sequence: NoteSequence, title?: string): strin
     }
   }
 
-  abc += abcElements.join(" ");
+  if (abcElements.length === 0) {
+    // Fallback to a simpler grouping approach if slicing somehow produced nothing
+    const grouped = groupNotesByStart(validNotes);
+    const groupedElements = grouped.map(notes => {
+      if (notes.length === 1) {
+        const note = notes[0];
+        const durationInBeats = secondsToBeats(note.endTime - note.startTime, qpm);
+        return pitchToAbcNote(note.pitch) + getDurationString(durationInBeats);
+      }
+
+      const minDuration = Math.min(...notes.map(n => n.endTime - n.startTime));
+      const durationInBeats = secondsToBeats(minDuration, qpm);
+      return "[" + notes.map(n => pitchToAbcNote(n.pitch)).join("") + "]" + getDurationString(durationInBeats);
+    });
+
+    abc += groupedElements.join(" ");
+  } else {
+    abc += abcElements.join(" ");
+  }
   return abc;
+}
+
+function groupNotesByStart(notes: Note[]): Note[][] {
+  const byStart = new Map<number, Note[]>();
+
+  notes.forEach(note => {
+    const key = Math.round(note.startTime * 1000);
+    const bucket = byStart.get(key);
+    if (bucket) {
+      bucket.push(note);
+    } else {
+      byStart.set(key, [note]);
+    }
+  });
+
+  return Array.from(byStart.keys())
+    .sort((a, b) => a - b)
+    .map(key => byStart.get(key) ?? []);
 }
 
 function pitchToAbcNote(pitch: number): string {

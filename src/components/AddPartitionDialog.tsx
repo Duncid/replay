@@ -35,6 +35,8 @@ function stripAbcHeaders(abc: string): string {
 export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc, mode = 'add', onEdit, instrument = 'classic' }: AddPartitionDialogProps) {
   const [abcText, setAbcText] = useState(initialAbc ? stripAbcHeaders(initialAbc) : "");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [lastValidPreview, setLastValidPreview] = useState<NoteSequence | null>(null);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const { toast } = useToast();
   // Only create audio engine when dialog is open to avoid background classic engine interference
@@ -48,24 +50,38 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
     }
   }, [open, initialAbc]);
 
-  const previewSequence = useMemo(() => {
-    if (!abcText.trim()) return null;
+  const previewResult = useMemo(() => {
+    if (!abcText.trim()) return { sequence: null, error: null };
     try {
       const seq = abcToNoteSequence(abcText, bpm);
-      return seq.notes.length > 0 ? seq : null;
-    } catch {
-      return null;
+      return seq.notes.length > 0
+        ? { sequence: seq, error: null }
+        : { sequence: null, error: "No valid notes found" };
+    } catch (error) {
+      return {
+        sequence: null,
+        error: error instanceof Error ? error.message : "Unable to parse ABC",
+      };
     }
   }, [abcText, bpm]);
 
+  useEffect(() => {
+    setParseError(previewResult.error);
+    if (previewResult.sequence) {
+      setLastValidPreview(previewResult.sequence);
+    }
+  }, [previewResult]);
+
+  const displaySequence = previewResult.sequence ?? lastValidPreview;
+
   const handlePlay = useCallback(async () => {
-    if (!previewSequence || previewSequence.notes.length === 0) return;
+    if (!displaySequence || displaySequence.notes.length === 0) return;
 
     await ensureAudioReady();
     setIsPlaying(true);
     playbackRef.current = { cancelled: false };
 
-    const sortedNotes = [...previewSequence.notes].sort((a, b) => a.startTime - b.startTime);
+    const sortedNotes = [...displaySequence.notes].sort((a, b) => a.startTime - b.startTime);
     const startTime = performance.now();
 
     for (const note of sortedNotes) {
@@ -94,7 +110,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
     }
 
     setIsPlaying(false);
-  }, [previewSequence, ensureAudioReady, playNote]);
+  }, [displaySequence, ensureAudioReady, playNote]);
 
   const handleStop = useCallback(() => {
     playbackRef.current.cancelled = true;
@@ -102,7 +118,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
   }, []);
 
   const handleSubmit = () => {
-    if (!abcText.trim()) {
+    if (!displaySequence && !abcText.trim()) {
       toast({ title: "Please enter ABC notation", variant: "destructive" });
       return;
     }
@@ -150,7 +166,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
           </SheetTitle>
         </SheetHeader>
         <div className="flex-1 flex flex-col space-y-4 py-4 overflow-y-auto min-h-0">
-          {previewSequence && (
+          {displaySequence && (
             <div className="space-y-2 flex-shrink-0">
               <Button variant="outline" className="gap-2" onClick={isPlaying ? handleStop : handlePlay}>
                 {isPlaying ? (
@@ -167,9 +183,14 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
               </Button>
               <div className="flex items-start gap-2">
                 <div className="overflow-x-auto flex-1">
-                  <SheetMusic sequence={previewSequence} compact noControls noTitle />
+                  <SheetMusic sequence={displaySequence} compact noControls noTitle />
                 </div>
               </div>
+            </div>
+          )}
+          {parseError && (
+            <div className="text-sm text-destructive" role="status">
+              {parseError}
             </div>
           )}
           <Textarea
