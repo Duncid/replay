@@ -370,29 +370,20 @@ export const Metronome = ({
   const feelConfig = feelConfigMap[feel];
   const subdivision = advancedSubdivision ?? feelConfig.subdivision;
   const isSwingFeel = feelConfig.subdivision === 2 && (feelConfig.swingAmount ?? 0) > 0;
-  const swingAmount = subdivision === 2 ? advancedSwing ?? feelConfig.swingAmount ?? 0 : 0;
+  const swingAmount = subdivision === 2 ? (advancedSwing ?? feelConfig.swingAmount ?? 0) : 0;
 
   const accentPresets = useMemo(() => accentPresetOptions[timeSignature] ?? [], [timeSignature]);
   const currentAccentPresetId = accentPresetBySignature[timeSignature] ?? accentPresets[0]?.id ?? "";
   const currentAccentPreset = accentPresets.find((preset) => preset.id === currentAccentPresetId) ?? accentPresets[0];
 
   const accentBeats = useMemo(
-    () =>
-      mapAccentBeatsToBeatUnit(
-        currentAccentPreset?.accents ?? [1],
-        timeSignature,
-        normalizedBeatUnit,
-        beatsPerBar,
-      ),
+    () => mapAccentBeatsToBeatUnit(currentAccentPreset?.accents ?? [1], timeSignature, normalizedBeatUnit, beatsPerBar),
     [beatsPerBar, currentAccentPreset?.accents, normalizedBeatUnit, timeSignature],
   );
 
   const stepsPerBar = beatsPerBar * subdivision;
 
-  const currentFeelOption = useMemo(
-    () => feelOptions.find((option) => option.id === feel) ?? feelOptions[0],
-    [feel],
-  );
+  const currentFeelOption = useMemo(() => feelOptions.find((option) => option.id === feel) ?? feelOptions[0], [feel]);
 
   useEffect(() => {
     setBeatUnit((prev) => normalizeBeatUnitForSignature(prev, timeSignature));
@@ -613,11 +604,7 @@ export const Metronome = ({
                   }}
                 >
                   {feelOptions.map((option) => (
-                    <DropdownMenuRadioItem
-                      key={option.id}
-                      value={option.id}
-                      className="flex flex-col items-start"
-                    >
+                    <DropdownMenuRadioItem key={option.id} value={option.id} className="flex flex-col items-start">
                       <span>{option.label}</span>
                       <span className="text-xs text-muted-foreground">{option.description}</span>
                     </DropdownMenuRadioItem>
@@ -637,9 +624,7 @@ export const Metronome = ({
                             size="sm"
                             variant={advancedSubdivision === value ? "default" : "outline"}
                             onClick={() =>
-                              setAdvancedSubdivision((prev) =>
-                                prev === value ? undefined : (value as 1 | 2 | 3 | 4),
-                              )
+                              setAdvancedSubdivision((prev) => (prev === value ? undefined : (value as 1 | 2 | 3 | 4)))
                             }
                           >
                             {value}
@@ -653,7 +638,9 @@ export const Metronome = ({
                         <div className="flex items-center justify-between text-sm mb-2">
                           <span>Swing amount</span>
                           {isSwingFeel && (
-                            <span className="text-xs text-muted-foreground">{Math.round((swingAmount ?? 0) * 100)}%</span>
+                            <span className="text-xs text-muted-foreground">
+                              {Math.round((swingAmount ?? 0) * 100)}%
+                            </span>
                           )}
                         </div>
                         <Slider
@@ -663,7 +650,9 @@ export const Metronome = ({
                           max={100}
                           step={5}
                         />
-                        <p className="text-xs text-muted-foreground mt-1">Higher values create a longer first eighth.</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Higher values create a longer first eighth.
+                        </p>
                       </div>
                     )}
                   </DropdownMenuSubContent>
@@ -694,11 +683,7 @@ export const Metronome = ({
                   <DropdownMenuSubContent className="bg-popover space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        <Switch
-                          checked={useCustomAccents}
-                          onCheckedChange={setUseCustomAccents}
-                          id="custom-accents"
-                        />
+                        <Switch checked={useCustomAccents} onCheckedChange={setUseCustomAccents} id="custom-accents" />
                         <Label htmlFor="custom-accents" className="cursor-pointer">
                           Use custom grid
                         </Label>
@@ -724,7 +709,6 @@ export const Metronome = ({
             </DropdownMenuSub>
 
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Sound</DropdownMenuLabel>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Sound: {soundTypeLabels[soundType]}</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="bg-popover">
