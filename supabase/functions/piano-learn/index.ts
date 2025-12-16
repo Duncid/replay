@@ -30,7 +30,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, difficulty = 1, previousSequence } = await req.json();
+    const { prompt, difficulty = 1, previousSequence, language = "en" } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
       return new Response(JSON.stringify({ error: "Missing or invalid 'prompt' in request body" }), {
@@ -39,7 +39,12 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Generating lesson for: "${prompt}" at difficulty ${difficulty}`);
+    console.log(`Generating lesson for: "${prompt}" at difficulty ${difficulty}, language: ${language}`);
+
+    // Dynamic language instruction
+    const languageInstruction = language === "fr"
+      ? "IMPORTANT: Write all instruction text in French. Be encouraging and use natural French phrasing."
+      : "IMPORTANT: Write all instruction text in English. Be encouraging and clear.";
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -59,6 +64,8 @@ serve(async (req) => {
       : "";
 
     const systemPrompt = `You are a piano teacher creating short practice sequences for students.
+
+${languageInstruction}
 
 The student wants to learn: "${prompt}"
 
