@@ -492,7 +492,7 @@ export const Metronome = ({
   }, [isPlaying, startMetronome, stepPlan, stopMetronome]);
 
   const renderAccentGrid = () => (
-    <div className="flex flex-col gap-1 mt-2">
+    <div className="grid grid-3 gap-1 mt-2">
       {Array.from({ length: stepsPerBar }, (_, idx) => {
         const level = customAccentLevels?.[idx] ?? 1;
         const beatIndex = Math.floor(idx / subdivision) + 1;
