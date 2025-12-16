@@ -571,7 +571,7 @@ export const Metronome = ({
             {denominator === 8 && (
               <div className="px-2 pb-2 text-sm space-y-2">
                 <p className="text-xs text-muted-foreground">Beat interpretation</p>
-                <div className="flex gap-2 flex-wrap">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     size="sm"
                     variant={normalizedBeatUnit === "dottedQuarter" ? "default" : "outline"}
