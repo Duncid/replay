@@ -4,6 +4,8 @@ export const STORAGE_KEYS = {
   INSTRUMENT: "replay-instrument",
   BPM: "replay-bpm",
   TIME_SIGNATURE: "replay-time-signature",
+  METRONOME_BEAT_UNIT: "replay-metronome-beat-unit",
+  METRONOME_FEEL: "replay-metronome-feel",
   COMPOSE_HISTORY: "replay-compose-history",
   IMPROV_HISTORY: "replay-improv-history",
   PLAY_HISTORY: "replay-play-history",
