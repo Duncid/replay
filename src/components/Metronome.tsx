@@ -492,7 +492,7 @@ export const Metronome = ({
   }, [isPlaying, startMetronome, stepPlan, stopMetronome]);
 
   const renderAccentGrid = () => (
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex flex-col gap-1 mt-2">
       {Array.from({ length: stepsPerBar }, (_, idx) => {
         const level = customAccentLevels?.[idx] ?? 1;
         const beatIndex = Math.floor(idx / subdivision) + 1;
@@ -700,7 +700,7 @@ export const Metronome = ({
                       </Button>
                     </div>
                     {renderAccentGrid()}
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs w-[280px] text-muted-foreground">
                       Click cells to cycle silence → normal → accent. Grid length adapts to subdivision.
                     </p>
                   </DropdownMenuSubContent>
