@@ -615,8 +615,8 @@ export const Metronome = ({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover space-y-3">
+                    <DropdownMenuLabel>Subdivision override</DropdownMenuLabel>
                     <div className="flex items-center justify-between text-sm">
-                      <span>Subdivision override</span>
                       <div className="flex gap-1">
                         {[1, 2, 3, 4].map((value) => (
                           <Button
