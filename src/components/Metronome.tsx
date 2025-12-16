@@ -390,6 +390,11 @@ export const Metronome = ({
 
   const stepsPerBar = beatsPerBar * subdivision;
 
+  const currentFeelOption = useMemo(
+    () => feelOptions.find((option) => option.id === feel) ?? feelOptions[0],
+    [feel],
+  );
+
   useEffect(() => {
     setBeatUnit((prev) => normalizeBeatUnitForSignature(prev, timeSignature));
   }, [setBeatUnit, timeSignature]);
@@ -611,21 +616,30 @@ export const Metronome = ({
 
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Feel</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={feel}
-              onValueChange={(value) => {
-                setFeel(value as FeelPreset);
-                setAdvancedSubdivision(undefined);
-                setAdvancedSwing(undefined);
-              }}
-            >
-              {feelOptions.map((option) => (
-                <DropdownMenuRadioItem key={option.id} value={option.id} className="flex flex-col items-start">
-                  <span>{option.label}</span>
-                  <span className="text-xs text-muted-foreground">{option.description}</span>
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Feel: {currentFeelOption.label}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover">
+                <DropdownMenuRadioGroup
+                  value={feel}
+                  onValueChange={(value) => {
+                    setFeel(value as FeelPreset);
+                    setAdvancedSubdivision(undefined);
+                    setAdvancedSwing(undefined);
+                  }}
+                >
+                  {feelOptions.map((option) => (
+                    <DropdownMenuRadioItem
+                      key={option.id}
+                      value={option.id}
+                      className="flex flex-col items-start"
+                    >
+                      <span>{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
 
             <div className="px-2 pb-2 space-y-3">
               <div className="flex items-center justify-between text-sm">
