@@ -613,7 +613,7 @@ export const Metronome = ({
 
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>Advanced options</DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span>Subdivision override</span>
@@ -679,7 +679,7 @@ export const Metronome = ({
 
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>Advanced (edit accents)</DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
