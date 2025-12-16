@@ -287,7 +287,7 @@ export const Metronome = ({
   };
 
   const adjustBpm = (delta: number) => {
-    setBpm((prev) => Math.min(300, Math.max(20, prev + delta)));
+    setBpm(Math.min(300, Math.max(20, bpm + delta)));
   };
 
   return (

@@ -142,14 +142,12 @@ function createHihatSound(): SoundNodes {
 
 function createClaveSound(): SoundNodes {
   const synth = new Tone.MetalSynth({
-    frequency: 2000,
     envelope: { attack: 0.001, decay: 0.15, release: 0.02 },
     harmonicity: 5.1,
     resonance: 6000,
   }).toDestination();
 
   const accentSynth = new Tone.MetalSynth({
-    frequency: 2300,
     envelope: { attack: 0.001, decay: 0.18, release: 0.03 },
     harmonicity: 5.4,
     resonance: 6500,
