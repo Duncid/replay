@@ -957,31 +957,30 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               {/* Play/Stop - only shown when there's history */}
-              {playMode.history.length > 0 && (
-                <Button
-                  onClick={() => {
-                    if (playMode.isPlaying) {
-                      playMode.onStopPlayback();
-                    } else {
-                      const seq = playMode.getCombinedSequence();
-                      if (seq?.sequence) {
-                        playMode.onPlayAll(seq.sequence, seq.segments);
+                {activeMode === "play" && (
+                  {playMode.history.length > 0 && (
+                  <Button
+                    onClick={() => {
+                      if (playMode.isPlaying) {
+                        playMode.onStopPlayback();
+                      } else {
+                        const seq = playMode.getCombinedSequence();
+                        if (seq?.sequence) {
+                          playMode.onPlayAll(seq.sequence, seq.segments);
+                        }
                       }
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
-                  {playMode.isPlaying ? (
-                    <Square className="h-4 w-4" fill="currentColor" />
-                  ) : (
-                    <Play className="h-4 w-4" fill="currentColor" />
-                  )}
-                  {playMode.isPlayingAll ? t("controls.stop") : t("controls.play")}
-                </Button>
-              )}
-
-              {activeMode === "play" && (
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {playMode.isPlaying ? (
+                      <Square className="h-4 w-4" fill="currentColor" />
+                    ) : (
+                      <Play className="h-4 w-4" fill="currentColor" />
+                    )}
+                    {playMode.isPlayingAll ? t("controls.stop") : t("controls.play")}
+                  </Button>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
