@@ -614,7 +614,7 @@ export const Metronome = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="bg-popover space-y-3">
+                  <DropdownMenuSubContent className="bg-popover space-y-1">
                     <DropdownMenuLabel>Subdivision override</DropdownMenuLabel>
                     <div className="grid grid-cols-4 gap-1">
                       {[1, 2, 3, 4].map((value) => (
@@ -634,7 +634,7 @@ export const Metronome = ({
                     {subdivision === 2 && (
                       <>
                         <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
-                        <div className="flex flex-raw items-center justify-between text-sm p-1.5">
+                        <div className="flex flex-col items-center justify-between text-sm p-1.5">
                           {isSwingFeel && (
                             <span className="text-xs text-muted-foreground">
                               {Math.round((swingAmount ?? 0) * 100)}%
