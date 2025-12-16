@@ -632,16 +632,14 @@ export const Metronome = ({
                     </div>
 
                     {subdivision === 2 && (
-                      <div className="flex items-center justify-between text-sm p-1.5">
+                      <>
                         <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
-                        <div>
-                          <div className="flex items-center justify-between text-sm mb-2">
-                            {isSwingFeel && (
-                              <span className="text-xs text-muted-foreground">
-                                {Math.round((swingAmount ?? 0) * 100)}%
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex flex-raw items-center justify-between text-sm p-1.5">
+                          {isSwingFeel && (
+                            <span className="text-xs text-muted-foreground">
+                              {Math.round((swingAmount ?? 0) * 100)}%
+                            </span>
+                          )}
                           <Slider
                             value={[swingAmount * 100]}
                             onValueChange={(value) => setAdvancedSwing(value[0] / 100)}
@@ -653,7 +651,7 @@ export const Metronome = ({
                             Higher values create a longer first eighth.
                           </p>
                         </div>
-                      </div>
+                      </>
                     )}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
