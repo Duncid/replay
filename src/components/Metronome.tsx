@@ -616,44 +616,44 @@ export const Metronome = ({
                   <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover space-y-3">
                     <DropdownMenuLabel>Subdivision override</DropdownMenuLabel>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4].map((value) => (
-                          <Button
-                            key={value}
-                            size="sm"
-                            variant={advancedSubdivision === value ? "default" : "outline"}
-                            onClick={() =>
-                              setAdvancedSubdivision((prev) => (prev === value ? undefined : (value as 1 | 2 | 3 | 4)))
-                            }
-                          >
-                            {value}
-                          </Button>
-                        ))}
-                      </div>
+                    <div className="grid grid-cols-4 gap-1">
+                      {[1, 2, 3, 4].map((value) => (
+                        <Button
+                          key={value}
+                          size="sm"
+                          variant={advancedSubdivision === value ? "default" : "outline"}
+                          onClick={() =>
+                            setAdvancedSubdivision((prev) => (prev === value ? undefined : (value as 1 | 2 | 3 | 4)))
+                          }
+                        >
+                          {value}
+                        </Button>
+                      ))}
                     </div>
 
                     {subdivision === 2 && (
-                      <div>
-                        <div className="flex items-center justify-between text-sm mb-2">
-                          <span>Swing amount</span>
-                          {isSwingFeel && (
-                            <span className="text-xs text-muted-foreground">
-                              {Math.round((swingAmount ?? 0) * 100)}%
-                            </span>
-                          )}
+                      <>
+                        <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
+                        <div>
+                          <div className="flex items-center justify-between text-sm mb-2">
+                            {isSwingFeel && (
+                              <span className="text-xs text-muted-foreground">
+                                {Math.round((swingAmount ?? 0) * 100)}%
+                              </span>
+                            )}
+                          </div>
+                          <Slider
+                            value={[swingAmount * 100]}
+                            onValueChange={(value) => setAdvancedSwing(value[0] / 100)}
+                            min={0}
+                            max={100}
+                            step={5}
+                          />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Higher values create a longer first eighth.
+                          </p>
                         </div>
-                        <Slider
-                          value={[swingAmount * 100]}
-                          onValueChange={(value) => setAdvancedSwing(value[0] / 100)}
-                          min={0}
-                          max={100}
-                          step={5}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Higher values create a longer first eighth.
-                        </p>
-                      </div>
+                      </>
                     )}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
