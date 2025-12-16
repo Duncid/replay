@@ -635,7 +635,7 @@ export const Metronome = ({
                       <>
                         <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
                         <div>
-                          <div className="flex items-center justify-between text-sm mb-2">
+                          <div className="flex items-center justify-between text-sm mb-1 p-1">
                             {isSwingFeel && (
                               <span className="text-xs text-muted-foreground">
                                 {Math.round((swingAmount ?? 0) * 100)}%
