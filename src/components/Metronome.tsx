@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, SlidersHorizontal, Timer } from "lucide-react";
+import { ChevronDown, Timer } from "lucide-react";
 import { useToneMetronome, MetronomeSoundType } from "@/hooks/useToneMetronome";
 import * as Tone from "tone";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -287,7 +287,6 @@ export const Metronome = ({
   const [advancedSwing, setAdvancedSwing] = useState<number | undefined>(undefined);
   const [customAccentLevels, setCustomAccentLevels] = useState<number[] | null>(null);
   const [useCustomAccents, setUseCustomAccents] = useState(false);
-  const [showAccentEditor, setShowAccentEditor] = useState(false);
 
   const [currentBeat, setCurrentBeat] = useState(0);
   const [accentPresetBySignature, setAccentPresetBySignature] = useState<Record<string, string>>(() => {
@@ -553,27 +552,14 @@ export const Metronome = ({
             <div className="px-2 pb-2">
               <Slider value={[bpm]} onValueChange={(value) => setBpm(value[0])} min={20} max={300} step={1} />
               <p className="text-xs text-muted-foreground mt-2">{getBpmDescription(bpm)}</p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <Button size="sm" variant="outline" onClick={() => adjustBpm(-5)}>
-                  -5
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => adjustBpm(-1)}>
-                  -1
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => adjustBpm(1)}>
-                  +1
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => adjustBpm(5)}>
-                  +5
-                </Button>
-                <Button size="sm" onClick={handleTapTempo} className="ml-auto">
+              <div className="mt-3">
+                <Button size="sm" onClick={handleTapTempo} className="w-full">
                   Tap tempo
                 </Button>
               </div>
             </div>
 
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Meter</DropdownMenuLabel>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Time Signature: {timeSignature}</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="bg-popover">
@@ -615,10 +601,9 @@ export const Metronome = ({
             )}
 
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Feel</DropdownMenuLabel>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Feel: {currentFeelOption.label}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover">
+              <DropdownMenuSubContent className="bg-popover space-y-2">
                 <DropdownMenuRadioGroup
                   value={feel}
                   onValueChange={(value) => {
@@ -638,51 +623,60 @@ export const Metronome = ({
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Advanced options</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Subdivision override</span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4].map((value) => (
+                          <Button
+                            key={value}
+                            size="sm"
+                            variant={advancedSubdivision === value ? "default" : "outline"}
+                            onClick={() =>
+                              setAdvancedSubdivision((prev) =>
+                                prev === value ? undefined : (value as 1 | 2 | 3 | 4),
+                              )
+                            }
+                          >
+                            {value}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {subdivision === 2 && (
+                      <div>
+                        <div className="flex items-center justify-between text-sm mb-2">
+                          <span>Swing amount</span>
+                          {isSwingFeel && (
+                            <span className="text-xs text-muted-foreground">{Math.round((swingAmount ?? 0) * 100)}%</span>
+                          )}
+                        </div>
+                        <Slider
+                          value={[swingAmount * 100]}
+                          onValueChange={(value) => setAdvancedSwing(value[0] / 100)}
+                          min={0}
+                          max={100}
+                          step={5}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Higher values create a longer first eighth.</p>
+                      </div>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
 
-            <div className="px-2 pb-2 space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span>Subdivision override</span>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4].map((value) => (
-                    <Button
-                      key={value}
-                      size="sm"
-                      variant={advancedSubdivision === value ? "default" : "outline"}
-                      onClick={() => setAdvancedSubdivision((prev) => (prev === value ? undefined : (value as 1 | 2 | 3 | 4)))}
-                    >
-                      {value}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {subdivision === 2 && (
-                <div>
-                  <div className="flex items-center justify-between text-sm mb-2">
-                    <span>Swing amount</span>
-                    {isSwingFeel && <span className="text-xs text-muted-foreground">{Math.round((swingAmount ?? 0) * 100)}%</span>}
-                  </div>
-                  <Slider
-                    value={[swingAmount * 100]}
-                    onValueChange={(value) => setAdvancedSwing(value[0] / 100)}
-                    min={0}
-                    max={100}
-                    step={5}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Higher values create a longer first eighth.</p>
-                </div>
-              )}
-            </div>
-
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Accents</DropdownMenuLabel>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 Accent pattern: {currentAccentPreset?.label ?? "Downbeat"}
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover">
+              <DropdownMenuSubContent className="bg-popover space-y-2">
                 <DropdownMenuRadioGroup
                   value={currentAccentPresetId}
                   onValueChange={(value) => handleAccentPresetChange(value)}
@@ -693,46 +687,41 @@ export const Metronome = ({
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Advanced (edit accents)</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={useCustomAccents}
+                          onCheckedChange={setUseCustomAccents}
+                          id="custom-accents"
+                        />
+                        <Label htmlFor="custom-accents" className="cursor-pointer">
+                          Use custom grid
+                        </Label>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setCustomAccentLevels(null);
+                          setUseCustomAccents(false);
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+                    {renderAccentGrid()}
+                    <p className="text-xs text-muted-foreground">
+                      Click cells to cycle silence → normal → accent. Grid length adapts to subdivision.
+                    </p>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
-
-            <div className="px-2 pb-3 space-y-2">
-              <Button
-                size="sm"
-                variant={showAccentEditor ? "default" : "outline"}
-                className="w-full flex items-center justify-center gap-2"
-                onClick={() => setShowAccentEditor((prev) => !prev)}
-              >
-                <SlidersHorizontal className="h-4 w-4" /> Edit accents
-              </Button>
-
-              {showAccentEditor && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={useCustomAccents} onCheckedChange={setUseCustomAccents} id="custom-accents" />
-                      <Label htmlFor="custom-accents" className="cursor-pointer">
-                        Use custom grid
-                      </Label>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setCustomAccentLevels(null);
-                        setUseCustomAccents(false);
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-                  {renderAccentGrid()}
-                  <p className="text-xs text-muted-foreground">
-                    Click cells to cycle silence → normal → accent. Grid length adapts to subdivision.
-                  </p>
-                </div>
-              )}
-            </div>
 
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Sound</DropdownMenuLabel>
