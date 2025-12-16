@@ -632,10 +632,10 @@ export const Metronome = ({
                     </div>
 
                     {subdivision === 2 && (
-                      <>
+                      <div className="flex items-center justify-between text-sm p-1.5">
                         <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
                         <div>
-                          <div className="flex items-center justify-between text-sm mb-1 p-1">
+                          <div className="flex items-center justify-between text-sm mb-2">
                             {isSwingFeel && (
                               <span className="text-xs text-muted-foreground">
                                 {Math.round((swingAmount ?? 0) * 100)}%
@@ -653,7 +653,7 @@ export const Metronome = ({
                             Higher values create a longer first eighth.
                           </p>
                         </div>
-                      </>
+                      </div>
                     )}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
