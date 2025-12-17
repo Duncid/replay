@@ -40,8 +40,9 @@ import {
 import { PianoSoundType, PIANO_SOUND_LABELS, SAMPLED_INSTRUMENTS } from "@/hooks/usePianoSound";
 import { MidiConnector } from "@/components/MidiConnector";
 import { useMidiInput } from "@/hooks/useMidiInput";
-import { Metronome } from "@/components/Metronome";
+import { Metronome, FeelPreset, MetronomeSoundType } from "@/components/Metronome";
 import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
+import { LessonFeelPreset, LessonMetronomeSoundType } from "@/types/learningSession";
 import { midiToFrequency, midiToNoteName, noteSequenceToAbc, abcToNoteSequence } from "@/utils/noteSequenceUtils";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import { AddNoteSequenceDialog } from "@/components/AddNoteSequenceDialog";
@@ -121,6 +122,8 @@ const Index = () => {
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(STORAGE_KEYS.BPM, 120);
   const [metronomeTimeSignature, setMetronomeTimeSignature] = useLocalStorage(STORAGE_KEYS.TIME_SIGNATURE, "4/4");
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
+  const [metronomeFeel, setMetronomeFeel] = useState<FeelPreset>("straight_beats");
+  const [metronomeSoundType, setMetronomeSoundType] = useState<MetronomeSoundType>("classic");
 
   // Persisted history
   const [savedPlayHistory, setSavedPlayHistory] = useLocalStorage<PlayEntry[]>(STORAGE_KEYS.PLAY_HISTORY, []);
@@ -611,6 +614,15 @@ const Index = () => {
     },
     language,
     model: selectedModel,
+    // Metronome control props
+    metronomeBpm,
+    setMetronomeBpm,
+    metronomeTimeSignature,
+    setMetronomeTimeSignature,
+    metronomeIsPlaying,
+    setMetronomeIsPlaying,
+    setMetronomeFeel: (feel: LessonFeelPreset) => setMetronomeFeel(feel as FeelPreset),
+    setMetronomeSoundType: (soundType: LessonMetronomeSoundType) => setMetronomeSoundType(soundType as MetronomeSoundType),
   });
 
   // Handle note events from Piano
@@ -860,6 +872,10 @@ const Index = () => {
               setTimeSignature={setMetronomeTimeSignature}
               isPlaying={metronomeIsPlaying}
               setIsPlaying={setMetronomeIsPlaying}
+              feel={activeMode === "learn" ? metronomeFeel : undefined}
+              onFeelChange={activeMode === "learn" ? setMetronomeFeel : undefined}
+              soundType={activeMode === "learn" ? metronomeSoundType : undefined}
+              onSoundTypeChange={activeMode === "learn" ? setMetronomeSoundType : undefined}
             />
           </div>
 

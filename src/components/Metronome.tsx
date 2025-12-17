@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Timer } from "lucide-react";
 import { useToneMetronome, MetronomeSoundType } from "@/hooks/useToneMetronome";
+export type { MetronomeSoundType } from "@/hooks/useToneMetronome";
 import * as Tone from "tone";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
@@ -141,6 +142,11 @@ interface MetronomeProps {
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   children?: React.ReactNode;
+  // Optional controlled props for external control (e.g., from LearnMode)
+  feel?: FeelPreset;
+  onFeelChange?: (feel: FeelPreset) => void;
+  soundType?: MetronomeSoundType;
+  onSoundTypeChange?: (soundType: MetronomeSoundType) => void;
 }
 
 interface ParsedTimeSignature {
@@ -276,13 +282,24 @@ export const Metronome = ({
   isPlaying,
   setIsPlaying,
   children,
+  feel: controlledFeel,
+  onFeelChange,
+  soundType: controlledSoundType,
+  onSoundTypeChange,
 }: MetronomeProps) => {
   const [volume, setVolume] = useLocalStorage(STORAGE_KEYS.METRONOME_VOLUME, 70);
   const [beatUnit, setBeatUnit] = useLocalStorage<BeatUnit>(
     STORAGE_KEYS.METRONOME_BEAT_UNIT,
     getDefaultBeatUnit(timeSignature),
   );
-  const [feel, setFeel] = useLocalStorage<FeelPreset>(STORAGE_KEYS.METRONOME_FEEL, "straight_beats");
+  const [localFeel, setLocalFeel] = useLocalStorage<FeelPreset>(STORAGE_KEYS.METRONOME_FEEL, "straight_beats");
+  
+  // Use controlled value if provided, otherwise use local state
+  const feel = controlledFeel ?? localFeel;
+  const setFeel = (newFeel: FeelPreset) => {
+    setLocalFeel(newFeel);
+    onFeelChange?.(newFeel);
+  };
   const [advancedSubdivision, setAdvancedSubdivision] = useState<1 | 2 | 3 | 4 | undefined>(undefined);
   const [advancedSwing, setAdvancedSwing] = useState<number | undefined>(undefined);
   const [customAccentLevels, setCustomAccentLevels] = useState<number[] | null>(null);
@@ -304,7 +321,15 @@ export const Metronome = ({
     "classic",
   );
 
-  const { soundType, setSoundType, playClick, ensureAudioReady } = useToneMetronome(storedSoundType);
+  const { soundType: hookSoundType, setSoundType: hookSetSoundType, playClick, ensureAudioReady } = useToneMetronome(controlledSoundType ?? storedSoundType);
+  
+  // Use controlled value if provided, otherwise use hook state
+  const soundType = controlledSoundType ?? hookSoundType;
+  const setSoundType = (newSoundType: MetronomeSoundType) => {
+    hookSetSoundType(newSoundType);
+    setStoredSoundType(newSoundType);
+    onSoundTypeChange?.(newSoundType);
+  };
 
   const schedulerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const nextStepTimeRef = useRef<number>(0);
