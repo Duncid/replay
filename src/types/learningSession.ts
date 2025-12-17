@@ -2,6 +2,28 @@ import { NoteSequence } from "./noteSequence";
 
 export type LessonPhase = "prompt" | "your_turn";
 
+// Types for metronome settings that the LLM can control
+export type LessonFeelPreset =
+  | "straight_beats"
+  | "straight_8ths"
+  | "triplets"
+  | "straight_16ths"
+  | "swing_light"
+  | "swing_medium"
+  | "swing_heavy"
+  | "shuffle";
+
+export type LessonMetronomeSoundType = "classic" | "woodblock" | "digital" | "hihat" | "clave";
+
+export interface LessonMetronomeSettings {
+  bpm?: number;
+  timeSignature?: string;
+  isActive?: boolean;
+  feel?: LessonFeelPreset;
+  soundType?: LessonMetronomeSoundType;
+  accentPreset?: string;
+}
+
 export interface LessonState {
   /** AI's explanation of what the user will play */
   instruction: string;
@@ -24,6 +46,7 @@ export interface LessonState {
 export interface LessonGenerationResponse {
   instruction: string;
   sequence: NoteSequence;
+  metronome?: LessonMetronomeSettings;
 }
 
 export interface EvaluationResponse {

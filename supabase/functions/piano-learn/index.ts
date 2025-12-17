@@ -19,9 +19,19 @@ interface NoteSequence {
   tempos?: Array<{ time: number; qpm: number }>;
 }
 
+interface MetronomeSettings {
+  bpm?: number;
+  timeSignature?: string;
+  isActive?: boolean;
+  feel?: "straight_beats" | "straight_8ths" | "triplets" | "straight_16ths" | "swing_light" | "swing_medium" | "swing_heavy" | "shuffle";
+  soundType?: "classic" | "woodblock" | "digital" | "hihat" | "clave";
+  accentPreset?: string;
+}
+
 interface LessonResponse {
   instruction: string;
   sequence: NoteSequence;
+  metronome?: MetronomeSettings;
 }
 
 serve(async (req) => {
@@ -72,11 +82,12 @@ The student wants to learn: "${prompt}"
 Your task is to generate:
 1. A brief instruction text (1-2 sentences) explaining what they will play
 2. A simple piano sequence as a NoteSequence JSON object
+3. OPTIONALLY: Metronome settings to help the student practice with the right tempo and feel
 
 DIFFICULTY LEVEL ${difficulty}: ${difficultyGuide}${previousContext}
 
 CRITICAL RULES:
-1. Return ONLY a valid JSON object with "instruction" and "sequence" keys
+1. Return ONLY a valid JSON object with "instruction", "sequence", and optionally "metronome" keys
 2. The sequence format must be:
 {
   "instruction": "This is a simple C major triad. Listen to the three notes played together.",
@@ -88,6 +99,13 @@ CRITICAL RULES:
     ],
     "totalTime": 1.0,
     "tempos": [{"time": 0, "qpm": 80}]
+  },
+  "metronome": {
+    "bpm": 80,
+    "timeSignature": "4/4",
+    "isActive": true,
+    "feel": "straight_beats",
+    "soundType": "classic"
   }
 }
 
@@ -98,18 +116,46 @@ CRITICAL RULES:
 7. Keep sequences SHORT and LEARNABLE (under 5 seconds for beginners)
 8. The instruction should be encouraging and explain what the student will hear/play
 
-EXAMPLE OUTPUT:
+METRONOME SETTINGS (optional but recommended):
+- "bpm": tempo 20-300, should match the sequence's tempo (derived from tempos[0].qpm)
+- "timeSignature": "2/4", "3/4", "4/4", "5/4", "5/8", "6/8", "7/8", "9/8", "12/8"
+- "isActive": true to enable metronome during practice, false to disable
+- "feel": One of "straight_beats" (basic), "straight_8ths", "triplets", "straight_16ths", "swing_light", "swing_medium", "swing_heavy", "shuffle"
+- "soundType": One of "classic", "woodblock", "digital", "hihat", "clave"
+- "accentPreset": Depends on time signature:
+  - 4/4: "downbeat", "backbeat", "all"
+  - 3/4: "downbeat", "waltz", "one-three"
+  - 6/8: "downbeat", "jig"
+
+WHEN TO USE METRONOME:
+- Enable (isActive: true) for rhythmic exercises, scales, and when timing is important
+- Disable (isActive: false) for free-form exploration or when the student should focus on notes only
+- Use swing feels for jazz/blues exercises
+- Use triplets for waltz or compound time exercises
+- Match BPM to the sequence tempo for best practice results
+
+EXAMPLE OUTPUT WITH METRONOME:
 {
-  "instruction": "Let's start with a simple ascending C major scale. Listen to these four notes going up.",
+  "instruction": "Let's practice a jazzy blues scale with a swing feel. Listen to the laid-back groove.",
   "sequence": {
     "notes": [
-      {"pitch": 60, "startTime": 0, "endTime": 0.8, "velocity": 0.8},
-      {"pitch": 62, "startTime": 0.8, "endTime": 1.6, "velocity": 0.8},
-      {"pitch": 64, "startTime": 1.6, "endTime": 2.4, "velocity": 0.8},
-      {"pitch": 65, "startTime": 2.4, "endTime": 3.2, "velocity": 0.8}
+      {"pitch": 60, "startTime": 0, "endTime": 0.5, "velocity": 0.8},
+      {"pitch": 63, "startTime": 0.5, "endTime": 1.0, "velocity": 0.7},
+      {"pitch": 65, "startTime": 1.0, "endTime": 1.5, "velocity": 0.8},
+      {"pitch": 66, "startTime": 1.5, "endTime": 2.0, "velocity": 0.7},
+      {"pitch": 67, "startTime": 2.0, "endTime": 2.5, "velocity": 0.8},
+      {"pitch": 70, "startTime": 2.5, "endTime": 3.0, "velocity": 0.9}
     ],
-    "totalTime": 3.2,
-    "tempos": [{"time": 0, "qpm": 80}]
+    "totalTime": 3.0,
+    "tempos": [{"time": 0, "qpm": 90}]
+  },
+  "metronome": {
+    "bpm": 90,
+    "timeSignature": "4/4",
+    "isActive": true,
+    "feel": "swing_medium",
+    "soundType": "hihat",
+    "accentPreset": "backbeat"
   }
 }`;
 
@@ -181,6 +227,13 @@ EXAMPLE OUTPUT:
           totalTime: 3.2,
           tempos: [{ time: 0, qpm: 80 }],
         },
+        metronome: {
+          bpm: 80,
+          timeSignature: "4/4",
+          isActive: true,
+          feel: "straight_beats",
+          soundType: "classic",
+        },
       };
     }
 
@@ -206,6 +259,45 @@ EXAMPLE OUTPUT:
 
     const totalTime = Math.max(...validNotes.map(n => n.endTime));
 
+    // Validate metronome settings
+    let validatedMetronome: MetronomeSettings | undefined = undefined;
+    if (lessonData.metronome) {
+      const m = lessonData.metronome;
+      validatedMetronome = {};
+      
+      if (typeof m.bpm === 'number' && m.bpm >= 20 && m.bpm <= 300) {
+        validatedMetronome.bpm = Math.round(m.bpm);
+      }
+      
+      const validTimeSignatures = ["2/4", "3/4", "4/4", "5/4", "5/8", "6/8", "7/8", "9/8", "12/8"];
+      if (typeof m.timeSignature === 'string' && validTimeSignatures.includes(m.timeSignature)) {
+        validatedMetronome.timeSignature = m.timeSignature;
+      }
+      
+      if (typeof m.isActive === 'boolean') {
+        validatedMetronome.isActive = m.isActive;
+      }
+      
+      const validFeels = ["straight_beats", "straight_8ths", "triplets", "straight_16ths", "swing_light", "swing_medium", "swing_heavy", "shuffle"];
+      if (typeof m.feel === 'string' && validFeels.includes(m.feel)) {
+        validatedMetronome.feel = m.feel as MetronomeSettings["feel"];
+      }
+      
+      const validSounds = ["classic", "woodblock", "digital", "hihat", "clave"];
+      if (typeof m.soundType === 'string' && validSounds.includes(m.soundType)) {
+        validatedMetronome.soundType = m.soundType as MetronomeSettings["soundType"];
+      }
+      
+      if (typeof m.accentPreset === 'string') {
+        validatedMetronome.accentPreset = m.accentPreset;
+      }
+      
+      // Only include metronome if at least one valid setting was found
+      if (Object.keys(validatedMetronome).length === 0) {
+        validatedMetronome = undefined;
+      }
+    }
+
     const result: LessonResponse = {
       instruction: lessonData.instruction || "Listen to this sequence and then try to repeat it.",
       sequence: {
@@ -213,6 +305,7 @@ EXAMPLE OUTPUT:
         totalTime,
         tempos: lessonData.sequence?.tempos || [{ time: 0, qpm: 80 }],
       },
+      metronome: validatedMetronome,
     };
 
     console.log("Final lesson:", JSON.stringify(result));

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
-import { LessonState, createInitialLessonState } from "@/types/learningSession";
+import { LessonState, createInitialLessonState, LessonMetronomeSettings, LessonFeelPreset, LessonMetronomeSoundType } from "@/types/learningSession";
 import { LessonCard } from "@/components/LessonCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,15 @@ interface LearnModeProps {
   onClearRecording: () => void;
   language: string;
   model: string;
+  // Metronome control props
+  metronomeBpm: number;
+  setMetronomeBpm: (bpm: number) => void;
+  metronomeTimeSignature: string;
+  setMetronomeTimeSignature: (ts: string) => void;
+  metronomeIsPlaying: boolean;
+  setMetronomeIsPlaying: (playing: boolean) => void;
+  setMetronomeFeel?: (feel: LessonFeelPreset) => void;
+  setMetronomeSoundType?: (soundType: LessonMetronomeSoundType) => void;
 }
 
 export function LearnMode({
@@ -28,6 +37,14 @@ export function LearnMode({
   onClearRecording,
   language,
   model,
+  metronomeBpm,
+  setMetronomeBpm,
+  metronomeTimeSignature,
+  setMetronomeTimeSignature,
+  metronomeIsPlaying,
+  setMetronomeIsPlaying,
+  setMetronomeFeel,
+  setMetronomeSoundType,
 }: LearnModeProps) {
   const [prompt, setPrompt] = useState("");
   const [lesson, setLesson] = useState<LessonState>(createInitialLessonState());
@@ -49,6 +66,27 @@ export function LearnMode({
     setIsLoading(false);
     setIsEvaluating(false);
   }, []);
+
+  // Apply metronome settings from a lesson response
+  const applyMetronomeSettings = useCallback((metronome?: LessonMetronomeSettings) => {
+    if (!metronome) return;
+
+    if (typeof metronome.bpm === 'number') {
+      setMetronomeBpm(metronome.bpm);
+    }
+    if (typeof metronome.timeSignature === 'string') {
+      setMetronomeTimeSignature(metronome.timeSignature);
+    }
+    if (typeof metronome.isActive === 'boolean') {
+      setMetronomeIsPlaying(metronome.isActive);
+    }
+    if (metronome.feel && setMetronomeFeel) {
+      setMetronomeFeel(metronome.feel);
+    }
+    if (metronome.soundType && setMetronomeSoundType) {
+      setMetronomeSoundType(metronome.soundType);
+    }
+  }, [setMetronomeBpm, setMetronomeTimeSignature, setMetronomeIsPlaying, setMetronomeFeel, setMetronomeSoundType]);
 
   const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
     markUserAction();
@@ -74,6 +112,11 @@ export function LearnMode({
 
       if (!data?.instruction || !data?.sequence) {
         throw new Error("Invalid lesson response");
+      }
+
+      // Apply metronome settings from the AI response
+      if (data.metronome) {
+        applyMetronomeSettings(data.metronome);
       }
 
       setLesson({
@@ -104,7 +147,7 @@ export function LearnMode({
         setIsLoading(false);
       }
     }
-  }, [language, markUserAction, model, onClearRecording, onPlaySequence, t, toast]);
+  }, [applyMetronomeSettings, language, markUserAction, model, onClearRecording, onPlaySequence, t, toast]);
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim() || isLoading) return;
