@@ -92,6 +92,21 @@ const questControlsStyles = `
   .quest-minimap .react-flow__minimap-node {
     stroke-width: 1.5 !important;
   }
+  /* Handle labels styling */
+  .react-flow__node .handle-label {
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+  }
+  /* Edge selection styling */
+  .react-flow__edge.selected .react-flow__edge-path {
+    stroke-width: 3 !important;
+    opacity: 0.9;
+  }
+  .react-flow__edge:hover .react-flow__edge-path {
+    stroke-width: 2.5;
+    cursor: pointer;
+  }
 `;
 
 interface QuestEditorProps {
@@ -113,7 +128,7 @@ function TrackNode({
 }) {
   return (
     <div
-      className={`px-4 py-3 rounded-lg border-2 bg-pink-950 min-w-[200px] ${
+      className={`relative px-4 py-3 rounded-lg border-2 bg-pink-950 min-w-[200px] ${
         selected ? "border-pink-500" : "border-pink-300"
       }`}
     >
@@ -133,6 +148,9 @@ function TrackNode({
       </div>
       <div className="text-xs text-muted-foreground mt-2">Out: 1 max</div>
       <Handle type="source" position={Position.Right} id="track-out" />
+      <span className="absolute right-[-35px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Out
+      </span>
     </div>
   );
 }
@@ -150,7 +168,7 @@ function LessonNode({
 }) {
   return (
     <div
-      className={`px-4 py-3 rounded-lg border-2 bg-sky-950 min-w-[200px] ${
+      className={`relative px-4 py-3 rounded-lg border-2 bg-sky-950 min-w-[200px] ${
         selected ? "border-sky-500" : "border-sky-300"
       }`}
     >
@@ -175,6 +193,18 @@ function LessonNode({
       <Handle type="source" position={Position.Right} id="lesson-out" />
       <Handle type="source" position={Position.Bottom} id="lesson-unlockable" />
       <Handle type="source" position={Position.Top} id="lesson-required" />
+      <span className="absolute left-[-30px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        In
+      </span>
+      <span className="absolute right-[-30px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Out
+      </span>
+      <span className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+        Unlockable
+      </span>
+      <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+        Required
+      </span>
     </div>
   );
 }
@@ -192,7 +222,7 @@ function SkillNode({
 }) {
   return (
     <div
-      className={`px-4 py-3 rounded-lg border-2 bg-emerald-950 min-w-[200px] ${
+      className={`relative px-4 py-3 rounded-lg border-2 bg-emerald-950 min-w-[200px] ${
         selected ? "border-emerald-500" : "border-emerald-300"
       }`}
     >
@@ -215,6 +245,12 @@ function SkillNode({
       </div>
       <Handle type="target" position={Position.Top} id="skill-unlockable" />
       <Handle type="target" position={Position.Bottom} id="skill-required" />
+      <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Unlockable
+      </span>
+      <span className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Required
+      </span>
     </div>
   );
 }
@@ -242,10 +278,10 @@ function CustomEdge({
   const isRequirement = data?.type === "requirement";
   const isUnlockable = data?.type === "unlockable";
   const strokeColor = isRequirement
-    ? "#ef4444"
+    ? "#10b981" // emerald-500
     : isUnlockable
-    ? "#10b981"
-    : "#64748b";
+    ? "#10b981" // emerald-500
+    : "#0ea5e9"; // sky-500
 
   const markerId = `arrowhead-${strokeColor.replace("#", "")}`;
 
@@ -270,21 +306,11 @@ function CustomEdge({
         style={{
           stroke: strokeColor,
           strokeWidth: 2,
-          strokeDasharray: isRequirement ? "5,5" : "0",
+          strokeDasharray: "0", // Plain (not dashed) for all edges
+          opacity: 0.6,
         }}
         markerEnd={`url(#${markerId})`}
       />
-      {data?.type && (
-        <text
-          x={labelX}
-          y={labelY}
-          textAnchor="middle"
-          className="text-xs pointer-events-none"
-          style={{ fill: strokeColor }}
-        >
-          {data.type as string}
-        </text>
-      )}
     </>
   );
 }
@@ -302,6 +328,7 @@ type NodeComponentProps = {
 function QuestEditorFlow({
   onNodesChange,
   onEdgesChange,
+  onEdgesDelete,
   nodes,
   edges,
   onConnect,
@@ -309,6 +336,7 @@ function QuestEditorFlow({
 }: {
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
+  onEdgesDelete?: (edges: Edge[]) => void;
   nodes: QuestNode[];
   edges: QuestEdge[];
   onConnect: (connection: Connection) => void;
@@ -332,6 +360,7 @@ function QuestEditorFlow({
       edges={edges as Edge[]}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
+      onEdgesDelete={onEdgesDelete}
       onConnect={onConnect}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
@@ -656,6 +685,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         sourceHandle: connection.sourceHandle || undefined,
         targetHandle: connection.targetHandle || undefined,
         data: { type: edgeType },
+        selectable: true,
+        deletable: true,
       };
 
       const newEdges = addEdge(newEdge, edges);
@@ -792,6 +823,16 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [toast, updateQuestData]);
 
+  const handleEdgesDelete = useCallback(
+    (deletedEdges: Edge[]) => {
+      // Filter out deleted edges from current edges
+      const deletedEdgeIds = new Set(deletedEdges.map((e) => e.id));
+      const remainingEdges = edges.filter((e) => !deletedEdgeIds.has(e.id));
+      updateQuestData(nodes, remainingEdges);
+    },
+    [edges, nodes, updateQuestData]
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-none w-screen h-screen m-0 p-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
@@ -861,6 +902,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onEdgesDelete={handleEdgesDelete}
               onConnect={handleConnect}
               onEditNode={handleEditNode}
             />
