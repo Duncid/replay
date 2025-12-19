@@ -58,6 +58,42 @@ import "@xyflow/react/dist/style.css";
 import { Download, Edit2, Menu, Plus, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+// Custom styles for React Flow Controls and MiniMap
+const questControlsStyles = `
+  .quest-controls {
+    background: hsl(var(--card)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: var(--radius) !important;
+  }
+  .quest-controls button {
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+  .quest-controls button:hover {
+    background: hsl(var(--accent) / 0.1) !important;
+    color: hsl(var(--accent)) !important;
+  }
+  .quest-controls button:active {
+    background: hsl(var(--accent) / 0.2) !important;
+  }
+  .quest-controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .quest-minimap {
+    background: hsl(var(--card)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: var(--radius) !important;
+  }
+  .quest-minimap .react-flow__minimap-mask {
+    fill: hsl(var(--background) / 0.8) !important;
+  }
+  .quest-minimap .react-flow__minimap-node {
+    stroke-width: 1.5 !important;
+  }
+`;
+
 interface QuestEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -302,8 +338,17 @@ function QuestEditorFlow({
       fitView
     >
       <Background />
-      <Controls />
-      <MiniMap />
+      <Controls className="quest-controls" />
+      <MiniMap
+        className="quest-minimap"
+        nodeColor={(node) => {
+          const nodeType = node.data?.type;
+          if (nodeType === "track") return "rgb(219, 39, 119)"; // pink-500
+          if (nodeType === "lesson") return "rgb(14, 165, 233)"; // sky-500
+          if (nodeType === "skill") return "rgb(16, 185, 129)"; // emerald-500
+          return "hsl(var(--muted))";
+        }}
+      />
     </ReactFlow>
   );
 }
@@ -809,6 +854,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           className="flex-1 relative"
           style={{ height: "calc(100vh - 120px)" }}
         >
+          <style>{questControlsStyles}</style>
           <ReactFlowProvider>
             <QuestEditorFlow
               nodes={nodes}
