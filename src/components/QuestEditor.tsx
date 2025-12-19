@@ -55,8 +55,8 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Download, Edit2, Menu, Plus, Upload, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Download, Menu, Plus, Upload, X } from "lucide-react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 
 // Custom styles for React Flow Controls and MiniMap
 const questControlsStyles = `
@@ -101,7 +101,6 @@ const questControlsStyles = `
   /* Edge selection styling */
   .react-flow__edge.selected .react-flow__edge-path {
     stroke-width: 3 !important;
-    opacity: 0.9;
   }
   .react-flow__edge:hover .react-flow__edge-path {
     stroke-width: 2.5;
@@ -112,6 +111,74 @@ const questControlsStyles = `
 interface QuestEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+// Node variation configuration
+const nodeVariations = {
+  track: {
+    bg: "bg-pink-950",
+    ringSelected: "ring-2 ring-pink-300/50",
+    borderDefault: "border-pink-500",
+    typeLabel: "Track",
+    defaultTitle: "Untitled Track",
+  },
+  lesson: {
+    bg: "bg-sky-950",
+    ringSelected: "ring-2 ring-sky-300/50",
+    borderDefault: "border-sky-300",
+    typeLabel: "Lesson",
+    defaultTitle: "Untitled Lesson",
+  },
+  skill: {
+    bg: "bg-emerald-950",
+    ringSelected: "ring-2 ring-emerald-300/50",
+    borderDefault: "border-emerald-500",
+    typeLabel: "Skill",
+    defaultTitle: "Untitled Skill",
+  },
+} as const;
+
+// Base Node Component
+function QuestNodeBase({
+  variation,
+  id,
+  data,
+  selected,
+  onEdit,
+  infoText,
+  children,
+}: {
+  variation: "track" | "lesson" | "skill";
+  id: string;
+  data: { title: string; type: QuestNodeType };
+  selected?: boolean;
+  onEdit: (nodeId: string) => void;
+  infoText: string;
+  children: ReactNode;
+}) {
+  const config = nodeVariations[variation];
+
+  return (
+    <div
+      className={`relative pl-3 pr-2 pt-2 pb-3 rounded-lg border-2 ${
+        config.bg
+      } min-w-[200px] ${config.borderDefault} ${
+        selected ? config.ringSelected : ""
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs uppercase opacity-60">{config.typeLabel}</span>
+        <Button variant="ghost" size="xs" onClick={() => onEdit(id)}>
+          Edit
+        </Button>
+      </div>
+      <div className="font-semibold text-sm">
+        {data.title || config.defaultTitle}
+      </div>
+
+      {children}
+    </div>
+  );
 }
 
 // Custom Node Components
@@ -127,31 +194,34 @@ function TrackNode({
   onEdit: (nodeId: string) => void;
 }) {
   return (
-    <div
-      className={`relative px-4 py-3 rounded-lg border-2 bg-pink-950 min-w-[200px] ${
-        selected ? "border-pink-500" : "border-pink-300"
-      }`}
+    <QuestNodeBase
+      variation="track"
+      id={id}
+      data={data}
+      selected={selected}
+      onEdit={onEdit}
+      infoText="Initial lesson: 1 max | Is requiring: Multiple"
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase opacity-60">Track</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={() => onEdit(id)}
-        >
-          <Edit2 className="h-3 w-3" />
-        </Button>
-      </div>
-      <div className="font-semibold text-sm">
-        {data.title || "Untitled Track"}
-      </div>
-      <div className="text-xs text-muted-foreground mt-2">Out: 1 max</div>
-      <Handle type="source" position={Position.Right} id="track-out" />
-      <span className="absolute right-[-35px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Out
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="track-out"
+        isConnectable={true}
+      />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="track-required"
+        isConnectable={true}
+        style={{ zIndex: 10 }}
+      />
+      <span className="absolute right-[-50px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Initial
       </span>
-    </div>
+      <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+        Is requiring
+      </span>
+    </QuestNodeBase>
   );
 }
 
@@ -167,45 +237,31 @@ function LessonNode({
   onEdit: (nodeId: string) => void;
 }) {
   return (
-    <div
-      className={`relative px-4 py-3 rounded-lg border-2 bg-sky-950 min-w-[200px] ${
-        selected ? "border-sky-500" : "border-sky-300"
-      }`}
+    <QuestNodeBase
+      variation="lesson"
+      id={id}
+      data={data}
+      selected={selected}
+      onEdit={onEdit}
+      infoText="Previous: 1 max | Next: 1 max"
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase opacity-60">Lesson</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={() => onEdit(id)}
-        >
-          <Edit2 className="h-3 w-3" />
-        </Button>
-      </div>
-      <div className="font-semibold text-sm">
-        {data.title || "Untitled Lesson"}
-      </div>
-      <div className="text-xs text-muted-foreground mt-2">
-        In: 1 max | Out: 1 max
-      </div>
       <Handle type="target" position={Position.Left} id="lesson-in" />
       <Handle type="source" position={Position.Right} id="lesson-out" />
       <Handle type="source" position={Position.Bottom} id="lesson-unlockable" />
       <Handle type="source" position={Position.Top} id="lesson-required" />
-      <span className="absolute left-[-30px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        In
+      <span className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Prev
       </span>
       <span className="absolute right-[-30px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Out
+        Next
       </span>
       <span className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Unlockable
+        Unlocking
       </span>
       <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Required
+        Is requiring
       </span>
-    </div>
+    </QuestNodeBase>
   );
 }
 
@@ -221,37 +277,23 @@ function SkillNode({
   onEdit: (nodeId: string) => void;
 }) {
   return (
-    <div
-      className={`relative px-4 py-3 rounded-lg border-2 bg-emerald-950 min-w-[200px] ${
-        selected ? "border-emerald-500" : "border-emerald-300"
-      }`}
+    <QuestNodeBase
+      variation="skill"
+      id={id}
+      data={data}
+      selected={selected}
+      onEdit={onEdit}
+      infoText="In: Multiple required, 1 unlockable"
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase opacity-60">Skill</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={() => onEdit(id)}
-        >
-          <Edit2 className="h-3 w-3" />
-        </Button>
-      </div>
-      <div className="font-semibold text-sm">
-        {data.title || "Untitled Skill"}
-      </div>
-      <div className="text-xs text-muted-foreground mt-2">
-        In: Multiple required, 1 unlockable
-      </div>
       <Handle type="target" position={Position.Top} id="skill-unlockable" />
       <Handle type="target" position={Position.Bottom} id="skill-required" />
       <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Unlockable
+        Unlocked by
       </span>
       <span className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Required
+        Is required by
       </span>
-    </div>
+    </QuestNodeBase>
   );
 }
 
@@ -265,6 +307,7 @@ function CustomEdge({
   sourcePosition,
   targetPosition,
   data,
+  selected,
 }: EdgeProps) {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -283,35 +326,17 @@ function CustomEdge({
     ? "#10b981" // emerald-500
     : "#0ea5e9"; // sky-500
 
-  const markerId = `arrowhead-${strokeColor.replace("#", "")}`;
-
   return (
-    <>
-      <defs>
-        <marker
-          id={markerId}
-          markerWidth="10"
-          markerHeight="10"
-          refX="9"
-          refY="3"
-          orient="auto"
-          markerUnits="strokeWidth"
-        >
-          <polygon points="0 0, 10 3, 0 6" fill={strokeColor} />
-        </marker>
-      </defs>
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        style={{
-          stroke: strokeColor,
-          strokeWidth: 2,
-          strokeDasharray: "0", // Plain (not dashed) for all edges
-          opacity: 0.6,
-        }}
-        markerEnd={`url(#${markerId})`}
-      />
-    </>
+    <BaseEdge
+      id={id}
+      path={edgePath}
+      style={{
+        stroke: strokeColor,
+        strokeWidth: 2,
+        strokeDasharray: "0", // Plain (not dashed) for all edges
+        opacity: selected ? 0.9 : 0.6,
+      }}
+    />
   );
 }
 
@@ -476,6 +501,12 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         return { valid: true };
       }
 
+      // Track → Skill (using track-required → skill-required)
+      if (source.data.type === "track" && target.data.type === "skill") {
+        // No limit on required connections from track to skills
+        return { valid: true };
+      }
+
       // Lesson → Lesson (using lesson-out → lesson-in)
       if (source.data.type === "lesson" && target.data.type === "lesson") {
         // Check if source already has lesson-out connection
@@ -515,7 +546,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
               "Lesson can only have one outgoing connection to another lesson",
           };
         }
-        // For unlockable, check if skill already has one
+        // For unlockable, check if skill already has one "Unlocked by" connection
         if (
           sourceHandle === "lesson-unlockable" &&
           targetHandle === "skill-unlockable"
@@ -529,7 +560,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           if (existingUnlockable) {
             return {
               valid: false,
-              reason: "Skill can only receive one unlockable connection",
+              reason: "Skill can only receive one 'Unlocked by' connection",
             };
           }
         }
@@ -553,8 +584,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       ) {
         return "unlockable";
       }
+      // Lesson/Track "Is requiring" → Skill "Is required by"
       if (
-        sourceHandle === "lesson-required" &&
+        (sourceHandle === "lesson-required" ||
+          sourceHandle === "track-required") &&
         targetHandle === "skill-required"
       ) {
         return "requirement";
@@ -586,6 +619,24 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         return { valid: true };
       }
 
+      // Track → Skill (required)
+      if (
+        sourceNode.data.type === "track" &&
+        targetNode.data.type === "skill"
+      ) {
+        if (
+          sourceHandle === "track-required" &&
+          targetHandle === "skill-required"
+        ) {
+          return { valid: true };
+        }
+        return {
+          valid: false,
+          reason:
+            "Track must connect to Skill using track-required → skill-required (Is requiring → Is required by)",
+        };
+      }
+
       // Lesson → Lesson
       if (
         sourceNode.data.type === "lesson" &&
@@ -600,17 +651,19 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         return { valid: true };
       }
 
-      // Lesson → Skill (unlockable)
+      // Lesson → Skill
       if (
         sourceNode.data.type === "lesson" &&
         targetNode.data.type === "skill"
       ) {
+        // Lesson "Unlocking" → Skill "Unlocked by"
         if (
           sourceHandle === "lesson-unlockable" &&
           targetHandle === "skill-unlockable"
         ) {
           return { valid: true };
         }
+        // Lesson "Is requiring" → Skill "Is required by"
         if (
           sourceHandle === "lesson-required" &&
           targetHandle === "skill-required"
@@ -620,7 +673,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         return {
           valid: false,
           reason:
-            "Lesson must connect to Skill using matching handles (unlockable or required)",
+            "Lesson must connect to Skill using matching handles (Unlocking → Unlocked by, or Is requiring → Is required by)",
         };
       }
 
@@ -893,7 +946,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
         <div
           className="flex-1 relative"
-          style={{ height: "calc(100vh - 120px)" }}
+          style={{ height: "calc(100vh - 64px)" }}
         >
           <style>{questControlsStyles}</style>
           <ReactFlowProvider>
