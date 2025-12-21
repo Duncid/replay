@@ -1,3 +1,13 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +21,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -26,6 +39,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useQuestGraphs, QuestGraph } from "@/hooks/useQuestGraphs";
 import {
   CurriculumExport,
   QuestData,
@@ -59,8 +73,21 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Download, FileText, Menu, Plus, Upload, X } from "lucide-react";
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import {
+  ChevronRight,
+  Download,
+  FileJson,
+  FileOutput,
+  FilePlus,
+  FolderOpen,
+  Menu,
+  Plus,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 // Custom styles for React Flow Controls and MiniMap
 const questControlsStyles = `
@@ -413,6 +440,17 @@ function QuestEditorFlow({
 
 export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const { toast } = useToast();
+  const {
+    questGraphs,
+    currentGraph,
+    isLoading: isDbLoading,
+    saveQuestGraph,
+    updateQuestGraph,
+    deleteQuestGraph,
+    loadQuestGraph,
+    clearCurrentGraph,
+  } = useQuestGraphs();
+
   const [questData, setQuestData] = useLocalStorage<QuestData>(
     "quest-editor-data",
     {
@@ -426,6 +464,18 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<QuestEdge>(
     questData.edges
   );
+
+  // Track unsaved changes
+  const lastSavedDataRef = useRef<string>("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Dialog states
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showNewConfirmDialog, setShowNewConfirmDialog] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [saveDialogTitle, setSaveDialogTitle] = useState("");
+  const [pendingLoadGraph, setPendingLoadGraph] = useState<QuestGraph | null>(null);
+
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingOrder, setEditingOrder] = useState<string>("");
@@ -441,6 +491,20 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     useState<string>("");
   const [editingDifficultyGuidance, setEditingDifficultyGuidance] =
     useState<string>("");
+
+  // Track unsaved changes
+  useEffect(() => {
+    const currentData = JSON.stringify({ nodes, edges });
+    if (lastSavedDataRef.current && lastSavedDataRef.current !== currentData) {
+      setHasUnsavedChanges(true);
+    }
+  }, [nodes, edges]);
+
+  // Update saved ref when loading or saving
+  const markAsSaved = useCallback(() => {
+    lastSavedDataRef.current = JSON.stringify({ nodes, edges });
+    setHasUnsavedChanges(false);
+  }, [nodes, edges]);
 
   // Sync with localStorage
   const updateQuestData = useCallback(
@@ -1215,7 +1279,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [nodes, edges, toast]);
 
-  const handleOpen = useCallback(async () => {
+  const handleOpenFile = useCallback(async () => {
     try {
       if (!("showOpenFilePicker" in window)) {
         toast({
@@ -1344,6 +1408,106 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [toast, updateQuestData]);
 
+  // New: Handle new graph (clear current)
+  const handleNew = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowNewConfirmDialog(true);
+    } else {
+      clearCurrentGraph();
+      updateQuestData([], []);
+      lastSavedDataRef.current = JSON.stringify({ nodes: [], edges: [] });
+      setHasUnsavedChanges(false);
+    }
+  }, [hasUnsavedChanges, clearCurrentGraph, updateQuestData]);
+
+  const confirmNew = useCallback(() => {
+    clearCurrentGraph();
+    updateQuestData([], []);
+    lastSavedDataRef.current = JSON.stringify({ nodes: [], edges: [] });
+    setHasUnsavedChanges(false);
+    setShowNewConfirmDialog(false);
+  }, [clearCurrentGraph, updateQuestData]);
+
+  // Save: Save current graph to database
+  const handleSave = useCallback(async () => {
+    if (currentGraph) {
+      // Update existing
+      const success = await updateQuestGraph(currentGraph.id, { nodes, edges });
+      if (success) {
+        markAsSaved();
+      }
+    } else {
+      // Show save dialog for new graph
+      setSaveDialogTitle("");
+      setShowSaveDialog(true);
+    }
+  }, [currentGraph, nodes, edges, updateQuestGraph, markAsSaved]);
+
+  const confirmSave = useCallback(async () => {
+    if (!saveDialogTitle.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please enter a title for the quest graph",
+        variant: "destructive",
+      });
+      return;
+    }
+    const graph = await saveQuestGraph(saveDialogTitle.trim(), { nodes, edges });
+    if (graph) {
+      markAsSaved();
+      setShowSaveDialog(false);
+    }
+  }, [saveDialogTitle, nodes, edges, saveQuestGraph, markAsSaved, toast]);
+
+  // Open: Load a graph from database
+  const handleLoadGraph = useCallback((graph: QuestGraph) => {
+    if (hasUnsavedChanges) {
+      setPendingLoadGraph(graph);
+      setShowNewConfirmDialog(true);
+    } else {
+      loadQuestGraph(graph);
+      updateQuestData(graph.data.nodes, graph.data.edges);
+      lastSavedDataRef.current = JSON.stringify(graph.data);
+      setHasUnsavedChanges(false);
+    }
+  }, [hasUnsavedChanges, loadQuestGraph, updateQuestData]);
+
+  const confirmLoadPending = useCallback(() => {
+    if (pendingLoadGraph) {
+      loadQuestGraph(pendingLoadGraph);
+      updateQuestData(pendingLoadGraph.data.nodes, pendingLoadGraph.data.edges);
+      lastSavedDataRef.current = JSON.stringify(pendingLoadGraph.data);
+      setHasUnsavedChanges(false);
+      setPendingLoadGraph(null);
+    } else {
+      // Just creating new
+      clearCurrentGraph();
+      updateQuestData([], []);
+      lastSavedDataRef.current = JSON.stringify({ nodes: [], edges: [] });
+      setHasUnsavedChanges(false);
+    }
+    setShowNewConfirmDialog(false);
+  }, [pendingLoadGraph, loadQuestGraph, updateQuestData, clearCurrentGraph]);
+
+  // Delete: Delete current graph from database
+  const handleDelete = useCallback(async () => {
+    if (currentGraph) {
+      setShowDeleteConfirmDialog(true);
+    }
+  }, [currentGraph]);
+
+  const confirmDelete = useCallback(async () => {
+    if (currentGraph) {
+      const success = await deleteQuestGraph(currentGraph.id);
+      if (success) {
+        updateQuestData([], []);
+        lastSavedDataRef.current = JSON.stringify({ nodes: [], edges: [] });
+        setHasUnsavedChanges(false);
+      }
+    }
+    setShowDeleteConfirmDialog(false);
+  }, [currentGraph, deleteQuestGraph, updateQuestData]);
+
   const handleEdgesDelete = useCallback(
     (deletedEdges: Edge[]) => {
       // Filter out deleted edges from current edges
@@ -1355,11 +1519,23 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   );
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
         <DialogHeader className="p-3 border-b h-16">
           <div className="flex items-center justify-between">
-            <DialogTitle>Quest Editor</DialogTitle>
+            <div className="flex items-center gap-2">
+              <DialogTitle>Quest Editor</DialogTitle>
+              {currentGraph && (
+                <span className="text-sm text-muted-foreground">
+                  — {currentGraph.title}
+                  {hasUnsavedChanges && " (unsaved)"}
+                </span>
+              )}
+              {!currentGraph && hasUnsavedChanges && (
+                <span className="text-sm text-muted-foreground">(unsaved)</span>
+              )}
+            </div>
             <div className="flex gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1389,23 +1565,79 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                     <Menu className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={handleDownload}>
-                    <Download className="h-4 w-4" />
-                    Save as JSON
+                <DropdownMenuContent className="w-48">
+                  <DropdownMenuItem onClick={handleNew}>
+                    <FilePlus className="h-4 w-4" />
+                    New
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExport}>
-                    <Download className="h-4 w-4" />
-                    Export Produ JSON
+                  <DropdownMenuItem onClick={handleSave} disabled={isDbLoading}>
+                    <Save className="h-4 w-4" />
+                    Save
+                    {hasUnsavedChanges && <span className="ml-auto text-xs text-muted-foreground">•</span>}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleOpen}>
-                    <Upload className="h-4 w-4" />
-                    Open JSON
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <FolderOpen className="h-4 w-4" />
+                      Open
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-56">
+                      {questGraphs.length === 0 ? (
+                        <DropdownMenuItem disabled>
+                          No saved graphs
+                        </DropdownMenuItem>
+                      ) : (
+                        questGraphs.map((graph) => (
+                          <DropdownMenuItem
+                            key={graph.id}
+                            onClick={() => handleLoadGraph(graph)}
+                          >
+                            {graph.title}
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    disabled={!currentGraph || isDbLoading}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleImport}>
-                    <FileText className="h-4 w-4" />
-                    Import
-                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <FileJson className="h-4 w-4" />
+                      Graph Export
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={handleDownload}>
+                        <Download className="h-4 w-4" />
+                        Save as JSON
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleOpenFile}>
+                        <Upload className="h-4 w-4" />
+                        Import JSON
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <FileOutput className="h-4 w-4" />
+                      Export Schema
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={handleExport}>
+                        <Download className="h-4 w-4" />
+                        Export Schema
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleImport}>
+                        <Upload className="h-4 w-4" />
+                        Import Schema
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -1767,5 +1999,67 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         </Sheet>
       </DialogContent>
     </Dialog>
+
+    {/* Save Dialog */}
+    <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Save Quest Graph</AlertDialogTitle>
+          <AlertDialogDescription>
+            Enter a title for your quest graph.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="py-4">
+          <Input
+            placeholder="Quest graph title"
+            value={saveDialogTitle}
+            onChange={(e) => setSaveDialogTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") confirmSave();
+            }}
+            autoFocus
+          />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmSave}>Save</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Unsaved Changes Confirm Dialog */}
+    <AlertDialog open={showNewConfirmDialog} onOpenChange={setShowNewConfirmDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved changes. Do you want to discard them?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setPendingLoadGraph(null)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmLoadPending}>Discard Changes</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Delete Confirm Dialog */}
+    <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Quest Graph</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{currentGraph?.title}"? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
