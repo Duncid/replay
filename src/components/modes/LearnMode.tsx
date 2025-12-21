@@ -1,12 +1,19 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { LessonCard } from "@/components/LessonCard";
+import { QuestEditor } from "@/components/QuestEditor";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
-import { NoteSequence } from "@/types/noteSequence";
-import { LessonState, createInitialLessonState, LessonMetronomeSettings, LessonFeelPreset, LessonMetronomeSoundType } from "@/types/learningSession";
-import { LessonCard } from "@/components/LessonCard";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  createInitialLessonState,
+  LessonFeelPreset,
+  LessonMetronomeSettings,
+  LessonMetronomeSoundType,
+  LessonState,
+} from "@/types/learningSession";
+import { NoteSequence } from "@/types/noteSequence";
+import { Loader2, Map, Send } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface LearnModeProps {
@@ -51,6 +58,7 @@ export function LearnMode({
   const [isLoading, setIsLoading] = useState(false);
   const [lastComment, setLastComment] = useState<string | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [questEditorOpen, setQuestEditorOpen] = useState(false);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
   const generationRequestIdRef = useRef<string | null>(null);
@@ -68,86 +76,127 @@ export function LearnMode({
   }, []);
 
   // Apply metronome settings from a lesson response
-  const applyMetronomeSettings = useCallback((metronome?: LessonMetronomeSettings) => {
-    if (!metronome) return;
+  const applyMetronomeSettings = useCallback(
+    (metronome?: LessonMetronomeSettings) => {
+      if (!metronome) return;
 
-    if (typeof metronome.bpm === 'number') {
-      setMetronomeBpm(metronome.bpm);
-    }
-    if (typeof metronome.timeSignature === 'string') {
-      setMetronomeTimeSignature(metronome.timeSignature);
-    }
-    if (typeof metronome.isActive === 'boolean') {
-      setMetronomeIsPlaying(metronome.isActive);
-    }
-    if (metronome.feel && setMetronomeFeel) {
-      setMetronomeFeel(metronome.feel);
-    }
-    if (metronome.soundType && setMetronomeSoundType) {
-      setMetronomeSoundType(metronome.soundType);
-    }
-  }, [setMetronomeBpm, setMetronomeTimeSignature, setMetronomeIsPlaying, setMetronomeFeel, setMetronomeSoundType]);
-
-  const generateLesson = useCallback(async (userPrompt: string, difficulty: number = 1, previousSequence?: NoteSequence) => {
-    markUserAction();
-    const actionToken = userActionTokenRef.current;
-    const requestId = crypto.randomUUID();
-    generationRequestIdRef.current = requestId;
-    setIsLoading(true);
-    setLastComment(null);
-    const localizedPrompt =
-      language === "fr"
-        ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
-        : userPrompt;
-
-    try {
-      const { data, error } = await supabase.functions.invoke("piano-learn", {
-        body: { prompt: localizedPrompt, difficulty, previousSequence, language, model },
-      });
-
-      if (generationRequestIdRef.current !== requestId || userActionTokenRef.current !== actionToken) return;
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      if (!data?.instruction || !data?.sequence) {
-        throw new Error("Invalid lesson response");
+      if (typeof metronome.bpm === "number") {
+        setMetronomeBpm(metronome.bpm);
       }
-
-      // Apply metronome settings from the AI response
-      if (data.metronome) {
-        applyMetronomeSettings(data.metronome);
+      if (typeof metronome.timeSignature === "string") {
+        setMetronomeTimeSignature(metronome.timeSignature);
       }
-
-      setLesson({
-        instruction: data.instruction,
-        targetSequence: data.sequence,
-        phase: "your_turn",
-        attempts: 0,
-        validations: 0,
-        feedback: null,
-        difficulty,
-        userPrompt,
-      });
-
-      hasEvaluatedRef.current = false;
-      onClearRecording();
-
-      // Automatically play the demo
-      setTimeout(() => onPlaySequence(data.sequence), 500);
-    } catch (error) {
-      console.error("Failed to generate lesson:", error);
-      toast({
-        title: t("learnMode.generateErrorTitle"),
-        description: error instanceof Error ? error.message : t("learnMode.generateErrorDescription"),
-        variant: "destructive",
-      });
-    } finally {
-      if (generationRequestIdRef.current === requestId && userActionTokenRef.current === actionToken) {
-        setIsLoading(false);
+      if (typeof metronome.isActive === "boolean") {
+        setMetronomeIsPlaying(metronome.isActive);
       }
-    }
-  }, [applyMetronomeSettings, language, markUserAction, model, onClearRecording, onPlaySequence, t, toast]);
+      if (metronome.feel && setMetronomeFeel) {
+        setMetronomeFeel(metronome.feel);
+      }
+      if (metronome.soundType && setMetronomeSoundType) {
+        setMetronomeSoundType(metronome.soundType);
+      }
+    },
+    [
+      setMetronomeBpm,
+      setMetronomeTimeSignature,
+      setMetronomeIsPlaying,
+      setMetronomeFeel,
+      setMetronomeSoundType,
+    ]
+  );
+
+  const generateLesson = useCallback(
+    async (
+      userPrompt: string,
+      difficulty: number = 1,
+      previousSequence?: NoteSequence
+    ) => {
+      markUserAction();
+      const actionToken = userActionTokenRef.current;
+      const requestId = crypto.randomUUID();
+      generationRequestIdRef.current = requestId;
+      setIsLoading(true);
+      setLastComment(null);
+      const localizedPrompt =
+        language === "fr"
+          ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
+          : userPrompt;
+
+      try {
+        const { data, error } = await supabase.functions.invoke("piano-learn", {
+          body: {
+            prompt: localizedPrompt,
+            difficulty,
+            previousSequence,
+            language,
+            model,
+          },
+        });
+
+        if (
+          generationRequestIdRef.current !== requestId ||
+          userActionTokenRef.current !== actionToken
+        )
+          return;
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (!data?.instruction || !data?.sequence) {
+          throw new Error("Invalid lesson response");
+        }
+
+        // Apply metronome settings from the AI response
+        if (data.metronome) {
+          applyMetronomeSettings(data.metronome);
+        }
+
+        setLesson({
+          instruction: data.instruction,
+          targetSequence: data.sequence,
+          phase: "your_turn",
+          attempts: 0,
+          validations: 0,
+          feedback: null,
+          difficulty,
+          userPrompt,
+        });
+
+        hasEvaluatedRef.current = false;
+        onClearRecording();
+
+        // Automatically play the demo
+        setTimeout(() => onPlaySequence(data.sequence), 500);
+      } catch (error) {
+        console.error("Failed to generate lesson:", error);
+        toast({
+          title: t("learnMode.generateErrorTitle"),
+          description:
+            error instanceof Error
+              ? error.message
+              : t("learnMode.generateErrorDescription"),
+          variant: "destructive",
+        });
+      } finally {
+        if (
+          generationRequestIdRef.current === requestId &&
+          userActionTokenRef.current === actionToken
+        ) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [
+      applyMetronomeSettings,
+      language,
+      markUserAction,
+      model,
+      onClearRecording,
+      onPlaySequence,
+      t,
+      toast,
+    ]
+  );
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim() || isLoading) return;
@@ -160,56 +209,77 @@ export function LearnMode({
     }
   }, [lesson.targetSequence, onPlaySequence]);
 
-  const evaluateAttempt = useCallback(async (userSequence: NoteSequence) => {
-    const actionToken = userActionTokenRef.current;
-    const requestId = crypto.randomUUID();
-    evaluationRequestIdRef.current = requestId;
-    setIsEvaluating(true);
+  const evaluateAttempt = useCallback(
+    async (userSequence: NoteSequence) => {
+      const actionToken = userActionTokenRef.current;
+      const requestId = crypto.randomUUID();
+      evaluationRequestIdRef.current = requestId;
+      setIsEvaluating(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("piano-evaluate", {
-        body: {
-          targetSequence: lesson.targetSequence,
-          userSequence,
-          instruction: lesson.instruction,
-          language,
-          model,
-        },
-      });
-
-      if (evaluationRequestIdRef.current !== requestId || userActionTokenRef.current !== actionToken) return;
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      const feedback = data.feedback as string;
-      const evaluation = data.evaluation as "correct" | "close" | "wrong";
-      
-      setLastComment(feedback);
-      setLesson(prev => ({
-        ...prev,
-        attempts: prev.attempts + 1,
-      }));
-
-      // Auto-replay example when notes were wrong
-      if (evaluation === "wrong" || evaluation === "close") {
-        setTimeout(() => {
-          if (lesson.targetSequence.notes.length > 0) {
-            onPlaySequence(lesson.targetSequence);
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          "piano-evaluate",
+          {
+            body: {
+              targetSequence: lesson.targetSequence,
+              userSequence,
+              instruction: lesson.instruction,
+              language,
+              model,
+            },
           }
-        }, 1000); // Small delay so user can read feedback first
+        );
+
+        if (
+          evaluationRequestIdRef.current !== requestId ||
+          userActionTokenRef.current !== actionToken
+        )
+          return;
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        const feedback = data.feedback as string;
+        const evaluation = data.evaluation as "correct" | "close" | "wrong";
+
+        setLastComment(feedback);
+        setLesson((prev) => ({
+          ...prev,
+          attempts: prev.attempts + 1,
+        }));
+
+        // Auto-replay example when notes were wrong
+        if (evaluation === "wrong" || evaluation === "close") {
+          setTimeout(() => {
+            if (lesson.targetSequence.notes.length > 0) {
+              onPlaySequence(lesson.targetSequence);
+            }
+          }, 1000); // Small delay so user can read feedback first
+        }
+      } catch (error) {
+        console.error("Failed to evaluate attempt:", error);
+        setLastComment(t("learnMode.evaluationFallback"));
+      } finally {
+        if (
+          evaluationRequestIdRef.current === requestId &&
+          userActionTokenRef.current === actionToken
+        ) {
+          setIsEvaluating(false);
+          hasEvaluatedRef.current = false; // Allow next recording to be evaluated
+          onClearRecording();
+        }
       }
-    } catch (error) {
-      console.error("Failed to evaluate attempt:", error);
-      setLastComment(t("learnMode.evaluationFallback"));
-    } finally {
-      if (evaluationRequestIdRef.current === requestId && userActionTokenRef.current === actionToken) {
-        setIsEvaluating(false);
-        hasEvaluatedRef.current = false; // Allow next recording to be evaluated
-        onClearRecording();
-      }
-    }
-  }, [language, lesson.targetSequence, lesson.instruction, model, onClearRecording, onPlaySequence, t]);
+    },
+    [
+      language,
+      lesson.targetSequence,
+      lesson.instruction,
+      model,
+      onClearRecording,
+      onPlaySequence,
+      t,
+    ]
+  );
 
   // Watch for recording completion to trigger evaluation
   useEffect(() => {
@@ -227,8 +297,17 @@ export function LearnMode({
   }, [lesson.phase, userRecording, isRecording, isEvaluating, evaluateAttempt]);
 
   const handleNext = useCallback(() => {
-    generateLesson(lesson.userPrompt, lesson.difficulty + 1, lesson.targetSequence);
-  }, [lesson.userPrompt, lesson.difficulty, lesson.targetSequence, generateLesson]);
+    generateLesson(
+      lesson.userPrompt,
+      lesson.difficulty + 1,
+      lesson.targetSequence
+    );
+  }, [
+    lesson.userPrompt,
+    lesson.difficulty,
+    lesson.targetSequence,
+    generateLesson,
+  ]);
 
   const handleLeave = useCallback(() => {
     markUserAction();
@@ -239,7 +318,8 @@ export function LearnMode({
   }, [markUserAction, onClearRecording]);
 
   const suggestions = [
-    ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) || []),
+    ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) ||
+      []),
   ];
 
   const render = () => (
@@ -247,6 +327,17 @@ export function LearnMode({
       {lesson.phase === "prompt" ? (
         /* Initial Prompt Input */
         <div className="w-full max-w-2xl mx-auto space-y-3">
+          <div className="flex justify-end mb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setQuestEditorOpen(true)}
+              disabled={isLoading || isPlaying}
+            >
+              <Map className="h-4 w-4 mr-2" />
+              Quest Editor
+            </Button>
+          </div>
           <Textarea
             placeholder={t("learnMode.promptPlaceholder")}
             value={prompt}
@@ -276,7 +367,11 @@ export function LearnMode({
             disabled={!prompt.trim() || isLoading || isPlaying}
             className="w-full gap-2"
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
             {t("learnMode.startLearning")}
           </Button>
         </div>
@@ -292,6 +387,7 @@ export function LearnMode({
           onLeave={handleLeave}
         />
       )}
+      <QuestEditor open={questEditorOpen} onOpenChange={setQuestEditorOpen} />
     </div>
   );
 
