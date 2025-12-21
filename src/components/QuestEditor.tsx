@@ -23,15 +23,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
+  CurriculumExport,
   QuestData,
   QuestEdge,
   QuestEdgeType,
   QuestNode,
   QuestNodeType,
 } from "@/types/quest";
+import { compileCurriculum } from "@/utils/curriculumCompiler";
+import { importCurriculumToGraph } from "@/utils/importCurriculumToGraph";
 import {
   addEdge,
   Background,
@@ -55,7 +59,7 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Download, Menu, Plus, Upload, X } from "lucide-react";
+import { Download, FileText, Menu, Plus, Upload, X } from "lucide-react";
 import { ReactNode, useCallback, useEffect, useState } from "react";
 
 // Custom styles for React Flow Controls and MiniMap
@@ -424,6 +428,19 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   );
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [editingOrder, setEditingOrder] = useState<string>("");
+  const [editingDescription, setEditingDescription] = useState<string>("");
+  const [editingTrackKey, setEditingTrackKey] = useState<string>("");
+  const [editingSkillKey, setEditingSkillKey] = useState<string>("");
+  const [editingUnlockGuidance, setEditingUnlockGuidance] =
+    useState<string>("");
+  const [editingLessonKey, setEditingLessonKey] = useState<string>("");
+  const [editingGoal, setEditingGoal] = useState<string>("");
+  const [editingSetupGuidance, setEditingSetupGuidance] = useState<string>("");
+  const [editingEvaluationGuidance, setEditingEvaluationGuidance] =
+    useState<string>("");
+  const [editingDifficultyGuidance, setEditingDifficultyGuidance] =
+    useState<string>("");
 
   // Sync with localStorage
   const updateQuestData = useCallback(
@@ -442,7 +459,131 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       if (node) {
         setEditingTitle(node.data.title);
         setEditingNodeId(nodeId);
+        // Initialize track-specific fields
+        if (node.data.type === "track") {
+          setEditingTrackKey(node.data.trackKey || "");
+          setEditingOrder(node.data.order?.toString() || "");
+          setEditingDescription(node.data.description || "");
+          setEditingSkillKey("");
+        } else if (node.data.type === "skill") {
+          // Initialize skill-specific fields
+          setEditingSkillKey(node.data.skillKey || "");
+          setEditingDescription(node.data.description || "");
+          setEditingUnlockGuidance(node.data.unlockGuidance || "");
+          setEditingOrder("");
+          setEditingLessonKey("");
+          setEditingGoal("");
+          setEditingSetupGuidance("");
+          setEditingEvaluationGuidance("");
+          setEditingDifficultyGuidance("");
+        } else if (node.data.type === "lesson") {
+          // Initialize lesson-specific fields
+          setEditingLessonKey(node.data.lessonKey || "");
+          setEditingGoal(node.data.goal || "");
+          setEditingSetupGuidance(node.data.setupGuidance || "");
+          setEditingEvaluationGuidance(node.data.evaluationGuidance || "");
+          setEditingDifficultyGuidance(node.data.difficultyGuidance || "");
+          setEditingOrder("");
+          setEditingDescription("");
+          setEditingTrackKey("");
+          setEditingSkillKey("");
+          setEditingUnlockGuidance("");
+        } else {
+          setEditingOrder("");
+          setEditingDescription("");
+          setEditingTrackKey("");
+          setEditingSkillKey("");
+          setEditingUnlockGuidance("");
+          setEditingLessonKey("");
+          setEditingGoal("");
+          setEditingSetupGuidance("");
+          setEditingEvaluationGuidance("");
+          setEditingDifficultyGuidance("");
+        }
       }
+    },
+    [nodes]
+  );
+
+  // Helper function to get first available order number
+  const getFirstAvailableOrder = useCallback((): number => {
+    const trackNodes = nodes.filter((n) => n.data.type === "track");
+    const usedOrders = trackNodes
+      .map((n) => n.data.order)
+      .filter(
+        (order): order is number => typeof order === "number" && order > 0
+      )
+      .sort((a, b) => a - b);
+
+    // Find first gap or return next number
+    for (let i = 1; i <= usedOrders.length; i++) {
+      if (!usedOrders.includes(i)) {
+        return i;
+      }
+    }
+    return usedOrders.length + 1;
+  }, [nodes]);
+
+  // Helper function to check if an order is already in use
+  const isOrderInUse = useCallback(
+    (order: number, excludeNodeId?: string): boolean => {
+      if (order <= 0 || !Number.isInteger(order)) {
+        return false;
+      }
+      return nodes.some(
+        (n) =>
+          n.data.type === "track" &&
+          n.id !== excludeNodeId &&
+          n.data.order === order
+      );
+    },
+    [nodes]
+  );
+
+  // Helper function to check if a skillKey is already in use
+  const isSkillKeyInUse = useCallback(
+    (skillKey: string, excludeNodeId?: string): boolean => {
+      if (!skillKey || skillKey.trim() === "") {
+        return false;
+      }
+      return nodes.some(
+        (n) =>
+          n.data.type === "skill" &&
+          n.id !== excludeNodeId &&
+          n.data.skillKey === skillKey.trim()
+      );
+    },
+    [nodes]
+  );
+
+  // Helper function to check if a lessonKey is already in use
+  const isLessonKeyInUse = useCallback(
+    (lessonKey: string, excludeNodeId?: string): boolean => {
+      if (!lessonKey || lessonKey.trim() === "") {
+        return false;
+      }
+      return nodes.some(
+        (n) =>
+          n.data.type === "lesson" &&
+          n.id !== excludeNodeId &&
+          n.data.lessonKey === lessonKey.trim()
+      );
+    },
+    [nodes]
+  );
+
+  // Helper function to check if a trackKey is already in use
+  const isTrackKeyInUse = useCallback(
+    (trackKey: string, excludeNodeId?: string): boolean => {
+      if (!trackKey || trackKey.trim() === "") {
+        return false;
+      }
+      return nodes.some(
+        (n) =>
+          n.data.type === "track" &&
+          n.id !== excludeNodeId &&
+          n.data.trackKey === trackKey.trim()
+      );
     },
     [nodes]
   );
@@ -450,14 +591,160 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const handleSaveTitle = useCallback(() => {
     if (!editingNodeId) return;
 
+    const currentNode = nodes.find((n) => n.id === editingNodeId);
+    if (!currentNode) return;
+
+    // Validate track-specific fields
+    if (currentNode.data.type === "track") {
+      if (!editingTrackKey || editingTrackKey.trim() === "") {
+        toast({
+          title: "Track key required",
+          description: "Track key cannot be empty",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (editingTrackKey.includes(" ")) {
+        toast({
+          title: "Invalid track key",
+          description: "Track key cannot contain spaces",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isTrackKeyInUse(editingTrackKey.trim(), editingNodeId)) {
+        toast({
+          title: "Track key already in use",
+          description: "This track key is already assigned to another track",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const orderValue = parseInt(editingOrder, 10);
+      if (
+        !editingOrder ||
+        isNaN(orderValue) ||
+        orderValue <= 0 ||
+        !Number.isInteger(orderValue)
+      ) {
+        toast({
+          title: "Invalid order",
+          description: "Order must be a positive integer greater than 0",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isOrderInUse(orderValue, editingNodeId)) {
+        toast({
+          title: "Order already in use",
+          description: "This order number is already assigned to another track",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Validate skill-specific fields
+    if (currentNode.data.type === "skill") {
+      const trimmedSkillKey = editingSkillKey.trim();
+      if (!trimmedSkillKey) {
+        toast({
+          title: "Invalid skill key",
+          description: "Skill key cannot be empty",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (trimmedSkillKey.includes(" ")) {
+        toast({
+          title: "Invalid skill key",
+          description: "Skill key cannot contain spaces",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isSkillKeyInUse(trimmedSkillKey, editingNodeId)) {
+        toast({
+          title: "Skill key already in use",
+          description: "This skill key is already assigned to another skill",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Validate lesson-specific fields
+    if (currentNode.data.type === "lesson") {
+      const trimmedLessonKey = editingLessonKey.trim();
+      if (!trimmedLessonKey) {
+        toast({
+          title: "Invalid lesson key",
+          description: "Lesson key cannot be empty",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (trimmedLessonKey.includes(" ")) {
+        toast({
+          title: "Invalid lesson key",
+          description: "Lesson key cannot contain spaces",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isLessonKeyInUse(trimmedLessonKey, editingNodeId)) {
+        toast({
+          title: "Lesson key already in use",
+          description: "This lesson key is already assigned to another lesson",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const updatedNodes = nodes.map((node) => {
       if (node.id === editingNodeId) {
+        const updatedData = {
+          ...node.data,
+          title: editingTitle,
+        };
+
+        // Add track-specific fields
+        if (node.data.type === "track") {
+          updatedData.trackKey = editingTrackKey.trim();
+          updatedData.order = parseInt(editingOrder, 10);
+          updatedData.description = editingDescription || undefined;
+        }
+
+        // Add skill-specific fields
+        if (node.data.type === "skill") {
+          updatedData.skillKey = editingSkillKey.trim();
+          updatedData.description = editingDescription || undefined;
+          updatedData.unlockGuidance = editingUnlockGuidance || undefined;
+        }
+
+        // Add lesson-specific fields
+        if (node.data.type === "lesson") {
+          updatedData.lessonKey = editingLessonKey.trim();
+          updatedData.goal = editingGoal || undefined;
+          updatedData.setupGuidance = editingSetupGuidance || undefined;
+          updatedData.evaluationGuidance =
+            editingEvaluationGuidance || undefined;
+          updatedData.difficultyGuidance =
+            editingDifficultyGuidance || undefined;
+        }
+
         return {
           ...node,
-          data: {
-            ...node.data,
-            title: editingTitle,
-          },
+          data: updatedData,
         };
       }
       return node;
@@ -466,11 +753,51 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     updateQuestData(updatedNodes, edges);
     setEditingNodeId(null);
     setEditingTitle("");
-  }, [editingNodeId, editingTitle, nodes, edges, updateQuestData]);
+    setEditingOrder("");
+    setEditingDescription("");
+    setEditingTrackKey("");
+    setEditingSkillKey("");
+    setEditingUnlockGuidance("");
+    setEditingLessonKey("");
+    setEditingGoal("");
+    setEditingSetupGuidance("");
+    setEditingEvaluationGuidance("");
+    setEditingDifficultyGuidance("");
+  }, [
+    editingNodeId,
+    editingTitle,
+    editingOrder,
+    editingDescription,
+    editingTrackKey,
+    editingSkillKey,
+    editingUnlockGuidance,
+    editingLessonKey,
+    editingGoal,
+    editingSetupGuidance,
+    editingEvaluationGuidance,
+    editingDifficultyGuidance,
+    nodes,
+    edges,
+    updateQuestData,
+    isOrderInUse,
+    isTrackKeyInUse,
+    isSkillKeyInUse,
+    isLessonKeyInUse,
+    toast,
+  ]);
 
   const handleCancelEdit = useCallback(() => {
     setEditingNodeId(null);
     setEditingTitle("");
+    setEditingOrder("");
+    setEditingDescription("");
+    setEditingSkillKey("");
+    setEditingUnlockGuidance("");
+    setEditingLessonKey("");
+    setEditingGoal("");
+    setEditingSetupGuidance("");
+    setEditingEvaluationGuidance("");
+    setEditingDifficultyGuidance("");
   }, []);
 
   // Save nodes and edges to localStorage whenever they change (including positions)
@@ -765,13 +1092,14 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         data: {
           title: `New ${type}`,
           type,
+          ...(type === "track" && { order: getFirstAvailableOrder() }),
         },
       };
 
       const newNodes = [...nodes, newNode];
       updateQuestData(newNodes, edges);
     },
-    [nodes, edges, updateQuestData]
+    [nodes, edges, updateQuestData, getFirstAvailableOrder]
   );
 
   const handleDownload = useCallback(async () => {
@@ -813,6 +1141,73 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       if ((error as Error).name !== "AbortError") {
         toast({
           title: "Error saving file",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [nodes, edges, toast]);
+
+  const handleExport = useCallback(async () => {
+    try {
+      if (!("showSaveFilePicker" in window)) {
+        toast({
+          title: "File picker not supported",
+          description:
+            "Your browser doesn't support the File System Access API.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const questData: QuestData = { nodes, edges };
+      const result = compileCurriculum(questData);
+
+      if (!result.success) {
+        const errorMessages = result.errors.map((e) => e.message).join("\n");
+        toast({
+          title: "Export validation failed",
+          description: errorMessages,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!result.export) {
+        toast({
+          title: "Export failed",
+          description: "Failed to generate export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const json = JSON.stringify(result.export, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fileHandle = await (window as any).showSaveFilePicker({
+        suggestedName: "curriculum.export.json",
+        types: [
+          {
+            description: "JSON files",
+            accept: { "application/json": [".json"] },
+          },
+        ],
+      });
+
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+
+      toast({
+        title: "Export successful",
+        description: "Curriculum export has been saved to file.",
+      });
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        toast({
+          title: "Error exporting file",
           description: error instanceof Error ? error.message : "Unknown error",
           variant: "destructive",
         });
@@ -876,6 +1271,79 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [toast, updateQuestData]);
 
+  const handleImport = useCallback(async () => {
+    try {
+      if (!("showOpenFilePicker" in window)) {
+        toast({
+          title: "File picker not supported",
+          description:
+            "Your browser doesn't support the File System Access API.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fileHandles = await (window as any).showOpenFilePicker({
+        types: [
+          {
+            description: "JSON files",
+            accept: { "application/json": [".json"] },
+          },
+        ],
+        multiple: false,
+      });
+
+      if (!fileHandles || fileHandles.length === 0) return;
+
+      const file = await fileHandles[0].getFile();
+      const text = await file.text();
+      const exportData: CurriculumExport = JSON.parse(text);
+
+      // Validate structure
+      if (
+        !exportData.tracks ||
+        !exportData.lessons ||
+        !exportData.skills ||
+        !Array.isArray(exportData.tracks) ||
+        !Array.isArray(exportData.lessons) ||
+        !Array.isArray(exportData.skills)
+      ) {
+        throw new Error("Invalid curriculum export format");
+      }
+
+      // Import the curriculum
+      const result = importCurriculumToGraph(exportData);
+
+      // Show warnings if any
+      if (result.warnings.length > 0) {
+        const warningMessages = result.warnings
+          .map((w) => w.message)
+          .join("\n");
+        toast({
+          title: "Import completed with warnings",
+          description: warningMessages,
+          variant: "default",
+        });
+      }
+
+      updateQuestData(result.data.nodes, result.data.edges);
+
+      toast({
+        title: "Curriculum imported",
+        description: `Imported ${exportData.tracks.length} tracks, ${exportData.lessons.length} lessons, and ${exportData.skills.length} skills.`,
+      });
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        toast({
+          title: "Error importing curriculum",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [toast, updateQuestData]);
+
   const handleEdgesDelete = useCallback(
     (deletedEdges: Edge[]) => {
       // Filter out deleted edges from current edges
@@ -888,7 +1356,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-screen h-screen m-0 p-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
+      <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
         <DialogHeader className="p-3 border-b h-16">
           <div className="flex items-center justify-between">
             <DialogTitle>Quest Editor</DialogTitle>
@@ -924,11 +1392,19 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={handleDownload}>
                     <Download className="h-4 w-4" />
-                    Download JSON
+                    Save as JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExport}>
+                    <Download className="h-4 w-4" />
+                    Export Produ JSON
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleOpen}>
                     <Upload className="h-4 w-4" />
                     Open JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleImport}>
+                    <FileText className="h-4 w-4" />
+                    Import
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -994,6 +1470,292 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                   autoFocus
                 />
               </div>
+              {editingNodeId &&
+                nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                  "track" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="trackKey">Track Key</Label>
+                      <Input
+                        id="trackKey"
+                        type="text"
+                        value={editingTrackKey}
+                        onChange={(e) => setEditingTrackKey(e.target.value)}
+                        aria-invalid={
+                          editingTrackKey &&
+                          (editingTrackKey.trim() === "" ||
+                            editingTrackKey.includes(" ") ||
+                            isTrackKeyInUse(
+                              editingTrackKey.trim(),
+                              editingNodeId
+                            ))
+                            ? "true"
+                            : "false"
+                        }
+                        className={
+                          editingTrackKey &&
+                          (editingTrackKey.trim() === "" ||
+                            editingTrackKey.includes(" ") ||
+                            isTrackKeyInUse(
+                              editingTrackKey.trim(),
+                              editingNodeId
+                            ))
+                            ? "border-destructive focus-visible:ring-destructive"
+                            : ""
+                        }
+                        placeholder="e.g., beginner-piano"
+                      />
+                      {editingTrackKey &&
+                        (editingTrackKey.trim() === "" ||
+                          editingTrackKey.includes(" ") ||
+                          isTrackKeyInUse(
+                            editingTrackKey.trim(),
+                            editingNodeId
+                          )) && (
+                          <p className="text-sm text-destructive">
+                            {editingTrackKey.trim() === ""
+                              ? "Track key cannot be empty"
+                              : editingTrackKey.includes(" ")
+                              ? "Track key cannot contain spaces"
+                              : "This track key is already in use"}
+                          </p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="order">Order</Label>
+                      <Input
+                        id="order"
+                        type="number"
+                        min="1"
+                        value={editingOrder}
+                        onChange={(e) => setEditingOrder(e.target.value)}
+                        aria-invalid={
+                          editingOrder &&
+                          (isNaN(parseInt(editingOrder, 10)) ||
+                            parseInt(editingOrder, 10) <= 0 ||
+                            !Number.isInteger(parseFloat(editingOrder)) ||
+                            isOrderInUse(
+                              parseInt(editingOrder, 10),
+                              editingNodeId
+                            ))
+                            ? "true"
+                            : "false"
+                        }
+                        className={
+                          editingOrder &&
+                          (isNaN(parseInt(editingOrder, 10)) ||
+                            parseInt(editingOrder, 10) <= 0 ||
+                            !Number.isInteger(parseFloat(editingOrder)) ||
+                            isOrderInUse(
+                              parseInt(editingOrder, 10),
+                              editingNodeId
+                            ))
+                            ? "border-destructive focus-visible:ring-destructive"
+                            : ""
+                        }
+                      />
+                      {editingOrder &&
+                        (isNaN(parseInt(editingOrder, 10)) ||
+                          parseInt(editingOrder, 10) <= 0 ||
+                          !Number.isInteger(parseFloat(editingOrder)) ||
+                          isOrderInUse(
+                            parseInt(editingOrder, 10),
+                            editingNodeId
+                          )) && (
+                          <p className="text-sm text-destructive">
+                            {isOrderInUse(
+                              parseInt(editingOrder, 10),
+                              editingNodeId
+                            )
+                              ? "This order number is already in use"
+                              : "Order must be a positive integer greater than 0"}
+                          </p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={editingDescription}
+                        onChange={(e) => setEditingDescription(e.target.value)}
+                        rows={4}
+                      />
+                    </div>
+                  </>
+                )}
+              {editingNodeId &&
+                nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                  "skill" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="skillKey">Skill Key</Label>
+                      <Input
+                        id="skillKey"
+                        type="text"
+                        value={editingSkillKey}
+                        onChange={(e) => setEditingSkillKey(e.target.value)}
+                        aria-invalid={
+                          editingSkillKey &&
+                          (editingSkillKey.trim() === "" ||
+                            editingSkillKey.includes(" ") ||
+                            isSkillKeyInUse(
+                              editingSkillKey.trim(),
+                              editingNodeId
+                            ))
+                            ? "true"
+                            : "false"
+                        }
+                        className={
+                          editingSkillKey &&
+                          (editingSkillKey.trim() === "" ||
+                            editingSkillKey.includes(" ") ||
+                            isSkillKeyInUse(
+                              editingSkillKey.trim(),
+                              editingNodeId
+                            ))
+                            ? "border-destructive focus-visible:ring-destructive"
+                            : ""
+                        }
+                        placeholder="e.g., piano_basics"
+                      />
+                      {editingSkillKey &&
+                        (editingSkillKey.trim() === "" ||
+                          editingSkillKey.includes(" ") ||
+                          isSkillKeyInUse(
+                            editingSkillKey.trim(),
+                            editingNodeId
+                          )) && (
+                          <p className="text-sm text-destructive">
+                            {editingSkillKey.trim() === ""
+                              ? "Skill key cannot be empty"
+                              : editingSkillKey.includes(" ")
+                              ? "Skill key cannot contain spaces"
+                              : "This skill key is already in use"}
+                          </p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={editingDescription}
+                        onChange={(e) => setEditingDescription(e.target.value)}
+                        rows={4}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="unlockGuidance">Unlock Guidance</Label>
+                      <Textarea
+                        id="unlockGuidance"
+                        value={editingUnlockGuidance}
+                        onChange={(e) =>
+                          setEditingUnlockGuidance(e.target.value)
+                        }
+                        rows={4}
+                      />
+                    </div>
+                  </>
+                )}
+              {editingNodeId &&
+                nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                  "lesson" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="lessonKey">Lesson Key</Label>
+                      <Input
+                        id="lessonKey"
+                        type="text"
+                        value={editingLessonKey}
+                        onChange={(e) => setEditingLessonKey(e.target.value)}
+                        aria-invalid={
+                          editingLessonKey &&
+                          (editingLessonKey.trim() === "" ||
+                            editingLessonKey.includes(" ") ||
+                            isLessonKeyInUse(
+                              editingLessonKey.trim(),
+                              editingNodeId
+                            ))
+                            ? "true"
+                            : "false"
+                        }
+                        className={
+                          editingLessonKey &&
+                          (editingLessonKey.trim() === "" ||
+                            editingLessonKey.includes(" ") ||
+                            isLessonKeyInUse(
+                              editingLessonKey.trim(),
+                              editingNodeId
+                            ))
+                            ? "border-destructive focus-visible:ring-destructive"
+                            : ""
+                        }
+                        placeholder="e.g., A1.1"
+                      />
+                      {editingLessonKey &&
+                        (editingLessonKey.trim() === "" ||
+                          editingLessonKey.includes(" ") ||
+                          isLessonKeyInUse(
+                            editingLessonKey.trim(),
+                            editingNodeId
+                          )) && (
+                          <p className="text-sm text-destructive">
+                            {editingLessonKey.trim() === ""
+                              ? "Lesson key cannot be empty"
+                              : editingLessonKey.includes(" ")
+                              ? "Lesson key cannot contain spaces"
+                              : "This lesson key is already in use"}
+                          </p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="goal">Goal</Label>
+                      <Input
+                        id="goal"
+                        type="text"
+                        value={editingGoal}
+                        onChange={(e) => setEditingGoal(e.target.value)}
+                        placeholder="e.g., Lock steady quarter notes to the metronome"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="setupGuidance">Setup Guidance</Label>
+                      <Textarea
+                        id="setupGuidance"
+                        value={editingSetupGuidance}
+                        onChange={(e) =>
+                          setEditingSetupGuidance(e.target.value)
+                        }
+                        rows={4}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="evaluationGuidance">
+                        Evaluation Guidance
+                      </Label>
+                      <Textarea
+                        id="evaluationGuidance"
+                        value={editingEvaluationGuidance}
+                        onChange={(e) =>
+                          setEditingEvaluationGuidance(e.target.value)
+                        }
+                        rows={4}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="difficultyGuidance">
+                        Difficulty Guidance
+                      </Label>
+                      <Textarea
+                        id="difficultyGuidance"
+                        value={editingDifficultyGuidance}
+                        onChange={(e) =>
+                          setEditingDifficultyGuidance(e.target.value)
+                        }
+                        rows={4}
+                      />
+                    </div>
+                  </>
+                )}
             </div>
             <SheetFooter>
               <Button variant="outline" onClick={handleCancelEdit}>
