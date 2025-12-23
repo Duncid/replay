@@ -304,18 +304,18 @@ export function TeacherWelcome({
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex items-center gap-2 flex-wrap">
-                {suggestion.difficulty.mode !== "same" && (
+                {suggestion.difficulty?.mode !== "same" && (
                   <Badge variant="secondary" className="flex items-center gap-1">
-                    {getDifficultyIcon(suggestion.difficulty.mode)}
-                    {getDifficultyLabel(suggestion.difficulty.mode)}
+                    {getDifficultyIcon(suggestion.difficulty?.mode || "")}
+                    {getDifficultyLabel(suggestion.difficulty?.mode || "")}
                   </Badge>
                 )}
-                {suggestion.setupHint.bpm && (
+                {suggestion.setupHint?.bpm && (
                   <Badge variant="outline" className="text-xs">
                     {suggestion.setupHint.bpm} BPM
                   </Badge>
                 )}
-                {suggestion.setupHint.meter && (
+                {suggestion.setupHint?.meter && (
                   <Badge variant="outline" className="text-xs">
                     {suggestion.setupHint.meter}
                   </Badge>
