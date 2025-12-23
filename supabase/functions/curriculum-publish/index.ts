@@ -55,6 +55,7 @@ interface ValidationWarning {
   type: string;
   message: string;
   nodeId?: string;
+  edgeId?: string;
 }
 
 interface PublishRequest {
@@ -465,27 +466,30 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Helper function to query curriculum schema tables via PostgREST
-    // NOTE: This requires the 'curriculum' schema to be exposed in Supabase API settings
-    // If this doesn't work, you may need to:
-    // 1. Expose the schema in Supabase Dashboard → API Settings → Exposed Schemas
-    // 2. Or use RPC functions with raw SQL instead
+    // The curriculum schema tables are accessed via schema-qualified names
     const queryCurriculumSchema = async (
-      table: string,
-      method: "GET" | "POST" | "PUT" | "DELETE",
+      tableWithFilters: string,
+      method: "GET" | "POST" | "PATCH" | "DELETE",
       body?: unknown
     ) => {
-      // PostgREST uses ?query=value format for filters in URL
-      // Try schema-qualified name first
-      let url = `${supabaseUrl}/rest/v1/curriculum.${table}`;
+      // Extract table name and filters (e.g., "curriculum_versions?id=eq.xxx")
+      const [table, filters] = tableWithFilters.split("?");
+      let url = `${supabaseUrl}/rest/v1/${table}`;
+      if (filters) {
+        url += `?${filters}`;
+      }
       
       const headers: Record<string, string> = {
         "apikey": supabaseServiceKey,
         "Authorization": `Bearer ${supabaseServiceKey}`,
         "Content-Type": "application/json",
+        // Request access to curriculum schema
+        "Accept-Profile": "curriculum",
+        "Content-Profile": "curriculum",
       };
 
-      // For POST/PUT, we want to return the inserted/updated data
-      if (method === "POST" || method === "PUT") {
+      // For POST/PATCH, we want to return the inserted/updated data
+      if (method === "POST" || method === "PATCH") {
         headers["Prefer"] = "return=representation";
       }
 
@@ -494,17 +498,20 @@ serve(async (req) => {
         headers,
       };
 
-      if (body && (method === "POST" || method === "PUT")) {
+      if (body && (method === "POST" || method === "PATCH")) {
         options.body = JSON.stringify(body);
       }
 
+      console.log(`[curriculum-publish] ${method} ${url}`);
       const response = await fetch(url, options);
+      
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`[curriculum-publish] PostgREST error: ${response.status} ${errorText}`);
         throw new Error(`PostgREST error: ${response.status} ${errorText}`);
       }
 
-      if (method === "GET" || method === "POST" || method === "PUT") {
+      if (method === "GET" || method === "POST" || method === "PATCH") {
         const text = await response.text();
         return text ? JSON.parse(text) : null;
       }
@@ -627,14 +634,18 @@ serve(async (req) => {
     let version;
     try {
       version = await queryCurriculumSchema("curriculum_versions", "POST", {
-        status: "draft",
         title: versionTitle,
-        source: {
-          quest_graph_id: questGraphId,
-          published_at: new Date().toISOString(),
-        },
+        source_graph_id: questGraphId,
+        status: "publishing",
+        node_count: counts.nodes,
+        edge_count: counts.edges,
+        track_count: counts.tracks,
+        lesson_count: counts.lessons,
+        skill_count: counts.skills,
       });
+      console.log("[curriculum-publish] Created version:", version);
     } catch (error) {
+      console.error("[curriculum-publish] Failed to create version:", error);
       return new Response(
         JSON.stringify({ success: false, errors: [`Failed to create version: ${error instanceof Error ? error.message : "Unknown error"}`] }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -691,22 +702,16 @@ serve(async (req) => {
     }
 
     // 3. Insert edges
-    const edgeInserts = runtimeData.edges
-      .map(edge => {
-        const fromNodeId = keyToCurriculumNodeId.get(edge.fromKey);
-        const toNodeId = keyToCurriculumNodeId.get(edge.toKey);
-        if (!fromNodeId || !toNodeId) return null;
-        return {
-          version_id: versionId,
-          from_node_id: fromNodeId,
-          to_node_id: toNodeId,
-          type: edge.type,
-        };
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null);
+    const edgeInserts = runtimeData.edges.map(edge => ({
+      version_id: versionId,
+      from_key: edge.fromKey,
+      to_key: edge.toKey,
+      edge_type: edge.type,
+    }));
 
     try {
       await queryCurriculumSchema("curriculum_edges", "POST", edgeInserts);
+      console.log("[curriculum-publish] Inserted edges:", edgeInserts.length);
     } catch (error) {
       // Cleanup: delete nodes and version
       try {
@@ -723,8 +728,9 @@ serve(async (req) => {
     try {
       await queryCurriculumSchema("curriculum_exports", "POST", {
         version_id: versionId,
-        exported_json: exportJson,
+        export_data: exportJson,
       });
+      console.log("[curriculum-publish] Inserted export snapshot");
     } catch (error) {
       // Cleanup: delete edges, nodes, and version
       try {
@@ -740,11 +746,14 @@ serve(async (req) => {
 
     // 5. Update version status to published
     try {
-      // PostgREST PUT requires the filter in the URL
-      await queryCurriculumSchema(`curriculum_versions?id=eq.${versionId}`, "PUT", { status: "published" });
+      await queryCurriculumSchema(`curriculum_versions?id=eq.${versionId}`, "PATCH", { 
+        status: "published",
+        published_at: new Date().toISOString(),
+      });
+      console.log("[curriculum-publish] Updated version status to published");
     } catch (error) {
       // Version exists but status update failed - still return success with warning
-      console.error("Failed to update version status:", error);
+      console.error("[curriculum-publish] Failed to update version status:", error);
     }
 
     const publishedAt = new Date().toISOString();

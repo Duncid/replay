@@ -1,21 +1,21 @@
 /**
  * Test fixture for importCurriculumToGraph
  *
- * This file contains a small test curriculum export and verification
+ * This file contains a small test curriculum and verification
  * that the import function correctly generates nodes and edges.
  */
 
-import { CurriculumExport } from "@/types/quest";
-import { importCurriculumToGraph } from "../importCurriculumToGraph";
+import { importCurriculumToGraph, SchemaImportFormat } from "../importCurriculumToGraph";
 
 // Test fixture: Small curriculum with tracks, lessons, and skills
-const testCurriculumExport: CurriculumExport = {
+// Uses SchemaImportFormat which expects nextLessons on tracks and nextLesson on lessons
+const testSchemaImport: SchemaImportFormat = {
   tracks: [
     {
       trackKey: "beginner-piano",
       title: "Beginner Piano",
       description: "Introduction to piano basics",
-      lessonKeys: ["learn-c-major", "learn-f-major"],
+      nextLessons: ["learn-c-major"],
       requiresSkills: [],
     },
   ],
@@ -27,19 +27,17 @@ const testCurriculumExport: CurriculumExport = {
       setupGuidance: "Place hands in C position",
       evaluationGuidance: "Play all notes smoothly without errors",
       difficultyGuidance: "Beginner level - focus on hand position",
-      trackKey: "beginner-piano",
       requiresSkills: [],
       awardsSkills: ["c-major-scale"],
-      nextLessons: ["learn-f-major"],
+      nextLesson: "learn-f-major",
     },
     {
       lessonKey: "learn-f-major",
       title: "Learn F Major Scale",
       goal: "Play the F major scale",
-      trackKey: "beginner-piano",
       requiresSkills: ["c-major-scale"],
       awardsSkills: ["f-major-scale"],
-      nextLessons: [],
+      nextLesson: null,
     },
   ],
   skills: [
@@ -48,17 +46,11 @@ const testCurriculumExport: CurriculumExport = {
       title: "C Major Scale",
       description: "Ability to play C major scale",
       unlockGuidance: "You've mastered the C major scale!",
-      requiredByLessons: ["learn-f-major"],
-      awardedByLessons: ["learn-c-major"],
-      requiredByTracks: [],
     },
     {
       skillKey: "f-major-scale",
       title: "F Major Scale",
       description: "Ability to play F major scale",
-      requiredByLessons: [],
-      awardedByLessons: ["learn-f-major"],
-      requiredByTracks: [],
     },
   ],
 };
@@ -67,7 +59,7 @@ const testCurriculumExport: CurriculumExport = {
 export function verifyImport() {
   console.log("Testing importCurriculumToGraph...");
 
-  const result = importCurriculumToGraph(testCurriculumExport);
+  const result = importCurriculumToGraph(testSchemaImport);
 
   // Verify node counts
   const trackNodes = result.data.nodes.filter((n) => n.data.type === "track");
