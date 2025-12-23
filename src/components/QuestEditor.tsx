@@ -1945,12 +1945,27 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
                         <FileJson className="h-4 w-4" />
-                        Graph Export
+                        Export / Import
                       </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
+                      <DropdownMenuSubContent className="w-48">
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">
+                          Schema
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem onClick={handleExportSchema}>
+                          <Download className="h-4 w-4" />
+                          Export Schema
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleImport}>
+                          <Upload className="h-4 w-4" />
+                          Import Schema
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">
+                          Graph
+                        </DropdownMenuLabel>
                         <DropdownMenuItem onClick={handleDownload}>
                           <Download className="h-4 w-4" />
-                          Save as JSON
+                          Export JSON
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleOpenFile}>
                           <Upload className="h-4 w-4" />
@@ -1958,14 +1973,6 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
-                    <DropdownMenuItem onClick={handleExportSchema}>
-                      <Download className="h-4 w-4" />
-                      Export Schema
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleImport}>
-                      <FileOutput className="h-4 w-4" />
-                      Import Schema
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handlePublish}
