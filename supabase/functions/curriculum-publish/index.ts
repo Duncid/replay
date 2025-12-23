@@ -584,6 +584,11 @@ serve(async (req) => {
         description: n.description,
         unlockGuidance: (n.data as { unlockGuidance?: string }).unlockGuidance,
       })),
+      edges: runtimeData.edges.map(e => ({
+        source_key: e.fromKey,
+        target_key: e.toKey,
+        edge_type: e.type,
+      })),
     };
 
     // Counts
