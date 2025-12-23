@@ -532,6 +532,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const [renameDialogTitle, setRenameDialogTitle] = useState("");
   const [publishDialogTitle, setPublishDialogTitle] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isDryRunValid, setIsDryRunValid] = useState(false);
   const [publishResult, setPublishResult] = useState<{
     success: boolean;
     versionId?: string;
@@ -565,11 +566,12 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const [editingDifficultyGuidance, setEditingDifficultyGuidance] =
     useState<string>("");
 
-  // Track unsaved changes
+  // Track unsaved changes and reset dry run validity
   useEffect(() => {
     const currentData = JSON.stringify({ nodes, edges });
     if (lastSavedDataRef.current && lastSavedDataRef.current !== currentData) {
       setHasUnsavedChanges(true);
+      setIsDryRunValid(false); // Reset validation when graph changes
     }
   }, [nodes, edges]);
 
@@ -1507,13 +1509,15 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       });
 
       if (data.success) {
+        setIsDryRunValid(true);
         toast({
           title: "Validation passed",
           description: `Graph is valid: ${data.counts?.nodes || 0} nodes, ${
             data.counts?.edges || 0
-          } edges. ${data.warnings?.length || 0} warnings.`,
+          } edges. ${data.warnings?.length || 0} warnings. You can now publish.`,
         });
       } else {
+        setIsDryRunValid(false);
         toast({
           title: "Validation failed",
           description: `${data.errors?.length || 0} errors found.`,
@@ -1959,20 +1963,20 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={handlePublish}
-                      disabled={
-                        !currentGraph || isDbLoading || hasUnsavedChanges
-                      }
-                    >
-                      <Rocket className="h-4 w-4" />
-                      Publish
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
                       onClick={handleDryRun}
                       disabled={!currentGraph || isDbLoading}
                     >
                       <Rocket className="h-4 w-4" />
                       Validate (Dry Run)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handlePublish}
+                      disabled={
+                        !currentGraph || isDbLoading || hasUnsavedChanges || !isDryRunValid
+                      }
+                    >
+                      <Rocket className="h-4 w-4" />
+                      Publish
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
