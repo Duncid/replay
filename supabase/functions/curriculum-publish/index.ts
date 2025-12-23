@@ -201,6 +201,8 @@ function validateGraphStructure(
   
   const skillKeys = new Set<string>();
   const trackStartLessons = new Map<string, string[]>(); // track nodeId -> lesson nodeIds
+  const lessonsWithIncomingEdges = new Set<string>(); // lesson nodeIds that have incoming lesson-in edges
+  const skillsWithUnlockedBy = new Set<string>(); // skill nodeIds that have incoming skill-unlockable edges
 
   // Collect skill keys
   for (const node of nodes) {
@@ -209,11 +211,12 @@ function validateGraphStructure(
     }
   }
 
-  // Collect track start lessons
+  // Analyze edges to collect relationship data
   for (const edge of edges) {
     const sourceNode = nodeIdMap.get(edge.source);
     const targetNode = nodeIdMap.get(edge.target);
     
+    // Track -> Lesson (track start lessons)
     if (
       sourceNode?.data.type === "track" &&
       targetNode?.data.type === "lesson" &&
@@ -224,6 +227,27 @@ function validateGraphStructure(
         trackStartLessons.set(edge.source, []);
       }
       trackStartLessons.get(edge.source)!.push(edge.target);
+      lessonsWithIncomingEdges.add(edge.target);
+    }
+    
+    // Lesson -> Lesson (lesson chain)
+    if (
+      sourceNode?.data.type === "lesson" &&
+      targetNode?.data.type === "lesson" &&
+      edge.sourceHandle === "lesson-out" &&
+      edge.targetHandle === "lesson-in"
+    ) {
+      lessonsWithIncomingEdges.add(edge.target);
+    }
+    
+    // Lesson -> Skill (skill unlocked by)
+    if (
+      sourceNode?.data.type === "lesson" &&
+      targetNode?.data.type === "skill" &&
+      edge.sourceHandle === "lesson-unlockable" &&
+      edge.targetHandle === "skill-unlockable"
+    ) {
+      skillsWithUnlockedBy.add(edge.target);
     }
   }
 
@@ -234,14 +258,40 @@ function validateGraphStructure(
       if (startLessons.length === 0) {
         warnings.push({
           type: "track_no_start",
-          message: `Track ${node.data.trackKey || node.id} has no start lessons`,
+          message: `Track "${node.data.trackKey || node.id}" has no start lessons`,
           nodeId: node.id,
         });
       }
     }
   }
 
-  // Check for cycles in lesson_next chain (optional warning)
+  // Check for orphan lessons (lessons with no incoming lesson-in edge from track or previous lesson)
+  for (const node of nodes) {
+    if (node.data.type === "lesson") {
+      if (!lessonsWithIncomingEdges.has(node.id)) {
+        warnings.push({
+          type: "orphan_lesson",
+          message: `Lesson "${node.data.lessonKey || node.id}" has no previous lesson or track connection`,
+          nodeId: node.id,
+        });
+      }
+    }
+  }
+
+  // Check for orphan skills (skills with no "unlocked by" connection)
+  for (const node of nodes) {
+    if (node.data.type === "skill") {
+      if (!skillsWithUnlockedBy.has(node.id)) {
+        warnings.push({
+          type: "orphan_skill",
+          message: `Skill "${node.data.skillKey || node.id}" is not unlocked by any lesson`,
+          nodeId: node.id,
+        });
+      }
+    }
+  }
+
+  // Check for cycles in lesson_next chain
   const lessonNextMap = new Map<string, string>(); // lesson nodeId -> next lesson nodeId
   for (const edge of edges) {
     const sourceNode = nodeIdMap.get(edge.source);
@@ -283,9 +333,9 @@ function validateGraphStructure(
 
   for (const nodeId of lessonNextMap.keys()) {
     if (!visited.has(nodeId) && hasCycle(nodeId)) {
-      warnings.push({
+      errors.push({
         type: "lesson_cycle",
-        message: "Cycle detected in lesson_next chain",
+        message: "Cycle detected in lesson chain - this will cause infinite loops",
         nodeId,
       });
     }

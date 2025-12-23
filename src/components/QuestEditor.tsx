@@ -531,11 +531,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const [saveDialogTitle, setSaveDialogTitle] = useState("");
   const [renameDialogTitle, setRenameDialogTitle] = useState("");
   const [publishDialogTitle, setPublishDialogTitle] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [isDryRunValid, setIsDryRunValid] = useState(false);
-  const [publishResult, setPublishResult] = useState<{
-    success: boolean;
-    versionId?: string;
+  const [validationResult, setValidationResult] = useState<{
+    validated: boolean;
     errors?: string[];
     warnings?: string[];
     counts?: {
@@ -545,6 +544,11 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       lessons: number;
       skills: number;
     };
+  } | null>(null);
+  const [publishResult, setPublishResult] = useState<{
+    success: boolean;
+    versionId?: string;
+    publishedAt?: string;
   } | null>(null);
   const [pendingLoadGraph, setPendingLoadGraph] = useState<QuestGraph | null>(
     null
@@ -566,12 +570,11 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const [editingDifficultyGuidance, setEditingDifficultyGuidance] =
     useState<string>("");
 
-  // Track unsaved changes and reset dry run validity
+  // Track unsaved changes
   useEffect(() => {
     const currentData = JSON.stringify({ nodes, edges });
     if (lastSavedDataRef.current && lastSavedDataRef.current !== currentData) {
       setHasUnsavedChanges(true);
-      setIsDryRunValid(false); // Reset validation when graph changes
     }
   }, [nodes, edges]);
 
@@ -1368,36 +1371,93 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [toast, updateQuestData]);
 
-  const handlePublish = useCallback(async () => {
+  // Unified publish flow - opens dialog and auto-runs validation
+  const handlePublish = useCallback(() => {
     if (!currentGraph) {
       toast({
         title: "No graph selected",
-        description: "Please save your graph first before publishing.",
+        description: "Please save or select a graph first.",
         variant: "destructive",
       });
       return;
     }
 
-    // Ensure graph is saved first
-    if (hasUnsavedChanges) {
-      toast({
-        title: "Unsaved changes",
-        description: "Please save your graph before publishing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // Reset all state
     setPublishDialogTitle(currentGraph.title);
+    setValidationResult(null);
     setPublishResult(null);
     setShowPublishDialog(true);
-  }, [currentGraph, hasUnsavedChanges, toast]);
+  }, [currentGraph, toast]);
+
+  // Auto-validate when dialog opens
+  const runValidation = useCallback(async () => {
+    if (!currentGraph) return;
+
+    setIsValidating(true);
+    setValidationResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "curriculum-publish",
+        {
+          body: {
+            questGraphId: currentGraph.id,
+            mode: "dryRun",
+          },
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      setValidationResult({
+        validated: true,
+        errors: data.errors,
+        warnings: data.warnings,
+        counts: data.counts,
+      });
+    } catch (error) {
+      console.error("Validation error:", error);
+      let errorMessage = "Unknown error";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        if (
+          error.message.includes("Failed to send") ||
+          error.message.includes("fetch failed")
+        ) {
+          errorMessage =
+            "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function.";
+        }
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error
+      ) {
+        errorMessage = String(error.message);
+      }
+
+      setValidationResult({
+        validated: true,
+        errors: [errorMessage],
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  }, [currentGraph]);
+
+  // Run validation when dialog opens
+  useEffect(() => {
+    if (showPublishDialog && currentGraph && !validationResult && !isValidating) {
+      runValidation();
+    }
+  }, [showPublishDialog, currentGraph, validationResult, isValidating, runValidation]);
 
   const confirmPublish = useCallback(async () => {
     if (!currentGraph) return;
 
     setIsPublishing(true);
-    setPublishResult(null);
 
     try {
       const { data, error } = await supabase.functions.invoke(
@@ -1419,21 +1479,16 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         setPublishResult({
           success: true,
           versionId: data.versionId,
-          warnings: data.warnings,
-          counts: data.counts,
+          publishedAt: data.publishedAt,
         });
         toast({
           title: "Published successfully",
-          description: `Version ${data.versionId?.substring(
-            0,
-            8
-          )}... published with ${data.counts?.nodes || 0} nodes and ${
-            data.counts?.edges || 0
-          } edges.`,
+          description: `Version ${data.versionId?.substring(0, 8)}... published.`,
         });
       } else {
-        setPublishResult({
-          success: false,
+        // Re-run validation to show the errors
+        setValidationResult({
+          validated: true,
           errors: data.errors,
           warnings: data.warnings,
           counts: data.counts,
@@ -1450,13 +1505,12 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
       if (error instanceof Error) {
         errorMessage = error.message;
-        // Check for common Edge Function errors
         if (
           error.message.includes("Failed to send") ||
           error.message.includes("fetch failed")
         ) {
           errorMessage =
-            "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function using: supabase functions deploy curriculum-publish";
+            "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function.";
         }
       } else if (
         typeof error === "object" &&
@@ -1466,8 +1520,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         errorMessage = String(error.message);
       }
 
-      setPublishResult({
-        success: false,
+      setValidationResult({
+        validated: true,
         errors: [errorMessage],
       });
       toast({
@@ -1480,86 +1534,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [currentGraph, publishDialogTitle, toast]);
 
-  const handleDryRun = useCallback(async () => {
-    if (!currentGraph) return;
-
-    setIsPublishing(true);
-    setPublishResult(null);
-
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "curriculum-publish",
-        {
-          body: {
-            questGraphId: currentGraph.id,
-            mode: "dryRun",
-          },
-        }
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      setPublishResult({
-        success: data.success,
-        errors: data.errors,
-        warnings: data.warnings,
-        counts: data.counts,
-      });
-
-      if (data.success) {
-        setIsDryRunValid(true);
-        const needsSave = hasUnsavedChanges;
-        toast({
-          title: "Validation passed",
-          description: needsSave
-            ? `Graph is valid (${data.counts?.nodes || 0} nodes, ${data.counts?.edges || 0} edges). Save your graph to enable publishing.`
-            : `Graph is valid: ${data.counts?.nodes || 0} nodes, ${data.counts?.edges || 0} edges. You can now publish.`,
-        });
-      } else {
-        setIsDryRunValid(false);
-        toast({
-          title: "Validation failed",
-          description: `${data.errors?.length || 0} errors found.`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Dry run error:", error);
-      let errorMessage = "Unknown error";
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        // Check for common Edge Function errors
-        if (
-          error.message.includes("Failed to send") ||
-          error.message.includes("fetch failed")
-        ) {
-          errorMessage =
-            "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function using: supabase functions deploy curriculum-publish";
-        }
-      } else if (
-        typeof error === "object" &&
-        error !== null &&
-        "message" in error
-      ) {
-        errorMessage = String(error.message);
-      }
-
-      setPublishResult({
-        success: false,
-        errors: [errorMessage],
-      });
-      toast({
-        title: "Dry run error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsPublishing(false);
-    }
-  }, [currentGraph, hasUnsavedChanges, toast]);
+  const hasValidationErrors = validationResult?.errors && validationResult.errors.length > 0;
+  const canPublish = validationResult?.validated && !hasValidationErrors && !publishResult?.success;
 
   const handleExportSchema = useCallback(async () => {
     try {
@@ -1964,17 +1940,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={handleDryRun}
-                      disabled={!currentGraph || isDbLoading}
-                    >
-                      <Rocket className="h-4 w-4" />
-                      Validate (Dry Run)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
                       onClick={handlePublish}
-                      disabled={
-                        !currentGraph || isDbLoading || hasUnsavedChanges || !isDryRunValid
-                      }
+                      disabled={!currentGraph || isDbLoading}
                     >
                       <Rocket className="h-4 w-4" />
                       Publish
@@ -2407,12 +2374,19 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       </AlertDialog>
 
       {/* Publish Dialog */}
-      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+      <Dialog open={showPublishDialog} onOpenChange={(open) => {
+        setShowPublishDialog(open);
+        if (!open) {
+          setValidationResult(null);
+          setPublishResult(null);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Publish Curriculum</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Version Title Input */}
             <div>
               <Label htmlFor="publishTitle">Version Title</Label>
               <Input
@@ -2420,84 +2394,92 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                 value={publishDialogTitle}
                 onChange={(e) => setPublishDialogTitle(e.target.value)}
                 placeholder="Enter version title (optional)"
-                disabled={isPublishing}
+                disabled={isValidating || isPublishing || publishResult?.success}
               />
             </div>
 
-            {publishResult && (
-              <div className="space-y-2">
-                {publishResult.success ? (
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
-                    <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
-                      Published Successfully
-                    </h4>
-                    {publishResult.versionId && (
-                      <p className="text-sm text-green-800 dark:text-green-200">
-                        Version ID: {publishResult.versionId}
-                      </p>
-                    )}
-                    {publishResult.counts && (
-                      <div className="mt-2 text-sm text-green-800 dark:text-green-200">
-                        <p>
-                          {publishResult.counts.nodes} nodes (
-                          {publishResult.counts.tracks} tracks,{" "}
-                          {publishResult.counts.lessons} lessons,{" "}
-                          {publishResult.counts.skills} skills)
-                        </p>
-                        <p>{publishResult.counts.edges} edges</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
-                      Publish Failed
-                    </h4>
-                    {publishResult.errors &&
-                      publishResult.errors.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                            Errors:
-                          </p>
-                          <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 mt-1">
-                            {publishResult.errors.map((error, idx) => (
-                              <li key={idx}>{error}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                  </div>
-                )}
-
-                {publishResult.warnings &&
-                  publishResult.warnings.length > 0 && (
-                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
-                        Warnings ({publishResult.warnings.length})
-                      </h4>
-                      <ul className="list-disc list-inside text-sm text-yellow-800 dark:text-yellow-200">
-                        {publishResult.warnings.map((warning, idx) => (
-                          <li key={idx}>{warning}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+            {/* Loading State */}
+            {isValidating && (
+              <div className="p-4 bg-muted rounded-md flex items-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                <span className="text-sm text-muted-foreground">Validating graph...</span>
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
+            {/* Publish Success */}
+            {publishResult?.success && (
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                  ✓ Published Successfully
+                </h4>
+                {publishResult.versionId && (
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    Version ID: {publishResult.versionId}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Critical Errors */}
+            {!publishResult?.success && hasValidationErrors && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                  🔴 Critical Errors ({validationResult?.errors?.length || 0})
+                </h4>
+                <p className="text-xs text-red-700 dark:text-red-300 mb-2">
+                  These must be fixed before publishing
+                </p>
+                <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
+                  {validationResult?.errors?.map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {validationResult?.warnings && validationResult.warnings.length > 0 && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                  ⚠️ Warnings ({validationResult.warnings.length})
+                </h4>
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
+                  Non-blocking issues - you can still publish
+                </p>
+                <ul className="list-disc list-inside text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
+                  {validationResult.warnings.map((warning, idx) => (
+                    <li key={idx}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Stats */}
+            {validationResult?.counts && !publishResult?.success && (
+              <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
+                <span className="font-medium">Stats:</span>{" "}
+                {validationResult.counts.nodes} nodes ({validationResult.counts.tracks} tracks, {validationResult.counts.lessons} lessons, {validationResult.counts.skills} skills), {validationResult.counts.edges} edges
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2">
               <Button
                 variant="outline"
                 onClick={() => {
                   setShowPublishDialog(false);
+                  setValidationResult(null);
                   setPublishResult(null);
                 }}
-                disabled={isPublishing}
+                disabled={isValidating || isPublishing}
               >
-                Close
+                {publishResult?.success ? "Close" : "Cancel"}
               </Button>
-              {!publishResult && (
-                <Button onClick={confirmPublish} disabled={isPublishing}>
+              {!publishResult?.success && (
+                <Button 
+                  onClick={confirmPublish} 
+                  disabled={isValidating || isPublishing || !canPublish}
+                >
                   {isPublishing ? "Publishing..." : "Publish"}
                 </Button>
               )}
