@@ -432,6 +432,7 @@ export function LearnMode({
           isLoading={isLoadingTeacher}
           onSelectActivity={handleSelectActivity}
           onFreePractice={handleFreePractice}
+          language={language}
         />
       ) : lesson.phase === "prompt" ? (
         /* Initial Prompt Input */

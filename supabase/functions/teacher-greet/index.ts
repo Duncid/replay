@@ -99,7 +99,7 @@ serve(async (req) => {
   }
 
   try {
-    const { language = "en" } = await req.json();
+    const { language = "en", debug = false } = await req.json();
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -132,46 +132,68 @@ serve(async (req) => {
       );
     }
 
+    // Snapshot schema: { tracks, lessons, skills, edges }
     const snapshot = exportData.snapshot as {
-      nodes: Array<{ node_key: string; node_type: string; data: Record<string, unknown> }>;
-      edges: Array<{ source_key: string; target_key: string; edge_type: string }>;
+      tracks: Array<{ trackKey: string; title: string; description?: string }>;
+      lessons: Array<{
+        lessonKey: string;
+        title: string;
+        goal?: string;
+        setupGuidance?: string;
+        evaluationGuidance?: string;
+        difficultyGuidance?: string;
+      }>;
+      skills: Array<{
+        skillKey: string;
+        title: string;
+        description?: string;
+        unlockGuidance?: string;
+      }>;
+      edges?: Array<{ source_key: string; target_key: string; edge_type: string }>;
     };
 
-    // Parse curriculum data
-    const tracks: TrackNode[] = [];
-    const lessons: Map<string, LessonNode> = new Map();
-    const skills: Map<string, SkillNode> = new Map();
-    const edges: Edge[] = snapshot.edges || [];
+    // Parse curriculum data from snapshot
+    const edges: Edge[] = (snapshot.edges || []).map(e => ({
+      source_key: e.source_key,
+      target_key: e.target_key,
+      edge_type: e.edge_type,
+    }));
 
-    for (const node of snapshot.nodes || []) {
-      if (node.node_type === "track") {
-        const startEdge = edges.find(
-          (e) => e.source_key === node.node_key && e.edge_type === "track_starts_with"
-        );
-        tracks.push({
-          key: node.node_key,
-          title: (node.data?.title as string) || node.node_key,
-          description: node.data?.description as string,
-          startLesson: startEdge?.target_key,
-        });
-      } else if (node.node_type === "lesson") {
-        lessons.set(node.node_key, {
-          key: node.node_key,
-          title: (node.data?.title as string) || node.node_key,
-          goal: (node.data?.goal as string) || "",
-          setupGuidance: node.data?.setupGuidance as string,
-          evaluationGuidance: node.data?.evaluationGuidance as string,
-          difficultyGuidance: node.data?.difficultyGuidance as string,
-        });
-      } else if (node.node_type === "skill") {
-        skills.set(node.node_key, {
-          key: node.node_key,
-          title: (node.data?.title as string) || node.node_key,
-          description: node.data?.description as string,
-          unlockGuidance: node.data?.unlockGuidance as string,
-        });
-      }
+    const tracks: TrackNode[] = (snapshot.tracks || []).map(t => {
+      const startEdge = edges.find(
+        (e) => e.source_key === t.trackKey && e.edge_type === "track_starts_with"
+      );
+      return {
+        key: t.trackKey,
+        title: t.title || t.trackKey,
+        description: t.description,
+        startLesson: startEdge?.target_key,
+      };
+    });
+
+    const lessons: Map<string, LessonNode> = new Map();
+    for (const l of snapshot.lessons || []) {
+      lessons.set(l.lessonKey, {
+        key: l.lessonKey,
+        title: l.title || l.lessonKey,
+        goal: l.goal || "",
+        setupGuidance: l.setupGuidance,
+        evaluationGuidance: l.evaluationGuidance,
+        difficultyGuidance: l.difficultyGuidance,
+      });
     }
+
+    const skills: Map<string, SkillNode> = new Map();
+    for (const s of snapshot.skills || []) {
+      skills.set(s.skillKey, {
+        key: s.skillKey,
+        title: s.title || s.skillKey,
+        description: s.description,
+        unlockGuidance: s.unlockGuidance,
+      });
+    }
+
+    console.log(`[teacher-greet] Curriculum loaded: ${tracks.length} tracks, ${lessons.size} lessons, ${skills.size} skills, ${edges.length} edges`);
 
     // Build edge lookups
     const lessonNextEdges = edges.filter((e) => e.edge_type === "lesson_next");
@@ -441,6 +463,33 @@ OUTPUT JSON SCHEMA:
   ],
   "notes": "string|null"
 }`;
+
+    // If debug mode, return context without calling LLM
+    if (debug) {
+      const fullPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
+      return new Response(
+        JSON.stringify({
+          debug: true,
+          curriculum: {
+            tracksCount: tracks.length,
+            lessonsCount: lessons.size,
+            skillsCount: skills.size,
+            edgesCount: edges.length,
+            tracks: tracksSummary,
+            lessons: lessonsSummary.slice(0, 10),
+            skills: skillsSummary,
+          },
+          candidates,
+          signals: {
+            timeSinceLastPracticeHours,
+            recentRunsCount: lessonRuns.length,
+            unlockedSkillsCount: unlockedSkills.size,
+          },
+          prompt: fullPrompt,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 7. Call LLM
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
