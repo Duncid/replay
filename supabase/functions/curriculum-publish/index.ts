@@ -515,59 +515,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Helper function to query curriculum schema tables via PostgREST
-    // The curriculum schema tables are accessed via schema-qualified names
-    const queryCurriculumSchema = async (
-      tableWithFilters: string,
-      method: "GET" | "POST" | "PATCH" | "DELETE",
-      body?: unknown
-    ) => {
-      // Extract table name and filters (e.g., "curriculum_versions?id=eq.xxx")
-      const [table, filters] = tableWithFilters.split("?");
-      let url = `${supabaseUrl}/rest/v1/${table}`;
-      if (filters) {
-        url += `?${filters}`;
-      }
-      
-      const headers: Record<string, string> = {
-        "apikey": supabaseServiceKey,
-        "Authorization": `Bearer ${supabaseServiceKey}`,
-        "Content-Type": "application/json",
-        // Request access to curriculum schema
-        "Accept-Profile": "curriculum",
-        "Content-Profile": "curriculum",
-      };
-
-      // For POST/PATCH, we want to return the inserted/updated data
-      if (method === "POST" || method === "PATCH") {
-        headers["Prefer"] = "return=representation";
-      }
-
-      const options: RequestInit = {
-        method,
-        headers,
-      };
-
-      if (body && (method === "POST" || method === "PATCH")) {
-        options.body = JSON.stringify(body);
-      }
-
-      console.log(`[curriculum-publish] ${method} ${url}`);
-      const response = await fetch(url, options);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[curriculum-publish] PostgREST error: ${response.status} ${errorText}`);
-        throw new Error(`PostgREST error: ${response.status} ${errorText}`);
-      }
-
-      if (method === "GET" || method === "POST" || method === "PATCH") {
-        const text = await response.text();
-        return text ? JSON.parse(text) : null;
-      }
-      return null;
-    };
-
     // Load quest graph
     const { data: questGraph, error: loadError } = await supabase
       .from("quest_graphs")
@@ -679,139 +626,146 @@ serve(async (req) => {
     // but we can use RPC functions or execute sequentially with error handling
     // For now, we'll do sequential inserts and handle errors
 
+    // First, get the next version number for this quest graph
+    const { data: existingVersions, error: versionQueryError } = await supabase
+      .from("curriculum_versions")
+      .select("version_number")
+      .eq("quest_graph_id", questGraphId)
+      .order("version_number", { ascending: false })
+      .limit(1);
+
+    if (versionQueryError) {
+      console.error("[curriculum-publish] Failed to query existing versions:", versionQueryError);
+      return new Response(
+        JSON.stringify({ success: false, errors: [`Failed to query versions: ${versionQueryError.message}`] }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const nextVersionNumber = (existingVersions?.[0]?.version_number ?? 0) + 1;
+
     // 1. Create version
     const versionTitle = publishTitle || `Published from ${questGraph.title}`;
-    let version;
-    try {
-      version = await queryCurriculumSchema("curriculum_versions", "POST", {
+    const { data: versionData, error: versionError } = await supabase
+      .from("curriculum_versions")
+      .insert({
+        quest_graph_id: questGraphId,
+        version_number: nextVersionNumber,
         title: versionTitle,
-        source_graph_id: questGraphId,
         status: "publishing",
-        node_count: counts.nodes,
-        edge_count: counts.edges,
-        track_count: counts.tracks,
-        lesson_count: counts.lessons,
-        skill_count: counts.skills,
-      });
-      console.log("[curriculum-publish] Created version:", version);
-    } catch (error) {
-      console.error("[curriculum-publish] Failed to create version:", error);
+      })
+      .select()
+      .single();
+
+    if (versionError || !versionData) {
+      console.error("[curriculum-publish] Failed to create version:", versionError);
       return new Response(
-        JSON.stringify({ success: false, errors: [`Failed to create version: ${error instanceof Error ? error.message : "Unknown error"}`] }),
+        JSON.stringify({ success: false, errors: [`Failed to create version: ${versionError?.message || "No data returned"}`] }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!version || !Array.isArray(version) || version.length === 0) {
-      return new Response(
-        JSON.stringify({ success: false, errors: ["Failed to create version: No data returned"] }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    console.log("[curriculum-publish] Created version:", versionData.id);
+    const versionId = versionData.id;
 
-    const versionId = version[0].id;
-
-    // 2. Insert nodes (build key -> curriculum_node_id map)
-    const keyToCurriculumNodeId = new Map<string, string>();
+    // 2. Insert nodes
     const nodeInserts = runtimeData.nodes.map(node => ({
       version_id: versionId,
-      kind: node.kind,
-      key: node.key,
-      title: node.title,
-      description: node.description,
-      data: node.data,
+      node_key: node.key,
+      node_type: node.kind,
+      data: {
+        title: node.title,
+        description: node.description,
+        ...node.data,
+      },
     }));
 
-    let insertedNodes;
-    try {
-      insertedNodes = await queryCurriculumSchema("curriculum_nodes", "POST", nodeInserts);
-    } catch (error) {
+    const { data: insertedNodes, error: nodesError } = await supabase
+      .from("curriculum_nodes")
+      .insert(nodeInserts)
+      .select();
+
+    if (nodesError) {
+      console.error("[curriculum-publish] Failed to insert nodes:", nodesError);
       // Cleanup: delete version
-      try {
-        await queryCurriculumSchema(`curriculum_versions?id=eq.${versionId}`, "DELETE", undefined);
-      } catch {}
+      await supabase.from("curriculum_versions").delete().eq("id", versionId);
       return new Response(
-        JSON.stringify({ success: false, errors: [`Failed to insert nodes: ${error instanceof Error ? error.message : "Unknown error"}`] }),
+        JSON.stringify({ success: false, errors: [`Failed to insert nodes: ${nodesError.message}`] }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!insertedNodes || !Array.isArray(insertedNodes)) {
-      try {
-        await queryCurriculumSchema(`curriculum_versions?id=eq.${versionId}`, "DELETE");
-      } catch {}
-      return new Response(
-        JSON.stringify({ success: false, errors: ["Failed to insert nodes: No data returned"] }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Build key -> curriculum_node_id map
-    for (const node of insertedNodes) {
-      keyToCurriculumNodeId.set(node.key, node.id);
-    }
+    console.log("[curriculum-publish] Inserted nodes:", insertedNodes?.length);
 
     // 3. Insert edges
     const edgeInserts = runtimeData.edges.map(edge => ({
       version_id: versionId,
-      from_key: edge.fromKey,
-      to_key: edge.toKey,
+      source_key: edge.fromKey,
+      target_key: edge.toKey,
       edge_type: edge.type,
     }));
 
-    try {
-      await queryCurriculumSchema("curriculum_edges", "POST", edgeInserts);
-      console.log("[curriculum-publish] Inserted edges:", edgeInserts.length);
-    } catch (error) {
+    const { error: edgesError } = await supabase
+      .from("curriculum_edges")
+      .insert(edgeInserts);
+
+    if (edgesError) {
+      console.error("[curriculum-publish] Failed to insert edges:", edgesError);
       // Cleanup: delete nodes and version
-      try {
-        await queryCurriculumSchema(`curriculum_nodes?version_id=eq.${versionId}`, "DELETE", undefined);
-        await queryCurriculumSchema(`curriculum_versions?id=eq.${versionId}`, "DELETE", undefined);
-      } catch {}
+      await supabase.from("curriculum_nodes").delete().eq("version_id", versionId);
+      await supabase.from("curriculum_versions").delete().eq("id", versionId);
       return new Response(
-        JSON.stringify({ success: false, errors: [`Failed to insert edges: ${error instanceof Error ? error.message : "Unknown error"}`] }),
+        JSON.stringify({ success: false, errors: [`Failed to insert edges: ${edgesError.message}`] }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("[curriculum-publish] Inserted edges:", edgeInserts.length);
 
     // 4. Insert export snapshot
-    try {
-      await queryCurriculumSchema("curriculum_exports", "POST", {
+    const { error: exportError } = await supabase
+      .from("curriculum_exports")
+      .insert({
         version_id: versionId,
-        export_data: exportJson,
+        snapshot: exportJson,
       });
-      console.log("[curriculum-publish] Inserted export snapshot");
-    } catch (error) {
+
+    if (exportError) {
+      console.error("[curriculum-publish] Failed to insert export:", exportError);
       // Cleanup: delete edges, nodes, and version
-      try {
-        await queryCurriculumSchema(`curriculum_edges?version_id=eq.${versionId}`, "DELETE", undefined);
-        await queryCurriculumSchema(`curriculum_nodes?version_id=eq.${versionId}`, "DELETE", undefined);
-        await queryCurriculumSchema(`curriculum_versions?id=eq.${versionId}`, "DELETE", undefined);
-      } catch {}
+      await supabase.from("curriculum_edges").delete().eq("version_id", versionId);
+      await supabase.from("curriculum_nodes").delete().eq("version_id", versionId);
+      await supabase.from("curriculum_versions").delete().eq("id", versionId);
       return new Response(
-        JSON.stringify({ success: false, errors: [`Failed to insert export: ${error instanceof Error ? error.message : "Unknown error"}`] }),
+        JSON.stringify({ success: false, errors: [`Failed to insert export: ${exportError.message}`] }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 5. Update version status to published
-    try {
-      await queryCurriculumSchema(`curriculum_versions?id=eq.${versionId}`, "PATCH", { 
-        status: "published",
-        published_at: new Date().toISOString(),
-      });
-      console.log("[curriculum-publish] Updated version status to published");
-    } catch (error) {
-      // Version exists but status update failed - still return success with warning
-      console.error("[curriculum-publish] Failed to update version status:", error);
-    }
+    console.log("[curriculum-publish] Inserted export snapshot");
 
+    // 5. Update version status to published
     const publishedAt = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("curriculum_versions")
+      .update({
+        status: "published",
+        published_at: publishedAt,
+      })
+      .eq("id", versionId);
+
+    if (updateError) {
+      // Version exists but status update failed - still return success with warning
+      console.error("[curriculum-publish] Failed to update version status:", updateError);
+    } else {
+      console.log("[curriculum-publish] Updated version status to published");
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         versionId,
+        versionNumber: nextVersionNumber,
         publishedAt,
         counts,
         warnings: allWarnings.map(w => w.message),

@@ -1511,13 +1511,41 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         ) {
           errorMessage =
             "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function.";
+        } else if (error.message.includes("non-2xx")) {
+          // Try to extract more details from the response
+          errorMessage = "Edge Function returned an error. Check function logs for details.";
         }
       } else if (
         typeof error === "object" &&
-        error !== null &&
-        "message" in error
+        error !== null
       ) {
-        errorMessage = String(error.message);
+        // Handle FunctionsHttpError with context
+        const errObj = error as Record<string, unknown>;
+        if ("context" in errObj && errObj.context && typeof errObj.context === "object") {
+          const ctx = errObj.context as Record<string, unknown>;
+          if (ctx.body && typeof ctx.body === "string") {
+            try {
+              const body = JSON.parse(ctx.body);
+              if (body.errors && Array.isArray(body.errors)) {
+                setValidationResult({
+                  validated: true,
+                  errors: body.errors,
+                  warnings: body.warnings,
+                  counts: body.counts,
+                });
+                toast({
+                  title: "Publish error",
+                  description: body.errors.join(", "),
+                  variant: "destructive",
+                });
+                return;
+              }
+            } catch {}
+          }
+        }
+        if ("message" in errObj) {
+          errorMessage = String(errObj.message);
+        }
       }
 
       setValidationResult({
