@@ -463,52 +463,46 @@ OUTPUT JSON SCHEMA:
       }),
     });
 
+    // Build fallback response from candidates (used if LLM fails)
+    const buildFallbackResponse = (): TeacherResponse => ({
+      greeting: language === "fr"
+        ? "Bonjour ! Prêt à pratiquer ?"
+        : "Hello! Ready to practice?",
+      suggestions: candidates.slice(0, 3).map((c) => ({
+        lessonKey: c.lessonKey,
+        label: c.title,
+        why: c.goal,
+        difficulty: { mode: "same", value: null },
+        setupHint: { bpm: null, meter: null, feel: null, bars: null, countInBars: null },
+        durationMin: 5,
+      })),
+      notes: null,
+    });
+
+    let teacherResponse: TeacherResponse;
+
     if (!llmResponse.ok) {
       const errorText = await llmResponse.text();
       console.error("LLM error:", llmResponse.status, errorText);
       
-      if (llmResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (llmResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add funds to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error("LLM request failed");
-    }
+      // Use fallback response instead of returning error
+      // This way users can still practice even if LLM is unavailable
+      console.log("Using fallback response due to LLM error");
+      teacherResponse = buildFallbackResponse();
+    } else {
+      const llmData = await llmResponse.json();
+      const rawContent = llmData.choices?.[0]?.message?.content || "";
 
-    const llmData = await llmResponse.json();
-    const rawContent = llmData.choices?.[0]?.message?.content || "";
-
-    // Parse JSON from response
-    let teacherResponse: TeacherResponse;
-    try {
-      // Try to extract JSON from markdown code blocks
-      const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawContent.trim();
-      teacherResponse = JSON.parse(jsonStr);
-    } catch (parseError) {
-      console.error("Failed to parse LLM response:", parseError, rawContent);
-      // Fallback response
-      teacherResponse = {
-        greeting: language === "fr"
-          ? "Bonjour ! Prêt à pratiquer ?"
-          : "Hello! Ready to practice?",
-        suggestions: candidates.slice(0, 3).map((c) => ({
-          lessonKey: c.lessonKey,
-          label: c.title,
-          why: c.goal,
-          difficulty: { mode: "same", value: null },
-          setupHint: { bpm: null, meter: null, feel: null, bars: null, countInBars: null },
-          durationMin: 5,
-        })),
-        notes: null,
-      };
+      // Parse JSON from response
+      try {
+        // Try to extract JSON from markdown code blocks
+        const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+        const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawContent.trim();
+        teacherResponse = JSON.parse(jsonStr);
+      } catch (parseError) {
+        console.error("Failed to parse LLM response:", parseError, rawContent);
+        teacherResponse = buildFallbackResponse();
+      }
     }
 
     // Validate and enrich suggestions with lesson data
