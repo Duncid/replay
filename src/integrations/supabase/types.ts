@@ -47,6 +47,143 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_edges: {
+        Row: {
+          created_at: string | null
+          edge_type: string
+          id: string
+          source_key: string
+          target_key: string
+          version_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          edge_type: string
+          id?: string
+          source_key: string
+          target_key: string
+          version_id: string
+        }
+        Update: {
+          created_at?: string | null
+          edge_type?: string
+          id?: string
+          source_key?: string
+          target_key?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_edges_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_exports: {
+        Row: {
+          created_at: string | null
+          id: string
+          snapshot: Json
+          version_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          snapshot: Json
+          version_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          snapshot?: Json
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_exports_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_nodes: {
+        Row: {
+          created_at: string | null
+          data: Json
+          id: string
+          node_key: string
+          node_type: string
+          version_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data: Json
+          id?: string
+          node_key: string
+          node_type: string
+          version_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json
+          id?: string
+          node_key?: string
+          node_type?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_nodes_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_versions: {
+        Row: {
+          created_at: string | null
+          id: string
+          published_at: string | null
+          quest_graph_id: string
+          status: string
+          title: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          published_at?: string | null
+          quest_graph_id: string
+          status?: string
+          title: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          published_at?: string | null
+          quest_graph_id?: string
+          status?: string
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_versions_quest_graph_id_fkey"
+            columns: ["quest_graph_id"]
+            isOneToOne: false
+            referencedRelation: "quest_graphs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quest_graphs: {
         Row: {
           created_at: string | null
