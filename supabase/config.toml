@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.piano-evaluate]
 verify_jwt = false
+
+[functions.curriculum-publish]
+verify_jwt = false

@@ -39,17 +39,19 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useQuestGraphs, QuestGraph } from "@/hooks/useQuestGraphs";
+import { QuestGraph, useQuestGraphs } from "@/hooks/useQuestGraphs";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  CurriculumExport,
   QuestData,
   QuestEdge,
   QuestEdgeType,
   QuestNode,
   QuestNodeType,
 } from "@/types/quest";
-import { compileCurriculum } from "@/utils/curriculumCompiler";
-import { importCurriculumToGraph } from "@/utils/importCurriculumToGraph";
+import {
+  exportGraphToSchema,
+  importCurriculumToGraph,
+} from "@/utils/importCurriculumToGraph";
 import {
   addEdge,
   Background,
@@ -74,14 +76,15 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
-  ChevronRight,
   Download,
   FileJson,
   FileOutput,
   FilePlus,
   FolderOpen,
   Menu,
+  Pencil,
   Plus,
+  Rocket,
   Save,
   Trash2,
   Upload,
@@ -128,6 +131,25 @@ const questControlsStyles = `
     pointer-events: none;
     user-select: none;
     z-index: 1;
+  }
+  /* Handle positioning - move handles 8px outside nodes */
+  .react-flow__handle-left {
+    left: -8px !important;
+  }
+  .react-flow__handle-right {
+    right: -8px !important;
+  }
+  .react-flow__handle-top {
+    top: -8px !important;
+  }
+  .react-flow__handle-bottom {
+    bottom: -8px !important;
+  }
+  /* Handle styling - make bigger and remove stroke */
+  .react-flow__handle {
+    width: 8px !important;
+    height: 8px !important;
+    border: none !important;
   }
   /* Edge selection styling */
   .react-flow__edge.selected .react-flow__edge-path {
@@ -238,18 +260,19 @@ function TrackNode({
         position={Position.Right}
         id="track-out"
         isConnectable={true}
+        style={{ backgroundColor: "#0284c7" }}
       />
       <Handle
         type="source"
         position={Position.Top}
         id="track-required"
         isConnectable={true}
-        style={{ zIndex: 10 }}
+        style={{ backgroundColor: "#059669", zIndex: 10 }}
       />
-      <span className="absolute right-[-50px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+      <span className="absolute right-[-46px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
         Initial
       </span>
-      <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+      <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
         Is requiring
       </span>
     </QuestNodeBase>
@@ -276,20 +299,40 @@ function LessonNode({
       onEdit={onEdit}
       infoText="Previous: 1 max | Next: 1 max"
     >
-      <Handle type="target" position={Position.Left} id="lesson-in" />
-      <Handle type="source" position={Position.Right} id="lesson-out" />
-      <Handle type="source" position={Position.Bottom} id="lesson-unlockable" />
-      <Handle type="source" position={Position.Top} id="lesson-required" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="lesson-in"
+        style={{ backgroundColor: "#0284c7" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="lesson-out"
+        style={{ backgroundColor: "#0284c7" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="lesson-unlockable"
+        style={{ backgroundColor: "#059669" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="lesson-required"
+        style={{ backgroundColor: "#059669" }}
+      />
       <span className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
         Prev
       </span>
-      <span className="absolute right-[-30px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+      <span className="absolute right-[-42px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
         Next
       </span>
-      <span className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+      <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
         Unlocking
       </span>
-      <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+      <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
         Is requiring
       </span>
     </QuestNodeBase>
@@ -316,12 +359,22 @@ function SkillNode({
       onEdit={onEdit}
       infoText="In: Multiple required, 1 unlockable"
     >
-      <Handle type="target" position={Position.Top} id="skill-unlockable" />
-      <Handle type="target" position={Position.Bottom} id="skill-required" />
-      <span className="absolute top-[-20px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="skill-unlockable"
+        style={{ backgroundColor: "#0284c7" }}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="skill-required"
+        style={{ backgroundColor: "#0284c7" }}
+      />
+      <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
         Unlocked by
       </span>
-      <span className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+      <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
         Is required by
       </span>
     </QuestNodeBase>
@@ -473,8 +526,28 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showNewConfirmDialog, setShowNewConfirmDialog] = useState(false);
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [saveDialogTitle, setSaveDialogTitle] = useState("");
-  const [pendingLoadGraph, setPendingLoadGraph] = useState<QuestGraph | null>(null);
+  const [renameDialogTitle, setRenameDialogTitle] = useState("");
+  const [publishDialogTitle, setPublishDialogTitle] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<{
+    success: boolean;
+    versionId?: string;
+    errors?: string[];
+    warnings?: string[];
+    counts?: {
+      nodes: number;
+      edges: number;
+      tracks: number;
+      lessons: number;
+      skills: number;
+    };
+  } | null>(null);
+  const [pendingLoadGraph, setPendingLoadGraph] = useState<QuestGraph | null>(
+    null
+  );
 
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -516,6 +589,31 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     },
     [setQuestData, setNodes, setEdges]
   );
+
+  // Load most recently saved graph when dialog opens
+  useEffect(() => {
+    if (
+      open &&
+      !isDbLoading &&
+      !currentGraph &&
+      questGraphs.length > 0 &&
+      !hasUnsavedChanges
+    ) {
+      const mostRecentGraph = questGraphs[0]; // Already sorted by updated_at descending
+      loadQuestGraph(mostRecentGraph);
+      updateQuestData(mostRecentGraph.data.nodes, mostRecentGraph.data.edges);
+      lastSavedDataRef.current = JSON.stringify(mostRecentGraph.data);
+      setHasUnsavedChanges(false);
+    }
+  }, [
+    open,
+    isDbLoading,
+    currentGraph,
+    questGraphs,
+    hasUnsavedChanges,
+    loadQuestGraph,
+    updateQuestData,
+  ]);
 
   const handleEditNode = useCallback(
     (nodeId: string) => {
@@ -1212,73 +1310,6 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [nodes, edges, toast]);
 
-  const handleExport = useCallback(async () => {
-    try {
-      if (!("showSaveFilePicker" in window)) {
-        toast({
-          title: "File picker not supported",
-          description:
-            "Your browser doesn't support the File System Access API.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const questData: QuestData = { nodes, edges };
-      const result = compileCurriculum(questData);
-
-      if (!result.success) {
-        const errorMessages = result.errors.map((e) => e.message).join("\n");
-        toast({
-          title: "Export validation failed",
-          description: errorMessages,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!result.export) {
-        toast({
-          title: "Export failed",
-          description: "Failed to generate export",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const json = JSON.stringify(result.export, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fileHandle = await (window as any).showSaveFilePicker({
-        suggestedName: "curriculum.export.json",
-        types: [
-          {
-            description: "JSON files",
-            accept: { "application/json": [".json"] },
-          },
-        ],
-      });
-
-      const writable = await fileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-
-      toast({
-        title: "Export successful",
-        description: "Curriculum export has been saved to file.",
-      });
-    } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        toast({
-          title: "Error exporting file",
-          description: error instanceof Error ? error.message : "Unknown error",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [nodes, edges, toast]);
-
   const handleOpenFile = useCallback(async () => {
     try {
       if (!("showOpenFilePicker" in window)) {
@@ -1335,6 +1366,244 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [toast, updateQuestData]);
 
+  const handlePublish = useCallback(async () => {
+    if (!currentGraph) {
+      toast({
+        title: "No graph selected",
+        description: "Please save your graph first before publishing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ensure graph is saved first
+    if (hasUnsavedChanges) {
+      toast({
+        title: "Unsaved changes",
+        description: "Please save your graph before publishing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPublishDialogTitle(currentGraph.title);
+    setPublishResult(null);
+    setShowPublishDialog(true);
+  }, [currentGraph, hasUnsavedChanges, toast]);
+
+  const confirmPublish = useCallback(async () => {
+    if (!currentGraph) return;
+
+    setIsPublishing(true);
+    setPublishResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "curriculum-publish",
+        {
+          body: {
+            questGraphId: currentGraph.id,
+            publishTitle: publishDialogTitle.trim() || undefined,
+            mode: "publish",
+          },
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.success) {
+        setPublishResult({
+          success: true,
+          versionId: data.versionId,
+          warnings: data.warnings,
+          counts: data.counts,
+        });
+        toast({
+          title: "Published successfully",
+          description: `Version ${data.versionId?.substring(
+            0,
+            8
+          )}... published with ${data.counts?.nodes || 0} nodes and ${
+            data.counts?.edges || 0
+          } edges.`,
+        });
+      } else {
+        setPublishResult({
+          success: false,
+          errors: data.errors,
+          warnings: data.warnings,
+          counts: data.counts,
+        });
+        toast({
+          title: "Publish failed",
+          description: data.errors?.join(", ") || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Publish error:", error);
+      let errorMessage = "Unknown error";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Check for common Edge Function errors
+        if (
+          error.message.includes("Failed to send") ||
+          error.message.includes("fetch failed")
+        ) {
+          errorMessage =
+            "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function using: supabase functions deploy curriculum-publish";
+        }
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error
+      ) {
+        errorMessage = String(error.message);
+      }
+
+      setPublishResult({
+        success: false,
+        errors: [errorMessage],
+      });
+      toast({
+        title: "Publish error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [currentGraph, publishDialogTitle, toast]);
+
+  const handleDryRun = useCallback(async () => {
+    if (!currentGraph) return;
+
+    setIsPublishing(true);
+    setPublishResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "curriculum-publish",
+        {
+          body: {
+            questGraphId: currentGraph.id,
+            mode: "dryRun",
+          },
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      setPublishResult({
+        success: data.success,
+        errors: data.errors,
+        warnings: data.warnings,
+        counts: data.counts,
+      });
+
+      if (data.success) {
+        toast({
+          title: "Validation passed",
+          description: `Graph is valid: ${data.counts?.nodes || 0} nodes, ${
+            data.counts?.edges || 0
+          } edges. ${data.warnings?.length || 0} warnings.`,
+        });
+      } else {
+        toast({
+          title: "Validation failed",
+          description: `${data.errors?.length || 0} errors found.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Dry run error:", error);
+      let errorMessage = "Unknown error";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Check for common Edge Function errors
+        if (
+          error.message.includes("Failed to send") ||
+          error.message.includes("fetch failed")
+        ) {
+          errorMessage =
+            "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function using: supabase functions deploy curriculum-publish";
+        }
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error
+      ) {
+        errorMessage = String(error.message);
+      }
+
+      setPublishResult({
+        success: false,
+        errors: [errorMessage],
+      });
+      toast({
+        title: "Dry run error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [currentGraph, toast]);
+
+  const handleExportSchema = useCallback(async () => {
+    try {
+      if (!("showSaveFilePicker" in window)) {
+        toast({
+          title: "File picker not supported",
+          description:
+            "Your browser doesn't support the File System Access API.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const questData: QuestData = { nodes, edges };
+      const schemaData = exportGraphToSchema(questData);
+
+      const json = JSON.stringify(schemaData, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fileHandle = await (window as any).showSaveFilePicker({
+        suggestedName: "curriculum.schema.json",
+        types: [
+          {
+            description: "JSON files",
+            accept: { "application/json": [".json"] },
+          },
+        ],
+      });
+
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+
+      toast({
+        title: "Schema exported",
+        description: `Exported ${schemaData.tracks.length} tracks, ${schemaData.lessons.length} lessons, and ${schemaData.skills.length} skills.`,
+      });
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        toast({
+          title: "Error exporting schema",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [nodes, edges, toast]);
+
   const handleImport = useCallback(async () => {
     try {
       if (!("showOpenFilePicker" in window)) {
@@ -1362,22 +1631,22 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
       const file = await fileHandles[0].getFile();
       const text = await file.text();
-      const exportData: CurriculumExport = JSON.parse(text);
+      const importData = JSON.parse(text);
 
       // Validate structure
       if (
-        !exportData.tracks ||
-        !exportData.lessons ||
-        !exportData.skills ||
-        !Array.isArray(exportData.tracks) ||
-        !Array.isArray(exportData.lessons) ||
-        !Array.isArray(exportData.skills)
+        !importData.tracks ||
+        !importData.lessons ||
+        !importData.skills ||
+        !Array.isArray(importData.tracks) ||
+        !Array.isArray(importData.lessons) ||
+        !Array.isArray(importData.skills)
       ) {
-        throw new Error("Invalid curriculum export format");
+        throw new Error("Invalid schema import format");
       }
 
-      // Import the curriculum
-      const result = importCurriculumToGraph(exportData);
+      // Import the curriculum (merge with existing nodes)
+      const result = importCurriculumToGraph(importData, nodes);
 
       // Show warnings if any
       if (result.warnings.length > 0) {
@@ -1391,11 +1660,15 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         });
       }
 
-      updateQuestData(result.data.nodes, result.data.edges);
+      // Merge imported nodes and edges with existing ones
+      const mergedNodes = [...nodes, ...result.data.nodes];
+      const mergedEdges = [...edges, ...result.data.edges];
+
+      updateQuestData(mergedNodes, mergedEdges);
 
       toast({
         title: "Curriculum imported",
-        description: `Imported ${exportData.tracks.length} tracks, ${exportData.lessons.length} lessons, and ${exportData.skills.length} skills.`,
+        description: `Imported ${importData.tracks.length} tracks, ${importData.lessons.length} lessons, and ${importData.skills.length} skills. Added to existing graph.`,
       });
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -1406,7 +1679,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         });
       }
     }
-  }, [toast, updateQuestData]);
+  }, [toast, updateQuestData, nodes, edges]);
 
   // New: Handle new graph (clear current)
   const handleNew = useCallback(() => {
@@ -1452,7 +1725,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       });
       return;
     }
-    const graph = await saveQuestGraph(saveDialogTitle.trim(), { nodes, edges });
+    const graph = await saveQuestGraph(saveDialogTitle.trim(), {
+      nodes,
+      edges,
+    });
     if (graph) {
       markAsSaved();
       setShowSaveDialog(false);
@@ -1460,17 +1736,20 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   }, [saveDialogTitle, nodes, edges, saveQuestGraph, markAsSaved, toast]);
 
   // Open: Load a graph from database
-  const handleLoadGraph = useCallback((graph: QuestGraph) => {
-    if (hasUnsavedChanges) {
-      setPendingLoadGraph(graph);
-      setShowNewConfirmDialog(true);
-    } else {
-      loadQuestGraph(graph);
-      updateQuestData(graph.data.nodes, graph.data.edges);
-      lastSavedDataRef.current = JSON.stringify(graph.data);
-      setHasUnsavedChanges(false);
-    }
-  }, [hasUnsavedChanges, loadQuestGraph, updateQuestData]);
+  const handleLoadGraph = useCallback(
+    (graph: QuestGraph) => {
+      if (hasUnsavedChanges) {
+        setPendingLoadGraph(graph);
+        setShowNewConfirmDialog(true);
+      } else {
+        loadQuestGraph(graph);
+        updateQuestData(graph.data.nodes, graph.data.edges);
+        lastSavedDataRef.current = JSON.stringify(graph.data);
+        setHasUnsavedChanges(false);
+      }
+    },
+    [hasUnsavedChanges, loadQuestGraph, updateQuestData]
+  );
 
   const confirmLoadPending = useCallback(() => {
     if (pendingLoadGraph) {
@@ -1508,6 +1787,38 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     setShowDeleteConfirmDialog(false);
   }, [currentGraph, deleteQuestGraph, updateQuestData]);
 
+  // Rename: Rename current graph
+  const handleRename = useCallback(() => {
+    if (currentGraph) {
+      setRenameDialogTitle(currentGraph.title);
+      setShowRenameDialog(true);
+    }
+  }, [currentGraph]);
+
+  const confirmRename = useCallback(async () => {
+    if (!currentGraph) return;
+
+    if (!renameDialogTitle.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please enter a title for the quest graph",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const success = await updateQuestGraph(
+      currentGraph.id,
+      { nodes, edges },
+      renameDialogTitle.trim()
+    );
+
+    if (success) {
+      setShowRenameDialog(false);
+      setRenameDialogTitle("");
+    }
+  }, [currentGraph, renameDialogTitle, nodes, edges, updateQuestGraph, toast]);
+
   const handleEdgesDelete = useCallback(
     (deletedEdges: Edge[]) => {
       // Filter out deleted edges from current edges
@@ -1520,546 +1831,723 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
-        <DialogHeader className="p-3 border-b h-16">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DialogTitle>Quest Editor</DialogTitle>
-              {currentGraph && (
-                <span className="text-sm text-muted-foreground">
-                  — {currentGraph.title}
-                  {hasUnsavedChanges && " (unsaved)"}
-                </span>
-              )}
-              {!currentGraph && hasUnsavedChanges && (
-                <span className="text-sm text-muted-foreground">(unsaved)</span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4" />
-                    Add
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>Add Node</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => addNode("track")}>
-                    Track
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => addNode("lesson")}>
-                    Lesson
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => addNode("skill")}>
-                    Skill
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
+          <DialogHeader className="p-3 border-b h-16">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DialogTitle>Quest Editor</DialogTitle>
+                {currentGraph && (
+                  <span className="text-sm text-muted-foreground">
+                    — {currentGraph.title}
+                    {hasUnsavedChanges && " (unsaved)"}
+                  </span>
+                )}
+                {!currentGraph && hasUnsavedChanges && (
+                  <span className="text-sm text-muted-foreground">
+                    (unsaved)
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuLabel>Add Node</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => addNode("track")}>
+                      Track
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => addNode("lesson")}>
+                      Lesson
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => addNode("skill")}>
+                      Skill
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48">
-                  <DropdownMenuItem onClick={handleNew}>
-                    <FilePlus className="h-4 w-4" />
-                    New
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSave} disabled={isDbLoading}>
-                    <Save className="h-4 w-4" />
-                    Save
-                    {hasUnsavedChanges && <span className="ml-auto text-xs text-muted-foreground">•</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <FolderOpen className="h-4 w-4" />
-                      Open
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-56">
-                      {questGraphs.length === 0 ? (
-                        <DropdownMenuItem disabled>
-                          No saved graphs
-                        </DropdownMenuItem>
-                      ) : (
-                        questGraphs.map((graph) => (
-                          <DropdownMenuItem
-                            key={graph.id}
-                            onClick={() => handleLoadGraph(graph)}
-                          >
-                            {graph.title}
-                          </DropdownMenuItem>
-                        ))
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48">
+                    <DropdownMenuItem onClick={handleNew}>
+                      <FilePlus className="h-4 w-4" />
+                      New
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleSave}
+                      disabled={isDbLoading}
+                    >
+                      <Save className="h-4 w-4" />
+                      Save
+                      {hasUnsavedChanges && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          •
+                        </span>
                       )}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                  <DropdownMenuItem
-                    onClick={handleDelete}
-                    disabled={!currentGraph || isDbLoading}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <FileJson className="h-4 w-4" />
-                      Graph Export
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuItem onClick={handleDownload}>
-                        <Download className="h-4 w-4" />
-                        Save as JSON
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleOpenFile}>
-                        <Upload className="h-4 w-4" />
-                        Import JSON
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <FileOutput className="h-4 w-4" />
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <FolderOpen className="h-4 w-4" />
+                        Open
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-56">
+                        {questGraphs.length === 0 ? (
+                          <DropdownMenuItem disabled>
+                            No saved graphs
+                          </DropdownMenuItem>
+                        ) : (
+                          questGraphs.map((graph) => (
+                            <DropdownMenuItem
+                              key={graph.id}
+                              onClick={() => handleLoadGraph(graph)}
+                            >
+                              {graph.title}
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuItem
+                      onClick={handleRename}
+                      disabled={!currentGraph || isDbLoading}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleDelete}
+                      disabled={!currentGraph || isDbLoading}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <FileJson className="h-4 w-4" />
+                        Graph Export
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={handleDownload}>
+                          <Download className="h-4 w-4" />
+                          Save as JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleOpenFile}>
+                          <Upload className="h-4 w-4" />
+                          Import JSON
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuItem onClick={handleExportSchema}>
+                      <Download className="h-4 w-4" />
                       Export Schema
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuItem onClick={handleExport}>
-                        <Download className="h-4 w-4" />
-                        Export Schema
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleImport}>
-                        <Upload className="h-4 w-4" />
-                        Import Schema
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleImport}>
+                      <FileOutput className="h-4 w-4" />
+                      Import Schema
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handlePublish}
+                      disabled={
+                        !currentGraph || isDbLoading || hasUnsavedChanges
+                      }
+                    >
+                      <Rocket className="h-4 w-4" />
+                      Publish
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleDryRun}
+                      disabled={!currentGraph || isDbLoading}
+                    >
+                      <Rocket className="h-4 w-4" />
+                      Validate (Dry Run)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onOpenChange(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div
+            className="flex-1 relative"
+            style={{ height: "calc(100vh - 64px)" }}
+          >
+            <style>{questControlsStyles}</style>
+            <ReactFlowProvider>
+              <QuestEditorFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onEdgesDelete={handleEdgesDelete}
+                onConnect={handleConnect}
+                onEditNode={handleEditNode}
+              />
+            </ReactFlowProvider>
+          </div>
+
+          <Sheet
+            open={editingNodeId !== null}
+            onOpenChange={(open) => {
+              if (!open) handleCancelEdit();
+            }}
+          >
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>
+                  Edit{" "}
+                  {editingNodeId &&
+                    nodes.find((n) => n.id === editingNodeId)?.data.type}
+                </SheetTitle>
+                <SheetDescription>Node ID: {editingNodeId}</SheetDescription>
+              </SheetHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveTitle();
+                      } else if (e.key === "Escape") {
+                        handleCancelEdit();
+                      }
+                    }}
+                    autoFocus
+                  />
+                </div>
+                {editingNodeId &&
+                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                    "track" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="trackKey">Track Key</Label>
+                        <Input
+                          id="trackKey"
+                          type="text"
+                          value={editingTrackKey}
+                          onChange={(e) => setEditingTrackKey(e.target.value)}
+                          aria-invalid={
+                            editingTrackKey &&
+                            (editingTrackKey.trim() === "" ||
+                              editingTrackKey.includes(" ") ||
+                              isTrackKeyInUse(
+                                editingTrackKey.trim(),
+                                editingNodeId
+                              ))
+                              ? "true"
+                              : "false"
+                          }
+                          className={
+                            editingTrackKey &&
+                            (editingTrackKey.trim() === "" ||
+                              editingTrackKey.includes(" ") ||
+                              isTrackKeyInUse(
+                                editingTrackKey.trim(),
+                                editingNodeId
+                              ))
+                              ? "border-destructive focus-visible:ring-destructive"
+                              : ""
+                          }
+                          placeholder="e.g., beginner-piano"
+                        />
+                        {editingTrackKey &&
+                          (editingTrackKey.trim() === "" ||
+                            editingTrackKey.includes(" ") ||
+                            isTrackKeyInUse(
+                              editingTrackKey.trim(),
+                              editingNodeId
+                            )) && (
+                            <p className="text-sm text-destructive">
+                              {editingTrackKey.trim() === ""
+                                ? "Track key cannot be empty"
+                                : editingTrackKey.includes(" ")
+                                ? "Track key cannot contain spaces"
+                                : "This track key is already in use"}
+                            </p>
+                          )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="order">Order</Label>
+                        <Input
+                          id="order"
+                          type="number"
+                          min="1"
+                          value={editingOrder}
+                          onChange={(e) => setEditingOrder(e.target.value)}
+                          aria-invalid={
+                            editingOrder &&
+                            (isNaN(parseInt(editingOrder, 10)) ||
+                              parseInt(editingOrder, 10) <= 0 ||
+                              !Number.isInteger(parseFloat(editingOrder)) ||
+                              isOrderInUse(
+                                parseInt(editingOrder, 10),
+                                editingNodeId
+                              ))
+                              ? "true"
+                              : "false"
+                          }
+                          className={
+                            editingOrder &&
+                            (isNaN(parseInt(editingOrder, 10)) ||
+                              parseInt(editingOrder, 10) <= 0 ||
+                              !Number.isInteger(parseFloat(editingOrder)) ||
+                              isOrderInUse(
+                                parseInt(editingOrder, 10),
+                                editingNodeId
+                              ))
+                              ? "border-destructive focus-visible:ring-destructive"
+                              : ""
+                          }
+                        />
+                        {editingOrder &&
+                          (isNaN(parseInt(editingOrder, 10)) ||
+                            parseInt(editingOrder, 10) <= 0 ||
+                            !Number.isInteger(parseFloat(editingOrder)) ||
+                            isOrderInUse(
+                              parseInt(editingOrder, 10),
+                              editingNodeId
+                            )) && (
+                            <p className="text-sm text-destructive">
+                              {isOrderInUse(
+                                parseInt(editingOrder, 10),
+                                editingNodeId
+                              )
+                                ? "This order number is already in use"
+                                : "Order must be a positive integer greater than 0"}
+                            </p>
+                          )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={editingDescription}
+                          onChange={(e) =>
+                            setEditingDescription(e.target.value)
+                          }
+                          rows={4}
+                        />
+                      </div>
+                    </>
+                  )}
+                {editingNodeId &&
+                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                    "skill" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="skillKey">Skill Key</Label>
+                        <Input
+                          id="skillKey"
+                          type="text"
+                          value={editingSkillKey}
+                          onChange={(e) => setEditingSkillKey(e.target.value)}
+                          aria-invalid={
+                            editingSkillKey &&
+                            (editingSkillKey.trim() === "" ||
+                              editingSkillKey.includes(" ") ||
+                              isSkillKeyInUse(
+                                editingSkillKey.trim(),
+                                editingNodeId
+                              ))
+                              ? "true"
+                              : "false"
+                          }
+                          className={
+                            editingSkillKey &&
+                            (editingSkillKey.trim() === "" ||
+                              editingSkillKey.includes(" ") ||
+                              isSkillKeyInUse(
+                                editingSkillKey.trim(),
+                                editingNodeId
+                              ))
+                              ? "border-destructive focus-visible:ring-destructive"
+                              : ""
+                          }
+                          placeholder="e.g., piano_basics"
+                        />
+                        {editingSkillKey &&
+                          (editingSkillKey.trim() === "" ||
+                            editingSkillKey.includes(" ") ||
+                            isSkillKeyInUse(
+                              editingSkillKey.trim(),
+                              editingNodeId
+                            )) && (
+                            <p className="text-sm text-destructive">
+                              {editingSkillKey.trim() === ""
+                                ? "Skill key cannot be empty"
+                                : editingSkillKey.includes(" ")
+                                ? "Skill key cannot contain spaces"
+                                : "This skill key is already in use"}
+                            </p>
+                          )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={editingDescription}
+                          onChange={(e) =>
+                            setEditingDescription(e.target.value)
+                          }
+                          rows={4}
+                          autoResize
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="unlockGuidance">Unlock Guidance</Label>
+                        <Textarea
+                          id="unlockGuidance"
+                          value={editingUnlockGuidance}
+                          onChange={(e) =>
+                            setEditingUnlockGuidance(e.target.value)
+                          }
+                          rows={4}
+                          autoResize
+                        />
+                      </div>
+                    </>
+                  )}
+                {editingNodeId &&
+                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                    "lesson" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="lessonKey">Lesson Key</Label>
+                        <Input
+                          id="lessonKey"
+                          type="text"
+                          value={editingLessonKey}
+                          onChange={(e) => setEditingLessonKey(e.target.value)}
+                          aria-invalid={
+                            editingLessonKey &&
+                            (editingLessonKey.trim() === "" ||
+                              editingLessonKey.includes(" ") ||
+                              isLessonKeyInUse(
+                                editingLessonKey.trim(),
+                                editingNodeId
+                              ))
+                              ? "true"
+                              : "false"
+                          }
+                          className={
+                            editingLessonKey &&
+                            (editingLessonKey.trim() === "" ||
+                              editingLessonKey.includes(" ") ||
+                              isLessonKeyInUse(
+                                editingLessonKey.trim(),
+                                editingNodeId
+                              ))
+                              ? "border-destructive focus-visible:ring-destructive"
+                              : ""
+                          }
+                          placeholder="e.g., A1.1"
+                        />
+                        {editingLessonKey &&
+                          (editingLessonKey.trim() === "" ||
+                            editingLessonKey.includes(" ") ||
+                            isLessonKeyInUse(
+                              editingLessonKey.trim(),
+                              editingNodeId
+                            )) && (
+                            <p className="text-sm text-destructive">
+                              {editingLessonKey.trim() === ""
+                                ? "Lesson key cannot be empty"
+                                : editingLessonKey.includes(" ")
+                                ? "Lesson key cannot contain spaces"
+                                : "This lesson key is already in use"}
+                            </p>
+                          )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="goal">Goal</Label>
+                        <Textarea
+                          id="goal"
+                          value={editingGoal}
+                          onChange={(e) => setEditingGoal(e.target.value)}
+                          placeholder="e.g., Lock steady quarter notes to the metronome"
+                          autoResize
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="setupGuidance">Setup Guidance</Label>
+                        <Textarea
+                          id="setupGuidance"
+                          value={editingSetupGuidance}
+                          onChange={(e) =>
+                            setEditingSetupGuidance(e.target.value)
+                          }
+                          rows={4}
+                          autoResize
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="evaluationGuidance">
+                          Evaluation Guidance
+                        </Label>
+                        <Textarea
+                          id="evaluationGuidance"
+                          value={editingEvaluationGuidance}
+                          onChange={(e) =>
+                            setEditingEvaluationGuidance(e.target.value)
+                          }
+                          rows={4}
+                          autoResize
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="difficultyGuidance">
+                          Difficulty Guidance
+                        </Label>
+                        <Textarea
+                          id="difficultyGuidance"
+                          value={editingDifficultyGuidance}
+                          onChange={(e) =>
+                            setEditingDifficultyGuidance(e.target.value)
+                          }
+                          rows={4}
+                          autoResize
+                        />
+                      </div>
+                    </>
+                  )}
+              </div>
+              <SheetFooter>
+                <Button variant="outline" onClick={handleCancelEdit}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveTitle}>Save</Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Dialog */}
+      <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save Quest Graph</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a title for your quest graph.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Quest graph title"
+              value={saveDialogTitle}
+              onChange={(e) => setSaveDialogTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmSave();
+              }}
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSave}>Save</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rename Dialog */}
+      <AlertDialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename Quest Graph</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a new title for your quest graph.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Quest graph title"
+              value={renameDialogTitle}
+              onChange={(e) => setRenameDialogTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmRename();
+              }}
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRename}>
+              Rename
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Publish Dialog */}
+      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Publish Curriculum</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="publishTitle">Version Title</Label>
+              <Input
+                id="publishTitle"
+                value={publishDialogTitle}
+                onChange={(e) => setPublishDialogTitle(e.target.value)}
+                placeholder="Enter version title (optional)"
+                disabled={isPublishing}
+              />
+            </div>
+
+            {publishResult && (
+              <div className="space-y-2">
+                {publishResult.success ? (
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                      Published Successfully
+                    </h4>
+                    {publishResult.versionId && (
+                      <p className="text-sm text-green-800 dark:text-green-200">
+                        Version ID: {publishResult.versionId}
+                      </p>
+                    )}
+                    {publishResult.counts && (
+                      <div className="mt-2 text-sm text-green-800 dark:text-green-200">
+                        <p>
+                          {publishResult.counts.nodes} nodes (
+                          {publishResult.counts.tracks} tracks,{" "}
+                          {publishResult.counts.lessons} lessons,{" "}
+                          {publishResult.counts.skills} skills)
+                        </p>
+                        <p>{publishResult.counts.edges} edges</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                    <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                      Publish Failed
+                    </h4>
+                    {publishResult.errors &&
+                      publishResult.errors.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                            Errors:
+                          </p>
+                          <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 mt-1">
+                            {publishResult.errors.map((error, idx) => (
+                              <li key={idx}>{error}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                  </div>
+                )}
+
+                {publishResult.warnings &&
+                  publishResult.warnings.length > 0 && (
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                        Warnings ({publishResult.warnings.length})
+                      </h4>
+                      <ul className="list-disc list-inside text-sm text-yellow-800 dark:text-yellow-200">
+                        {publishResult.warnings.map((warning, idx) => (
+                          <li key={idx}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenChange(false)}
+                variant="outline"
+                onClick={() => {
+                  setShowPublishDialog(false);
+                  setPublishResult(null);
+                }}
+                disabled={isPublishing}
               >
-                <X className="h-4 w-4" />
+                Close
               </Button>
+              {!publishResult && (
+                <Button onClick={confirmPublish} disabled={isPublishing}>
+                  {isPublishing ? "Publishing..." : "Publish"}
+                </Button>
+              )}
             </div>
           </div>
-        </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
-        <div
-          className="flex-1 relative"
-          style={{ height: "calc(100vh - 64px)" }}
-        >
-          <style>{questControlsStyles}</style>
-          <ReactFlowProvider>
-            <QuestEditorFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onEdgesDelete={handleEdgesDelete}
-              onConnect={handleConnect}
-              onEditNode={handleEditNode}
-            />
-          </ReactFlowProvider>
-        </div>
+      {/* Unsaved Changes Confirm Dialog */}
+      <AlertDialog
+        open={showNewConfirmDialog}
+        onOpenChange={setShowNewConfirmDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Do you want to discard them?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingLoadGraph(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLoadPending}>
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-        <Sheet
-          open={editingNodeId !== null}
-          onOpenChange={(open) => {
-            if (!open) handleCancelEdit();
-          }}
-        >
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>
-                Edit{" "}
-                {editingNodeId &&
-                  nodes.find((n) => n.id === editingNodeId)?.data.type}
-              </SheetTitle>
-              <SheetDescription>Node ID: {editingNodeId}</SheetDescription>
-            </SheetHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSaveTitle();
-                    } else if (e.key === "Escape") {
-                      handleCancelEdit();
-                    }
-                  }}
-                  autoFocus
-                />
-              </div>
-              {editingNodeId &&
-                nodes.find((n) => n.id === editingNodeId)?.data.type ===
-                  "track" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="trackKey">Track Key</Label>
-                      <Input
-                        id="trackKey"
-                        type="text"
-                        value={editingTrackKey}
-                        onChange={(e) => setEditingTrackKey(e.target.value)}
-                        aria-invalid={
-                          editingTrackKey &&
-                          (editingTrackKey.trim() === "" ||
-                            editingTrackKey.includes(" ") ||
-                            isTrackKeyInUse(
-                              editingTrackKey.trim(),
-                              editingNodeId
-                            ))
-                            ? "true"
-                            : "false"
-                        }
-                        className={
-                          editingTrackKey &&
-                          (editingTrackKey.trim() === "" ||
-                            editingTrackKey.includes(" ") ||
-                            isTrackKeyInUse(
-                              editingTrackKey.trim(),
-                              editingNodeId
-                            ))
-                            ? "border-destructive focus-visible:ring-destructive"
-                            : ""
-                        }
-                        placeholder="e.g., beginner-piano"
-                      />
-                      {editingTrackKey &&
-                        (editingTrackKey.trim() === "" ||
-                          editingTrackKey.includes(" ") ||
-                          isTrackKeyInUse(
-                            editingTrackKey.trim(),
-                            editingNodeId
-                          )) && (
-                          <p className="text-sm text-destructive">
-                            {editingTrackKey.trim() === ""
-                              ? "Track key cannot be empty"
-                              : editingTrackKey.includes(" ")
-                              ? "Track key cannot contain spaces"
-                              : "This track key is already in use"}
-                          </p>
-                        )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="order">Order</Label>
-                      <Input
-                        id="order"
-                        type="number"
-                        min="1"
-                        value={editingOrder}
-                        onChange={(e) => setEditingOrder(e.target.value)}
-                        aria-invalid={
-                          editingOrder &&
-                          (isNaN(parseInt(editingOrder, 10)) ||
-                            parseInt(editingOrder, 10) <= 0 ||
-                            !Number.isInteger(parseFloat(editingOrder)) ||
-                            isOrderInUse(
-                              parseInt(editingOrder, 10),
-                              editingNodeId
-                            ))
-                            ? "true"
-                            : "false"
-                        }
-                        className={
-                          editingOrder &&
-                          (isNaN(parseInt(editingOrder, 10)) ||
-                            parseInt(editingOrder, 10) <= 0 ||
-                            !Number.isInteger(parseFloat(editingOrder)) ||
-                            isOrderInUse(
-                              parseInt(editingOrder, 10),
-                              editingNodeId
-                            ))
-                            ? "border-destructive focus-visible:ring-destructive"
-                            : ""
-                        }
-                      />
-                      {editingOrder &&
-                        (isNaN(parseInt(editingOrder, 10)) ||
-                          parseInt(editingOrder, 10) <= 0 ||
-                          !Number.isInteger(parseFloat(editingOrder)) ||
-                          isOrderInUse(
-                            parseInt(editingOrder, 10),
-                            editingNodeId
-                          )) && (
-                          <p className="text-sm text-destructive">
-                            {isOrderInUse(
-                              parseInt(editingOrder, 10),
-                              editingNodeId
-                            )
-                              ? "This order number is already in use"
-                              : "Order must be a positive integer greater than 0"}
-                          </p>
-                        )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={editingDescription}
-                        onChange={(e) => setEditingDescription(e.target.value)}
-                        rows={4}
-                      />
-                    </div>
-                  </>
-                )}
-              {editingNodeId &&
-                nodes.find((n) => n.id === editingNodeId)?.data.type ===
-                  "skill" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="skillKey">Skill Key</Label>
-                      <Input
-                        id="skillKey"
-                        type="text"
-                        value={editingSkillKey}
-                        onChange={(e) => setEditingSkillKey(e.target.value)}
-                        aria-invalid={
-                          editingSkillKey &&
-                          (editingSkillKey.trim() === "" ||
-                            editingSkillKey.includes(" ") ||
-                            isSkillKeyInUse(
-                              editingSkillKey.trim(),
-                              editingNodeId
-                            ))
-                            ? "true"
-                            : "false"
-                        }
-                        className={
-                          editingSkillKey &&
-                          (editingSkillKey.trim() === "" ||
-                            editingSkillKey.includes(" ") ||
-                            isSkillKeyInUse(
-                              editingSkillKey.trim(),
-                              editingNodeId
-                            ))
-                            ? "border-destructive focus-visible:ring-destructive"
-                            : ""
-                        }
-                        placeholder="e.g., piano_basics"
-                      />
-                      {editingSkillKey &&
-                        (editingSkillKey.trim() === "" ||
-                          editingSkillKey.includes(" ") ||
-                          isSkillKeyInUse(
-                            editingSkillKey.trim(),
-                            editingNodeId
-                          )) && (
-                          <p className="text-sm text-destructive">
-                            {editingSkillKey.trim() === ""
-                              ? "Skill key cannot be empty"
-                              : editingSkillKey.includes(" ")
-                              ? "Skill key cannot contain spaces"
-                              : "This skill key is already in use"}
-                          </p>
-                        )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={editingDescription}
-                        onChange={(e) => setEditingDescription(e.target.value)}
-                        rows={4}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="unlockGuidance">Unlock Guidance</Label>
-                      <Textarea
-                        id="unlockGuidance"
-                        value={editingUnlockGuidance}
-                        onChange={(e) =>
-                          setEditingUnlockGuidance(e.target.value)
-                        }
-                        rows={4}
-                      />
-                    </div>
-                  </>
-                )}
-              {editingNodeId &&
-                nodes.find((n) => n.id === editingNodeId)?.data.type ===
-                  "lesson" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="lessonKey">Lesson Key</Label>
-                      <Input
-                        id="lessonKey"
-                        type="text"
-                        value={editingLessonKey}
-                        onChange={(e) => setEditingLessonKey(e.target.value)}
-                        aria-invalid={
-                          editingLessonKey &&
-                          (editingLessonKey.trim() === "" ||
-                            editingLessonKey.includes(" ") ||
-                            isLessonKeyInUse(
-                              editingLessonKey.trim(),
-                              editingNodeId
-                            ))
-                            ? "true"
-                            : "false"
-                        }
-                        className={
-                          editingLessonKey &&
-                          (editingLessonKey.trim() === "" ||
-                            editingLessonKey.includes(" ") ||
-                            isLessonKeyInUse(
-                              editingLessonKey.trim(),
-                              editingNodeId
-                            ))
-                            ? "border-destructive focus-visible:ring-destructive"
-                            : ""
-                        }
-                        placeholder="e.g., A1.1"
-                      />
-                      {editingLessonKey &&
-                        (editingLessonKey.trim() === "" ||
-                          editingLessonKey.includes(" ") ||
-                          isLessonKeyInUse(
-                            editingLessonKey.trim(),
-                            editingNodeId
-                          )) && (
-                          <p className="text-sm text-destructive">
-                            {editingLessonKey.trim() === ""
-                              ? "Lesson key cannot be empty"
-                              : editingLessonKey.includes(" ")
-                              ? "Lesson key cannot contain spaces"
-                              : "This lesson key is already in use"}
-                          </p>
-                        )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="goal">Goal</Label>
-                      <Input
-                        id="goal"
-                        type="text"
-                        value={editingGoal}
-                        onChange={(e) => setEditingGoal(e.target.value)}
-                        placeholder="e.g., Lock steady quarter notes to the metronome"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="setupGuidance">Setup Guidance</Label>
-                      <Textarea
-                        id="setupGuidance"
-                        value={editingSetupGuidance}
-                        onChange={(e) =>
-                          setEditingSetupGuidance(e.target.value)
-                        }
-                        rows={4}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="evaluationGuidance">
-                        Evaluation Guidance
-                      </Label>
-                      <Textarea
-                        id="evaluationGuidance"
-                        value={editingEvaluationGuidance}
-                        onChange={(e) =>
-                          setEditingEvaluationGuidance(e.target.value)
-                        }
-                        rows={4}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="difficultyGuidance">
-                        Difficulty Guidance
-                      </Label>
-                      <Textarea
-                        id="difficultyGuidance"
-                        value={editingDifficultyGuidance}
-                        onChange={(e) =>
-                          setEditingDifficultyGuidance(e.target.value)
-                        }
-                        rows={4}
-                      />
-                    </div>
-                  </>
-                )}
-            </div>
-            <SheetFooter>
-              <Button variant="outline" onClick={handleCancelEdit}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveTitle}>Save</Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </DialogContent>
-    </Dialog>
-
-    {/* Save Dialog */}
-    <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Save Quest Graph</AlertDialogTitle>
-          <AlertDialogDescription>
-            Enter a title for your quest graph.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="py-4">
-          <Input
-            placeholder="Quest graph title"
-            value={saveDialogTitle}
-            onChange={(e) => setSaveDialogTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") confirmSave();
-            }}
-            autoFocus
-          />
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={confirmSave}>Save</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-
-    {/* Unsaved Changes Confirm Dialog */}
-    <AlertDialog open={showNewConfirmDialog} onOpenChange={setShowNewConfirmDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-          <AlertDialogDescription>
-            You have unsaved changes. Do you want to discard them?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setPendingLoadGraph(null)}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={confirmLoadPending}>Discard Changes</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-
-    {/* Delete Confirm Dialog */}
-    <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Quest Graph</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete "{currentGraph?.title}"? This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      {/* Delete Confirm Dialog */}
+      <AlertDialog
+        open={showDeleteConfirmDialog}
+        onOpenChange={setShowDeleteConfirmDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Quest Graph</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{currentGraph?.title}"? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
