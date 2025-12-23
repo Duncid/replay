@@ -1510,11 +1510,12 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
       if (data.success) {
         setIsDryRunValid(true);
+        const needsSave = hasUnsavedChanges;
         toast({
           title: "Validation passed",
-          description: `Graph is valid: ${data.counts?.nodes || 0} nodes, ${
-            data.counts?.edges || 0
-          } edges. ${data.warnings?.length || 0} warnings. You can now publish.`,
+          description: needsSave
+            ? `Graph is valid (${data.counts?.nodes || 0} nodes, ${data.counts?.edges || 0} edges). Save your graph to enable publishing.`
+            : `Graph is valid: ${data.counts?.nodes || 0} nodes, ${data.counts?.edges || 0} edges. You can now publish.`,
         });
       } else {
         setIsDryRunValid(false);
@@ -1558,7 +1559,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     } finally {
       setIsPublishing(false);
     }
-  }, [currentGraph, toast]);
+  }, [currentGraph, hasUnsavedChanges, toast]);
 
   const handleExportSchema = useCallback(async () => {
     try {
