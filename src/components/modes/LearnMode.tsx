@@ -1,8 +1,10 @@
 import { LessonCard } from "@/components/LessonCard";
 import { QuestEditor } from "@/components/QuestEditor";
+import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useLessonRuns } from "@/hooks/useLessonRuns";
 import { supabase } from "@/integrations/supabase/client";
 import {
   createInitialLessonState,
@@ -10,6 +12,8 @@ import {
   LessonMetronomeSettings,
   LessonMetronomeSoundType,
   LessonState,
+  TeacherGreetingResponse,
+  TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
 import { Loader2, Map, Send } from "lucide-react";
@@ -59,12 +63,15 @@ export function LearnMode({
   const [lastComment, setLastComment] = useState<string | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [questEditorOpen, setQuestEditorOpen] = useState(false);
+  const [teacherGreeting, setTeacherGreeting] = useState<TeacherGreetingResponse | null>(null);
+  const [isLoadingTeacher, setIsLoadingTeacher] = useState(false);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
   const generationRequestIdRef = useRef<string | null>(null);
   const evaluationRequestIdRef = useRef<string | null>(null);
   const userActionTokenRef = useRef<string>(crypto.randomUUID());
   const { t } = useTranslation();
+  const { startLessonRun, incrementAttempts, endLessonRun } = useLessonRuns();
 
   const markUserAction = useCallback(() => {
     userActionTokenRef.current = crypto.randomUUID();
@@ -74,6 +81,38 @@ export function LearnMode({
     setIsLoading(false);
     setIsEvaluating(false);
   }, []);
+
+  // Fetch teacher greeting on mount
+  useEffect(() => {
+    const fetchTeacherGreeting = async () => {
+      setIsLoadingTeacher(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("teacher-greet", {
+          body: { language },
+        });
+
+        if (error) {
+          console.error("Teacher greet error:", error);
+          return;
+        }
+
+        if (data?.error) {
+          console.error("Teacher greet returned error:", data.error);
+          return;
+        }
+
+        setTeacherGreeting(data as TeacherGreetingResponse);
+      } catch (err) {
+        console.error("Failed to fetch teacher greeting:", err);
+      } finally {
+        setIsLoadingTeacher(false);
+      }
+    };
+
+    if (lesson.phase === "welcome") {
+      fetchTeacherGreeting();
+    }
+  }, [language, lesson.phase]);
 
   // Apply metronome settings from a lesson response
   const applyMetronomeSettings = useCallback(
@@ -109,7 +148,8 @@ export function LearnMode({
     async (
       userPrompt: string,
       difficulty: number = 1,
-      previousSequence?: NoteSequence
+      previousSequence?: NoteSequence,
+      lessonNodeKey?: string
     ) => {
       markUserAction();
       const actionToken = userActionTokenRef.current;
@@ -151,6 +191,16 @@ export function LearnMode({
           applyMetronomeSettings(data.metronome);
         }
 
+        // Start lesson run tracking if we have a lesson key
+        let lessonRunId: string | undefined;
+        if (lessonNodeKey) {
+          const runId = await startLessonRun(lessonNodeKey, difficulty, {
+            bpm: data.metronome?.bpm || metronomeBpm,
+            meter: data.metronome?.timeSignature || metronomeTimeSignature,
+          });
+          if (runId) lessonRunId = runId;
+        }
+
         setLesson({
           instruction: data.instruction,
           targetSequence: data.sequence,
@@ -160,6 +210,8 @@ export function LearnMode({
           feedback: null,
           difficulty,
           userPrompt,
+          lessonNodeKey,
+          lessonRunId,
         });
 
         hasEvaluatedRef.current = false;
@@ -190,9 +242,12 @@ export function LearnMode({
       applyMetronomeSettings,
       language,
       markUserAction,
+      metronomeBpm,
+      metronomeTimeSignature,
       model,
       onClearRecording,
       onPlaySequence,
+      startLessonRun,
       t,
       toast,
     ]
@@ -248,6 +303,16 @@ export function LearnMode({
           attempts: prev.attempts + 1,
         }));
 
+        // Track attempt in lesson run
+        if (lesson.lessonRunId) {
+          await incrementAttempts(lesson.lessonRunId);
+        }
+
+        // End lesson run on pass
+        if (evaluation === "correct" && lesson.lessonRunId) {
+          await endLessonRun(lesson.lessonRunId, "pass");
+        }
+
         // Auto-replay example when notes were wrong
         if (evaluation === "wrong" || evaluation === "close") {
           setTimeout(() => {
@@ -271,9 +336,12 @@ export function LearnMode({
       }
     },
     [
+      endLessonRun,
+      incrementAttempts,
       language,
-      lesson.targetSequence,
       lesson.instruction,
+      lesson.lessonRunId,
+      lesson.targetSequence,
       model,
       onClearRecording,
       onPlaySequence,
@@ -300,12 +368,14 @@ export function LearnMode({
     generateLesson(
       lesson.userPrompt,
       lesson.difficulty + 1,
-      lesson.targetSequence
+      lesson.targetSequence,
+      lesson.lessonNodeKey
     );
   }, [
     lesson.userPrompt,
     lesson.difficulty,
     lesson.targetSequence,
+    lesson.lessonNodeKey,
     generateLesson,
   ]);
 
@@ -315,7 +385,38 @@ export function LearnMode({
     setPrompt("");
     setLastComment(null);
     onClearRecording();
+    setTeacherGreeting(null);
   }, [markUserAction, onClearRecording]);
+
+  const handleSelectActivity = useCallback(
+    (suggestion: TeacherSuggestion) => {
+      // Apply setup hints if provided
+      if (suggestion.setupHint.bpm) {
+        setMetronomeBpm(suggestion.setupHint.bpm);
+      }
+      if (suggestion.setupHint.meter) {
+        setMetronomeTimeSignature(suggestion.setupHint.meter);
+      }
+
+      // Determine difficulty
+      let difficulty = 1;
+      if (suggestion.difficulty.mode === "set" && suggestion.difficulty.value) {
+        difficulty = suggestion.difficulty.value;
+      }
+
+      // Build prompt from suggestion
+      const prompt = `${suggestion.label}: ${suggestion.why}`;
+      generateLesson(prompt, difficulty, undefined, suggestion.lessonKey);
+    },
+    [generateLesson, setMetronomeBpm, setMetronomeTimeSignature]
+  );
+
+  const handleFreePractice = useCallback(() => {
+    setLesson((prev) => ({
+      ...prev,
+      phase: "prompt",
+    }));
+  }, []);
 
   const suggestions = [
     ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) ||
@@ -324,7 +425,15 @@ export function LearnMode({
 
   const render = () => (
     <div className="space-y-8">
-      {lesson.phase === "prompt" ? (
+      {lesson.phase === "welcome" ? (
+        /* Teacher Welcome */
+        <TeacherWelcome
+          greeting={teacherGreeting}
+          isLoading={isLoadingTeacher}
+          onSelectActivity={handleSelectActivity}
+          onFreePractice={handleFreePractice}
+        />
+      ) : lesson.phase === "prompt" ? (
         /* Initial Prompt Input */
         <div className="w-full max-w-2xl mx-auto space-y-3">
           <div className="flex justify-end mb-2">

@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.curriculum-publish]
 verify_jwt = false
+
+[functions.teacher-greet]
+verify_jwt = false

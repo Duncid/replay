@@ -1,6 +1,6 @@
 import { NoteSequence } from "./noteSequence";
 
-export type LessonPhase = "prompt" | "your_turn";
+export type LessonPhase = "welcome" | "prompt" | "your_turn";
 
 // Types for metronome settings that the LLM can control
 export type LessonFeelPreset =
@@ -41,6 +41,10 @@ export interface LessonState {
   difficulty: number;
   /** User's original prompt */
   userPrompt: string;
+  /** Current lesson node key from curriculum */
+  lessonNodeKey?: string;
+  /** Current lesson run ID for tracking */
+  lessonRunId?: string;
 }
 
 export interface LessonGenerationResponse {
@@ -54,10 +58,78 @@ export interface EvaluationResponse {
   feedback: string;
 }
 
+// Teacher greeting types
+export interface TeacherDifficulty {
+  mode: "same" | "easier" | "harder" | "set";
+  value: number | null;
+}
+
+export interface TeacherSetupHint {
+  bpm?: number | null;
+  meter?: string | null;
+  feel?: string | null;
+  bars?: number | null;
+  countInBars?: number | null;
+}
+
+export interface TeacherSuggestion {
+  lessonKey: string;
+  label: string;
+  why: string;
+  difficulty: TeacherDifficulty;
+  setupHint: TeacherSetupHint;
+  durationMin: number;
+}
+
+export interface TeacherGreetingResponse {
+  greeting: string;
+  suggestions: TeacherSuggestion[];
+  notes?: string | null;
+}
+
+// Lesson run types for activity tracking
+export interface LessonRunSetup {
+  bpm?: number;
+  meter?: string;
+  feel?: string;
+  bars?: number;
+  countInBars?: number;
+}
+
+export interface LessonRun {
+  id: string;
+  lesson_node_key: string;
+  started_at: string;
+  ended_at?: string | null;
+  evaluation?: "pass" | "close" | "fail" | null;
+  difficulty: number;
+  setup: LessonRunSetup;
+  attempt_count: number;
+  created_at: string;
+}
+
+export interface UserSkillState {
+  id: string;
+  skill_key: string;
+  unlocked: boolean;
+  mastery: number;
+  last_practiced_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PracticeSession {
+  id: string;
+  started_at: string;
+  ended_at?: string | null;
+  lesson_run_ids: string[];
+  created_at: string;
+}
+
 export const createInitialLessonState = (): LessonState => ({
   instruction: "",
   targetSequence: { notes: [], totalTime: 0 },
-  phase: "prompt",
+  phase: "welcome",
   attempts: 0,
   validations: 0,
   feedback: null,

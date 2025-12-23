@@ -184,6 +184,66 @@ export type Database = {
           },
         ]
       }
+      lesson_runs: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          difficulty: number
+          ended_at: string | null
+          evaluation: string | null
+          id: string
+          lesson_node_key: string
+          setup: Json | null
+          started_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          difficulty?: number
+          ended_at?: string | null
+          evaluation?: string | null
+          id?: string
+          lesson_node_key: string
+          setup?: Json | null
+          started_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          difficulty?: number
+          ended_at?: string | null
+          evaluation?: string | null
+          id?: string
+          lesson_node_key?: string
+          setup?: Json | null
+          started_at?: string
+        }
+        Relationships: []
+      }
+      practice_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          lesson_run_ids: string[] | null
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          lesson_run_ids?: string[] | null
+          started_at?: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          lesson_run_ids?: string[] | null
+          started_at?: string
+        }
+        Relationships: []
+      }
       quest_graphs: {
         Row: {
           created_at: string | null
@@ -205,6 +265,36 @@ export type Database = {
           id?: string
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_skill_state: {
+        Row: {
+          created_at: string
+          id: string
+          last_practiced_at: string | null
+          mastery: number
+          skill_key: string
+          unlocked: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_practiced_at?: string | null
+          mastery?: number
+          skill_key: string
+          unlocked?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_practiced_at?: string | null
+          mastery?: number
+          skill_key?: string
+          unlocked?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
