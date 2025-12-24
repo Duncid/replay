@@ -298,6 +298,10 @@ export function TeacherWelcome({
 
               {/* Actions */}
               <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={onFreePractice}>
+                  {t("learnMode.freePractice", "Free Practice")}
+                </Button>
+
                 <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
