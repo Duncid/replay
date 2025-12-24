@@ -126,6 +126,58 @@ export interface PracticeSession {
   created_at: string;
 }
 
+// Lesson Brief - compiled once at lesson start, reused for all turns
+export interface LessonBrief {
+  lessonKey: string;
+  title: string;
+  goal: string;
+  setupGuidance: string;
+  evaluationGuidance: string;
+  difficultyGuidance: string;
+  requiredSkills: string[];
+  awardedSkills: string[];
+  nextLessonKey: string | null;
+}
+
+// Grader output from lesson-evaluate
+export interface GraderOutput {
+  evaluation: "pass" | "close" | "fail";
+  diagnosis: string[];
+  feedbackText: string;
+  suggestedAdjustment: "easier" | "same" | "harder";
+  nextSetup?: Partial<LessonRunSetup>;
+}
+
+// Coach decision from lesson-decide
+export type CoachNextAction = "RETRY_SAME" | "MAKE_EASIER" | "MAKE_HARDER" | "EXIT_TO_MAIN_TEACHER";
+
+export interface CoachOutput {
+  feedbackText: string;
+  nextAction: CoachNextAction;
+  setupDelta?: Partial<LessonRunSetup>;
+  exitHint?: string;
+}
+
+// Lesson state for the state machine
+export interface LessonMachineState {
+  turn: number;
+  passStreak: number;
+  failStreak: number;
+  lastDecision: CoachNextAction | null;
+  phase: "intro" | "practice" | "evaluate" | "feedback" | "exit";
+}
+
+// Response from lesson-start endpoint
+export interface LessonStartResponse {
+  lessonRunId: string;
+  instruction: string;
+  demoSequence?: NoteSequence;
+  setup: LessonRunSetup;
+  metronome?: LessonMetronomeSettings;
+  lessonBrief: LessonBrief;
+  composedPrompt?: string; // When debug: true
+}
+
 export const createInitialLessonState = (): LessonState => ({
   instruction: "",
   targetSequence: { notes: [], totalTime: 0 },
