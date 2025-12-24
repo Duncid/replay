@@ -1,0 +1,131 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { TeacherSuggestion } from "@/types/learningSession";
+import { Clock, TrendingUp, RotateCcw, Eye, ChevronRight, ArrowLeft } from "lucide-react";
+import { useState } from "react";
+
+interface LessonDebugCardProps {
+  suggestion: TeacherSuggestion;
+  prompt: string;
+  isLoading: boolean;
+  onStart: () => void;
+  onCancel: () => void;
+}
+
+function getDifficultyIcon(mode: string) {
+  switch (mode) {
+    case "easier":
+      return <RotateCcw className="h-3 w-3" />;
+    case "harder":
+      return <TrendingUp className="h-3 w-3" />;
+    default:
+      return null;
+  }
+}
+
+function getDifficultyLabel(mode: string) {
+  switch (mode) {
+    case "easier":
+      return "Easier";
+    case "harder":
+      return "Harder";
+    case "same":
+      return "Same level";
+    case "set":
+      return "Custom";
+    default:
+      return "";
+  }
+}
+
+export function LessonDebugCard({
+  suggestion,
+  prompt,
+  isLoading,
+  onStart,
+  onCancel,
+}: LessonDebugCardProps) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  return (
+    <div className="w-full max-w-3xl mx-auto space-y-6">
+      <Card className="border-amber-500/30 bg-amber-500/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg">{suggestion.label}</CardTitle>
+          </div>
+          <CardDescription>{suggestion.why}</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-4">
+          {/* Lesson Details */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {suggestion.durationMin} min
+            </div>
+            {suggestion.difficulty?.mode !== "same" && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                {getDifficultyIcon(suggestion.difficulty?.mode || "")}
+                {getDifficultyLabel(suggestion.difficulty?.mode || "")}
+              </Badge>
+            )}
+            {suggestion.setupHint?.bpm && (
+              <Badge variant="outline" className="text-xs">
+                {suggestion.setupHint.bpm} BPM
+              </Badge>
+            )}
+            {suggestion.setupHint?.meter && (
+              <Badge variant="outline" className="text-xs">
+                {suggestion.setupHint.meter}
+              </Badge>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Eye className="h-4 w-4" />
+                  Debug
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+                <SheetHeader>
+                  <SheetTitle>LLM Prompt Preview</SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="h-[calc(100vh-120px)] mt-4">
+                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
+                    {prompt}
+                  </pre>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+
+            <Button
+              onClick={onStart}
+              disabled={isLoading}
+              className="gap-2 flex-1"
+            >
+              <ChevronRight className="h-4 w-4" />
+              Start
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
