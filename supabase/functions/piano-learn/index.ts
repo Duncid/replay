@@ -40,7 +40,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, difficulty = 1, previousSequence, language = "en" } = await req.json();
+    const { prompt, difficulty = 1, previousSequence, language = "en", debug = false } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
       return new Response(JSON.stringify({ error: "Missing or invalid 'prompt' in request body" }), {
@@ -49,7 +49,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Generating lesson for: "${prompt}" at difficulty ${difficulty}, language: ${language}`);
+    console.log(`Generating lesson for: "${prompt}" at difficulty ${difficulty}, language: ${language}, debug: ${debug}`);
 
     // Dynamic language instruction
     const languageInstruction = language === "fr"
@@ -157,7 +157,18 @@ EXAMPLE OUTPUT WITH METRONOME:
     "soundType": "hihat",
     "accentPreset": "backbeat"
   }
-}`;
+  }`;
+
+    // If debug mode, return the prompt without calling the LLM
+    if (debug) {
+      console.log("Debug mode: returning prompt without LLM call");
+      return new Response(JSON.stringify({ 
+        debug: true, 
+        prompt: systemPrompt + "\n\n---USER PROMPT---\n\nGenerate a lesson for: " + prompt 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

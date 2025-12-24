@@ -1,6 +1,7 @@
 import { LessonCard } from "@/components/LessonCard";
 import { QuestEditor } from "@/components/QuestEditor";
-import { TeacherWelcome } from "@/components/TeacherWelcome";
+import { TeacherWelcome, TeacherDebugData } from "@/components/TeacherWelcome";
+import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,11 @@ interface LearnModeProps {
   setMetronomeSoundType?: (soundType: LessonMetronomeSoundType) => void;
 }
 
+interface LessonDebugState {
+  suggestion: TeacherSuggestion;
+  prompt: string;
+}
+
 export function LearnMode({
   isPlaying,
   onPlaySequence,
@@ -65,6 +71,8 @@ export function LearnMode({
   const [questEditorOpen, setQuestEditorOpen] = useState(false);
   const [teacherGreeting, setTeacherGreeting] = useState<TeacherGreetingResponse | null>(null);
   const [isLoadingTeacher, setIsLoadingTeacher] = useState(false);
+  const [lessonDebug, setLessonDebug] = useState<LessonDebugState | null>(null);
+  const [isLoadingLessonDebug, setIsLoadingLessonDebug] = useState(false);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
   const generationRequestIdRef = useRef<string | null>(null);
@@ -82,37 +90,48 @@ export function LearnMode({
     setIsEvaluating(false);
   }, []);
 
-  // Fetch teacher greeting on mount
-  useEffect(() => {
-    const fetchTeacherGreeting = async () => {
-      setIsLoadingTeacher(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("teacher-greet", {
-          body: { language },
+  // No auto-fetch on mount - user must click "Start"
+
+  // Fetch teacher greeting when user clicks Start
+  const handleStartTeacherGreet = useCallback(async () => {
+    setIsLoadingTeacher(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("teacher-greet", {
+        body: { language, debug: false },
+      });
+
+      if (error) {
+        console.error("Teacher greet error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to get teacher greeting",
+          variant: "destructive",
         });
-
-        if (error) {
-          console.error("Teacher greet error:", error);
-          return;
-        }
-
-        if (data?.error) {
-          console.error("Teacher greet returned error:", data.error);
-          return;
-        }
-
-        setTeacherGreeting(data as TeacherGreetingResponse);
-      } catch (err) {
-        console.error("Failed to fetch teacher greeting:", err);
-      } finally {
-        setIsLoadingTeacher(false);
+        return;
       }
-    };
 
-    if (lesson.phase === "welcome") {
-      fetchTeacherGreeting();
+      if (data?.error) {
+        console.error("Teacher greet returned error:", data.error);
+        toast({
+          title: "Error",
+          description: data.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setTeacherGreeting(data as TeacherGreetingResponse);
+    } catch (err) {
+      console.error("Failed to fetch teacher greeting:", err);
+      toast({
+        title: "Error",
+        description: "Failed to connect to teacher",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingTeacher(false);
     }
-  }, [language, lesson.phase]);
+  }, [language, toast]);
 
   // Apply metronome settings from a lesson response
   const applyMetronomeSettings = useCallback(
@@ -157,6 +176,7 @@ export function LearnMode({
       generationRequestIdRef.current = requestId;
       setIsLoading(true);
       setLastComment(null);
+      setLessonDebug(null); // Clear any lesson debug state
       const localizedPrompt =
         language === "fr"
           ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
@@ -170,6 +190,7 @@ export function LearnMode({
             previousSequence,
             language,
             model,
+            debug: false,
           },
         });
 
@@ -384,32 +405,82 @@ export function LearnMode({
     setLesson(createInitialLessonState());
     setPrompt("");
     setLastComment(null);
+    setLessonDebug(null);
     onClearRecording();
     setTeacherGreeting(null);
   }, [markUserAction, onClearRecording]);
 
+  // When a suggestion is clicked, fetch the debug prompt first
   const handleSelectActivity = useCallback(
-    (suggestion: TeacherSuggestion) => {
+    async (suggestion: TeacherSuggestion) => {
+      setIsLoadingLessonDebug(true);
+      
       // Apply setup hints if provided
-      if (suggestion.setupHint.bpm) {
+      if (suggestion.setupHint?.bpm) {
         setMetronomeBpm(suggestion.setupHint.bpm);
       }
-      if (suggestion.setupHint.meter) {
+      if (suggestion.setupHint?.meter) {
         setMetronomeTimeSignature(suggestion.setupHint.meter);
       }
 
-      // Determine difficulty
-      let difficulty = 1;
-      if (suggestion.difficulty.mode === "set" && suggestion.difficulty.value) {
-        difficulty = suggestion.difficulty.value;
-      }
-
       // Build prompt from suggestion
-      const prompt = `${suggestion.label}: ${suggestion.why}`;
-      generateLesson(prompt, difficulty, undefined, suggestion.lessonKey);
+      const lessonPrompt = `${suggestion.label}: ${suggestion.why}`;
+      
+      try {
+        const { data, error } = await supabase.functions.invoke("piano-learn", {
+          body: {
+            prompt: lessonPrompt,
+            difficulty: suggestion.difficulty?.mode === "set" && suggestion.difficulty?.value 
+              ? suggestion.difficulty.value 
+              : 1,
+            language,
+            model,
+            debug: true,
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (data?.debug && data?.prompt) {
+          setLessonDebug({
+            suggestion,
+            prompt: data.prompt,
+          });
+        } else {
+          throw new Error("Debug mode not returning expected data");
+        }
+      } catch (err) {
+        console.error("Failed to fetch lesson debug:", err);
+        toast({
+          title: "Error",
+          description: "Failed to prepare lesson",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingLessonDebug(false);
+      }
     },
-    [generateLesson, setMetronomeBpm, setMetronomeTimeSignature]
+    [language, model, setMetronomeBpm, setMetronomeTimeSignature, toast]
   );
+
+  // Start the actual lesson after seeing the debug prompt
+  const handleStartLesson = useCallback(() => {
+    if (!lessonDebug) return;
+    
+    const suggestion = lessonDebug.suggestion;
+    let difficulty = 1;
+    if (suggestion.difficulty?.mode === "set" && suggestion.difficulty?.value) {
+      difficulty = suggestion.difficulty.value;
+    }
+
+    const prompt = `${suggestion.label}: ${suggestion.why}`;
+    generateLesson(prompt, difficulty, undefined, suggestion.lessonKey);
+  }, [lessonDebug, generateLesson]);
+
+  const handleCancelLessonDebug = useCallback(() => {
+    setLessonDebug(null);
+  }, []);
 
   const handleFreePractice = useCallback(() => {
     setLesson((prev) => ({
@@ -425,13 +496,31 @@ export function LearnMode({
 
   const render = () => (
     <div className="space-y-8">
-      {lesson.phase === "welcome" ? (
+      {lessonDebug ? (
+        /* Lesson Debug Card - shown after selecting a suggestion */
+        <LessonDebugCard
+          suggestion={lessonDebug.suggestion}
+          prompt={lessonDebug.prompt}
+          isLoading={isLoading}
+          onStart={handleStartLesson}
+          onCancel={handleCancelLessonDebug}
+        />
+      ) : isLoadingLessonDebug ? (
+        /* Loading lesson debug */
+        <div className="w-full max-w-2xl mx-auto">
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Preparing lesson...</p>
+          </div>
+        </div>
+      ) : lesson.phase === "welcome" ? (
         /* Teacher Welcome */
         <TeacherWelcome
           greeting={teacherGreeting}
           isLoading={isLoadingTeacher}
           onSelectActivity={handleSelectActivity}
           onFreePractice={handleFreePractice}
+          onStart={handleStartTeacherGreet}
           language={language}
         />
       ) : lesson.phase === "prompt" ? (
@@ -501,9 +590,9 @@ export function LearnMode({
     </div>
   );
 
-  return {
-    lesson,
-    render,
-    handleUserAction: markUserAction,
-  };
+  const handleUserAction = useCallback(() => {
+    markUserAction();
+  }, [markUserAction]);
+
+  return { lesson, render, handleUserAction };
 }
