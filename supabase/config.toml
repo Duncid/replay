@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.teacher-greet]
 verify_jwt = false
+
+[functions.lesson-start]
+verify_jwt = false

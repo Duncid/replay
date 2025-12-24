@@ -186,39 +186,71 @@ export type Database = {
       }
       lesson_runs: {
         Row: {
+          ai_feedback: string | null
           attempt_count: number
           created_at: string
+          demo_sequence: Json | null
+          diagnosis: Json | null
           difficulty: number
           ended_at: string | null
           evaluation: string | null
           id: string
+          lesson_brief: Json | null
           lesson_node_key: string
+          metronome_context: Json | null
           setup: Json | null
           started_at: string
+          state: Json | null
+          user_recording: Json | null
+          version_id: string | null
         }
         Insert: {
+          ai_feedback?: string | null
           attempt_count?: number
           created_at?: string
+          demo_sequence?: Json | null
+          diagnosis?: Json | null
           difficulty?: number
           ended_at?: string | null
           evaluation?: string | null
           id?: string
+          lesson_brief?: Json | null
           lesson_node_key: string
+          metronome_context?: Json | null
           setup?: Json | null
           started_at?: string
+          state?: Json | null
+          user_recording?: Json | null
+          version_id?: string | null
         }
         Update: {
+          ai_feedback?: string | null
           attempt_count?: number
           created_at?: string
+          demo_sequence?: Json | null
+          diagnosis?: Json | null
           difficulty?: number
           ended_at?: string | null
           evaluation?: string | null
           id?: string
+          lesson_brief?: Json | null
           lesson_node_key?: string
+          metronome_context?: Json | null
           setup?: Json | null
           started_at?: string
+          state?: Json | null
+          user_recording?: Json | null
+          version_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lesson_runs_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       practice_sessions: {
         Row: {
