@@ -100,7 +100,7 @@ serve(async (req) => {
 
   try {
     const { language = "en", debug = false } = await req.json();
-    
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -122,13 +122,14 @@ serve(async (req) => {
       // No published curriculum yet, return a simple greeting
       return new Response(
         JSON.stringify({
-          greeting: language === "fr" 
-            ? "Bienvenue ! Le curriculum n'est pas encore disponible. Essayez le mode libre pour commencer."
-            : "Welcome! The curriculum isn't published yet. Try free practice mode to get started.",
+          greeting:
+            language === "fr"
+              ? "Bienvenue ! Le curriculum n'est pas encore disponible. Essayez le mode libre pour commencer."
+              : "Welcome! The curriculum isn't published yet. Try free practice mode to get started.",
           suggestions: [],
           notes: null,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -153,16 +154,14 @@ serve(async (req) => {
     };
 
     // Parse curriculum data from snapshot
-    const edges: Edge[] = (snapshot.edges || []).map(e => ({
+    const edges: Edge[] = (snapshot.edges || []).map((e) => ({
       source_key: e.source_key,
       target_key: e.target_key,
       edge_type: e.edge_type,
     }));
 
-    const tracks: TrackNode[] = (snapshot.tracks || []).map(t => {
-      const startEdge = edges.find(
-        (e) => e.source_key === t.trackKey && e.edge_type === "track_starts_with"
-      );
+    const tracks: TrackNode[] = (snapshot.tracks || []).map((t) => {
+      const startEdge = edges.find((e) => e.source_key === t.trackKey && e.edge_type === "track_starts_with");
       return {
         key: t.trackKey,
         title: t.title || t.trackKey,
@@ -193,7 +192,9 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[teacher-greet] Curriculum loaded: ${tracks.length} tracks, ${lessons.size} lessons, ${skills.size} skills, ${edges.length} edges`);
+    console.log(
+      `[teacher-greet] Curriculum loaded: ${tracks.length} tracks, ${lessons.size} lessons, ${skills.size} skills, ${edges.length} edges`,
+    );
 
     // Build edge lookups
     const lessonNextEdges = edges.filter((e) => e.edge_type === "lesson_next");
@@ -213,18 +214,14 @@ serve(async (req) => {
 
     const lessonRuns: LessonRun[] = (recentRuns || []) as LessonRun[];
 
-    const { data: skillStates, error: skillsError } = await supabase
-      .from("user_skill_state")
-      .select("*");
+    const { data: skillStates, error: skillsError } = await supabase.from("user_skill_state").select("*");
 
     if (skillsError) {
       console.error("Error fetching skill states:", skillsError);
     }
 
     const unlockedSkills = new Set(
-      ((skillStates || []) as SkillState[])
-        .filter((s) => s.unlocked)
-        .map((s) => s.skill_key)
+      ((skillStates || []) as SkillState[]).filter((s) => s.unlocked).map((s) => s.skill_key),
     );
 
     // 3. Compute accessible lessons per track
@@ -288,9 +285,7 @@ serve(async (req) => {
       if (lesson) {
         const runs = runsByLesson.get(lastPracticedKey) || [];
         const recentEvals = runs.slice(0, 3).map((r) => r.evaluation || "none");
-        const attemptsLast7Days = runs.filter(
-          (r) => new Date(r.started_at) >= sevenDaysAgo
-        ).length;
+        const attemptsLast7Days = runs.filter((r) => new Date(r.started_at) >= sevenDaysAgo).length;
 
         candidates.push({
           lessonKey: lastPracticedKey,
@@ -343,7 +338,7 @@ serve(async (req) => {
     }
 
     const sortedTracks = [...tracks].sort(
-      (a, b) => (practiceCountByTrack.get(a.key) || 0) - (practiceCountByTrack.get(b.key) || 0)
+      (a, b) => (practiceCountByTrack.get(a.key) || 0) - (practiceCountByTrack.get(b.key) || 0),
     );
 
     for (const track of sortedTracks) {
@@ -388,12 +383,12 @@ serve(async (req) => {
         : null;
 
     // 6. Build LLM prompt
-    const systemPrompt = `You are the Teacher agent for an AI+Human piano practice app.
+    const systemPrompt = `You are the Teacher agent for a piano practice app.
 
 Your job when the user opens Learning mode:
-1) Greet the user briefly.
+1) Greet the user briefly, taking into account if you interracted with them on the day
 2) Look at their recent activity and performance.
-3) Propose 2 to 4 next activities (lesson choices) that the user can pick from.
+3) Propose 1 to 4 next activities (lesson choices) that the user can pick from.
 4) Keep it lightweight and motivating. No lecturing. No long explanations.
 
 Important rules:
@@ -487,7 +482,7 @@ OUTPUT JSON SCHEMA:
           },
           prompt: fullPrompt,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -514,9 +509,7 @@ OUTPUT JSON SCHEMA:
 
     // Build fallback response from candidates (used if LLM fails)
     const buildFallbackResponse = (): TeacherResponse => ({
-      greeting: language === "fr"
-        ? "Bonjour ! Prêt à pratiquer ?"
-        : "Hello! Ready to practice?",
+      greeting: language === "fr" ? "Bonjour ! Prêt à pratiquer ?" : "Hello! Ready to practice?",
       suggestions: candidates.slice(0, 3).map((c) => ({
         lessonKey: c.lessonKey,
         label: c.title,
@@ -533,7 +526,7 @@ OUTPUT JSON SCHEMA:
     if (!llmResponse.ok) {
       const errorText = await llmResponse.text();
       console.error("LLM error:", llmResponse.status, errorText);
-      
+
       // Use fallback response instead of returning error
       // This way users can still practice even if LLM is unavailable
       console.log("Using fallback response due to LLM error");
@@ -575,7 +568,7 @@ OUTPUT JSON SCHEMA:
         suggestions: validatedSuggestions,
         notes: teacherResponse.notes,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Error in teacher-greet:", error);
@@ -583,7 +576,7 @@ OUTPUT JSON SCHEMA:
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
