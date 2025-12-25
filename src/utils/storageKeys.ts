@@ -15,4 +15,5 @@ export const STORAGE_KEYS = {
   LEARN_DIFFICULTY: "replay-learn-difficulty",
   LANGUAGE: "replay-language",
   MAGENTA_TEMPERATURE: "replay-magenta-temperature",
+  DEBUG_MODE: "replay-debug-mode",
 } as const;
