@@ -29,6 +29,7 @@ interface LearnModeProps {
   onClearRecording: () => void;
   language: string;
   model: string;
+  debugMode: boolean;
   // Metronome control props
   metronomeBpm: number;
   setMetronomeBpm: (bpm: number) => void;
@@ -53,6 +54,7 @@ export function LearnMode({
   onClearRecording,
   language,
   model,
+  debugMode,
   metronomeBpm,
   setMetronomeBpm,
   metronomeTimeSignature,
@@ -323,6 +325,16 @@ export function LearnMode({
           attempts: prev.attempts + 1,
         }));
 
+        // Debug mode: toast evaluation result
+        if (debugMode) {
+          const evalEmoji = evaluation === "correct" ? "✅" : evaluation === "close" ? "⚠️" : "❌";
+          const evalLabel = evaluation === "correct" ? "Pass" : evaluation === "close" ? "Close" : "Fail";
+          toast({
+            title: `${evalEmoji} ${evalLabel}`,
+            description: `Evaluation: ${evaluation}`,
+          });
+        }
+
         // Track attempt in lesson run
         if (lesson.lessonRunId) {
           await incrementAttempts(lesson.lessonRunId);
@@ -356,6 +368,7 @@ export function LearnMode({
       }
     },
     [
+      debugMode,
       endLessonRun,
       incrementAttempts,
       language,
@@ -366,6 +379,7 @@ export function LearnMode({
       onClearRecording,
       onPlaySequence,
       t,
+      toast,
     ]
   );
 

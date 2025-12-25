@@ -48,6 +48,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -205,6 +206,11 @@ const Index = () => {
   const [magentaTemperature, setMagentaTemperature] = useLocalStorage<number>(
     STORAGE_KEYS.MAGENTA_TEMPERATURE,
     40
+  );
+  // Debug mode
+  const [debugMode, setDebugMode] = useLocalStorage<boolean>(
+    STORAGE_KEYS.DEBUG_MODE,
+    false
   );
 
   // Log initial creativity value
@@ -830,6 +836,7 @@ const Index = () => {
     },
     language,
     model: selectedModel,
+    debugMode,
     // Metronome control props
     metronomeBpm,
     setMetronomeBpm,
@@ -1221,6 +1228,16 @@ const Index = () => {
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
               </TabsList>
+              <div className="flex items-center gap-2 ml-auto">
+                <Checkbox
+                  id="debug-mode"
+                  checked={debugMode}
+                  onCheckedChange={(checked) => setDebugMode(checked === true)}
+                />
+                <Label htmlFor="debug-mode" className="cursor-pointer text-sm text-muted-foreground">
+                  Debug
+                </Label>
+              </div>
               {activeMode === "play" && (
                 <div className="flex items-center gap-2">
                   <Switch
