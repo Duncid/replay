@@ -438,6 +438,7 @@ CURRICULUM SNAPSHOT:
 - skills: ${JSON.stringify(skillsSummary)}
 
 CANDIDATE ACTIVITIES (precomputed, do NOT invent others):
+Note: "lastEvaluation: null" means the run wasn't graded.
 ${JSON.stringify(candidates, null, 2)}
 
 RECENT ACTIVITY:
