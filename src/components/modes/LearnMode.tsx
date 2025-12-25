@@ -168,6 +168,72 @@ export function LearnMode({
     ]
   );
 
+  // Regenerate demo sequence with new BPM/meter settings
+  const regenerateLessonWithNewSettings = useCallback(
+    async (newBpm: number, newMeter: string) => {
+      if (!lesson.lessonRunId || lesson.targetSequence.notes.length === 0) return;
+      
+      setIsLoading(true);
+      try {
+        const regeneratePrompt = lesson.userPrompt || lesson.instruction;
+        const localizedPrompt =
+          language === "fr"
+            ? `${regeneratePrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
+            : regeneratePrompt;
+
+        const { data, error } = await supabase.functions.invoke("piano-learn", {
+          body: {
+            prompt: localizedPrompt,
+            difficulty: lesson.difficulty,
+            language,
+            model,
+            debug: false,
+            // Pass the new BPM/meter so the AI generates at the right tempo
+            metronomeBpm: newBpm,
+            metronomeTimeSignature: newMeter,
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (!data?.instruction || !data?.sequence) {
+          throw new Error("Invalid lesson response");
+        }
+
+        // Update the lesson with the new sequence
+        setLesson((prev) => ({
+          ...prev,
+          targetSequence: data.sequence,
+          instruction: data.instruction,
+        }));
+
+        // Update the demo_sequence in the lesson_runs table
+        await supabase
+          .from("lesson_runs")
+          .update({
+            demo_sequence: data.sequence,
+            setup: { bpm: newBpm, meter: newMeter },
+          })
+          .eq("id", lesson.lessonRunId);
+
+        // Play the new example
+        setTimeout(() => onPlaySequence(data.sequence), 500);
+
+      } catch (err) {
+        console.error("Failed to regenerate lesson:", err);
+        toast({
+          title: "Error",
+          description: "Failed to regenerate lesson with new settings",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [lesson.lessonRunId, lesson.targetSequence.notes.length, lesson.userPrompt, lesson.instruction, lesson.difficulty, language, model, onPlaySequence, toast]
+  );
+
   const generateLesson = useCallback(
     async (
       userPrompt: string,
@@ -404,13 +470,19 @@ export function LearnMode({
                 break;
               case "MAKE_EASIER":
               case "MAKE_HARDER":
-                // Apply setup delta (e.g., adjust BPM)
+                // Apply setup delta (e.g., adjust BPM) and regenerate demo sequence
+                const newBpm = setupDelta?.bpm ?? metronomeBpm;
+                const newMeter = setupDelta?.meter ?? metronomeTimeSignature;
+                
                 if (setupDelta?.bpm) {
                   setMetronomeBpm(setupDelta.bpm);
                 }
                 if (setupDelta?.meter) {
                   setMetronomeTimeSignature(setupDelta.meter);
                 }
+                
+                // Regenerate the lesson with the new settings
+                regenerateLessonWithNewSettings(newBpm, newMeter);
                 break;
               case "EXIT_TO_MAIN_TEACHER":
                 // End lesson, return to welcome phase
