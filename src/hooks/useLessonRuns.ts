@@ -1,11 +1,18 @@
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LessonRun, LessonRunSetup } from "@/types/learningSession";
+import { LessonBrief, LessonRun, LessonRunSetup } from "@/types/learningSession";
+import { NoteSequence } from "@/types/noteSequence";
 import { Json } from "@/integrations/supabase/types";
 
 export function useLessonRuns() {
   const startLessonRun = useCallback(
-    async (lessonNodeKey: string, difficulty: number, setup: LessonRunSetup = {}): Promise<string | null> => {
+    async (
+      lessonNodeKey: string,
+      difficulty: number,
+      setup: LessonRunSetup = {},
+      demoSequence?: NoteSequence,
+      lessonBrief?: LessonBrief
+    ): Promise<string | null> => {
       try {
         const { data, error } = await supabase
           .from("lesson_runs")
@@ -14,6 +21,8 @@ export function useLessonRuns() {
             difficulty,
             setup: setup as Json,
             attempt_count: 0,
+            demo_sequence: demoSequence ? (demoSequence as unknown as Json) : null,
+            lesson_brief: lessonBrief ? (lessonBrief as unknown as Json) : null,
           }])
           .select("id")
           .single();
