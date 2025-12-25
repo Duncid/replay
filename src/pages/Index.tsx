@@ -80,7 +80,6 @@ import {
   ChevronDown,
   Download,
   FilePlus,
-  Map,
   Mic,
   MoreHorizontal,
   Music,
@@ -1223,7 +1222,7 @@ const Index = () => {
           className="w-full relative z-10"
         >
           <div className="flex items-center justify-between px-2 py-4">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <TabsList>
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
@@ -1290,7 +1289,6 @@ const Index = () => {
                       appState === "ai_playing" || appState === "waiting_for_ai"
                     }
                   >
-                    <Map className="h-4 w-4 mr-2" />
                     Quest Editor
                   </Button>
                   <Button
