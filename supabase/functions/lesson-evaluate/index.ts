@@ -77,20 +77,26 @@ serve(async (req) => {
       );
     }
 
-    const lessonBrief = lessonRun.lesson_brief as Record<string, unknown>;
+    const lessonBrief = lessonRun.lesson_brief as Record<string, unknown> | null;
     const demoSequence = lessonRun.demo_sequence as NoteSequence | null;
-    const setup = lessonRun.setup as Record<string, unknown>;
-    const state = lessonRun.state as Record<string, unknown>;
+    const setup = (lessonRun.setup || {}) as Record<string, unknown>;
+    const state = (lessonRun.state || {}) as Record<string, unknown>;
+
+    // Handle case where lesson_brief is not populated (free-form lessons from piano-learn)
+    const lessonKey = lessonBrief?.lessonKey || lessonRun.lesson_node_key || "unknown";
+    const lessonTitle = lessonBrief?.title || "Practice Exercise";
+    const lessonGoal = lessonBrief?.goal || "Play the demonstrated sequence accurately";
+    const evaluationGuidance = lessonBrief?.evaluationGuidance || "";
 
     // 2. Build Grader prompt
     const systemPrompt = `You are a piano lesson grader. Your ONLY job is to assess the student's performance objectively.
 You do NOT provide encouragement or coaching - just pure assessment.
 
 LESSON BRIEF:
-- Key: ${lessonBrief.lessonKey}
-- Title: ${lessonBrief.title}
-- Goal: ${lessonBrief.goal}
-${lessonBrief.evaluationGuidance ? `- Evaluation Guidance: ${lessonBrief.evaluationGuidance}` : ""}
+- Key: ${lessonKey}
+- Title: ${lessonTitle}
+- Goal: ${lessonGoal}
+${evaluationGuidance ? `- Evaluation Guidance: ${evaluationGuidance}` : ""}
 
 CURRENT SETUP:
 - BPM: ${setup.bpm || 80}
