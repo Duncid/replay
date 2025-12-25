@@ -17,6 +17,15 @@ interface CoachOutput {
   nextAction: CoachNextAction;
   setupDelta?: Record<string, unknown>;
   exitHint?: string;
+  awardSkills?: boolean;
+}
+
+interface LessonBrief {
+  lessonKey: string;
+  title: string;
+  goal: string;
+  awardedSkills: string[];
+  [key: string]: unknown;
 }
 
 interface LessonState {
@@ -79,7 +88,7 @@ serve(async (req) => {
       );
     }
 
-    const lessonBrief = lessonRun.lesson_brief as Record<string, unknown>;
+    const lessonBrief = lessonRun.lesson_brief as LessonBrief;
     const setup = lessonRun.setup as Record<string, unknown>;
     const currentState = (lessonRun.state as LessonState) || {
       turn: 0,
@@ -231,6 +240,10 @@ Use the provided function to submit your decision.`;
                     type: "string",
                     description: "If exiting, a hint for the main teacher about what to suggest next",
                   },
+                  awardSkills: {
+                    type: "boolean",
+                    description: "Whether to award the lesson's skills based on demonstrated mastery (true if passStreak >= 2)",
+                  },
                 },
                 required: ["feedbackText", "nextAction"],
               },
@@ -271,10 +284,43 @@ Use the provided function to submit your decision.`;
           ? "Good job! Let's keep going." 
           : "Nice try! Let's give it another shot.",
         nextAction: suggestedAction || "RETRY_SAME",
+        awardSkills: newState.passStreak >= PASS_STREAK_THRESHOLD,
       };
     }
 
-    // 6. Update lesson state with decision
+    // 6. Award skills if conditions are met
+    const shouldAwardSkills = coachOutput.awardSkills || (
+      newState.passStreak >= PASS_STREAK_THRESHOLD &&
+      (coachOutput.nextAction === "EXIT_TO_MAIN_TEACHER" || coachOutput.nextAction === "MAKE_HARDER")
+    );
+
+    const awardedSkillKeys: string[] = [];
+    if (shouldAwardSkills && lessonBrief.awardedSkills && lessonBrief.awardedSkills.length > 0) {
+      console.log("Awarding skills:", lessonBrief.awardedSkills);
+      
+      for (const skillKey of lessonBrief.awardedSkills) {
+        const { error: upsertError } = await supabase
+          .from("user_skill_state")
+          .upsert(
+            {
+              skill_key: skillKey,
+              unlocked: true,
+              mastery: 1,
+              last_practiced_at: new Date().toISOString(),
+            },
+            { onConflict: "skill_key" }
+          );
+
+        if (upsertError) {
+          console.error("Error upserting skill:", skillKey, upsertError);
+        } else {
+          awardedSkillKeys.push(skillKey);
+          console.log("Awarded skill:", skillKey);
+        }
+      }
+    }
+
+    // 7. Update lesson state with decision
     newState.lastDecision = coachOutput.nextAction;
     newState.phase = coachOutput.nextAction === "EXIT_TO_MAIN_TEACHER" ? "exit" : 
                      coachOutput.nextAction === "RETRY_SAME" ? "practice" : "intro";
@@ -308,12 +354,13 @@ Use the provided function to submit your decision.`;
       console.error("Error updating lesson run:", updateError);
     }
 
-    console.log("Coach decision:", lessonRunId, coachOutput.nextAction);
+    console.log("Coach decision:", lessonRunId, coachOutput.nextAction, "Awarded:", awardedSkillKeys);
 
     return new Response(JSON.stringify({
       ...coachOutput,
       state: newState,
       setup: newSetup,
+      awardedSkills: awardedSkillKeys,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
