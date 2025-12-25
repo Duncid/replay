@@ -1,7 +1,6 @@
 import { LessonCard } from "@/components/LessonCard";
-import { QuestEditor } from "@/components/QuestEditor";
-import { TeacherWelcome, TeacherDebugData } from "@/components/TeacherWelcome";
 import { LessonDebugCard } from "@/components/LessonDebugCard";
+import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +16,7 @@ import {
   TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
-import { Loader2, Map, Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -68,8 +67,8 @@ export function LearnMode({
   const [isLoading, setIsLoading] = useState(false);
   const [lastComment, setLastComment] = useState<string | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [questEditorOpen, setQuestEditorOpen] = useState(false);
-  const [teacherGreeting, setTeacherGreeting] = useState<TeacherGreetingResponse | null>(null);
+  const [teacherGreeting, setTeacherGreeting] =
+    useState<TeacherGreetingResponse | null>(null);
   const [isLoadingTeacher, setIsLoadingTeacher] = useState(false);
   const [lessonDebug, setLessonDebug] = useState<LessonDebugState | null>(null);
   const [isLoadingLessonDebug, setIsLoadingLessonDebug] = useState(false);
@@ -414,7 +413,7 @@ export function LearnMode({
   const handleSelectActivity = useCallback(
     async (suggestion: TeacherSuggestion) => {
       setIsLoadingLessonDebug(true);
-      
+
       // Apply setup hints if provided
       if (suggestion.setupHint?.bpm) {
         setMetronomeBpm(suggestion.setupHint.bpm);
@@ -425,14 +424,16 @@ export function LearnMode({
 
       // Build prompt from suggestion
       const lessonPrompt = `${suggestion.label}: ${suggestion.why}`;
-      
+
       try {
         const { data, error } = await supabase.functions.invoke("piano-learn", {
           body: {
             prompt: lessonPrompt,
-            difficulty: suggestion.difficulty?.mode === "set" && suggestion.difficulty?.value 
-              ? suggestion.difficulty.value 
-              : 1,
+            difficulty:
+              suggestion.difficulty?.mode === "set" &&
+              suggestion.difficulty?.value
+                ? suggestion.difficulty.value
+                : 1,
             language,
             model,
             debug: true,
@@ -467,7 +468,7 @@ export function LearnMode({
   // Start the actual lesson after seeing the debug prompt
   const handleStartLesson = useCallback(() => {
     if (!lessonDebug) return;
-    
+
     const suggestion = lessonDebug.suggestion;
     let difficulty = 1;
     if (suggestion.difficulty?.mode === "set" && suggestion.difficulty?.value) {
@@ -519,24 +520,12 @@ export function LearnMode({
           greeting={teacherGreeting}
           isLoading={isLoadingTeacher}
           onSelectActivity={handleSelectActivity}
-          onFreePractice={handleFreePractice}
           onStart={handleStartTeacherGreet}
           language={language}
         />
       ) : lesson.phase === "prompt" ? (
         /* Initial Prompt Input */
         <div className="w-full max-w-2xl mx-auto space-y-3">
-          <div className="flex justify-end mb-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuestEditorOpen(true)}
-              disabled={isLoading || isPlaying}
-            >
-              <Map className="h-4 w-4 mr-2" />
-              Quest Editor
-            </Button>
-          </div>
           <Textarea
             placeholder={t("learnMode.promptPlaceholder")}
             value={prompt}
@@ -586,7 +575,6 @@ export function LearnMode({
           onLeave={handleLeave}
         />
       )}
-      <QuestEditor open={questEditorOpen} onOpenChange={setQuestEditorOpen} />
     </div>
   );
 
@@ -594,5 +582,5 @@ export function LearnMode({
     markUserAction();
   }, [markUserAction]);
 
-  return { lesson, render, handleUserAction };
+  return { lesson, render, handleUserAction, handleFreePractice };
 }
