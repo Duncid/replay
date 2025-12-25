@@ -1,13 +1,38 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TeacherGreetingResponse, TeacherSuggestion } from "@/types/learningSession";
-import { Clock, Play, Sparkles, TrendingUp, RotateCcw, Loader2, Bug, Eye, ChevronRight } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useState, useEffect, useCallback } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  TeacherGreetingResponse,
+  TeacherSuggestion,
+} from "@/types/learningSession";
+import {
+  Bug,
+  ChevronRight,
+  Clock,
+  Eye,
+  Loader2,
+  Play,
+  RotateCcw,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface TeacherDebugData {
   debug: true;
@@ -43,7 +68,6 @@ interface TeacherWelcomeProps {
   greeting: TeacherGreetingResponse | null;
   isLoading: boolean;
   onSelectActivity: (suggestion: TeacherSuggestion) => void;
-  onFreePractice: () => void;
   onStart: () => void;
   language?: string;
 }
@@ -78,7 +102,6 @@ export function TeacherWelcome({
   greeting,
   isLoading,
   onSelectActivity,
-  onFreePractice,
   onStart,
   language = "en",
 }: TeacherWelcomeProps) {
@@ -129,7 +152,9 @@ export function TeacherWelcome({
             <h2 className="text-xl font-semibold">{greeting.greeting}</h2>
           </div>
           {greeting.notes && (
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">{greeting.notes}</p>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              {greeting.notes}
+            </p>
           )}
         </div>
 
@@ -138,7 +163,11 @@ export function TeacherWelcome({
           <div className="flex justify-center">
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground"
+                >
                   <Bug className="h-3 w-3" />
                   Debug ({debugData.candidates.length} candidates)
                 </Button>
@@ -167,18 +196,25 @@ export function TeacherWelcome({
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base leading-tight">{suggestion.label}</CardTitle>
+                  <CardTitle className="text-base leading-tight">
+                    {suggestion.label}
+                  </CardTitle>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                     <Clock className="h-3 w-3" />
                     {suggestion.durationMin} min
                   </div>
                 </div>
-                <CardDescription className="text-sm">{suggestion.why}</CardDescription>
+                <CardDescription className="text-sm">
+                  {suggestion.why}
+                </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   {suggestion.difficulty?.mode !== "same" && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       {getDifficultyIcon(suggestion.difficulty?.mode || "")}
                       {getDifficultyLabel(suggestion.difficulty?.mode || "")}
                     </Badge>
@@ -202,13 +238,6 @@ export function TeacherWelcome({
             </Card>
           ))}
         </div>
-
-        {/* Fallback options */}
-        <div className="flex justify-center gap-3">
-          <Button variant="ghost" onClick={onFreePractice}>
-            {t("learnMode.freePractice", "Free Practice")}
-          </Button>
-        </div>
       </div>
     );
   }
@@ -220,7 +249,9 @@ export function TeacherWelcome({
         <Card className="border-primary/20">
           <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">{t("learnMode.loadingTeacher", "Preparing your lesson...")}</p>
+            <p className="text-muted-foreground">
+              {t("learnMode.loadingTeacher", "Preparing your lesson...")}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -251,7 +282,9 @@ export function TeacherWelcome({
           {isLoadingDebug && (
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">Fetching debug data...</span>
+              <span className="text-sm text-muted-foreground">
+                Fetching debug data...
+              </span>
             </div>
           )}
 
@@ -263,22 +296,34 @@ export function TeacherWelcome({
                   <div className="text-lg font-semibold">
                     {debugData.signals.timeSinceLastPracticeHours ?? "∞"}
                   </div>
-                  <div className="text-xs text-muted-foreground">Hours since practice</div>
+                  <div className="text-xs text-muted-foreground">
+                    Hours since practice
+                  </div>
                 </div>
                 <div className="rounded-md bg-muted p-2 text-center">
-                  <div className="text-lg font-semibold">{debugData.signals.recentRunsCount}</div>
-                  <div className="text-xs text-muted-foreground">Recent runs</div>
+                  <div className="text-lg font-semibold">
+                    {debugData.signals.recentRunsCount}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Recent runs
+                  </div>
                 </div>
                 <div className="rounded-md bg-muted p-2 text-center">
-                  <div className="text-lg font-semibold">{debugData.signals.unlockedSkillsCount}</div>
-                  <div className="text-xs text-muted-foreground">Skills unlocked</div>
+                  <div className="text-lg font-semibold">
+                    {debugData.signals.unlockedSkillsCount}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Skills unlocked
+                  </div>
                 </div>
               </div>
 
               {/* Candidates Preview */}
               {debugData.candidates.length > 0 && (
                 <div>
-                  <div className="text-sm font-medium mb-2">Candidate Activities:</div>
+                  <div className="text-sm font-medium mb-2">
+                    Candidate Activities:
+                  </div>
                   <div className="space-y-1">
                     {debugData.candidates.slice(0, 5).map((c) => (
                       <div
@@ -289,7 +334,9 @@ export function TeacherWelcome({
                           {c.category}
                         </Badge>
                         <span className="font-medium">{c.title}</span>
-                        <span className="text-muted-foreground truncate">{c.goal}</span>
+                        <span className="text-muted-foreground truncate">
+                          {c.goal}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -298,10 +345,6 @@ export function TeacherWelcome({
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={onFreePractice}>
-                  {t("learnMode.freePractice", "Free Practice")}
-                </Button>
-
                 <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
@@ -309,7 +352,10 @@ export function TeacherWelcome({
                       Debug
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+                  <SheetContent
+                    side="right"
+                    className="w-[600px] sm:max-w-[600px]"
+                  >
                     <SheetHeader>
                       <SheetTitle>LLM Prompt Preview</SheetTitle>
                     </SheetHeader>
@@ -321,10 +367,7 @@ export function TeacherWelcome({
                   </SheetContent>
                 </Sheet>
 
-                <Button
-                  onClick={onStart}
-                  className="gap-2 flex-1"
-                >
+                <Button onClick={onStart} className="gap-2 flex-1">
                   <ChevronRight className="h-4 w-4" />
                   Start
                 </Button>
@@ -336,9 +379,6 @@ export function TeacherWelcome({
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={fetchDebugData}>
                 Retry
-              </Button>
-              <Button onClick={onFreePractice} variant="outline">
-                {t("learnMode.freePractice", "Free Practice")}
               </Button>
             </div>
           )}

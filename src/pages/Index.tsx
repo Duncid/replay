@@ -8,6 +8,7 @@ import {
 } from "@/components/Metronome";
 import { MidiConnector } from "@/components/MidiConnector";
 import Piano, { PianoHandle } from "@/components/Piano";
+import { QuestEditor } from "@/components/QuestEditor";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
 import { WhistleImportSheet } from "@/components/WhistleImportSheet";
@@ -78,6 +79,7 @@ import {
   ChevronDown,
   Download,
   FilePlus,
+  Map,
   Mic,
   MoreHorizontal,
   Music,
@@ -177,6 +179,7 @@ const Index = () => {
     "add" | "edit"
   >("add");
   const [whistleSheetOpen, setWhistleSheetOpen] = useState(false);
+  const [questEditorOpen, setQuestEditorOpen] = useState(false);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
 
@@ -1260,6 +1263,29 @@ const Index = () => {
                 </DropdownMenu>
               )}
 
+              {activeMode === "learn" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuestEditorOpen(true)}
+                    disabled={
+                      appState === "ai_playing" || appState === "waiting_for_ai"
+                    }
+                  >
+                    <Map className="h-4 w-4 mr-2" />
+                    Quest Editor
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={learnMode.handleFreePractice}
+                  >
+                    {t("learnMode.freePractice", "Free Practice")}
+                  </Button>
+                </>
+              )}
+
               {activeMode === "play" && isAutoreplyActive && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1758,6 +1784,8 @@ const Index = () => {
         isLoading={compositions.isLoading}
         defaultTitle={compositions.currentComposition?.title || ""}
       />
+
+      <QuestEditor open={questEditorOpen} onOpenChange={setQuestEditorOpen} />
     </div>
   );
 };
