@@ -80,12 +80,30 @@ export const useMidiInput = (
 
   const disconnect = useCallback(() => {
     if (activeInputRef.current) {
+      // Explicitly clear the handler
       activeInputRef.current.onmidimessage = null;
       activeInputRef.current = null;
     }
     setConnectedDevice(null);
     console.log("[MIDI] Disconnected");
   }, []);
+
+  // Clear all MIDI handlers from all inputs to prevent stale handlers
+  const clearAllMidiHandlers = useCallback(async () => {
+    if (!isSupported) return;
+    
+    try {
+      const access = await navigator.requestMIDIAccess();
+      const inputs = Array.from(access.inputs.values());
+      inputs.forEach((input) => {
+        // Clear any existing handlers
+        input.onmidimessage = null;
+      });
+      console.log(`[MIDI] Cleared handlers from ${inputs.length} input(s)`);
+    } catch (err) {
+      console.error("[MIDI] Error clearing handlers:", err);
+    }
+  }, [isSupported]);
 
   const connectToDevices = useCallback(async (isManual: boolean) => {
     // Ensure we don't accumulate multiple connections (e.g., from Strict Mode double-invocation)
@@ -101,6 +119,9 @@ export const useMidiInput = (
     try {
       setError(null);
       console.log("[MIDI] Requesting MIDI access...");
+
+      // Clear all existing handlers before connecting to prevent stale handlers
+      await clearAllMidiHandlers();
 
       const access = await navigator.requestMIDIAccess();
       midiAccessRef.current = access;
@@ -125,6 +146,11 @@ export const useMidiInput = (
 
       // Auto-connect to first device
       const firstInput = inputs[0];
+      
+      // Clear any existing handler on this input before setting new one
+      // This ensures no stale handlers remain from previous sessions
+      firstInput.onmidimessage = null;
+      
       activeInputRef.current = firstInput;
       firstInput.onmidimessage = handleMidiMessage;
 
@@ -142,7 +168,7 @@ export const useMidiInput = (
       }
       console.error("[MIDI] Error:", err);
     }
-  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices]);
+  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices, clearAllMidiHandlers]);
 
   const requestAccess = useCallback(async () => {
     await connectToDevices(true);
@@ -159,19 +185,25 @@ export const useMidiInput = (
   // Update MIDI message handler when callbacks change to avoid stale closures
   useEffect(() => {
     if (activeInputRef.current) {
+      // Only update if we have an active connection
       activeInputRef.current.onmidimessage = handleMidiMessage;
+      console.log("[MIDI] Updated message handler");
     }
   }, [handleMidiMessage]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - ensure all handlers are cleared
   useEffect(() => {
     return () => {
       disconnect();
+      // Clear all handlers on unmount as well
+      clearAllMidiHandlers().catch(() => {
+        // Ignore errors during cleanup
+      });
       if (midiAccessRef.current) {
         midiAccessRef.current = null;
       }
     };
-  }, [disconnect]);
+  }, [disconnect, clearAllMidiHandlers]);
 
   return {
     devices,

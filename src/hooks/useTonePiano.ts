@@ -224,8 +224,9 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
   }, [isLoaded]);
 
   useEffect(() => {
-    // Clean up previous engine
+    // Clean up previous engine before creating a new one
     if (engineRef.current) {
+      console.log(`[AudioEngine] Disposing previous engine (type: ${engineRef.current.type})`);
       engineRef.current.dispose();
       engineRef.current = null;
     }
@@ -240,22 +241,28 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
     }
 
     if (soundType === "classic") {
+      console.log("[AudioEngine] Creating classic engine");
       engineRef.current = createClassicEngine();
       setIsLoaded(true);
       isLoadedRef.current = true;
     } else if (SAMPLED_INSTRUMENTS.includes(soundType)) {
+      console.log(`[AudioEngine] Creating sampler engine for: ${soundType}`);
       const { engine, loadPromise } = createSamplerEngine(soundType);
       engineRef.current = engine;
       loadPromise.then(() => {
-        if (soundTypeRef.current === soundType) {
+        if (soundTypeRef.current === soundType && engineRef.current === engine) {
           setIsLoaded(true);
           isLoadedRef.current = true;
+          console.log(`[AudioEngine] Sampler engine loaded: ${soundType}`);
+        } else {
+          console.log(`[AudioEngine] Sampler engine load completed but soundType changed or engine replaced`);
         }
       });
     }
 
     return () => {
       if (engineRef.current) {
+        console.log(`[AudioEngine] Cleanup: Disposing engine (type: ${engineRef.current.type})`);
         engineRef.current.dispose();
         engineRef.current = null;
       }
