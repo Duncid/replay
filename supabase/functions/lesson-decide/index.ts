@@ -88,8 +88,8 @@ serve(async (req) => {
       );
     }
 
-    const lessonBrief = lessonRun.lesson_brief as LessonBrief;
-    const setup = lessonRun.setup as Record<string, unknown>;
+    const lessonBrief = lessonRun.lesson_brief as LessonBrief | null;
+    const setup = (lessonRun.setup || {}) as Record<string, unknown>;
     const currentState = (lessonRun.state as LessonState) || {
       turn: 0,
       passStreak: 0,
@@ -97,6 +97,12 @@ serve(async (req) => {
       lastDecision: null,
       phase: "feedback",
     };
+
+    // Handle case where lesson_brief is not populated (free-form lessons from piano-learn)
+    const lessonKey = lessonBrief?.lessonKey || lessonRun.lesson_node_key || "unknown";
+    const lessonTitle = lessonBrief?.title || "Practice Exercise";
+    const lessonGoal = lessonBrief?.goal || "Play the demonstrated sequence accurately";
+    const awardedSkills = lessonBrief?.awardedSkills || [];
 
     // 2. Update streaks based on evaluation
     const newState: LessonState = {
@@ -128,9 +134,9 @@ serve(async (req) => {
 You trust the grader's assessment completely - do NOT re-evaluate the performance.
 
 LESSON BRIEF:
-- Key: ${lessonBrief.lessonKey}
-- Title: ${lessonBrief.title}
-- Goal: ${lessonBrief.goal}
+- Key: ${lessonKey}
+- Title: ${lessonTitle}
+- Goal: ${lessonGoal}
 
 CURRENT SETUP:
 - BPM: ${setup.bpm || 80}
@@ -295,10 +301,10 @@ Use the provided function to submit your decision.`;
     );
 
     const awardedSkillKeys: string[] = [];
-    if (shouldAwardSkills && lessonBrief.awardedSkills && lessonBrief.awardedSkills.length > 0) {
-      console.log("Awarding skills:", lessonBrief.awardedSkills);
+    if (shouldAwardSkills && awardedSkills.length > 0) {
+      console.log("Awarding skills:", awardedSkills);
       
-      for (const skillKey of lessonBrief.awardedSkills) {
+      for (const skillKey of awardedSkills) {
         const { error: upsertError } = await supabase
           .from("user_skill_state")
           .upsert(
