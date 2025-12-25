@@ -7,10 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useLessonRuns } from "@/hooks/useLessonRuns";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  CoachNextAction,
+  CoachOutput,
   createInitialLessonState,
+  GraderOutput,
   LessonFeelPreset,
   LessonMetronomeSettings,
   LessonMetronomeSoundType,
+  LessonRunSetup,
   LessonState,
   TeacherGreetingResponse,
   TeacherSuggestion,
@@ -294,64 +298,175 @@ export function LearnMode({
       setIsEvaluating(true);
 
       try {
-        const { data, error } = await supabase.functions.invoke(
-          "piano-evaluate",
-          {
-            body: {
-              targetSequence: lesson.targetSequence,
-              userSequence,
-              instruction: lesson.instruction,
-              language,
-              model,
-            },
-          }
-        );
-
-        if (
-          evaluationRequestIdRef.current !== requestId ||
-          userActionTokenRef.current !== actionToken
-        )
-          return;
-
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        const feedback = data.feedback as string;
-        const evaluation = data.evaluation as "correct" | "close" | "wrong";
-
-        setLastComment(feedback);
-        setLesson((prev) => ({
-          ...prev,
-          attempts: prev.attempts + 1,
-        }));
-
-        // Debug mode: toast evaluation result
-        if (debugMode) {
-          const evalEmoji = evaluation === "correct" ? "✅" : evaluation === "close" ? "⚠️" : "❌";
-          const evalLabel = evaluation === "correct" ? "Pass" : evaluation === "close" ? "Close" : "Fail";
-          toast({
-            title: `${evalEmoji} ${evalLabel}`,
-            description: `Evaluation: ${evaluation}`,
-          });
-        }
-
-        // Track attempt in lesson run
+        // STRUCTURED LESSON: Use lesson-evaluate → lesson-decide
         if (lesson.lessonRunId) {
-          await incrementAttempts(lesson.lessonRunId);
-        }
-
-        // End lesson run on pass
-        if (evaluation === "correct" && lesson.lessonRunId) {
-          await endLessonRun(lesson.lessonRunId, "pass");
-        }
-
-        // Auto-replay example when notes were wrong
-        if (evaluation === "wrong" || evaluation === "close") {
-          setTimeout(() => {
-            if (lesson.targetSequence.notes.length > 0) {
-              onPlaySequence(lesson.targetSequence);
+          // Step 1: Call lesson-evaluate
+          const { data: graderData, error: graderError } = await supabase.functions.invoke(
+            "lesson-evaluate",
+            {
+              body: {
+                lessonRunId: lesson.lessonRunId,
+                userSequence,
+                metronomeContext: {
+                  bpm: metronomeBpm,
+                  meter: metronomeTimeSignature,
+                },
+              },
             }
-          }, 1000); // Small delay so user can read feedback first
+          );
+
+          if (
+            evaluationRequestIdRef.current !== requestId ||
+            userActionTokenRef.current !== actionToken
+          ) return;
+
+          if (graderError) throw graderError;
+          if (graderData?.error) throw new Error(graderData.error);
+
+          const graderOutput = graderData as GraderOutput;
+
+          // Debug mode: toast grader evaluation
+          if (debugMode) {
+            const evalEmoji = graderOutput.evaluation === "pass" ? "✅" : graderOutput.evaluation === "close" ? "⚠️" : "❌";
+            const evalLabel = graderOutput.evaluation === "pass" ? "Pass" : graderOutput.evaluation === "close" ? "Close" : "Fail";
+            toast({
+              title: `${evalEmoji} Grader: ${evalLabel}`,
+              description: graderOutput.diagnosis?.join(", ") || graderOutput.feedbackText,
+            });
+          }
+
+          // Step 2: Call lesson-decide with grader output
+          const { data: coachData, error: coachError } = await supabase.functions.invoke(
+            "lesson-decide",
+            {
+              body: {
+                lessonRunId: lesson.lessonRunId,
+                graderOutput,
+              },
+            }
+          );
+
+          if (
+            evaluationRequestIdRef.current !== requestId ||
+            userActionTokenRef.current !== actionToken
+          ) return;
+
+          if (coachError) throw coachError;
+          if (coachData?.error) throw new Error(coachData.error);
+
+          const coachOutput = coachData as CoachOutput & { awardedSkills?: string[] };
+
+          // Debug mode: toast coach decision and skills
+          if (debugMode) {
+            toast({
+              title: `🎯 Coach: ${coachOutput.nextAction}`,
+              description: coachOutput.setupDelta ? `Setup: ${JSON.stringify(coachOutput.setupDelta)}` : undefined,
+            });
+
+            if (coachOutput.awardedSkills && coachOutput.awardedSkills.length > 0) {
+              toast({
+                title: `🏆 Skills Awarded`,
+                description: coachOutput.awardedSkills.join(", "),
+              });
+            }
+          }
+
+          setLastComment(coachOutput.feedbackText);
+          setLesson((prev) => ({
+            ...prev,
+            attempts: prev.attempts + 1,
+          }));
+
+          // Handle coach's nextAction
+          const handleNextAction = (action: CoachNextAction, setupDelta?: Partial<LessonRunSetup>) => {
+            switch (action) {
+              case "RETRY_SAME":
+                // Keep lesson running, just show feedback
+                break;
+              case "MAKE_EASIER":
+              case "MAKE_HARDER":
+                // Apply setup delta (e.g., adjust BPM)
+                if (setupDelta?.bpm) {
+                  setMetronomeBpm(setupDelta.bpm);
+                }
+                if (setupDelta?.meter) {
+                  setMetronomeTimeSignature(setupDelta.meter);
+                }
+                break;
+              case "EXIT_TO_MAIN_TEACHER":
+                // End lesson, return to welcome phase
+                setTimeout(() => {
+                  setLesson(createInitialLessonState());
+                  setPrompt("");
+                  setLastComment(null);
+                  onClearRecording();
+                  // Keep teacher greeting so user can pick another activity
+                }, 2000);
+                break;
+            }
+          };
+
+          handleNextAction(coachOutput.nextAction, coachOutput.setupDelta);
+
+          // Auto-replay example when not passing
+          if (graderOutput.evaluation !== "pass") {
+            setTimeout(() => {
+              if (lesson.targetSequence.notes.length > 0) {
+                onPlaySequence(lesson.targetSequence);
+              }
+            }, 1000);
+          }
+
+        } else {
+          // FREE PRACTICE: Keep using piano-evaluate
+          const { data, error } = await supabase.functions.invoke(
+            "piano-evaluate",
+            {
+              body: {
+                targetSequence: lesson.targetSequence,
+                userSequence,
+                instruction: lesson.instruction,
+                language,
+                model,
+              },
+            }
+          );
+
+          if (
+            evaluationRequestIdRef.current !== requestId ||
+            userActionTokenRef.current !== actionToken
+          ) return;
+
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          const feedback = data.feedback as string;
+          const evaluation = data.evaluation as "correct" | "close" | "wrong";
+
+          setLastComment(feedback);
+          setLesson((prev) => ({
+            ...prev,
+            attempts: prev.attempts + 1,
+          }));
+
+          // Debug mode: toast evaluation result
+          if (debugMode) {
+            const evalEmoji = evaluation === "correct" ? "✅" : evaluation === "close" ? "⚠️" : "❌";
+            const evalLabel = evaluation === "correct" ? "Pass" : evaluation === "close" ? "Close" : "Fail";
+            toast({
+              title: `${evalEmoji} ${evalLabel}`,
+              description: `Evaluation: ${evaluation}`,
+            });
+          }
+
+          // Auto-replay example when notes were wrong
+          if (evaluation === "wrong" || evaluation === "close") {
+            setTimeout(() => {
+              if (lesson.targetSequence.notes.length > 0) {
+                onPlaySequence(lesson.targetSequence);
+              }
+            }, 1000);
+          }
         }
       } catch (error) {
         console.error("Failed to evaluate attempt:", error);
@@ -362,22 +477,24 @@ export function LearnMode({
           userActionTokenRef.current === actionToken
         ) {
           setIsEvaluating(false);
-          hasEvaluatedRef.current = false; // Allow next recording to be evaluated
+          hasEvaluatedRef.current = false;
           onClearRecording();
         }
       }
     },
     [
       debugMode,
-      endLessonRun,
-      incrementAttempts,
       language,
       lesson.instruction,
       lesson.lessonRunId,
       lesson.targetSequence,
+      metronomeBpm,
+      metronomeTimeSignature,
       model,
       onClearRecording,
       onPlaySequence,
+      setMetronomeBpm,
+      setMetronomeTimeSignature,
       t,
       toast,
     ]
