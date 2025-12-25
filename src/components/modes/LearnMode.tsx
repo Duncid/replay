@@ -220,10 +220,29 @@ export function LearnMode({
         // Start lesson run tracking if we have a lesson key
         let lessonRunId: string | undefined;
         if (lessonNodeKey) {
-          const runId = await startLessonRun(lessonNodeKey, difficulty, {
-            bpm: data.metronome?.bpm || metronomeBpm,
-            meter: data.metronome?.timeSignature || metronomeTimeSignature,
-          });
+          // Build lesson brief from available data
+          const brief = {
+            lessonKey: lessonNodeKey,
+            title: data.instruction.split('\n')[0]?.substring(0, 100) || "Practice Exercise",
+            goal: data.instruction,
+            setupGuidance: "",
+            evaluationGuidance: "Compare user's notes to the demo sequence",
+            difficultyGuidance: "",
+            requiredSkills: [],
+            awardedSkills: [],
+            nextLessonKey: null,
+          };
+          
+          const runId = await startLessonRun(
+            lessonNodeKey,
+            difficulty,
+            {
+              bpm: data.metronome?.bpm || metronomeBpm,
+              meter: data.metronome?.timeSignature || metronomeTimeSignature,
+            },
+            data.sequence,  // Pass demo sequence
+            brief           // Pass lesson brief
+          );
           if (runId) lessonRunId = runId;
         }
 
