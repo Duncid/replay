@@ -132,7 +132,10 @@ export function TeacherWelcome({
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
                   {suggestion.trackTitle && (
-                    <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1 text-xs"
+                    >
                       <Music className="h-3 w-3" />
                       {suggestion.trackTitle}
                     </Badge>
@@ -177,14 +180,10 @@ export function TeacherWelcome({
   if (isLoading) {
     return (
       <div className="w-full max-w-2xl mx-auto">
-        <Card className="border-primary/20">
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">
-              {t("learnMode.loadingTeacher", "Preparing your lesson...")}
-            </p>
-          </CardContent>
-        </Card>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">
+          {t("learnMode.loadingTeacher", "Preparing your lesson...")}
+        </p>
       </div>
     );
   }
