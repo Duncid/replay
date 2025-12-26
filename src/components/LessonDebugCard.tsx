@@ -1,10 +1,22 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { TeacherSuggestion } from "@/types/learningSession";
-import { Clock, TrendingUp, RotateCcw, Eye, ChevronRight, ArrowLeft } from "lucide-react";
+import { ArrowLeft, RotateCcw, TrendingUp } from "lucide-react";
 import { useState } from "react";
 
 interface LessonDebugCardProps {
@@ -62,16 +74,6 @@ export function LessonDebugCard({
         <CardContent className="pt-0 space-y-4">
           {/* Lesson Details */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              {suggestion.durationMin} min
-            </div>
-            {suggestion.difficulty?.mode !== "same" && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                {getDifficultyIcon(suggestion.difficulty?.mode || "")}
-                {getDifficultyLabel(suggestion.difficulty?.mode || "")}
-              </Badge>
-            )}
             {suggestion.setupHint?.bpm && (
               <Badge variant="outline" className="text-xs">
                 {suggestion.setupHint.bpm} BPM
@@ -87,7 +89,7 @@ export function LessonDebugCard({
           {/* Actions */}
           <div className="flex gap-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={onCancel}
               className="gap-2"
@@ -99,7 +101,6 @@ export function LessonDebugCard({
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
-                  <Eye className="h-4 w-4" />
                   Debug
                 </Button>
               </SheetTrigger>
@@ -115,12 +116,7 @@ export function LessonDebugCard({
               </SheetContent>
             </Sheet>
 
-            <Button
-              onClick={onStart}
-              disabled={isLoading}
-              className="gap-2 flex-1"
-            >
-              <ChevronRight className="h-4 w-4" />
+            <Button onClick={onStart} disabled={isLoading} size="sm">
               Start
             </Button>
           </div>
