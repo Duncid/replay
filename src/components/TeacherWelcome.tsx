@@ -62,32 +62,6 @@ interface TeacherWelcomeProps {
   language?: string;
 }
 
-function getDifficultyIcon(mode: string) {
-  switch (mode) {
-    case "easier":
-      return <RotateCcw className="h-3 w-3" />;
-    case "harder":
-      return <TrendingUp className="h-3 w-3" />;
-    default:
-      return null;
-  }
-}
-
-function getDifficultyLabel(mode: string) {
-  switch (mode) {
-    case "easier":
-      return "Easier";
-    case "harder":
-      return "Harder";
-    case "same":
-      return "Same level";
-    case "set":
-      return "Custom";
-    default:
-      return "";
-  }
-}
-
 export function TeacherWelcome({
   greeting,
   isLoading,
