@@ -1076,7 +1076,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
       <div
         id="topContainer"
-        className="w-full flex flex-col items-center justify-start relative"
+        className="w-full flex flex-col items-center justify-start relative flex-1"
       >
         {/* AI Playing / Replay indicator */}
         <TopToastLabel
@@ -1218,7 +1218,7 @@ const Index = () => {
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
-          className="w-full relative z-10"
+          className="w-full relative z-10 flex-1 flex flex-col"
         >
           <div className="flex items-center justify-between px-2 py-4">
             <div className="flex items-center gap-4">

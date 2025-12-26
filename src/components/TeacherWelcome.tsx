@@ -22,9 +22,7 @@ import {
 } from "@/types/learningSession";
 import {
   Bug,
-  ChevronRight,
   Clock,
-  Eye,
   Loader2,
   Play,
   RotateCcw,
@@ -260,12 +258,11 @@ export function TeacherWelcome({
 
   // Debug Card - shown by default before Start is clicked
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
+    <div className="w-full max-w-3xl h-full flex flex-col justify-center items-center mx-auto space-y-6">
       {/* Debug Card */}
       <Card className="border-amber-500/30 bg-amber-500/5">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Bug className="h-5 w-5 text-amber-500" />
             <CardTitle className="text-lg">Teacher Context</CardTitle>
           </div>
           <CardDescription>
@@ -292,65 +289,31 @@ export function TeacherWelcome({
             <div className="space-y-4">
               {/* Signals Summary */}
               <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-md bg-muted p-2 text-center">
+                <div className="rounded-md p-2 text-center">
                   <div className="text-lg font-semibold">
                     {debugData.signals.timeSinceLastPracticeHours ?? "∞"}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Hours since practice
-                  </div>
+                  <div className="text-xs">Hours since practice</div>
                 </div>
-                <div className="rounded-md bg-muted p-2 text-center">
+                <div className="rounded-md p-2 text-center">
                   <div className="text-lg font-semibold">
                     {debugData.signals.recentRunsCount}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Recent runs
-                  </div>
+                  <div className="text-xs">Recent runs</div>
                 </div>
-                <div className="rounded-md bg-muted p-2 text-center">
+                <div className="rounded-md p-2 text-center">
                   <div className="text-lg font-semibold">
                     {debugData.signals.unlockedSkillsCount}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Skills unlocked
-                  </div>
+                  <div className="text-xs">Skills unlocked</div>
                 </div>
               </div>
-
-              {/* Candidates Preview */}
-              {debugData.candidates.length > 0 && (
-                <div>
-                  <div className="text-sm font-medium mb-2">
-                    Candidate Activities:
-                  </div>
-                  <div className="space-y-1">
-                    {debugData.candidates.slice(0, 5).map((c) => (
-                      <div
-                        key={c.lessonKey}
-                        className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1"
-                      >
-                        <Badge variant="outline" className="text-xs">
-                          {c.category}
-                        </Badge>
-                        <span className="font-medium">{c.title}</span>
-                        <span className="text-muted-foreground truncate">
-                          {c.goal}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Actions */}
               <div className="flex gap-2">
                 <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Eye className="h-4 w-4" />
-                      Debug
-                    </Button>
+                    <Button variant="outline">Debug</Button>
                   </SheetTrigger>
                   <SheetContent
                     side="right"
@@ -367,10 +330,7 @@ export function TeacherWelcome({
                   </SheetContent>
                 </Sheet>
 
-                <Button onClick={onStart} className="gap-2 flex-1">
-                  <ChevronRight className="h-4 w-4" />
-                  Start
-                </Button>
+                <Button onClick={onStart}>Start</Button>
               </div>
             </div>
           )}

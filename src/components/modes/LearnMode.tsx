@@ -79,7 +79,9 @@ export function LearnMode({
   const [isLoadingTeacher, setIsLoadingTeacher] = useState(false);
   const [lessonDebug, setLessonDebug] = useState<LessonDebugState | null>(null);
   const [isLoadingLessonDebug, setIsLoadingLessonDebug] = useState(false);
-  const [skillToUnlock, setSkillToUnlock] = useState<SkillToUnlock | null>(null);
+  const [skillToUnlock, setSkillToUnlock] = useState<SkillToUnlock | null>(
+    null
+  );
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
   const generationRequestIdRef = useRef<string | null>(null);
@@ -173,7 +175,10 @@ export function LearnMode({
 
   // Fetch skill unlock status for a given skill key
   const fetchSkillStatus = useCallback(
-    async (skillKey: string, skillTitle?: string): Promise<SkillToUnlock | null> => {
+    async (
+      skillKey: string,
+      skillTitle?: string
+    ): Promise<SkillToUnlock | null> => {
       try {
         const { data: skillState } = await supabase
           .from("user_skill_state")
@@ -233,8 +238,9 @@ export function LearnMode({
   // Regenerate demo sequence with new BPM/meter settings
   const regenerateLessonWithNewSettings = useCallback(
     async (newBpm: number, newMeter: string) => {
-      if (!lesson.lessonRunId || lesson.targetSequence.notes.length === 0) return;
-      
+      if (!lesson.lessonRunId || lesson.targetSequence.notes.length === 0)
+        return;
+
       setIsLoading(true);
       try {
         const regeneratePrompt = lesson.userPrompt || lesson.instruction;
@@ -281,7 +287,6 @@ export function LearnMode({
 
         // Play the new example
         setTimeout(() => onPlaySequence(data.sequence), 500);
-
       } catch (err) {
         console.error("Failed to regenerate lesson:", err);
         toast({
@@ -293,7 +298,17 @@ export function LearnMode({
         setIsLoading(false);
       }
     },
-    [lesson.lessonRunId, lesson.targetSequence.notes.length, lesson.userPrompt, lesson.instruction, lesson.difficulty, language, model, onPlaySequence, toast]
+    [
+      lesson.lessonRunId,
+      lesson.targetSequence.notes.length,
+      lesson.userPrompt,
+      lesson.instruction,
+      lesson.difficulty,
+      language,
+      model,
+      onPlaySequence,
+      toast,
+    ]
   );
 
   const generateLesson = useCallback(
@@ -349,7 +364,7 @@ export function LearnMode({
         let lessonRunId: string | undefined;
         let trackKey: string | undefined;
         let trackTitle: string | undefined;
-        let awardedSkills: string[] = [];
+        const awardedSkills: string[] = [];
 
         if (lessonNodeKey) {
           // Fetch track and skill info from curriculum edges
@@ -367,12 +382,20 @@ export function LearnMode({
               .from("curriculum_edges")
               .select("*")
               .eq("version_id", latestVersion.id)
-              .or(`source_key.eq.${lessonNodeKey},target_key.eq.${lessonNodeKey}`);
+              .or(
+                `source_key.eq.${lessonNodeKey},target_key.eq.${lessonNodeKey}`
+              );
 
             for (const edge of edges || []) {
-              if (edge.source_key === lessonNodeKey && edge.edge_type === "lesson_awards_skill") {
+              if (
+                edge.source_key === lessonNodeKey &&
+                edge.edge_type === "lesson_awards_skill"
+              ) {
                 awardedSkills.push(edge.target_key);
-              } else if (edge.target_key === lessonNodeKey && edge.edge_type === "track_contains_lesson") {
+              } else if (
+                edge.target_key === lessonNodeKey &&
+                edge.edge_type === "track_contains_lesson"
+              ) {
                 trackKey = edge.source_key;
               }
             }
@@ -396,7 +419,10 @@ export function LearnMode({
             // Fetch skill status for the first awarded skill
             if (awardedSkills.length > 0) {
               const skillTitle = await fetchSkillTitle(awardedSkills[0]);
-              const status = await fetchSkillStatus(awardedSkills[0], skillTitle);
+              const status = await fetchSkillStatus(
+                awardedSkills[0],
+                skillTitle
+              );
               setSkillToUnlock(status);
             } else {
               setSkillToUnlock(null);
@@ -406,7 +432,9 @@ export function LearnMode({
           // Build lesson brief from available data
           const brief: LessonBrief = {
             lessonKey: lessonNodeKey,
-            title: data.instruction.split('\n')[0]?.substring(0, 100) || "Practice Exercise",
+            title:
+              data.instruction.split("\n")[0]?.substring(0, 100) ||
+              "Practice Exercise",
             goal: data.instruction,
             setupGuidance: "",
             evaluationGuidance: "Compare user's notes to the demo sequence",
@@ -417,7 +445,7 @@ export function LearnMode({
             trackKey,
             trackTitle,
           };
-          
+
           const runId = await startLessonRun(
             lessonNodeKey,
             difficulty,
@@ -425,8 +453,8 @@ export function LearnMode({
               bpm: data.metronome?.bpm || metronomeBpm,
               meter: data.metronome?.timeSignature || metronomeTimeSignature,
             },
-            data.sequence,  // Pass demo sequence
-            brief           // Pass lesson brief
+            data.sequence, // Pass demo sequence
+            brief // Pass lesson brief
           );
           if (runId) lessonRunId = runId;
         } else {
@@ -512,9 +540,8 @@ export function LearnMode({
         // STRUCTURED LESSON: Use lesson-evaluate → lesson-decide
         if (lesson.lessonRunId) {
           // Step 1: Call lesson-evaluate
-          const { data: graderData, error: graderError } = await supabase.functions.invoke(
-            "lesson-evaluate",
-            {
+          const { data: graderData, error: graderError } =
+            await supabase.functions.invoke("lesson-evaluate", {
               body: {
                 lessonRunId: lesson.lessonRunId,
                 userSequence,
@@ -523,13 +550,13 @@ export function LearnMode({
                   meter: metronomeTimeSignature,
                 },
               },
-            }
-          );
+            });
 
           if (
             evaluationRequestIdRef.current !== requestId ||
             userActionTokenRef.current !== actionToken
-          ) return;
+          )
+            return;
 
           if (graderError) throw graderError;
           if (graderData?.error) throw new Error(graderData.error);
@@ -538,43 +565,60 @@ export function LearnMode({
 
           // Debug mode: toast grader evaluation
           if (debugMode) {
-            const evalEmoji = graderOutput.evaluation === "pass" ? "✅" : graderOutput.evaluation === "close" ? "⚠️" : "❌";
-            const evalLabel = graderOutput.evaluation === "pass" ? "Pass" : graderOutput.evaluation === "close" ? "Close" : "Fail";
+            const evalEmoji =
+              graderOutput.evaluation === "pass"
+                ? "✅"
+                : graderOutput.evaluation === "close"
+                ? "⚠️"
+                : "❌";
+            const evalLabel =
+              graderOutput.evaluation === "pass"
+                ? "Pass"
+                : graderOutput.evaluation === "close"
+                ? "Close"
+                : "Fail";
             toast({
               title: `${evalEmoji} Grader: ${evalLabel}`,
-              description: graderOutput.diagnosis?.join(", ") || graderOutput.feedbackText,
+              description:
+                graderOutput.diagnosis?.join(", ") || graderOutput.feedbackText,
             });
           }
 
           // Step 2: Call lesson-decide with grader output
-          const { data: coachData, error: coachError } = await supabase.functions.invoke(
-            "lesson-decide",
-            {
+          const { data: coachData, error: coachError } =
+            await supabase.functions.invoke("lesson-decide", {
               body: {
                 lessonRunId: lesson.lessonRunId,
                 graderOutput,
               },
-            }
-          );
+            });
 
           if (
             evaluationRequestIdRef.current !== requestId ||
             userActionTokenRef.current !== actionToken
-          ) return;
+          )
+            return;
 
           if (coachError) throw coachError;
           if (coachData?.error) throw new Error(coachData.error);
 
-          const coachOutput = coachData as CoachOutput & { awardedSkills?: string[] };
+          const coachOutput = coachData as CoachOutput & {
+            awardedSkills?: string[];
+          };
 
           // Debug mode: toast coach decision and skills
           if (debugMode) {
             toast({
               title: `🎯 Coach: ${coachOutput.nextAction}`,
-              description: coachOutput.setupDelta ? `Setup: ${JSON.stringify(coachOutput.setupDelta)}` : undefined,
+              description: coachOutput.setupDelta
+                ? `Setup: ${JSON.stringify(coachOutput.setupDelta)}`
+                : undefined,
             });
 
-            if (coachOutput.awardedSkills && coachOutput.awardedSkills.length > 0) {
+            if (
+              coachOutput.awardedSkills &&
+              coachOutput.awardedSkills.length > 0
+            ) {
               toast({
                 title: `🏆 Skills Awarded`,
                 description: coachOutput.awardedSkills.join(", "),
@@ -583,7 +627,10 @@ export function LearnMode({
           }
 
           // Update skill unlock status if skills were awarded
-          if (coachOutput.awardedSkills && coachOutput.awardedSkills.length > 0) {
+          if (
+            coachOutput.awardedSkills &&
+            coachOutput.awardedSkills.length > 0
+          ) {
             const skillKey = coachOutput.awardedSkills[0];
             const skillTitle = await fetchSkillTitle(skillKey);
             const status = await fetchSkillStatus(skillKey, skillTitle);
@@ -599,27 +646,31 @@ export function LearnMode({
           }));
 
           // Handle coach's nextAction
-          const handleNextAction = (action: CoachNextAction, setupDelta?: Partial<LessonRunSetup>) => {
+          const handleNextAction = (
+            action: CoachNextAction,
+            setupDelta?: Partial<LessonRunSetup>
+          ) => {
             switch (action) {
               case "RETRY_SAME":
                 // Keep lesson running, just show feedback
                 break;
               case "MAKE_EASIER":
-              case "MAKE_HARDER":
+              case "MAKE_HARDER": {
                 // Apply setup delta (e.g., adjust BPM) and regenerate demo sequence
                 const newBpm = setupDelta?.bpm ?? metronomeBpm;
                 const newMeter = setupDelta?.meter ?? metronomeTimeSignature;
-                
+
                 if (setupDelta?.bpm) {
                   setMetronomeBpm(setupDelta.bpm);
                 }
                 if (setupDelta?.meter) {
                   setMetronomeTimeSignature(setupDelta.meter);
                 }
-                
+
                 // Regenerate the lesson with the new settings
                 regenerateLessonWithNewSettings(newBpm, newMeter);
                 break;
+              }
               case "EXIT_TO_MAIN_TEACHER":
                 // End lesson, return to welcome phase
                 setTimeout(() => {
@@ -643,7 +694,6 @@ export function LearnMode({
               }
             }, 1000);
           }
-
         } else {
           // FREE PRACTICE: Keep using piano-evaluate
           const { data, error } = await supabase.functions.invoke(
@@ -662,7 +712,8 @@ export function LearnMode({
           if (
             evaluationRequestIdRef.current !== requestId ||
             userActionTokenRef.current !== actionToken
-          ) return;
+          )
+            return;
 
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
@@ -678,8 +729,18 @@ export function LearnMode({
 
           // Debug mode: toast evaluation result
           if (debugMode) {
-            const evalEmoji = evaluation === "correct" ? "✅" : evaluation === "close" ? "⚠️" : "❌";
-            const evalLabel = evaluation === "correct" ? "Pass" : evaluation === "close" ? "Close" : "Fail";
+            const evalEmoji =
+              evaluation === "correct"
+                ? "✅"
+                : evaluation === "close"
+                ? "⚠️"
+                : "❌";
+            const evalLabel =
+              evaluation === "correct"
+                ? "Pass"
+                : evaluation === "close"
+                ? "Close"
+                : "Fail";
             toast({
               title: `${evalEmoji} ${evalLabel}`,
               description: `Evaluation: ${evaluation}`,
@@ -857,7 +918,7 @@ export function LearnMode({
   ];
 
   const render = () => (
-    <div className="space-y-8">
+    <>
       {lessonDebug ? (
         /* Lesson Debug Card - shown after selecting a suggestion */
         <LessonDebugCard
@@ -938,7 +999,7 @@ export function LearnMode({
           skillToUnlock={skillToUnlock}
         />
       )}
-    </div>
+    </>
   );
 
   const handleUserAction = useCallback(() => {
