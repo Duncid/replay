@@ -401,6 +401,7 @@ Important rules:
 - If the user is succeeding (recent pass streak), propose either the next lesson or a slightly harder difficulty.
 - Balance: avoid always recommending the same track; include variety when appropriate.
 - IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include lesson keys (like "A1.4" or "B2.1") in the label. Example: "Eighth notes practice" NOT "A1.4: Eighth notes practice".
+- REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities. Focus on their progress, recent practice, and what makes sense for them today. Example: "Based on your progress with quarter notes, I think you're ready for eighth notes. The second option is a good review if you want to solidify basics first."
 
 Return ONLY valid JSON following the schema provided.`;
 
@@ -459,7 +460,7 @@ OUTPUT JSON SCHEMA:
       "durationMin": number
     }
   ],
-  "notes": "string|null"
+  "notes": "string (REQUIRED: Brief explanation to the user about why you picked these lessons based on their progress and what makes sense for them today)"
 }`;
 
     // If debug mode, return context without calling LLM
@@ -551,10 +552,30 @@ OUTPUT JSON SCHEMA:
     }
 
     // Build a map of lesson -> track for enriching suggestions
+    // Walk track_starts_with + lesson_next chains to map each lesson to its track
     const lessonToTrack: Map<string, string> = new Map();
-    const trackContainsEdges = edges.filter((e) => e.edge_type === "track_contains_lesson");
-    for (const edge of trackContainsEdges) {
-      lessonToTrack.set(edge.target_key, edge.source_key);
+    const trackStartsEdges = edges.filter((e) => e.edge_type === "track_starts_with");
+    const lessonNextEdgesForTrack = edges.filter((e) => e.edge_type === "lesson_next");
+    
+    // Build a map for lesson_next traversal
+    const lessonNextMap: Map<string, string> = new Map();
+    for (const edge of lessonNextEdgesForTrack) {
+      lessonNextMap.set(edge.source_key, edge.target_key);
+    }
+    
+    // For each track, walk its lesson chain and map all lessons to the track
+    for (const startEdge of trackStartsEdges) {
+      const trackKey = startEdge.source_key;
+      let currentLesson = startEdge.target_key;
+      
+      // Add the first lesson
+      lessonToTrack.set(currentLesson, trackKey);
+      
+      // Walk the chain via lesson_next edges
+      while (lessonNextMap.has(currentLesson)) {
+        currentLesson = lessonNextMap.get(currentLesson)!;
+        lessonToTrack.set(currentLesson, trackKey);
+      }
     }
 
     // Validate and enrich suggestions with lesson data
