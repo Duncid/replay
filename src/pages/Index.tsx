@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,6 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -1227,16 +1227,6 @@ const Index = () => {
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
               </TabsList>
-              <div className="flex items-center gap-2 ml-auto">
-                <Checkbox
-                  id="debug-mode"
-                  checked={debugMode}
-                  onCheckedChange={(checked) => setDebugMode(checked === true)}
-                />
-                <Label htmlFor="debug-mode" className="cursor-pointer text-sm text-muted-foreground">
-                  Debug
-                </Label>
-              </div>
               {activeMode === "play" && (
                 <div className="flex items-center gap-2">
                   <Switch
@@ -1254,33 +1244,30 @@ const Index = () => {
               )}
 
               {activeMode === "learn" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="justify-between"
-                    >
-                      {AI_MODELS.llm.find((m) => m.value === selectedModel)
-                        ?.label || selectedModel}
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {AI_MODELS.llm.map((model) => (
-                      <DropdownMenuItem
-                        key={model.value}
-                        onClick={() => setSelectedModel(model.value)}
-                      >
-                        {model.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              {activeMode === "learn" && (
                 <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="justify-between"
+                      >
+                        {AI_MODELS.llm.find((m) => m.value === selectedModel)
+                          ?.label || selectedModel}
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {AI_MODELS.llm.map((model) => (
+                        <DropdownMenuItem
+                          key={model.value}
+                          onClick={() => setSelectedModel(model.value)}
+                        >
+                          {model.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1400,6 +1387,23 @@ const Index = () => {
                 )}
             </div>
             <div className="flex items-center gap-2">
+              {activeMode === "learn" && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <Checkbox
+                    id="debug-mode"
+                    checked={debugMode}
+                    onCheckedChange={(checked) =>
+                      setDebugMode(checked === true)
+                    }
+                  />
+                  <Label
+                    htmlFor="debug-mode"
+                    className="cursor-pointer text-sm text-muted-foreground"
+                  >
+                    Debug
+                  </Label>
+                </div>
+              )}
               {/* Play/Stop - only shown when there's history */}
               {activeMode === "play" && playMode.history.length > 0 && (
                 <Button
