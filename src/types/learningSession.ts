@@ -65,27 +65,11 @@ export interface EvaluationResponse {
 }
 
 // Teacher greeting types
-export interface TeacherDifficulty {
-  mode: "same" | "easier" | "harder" | "set";
-  value: number | null;
-}
-
-export interface TeacherSetupHint {
-  bpm?: number | null;
-  meter?: string | null;
-  feel?: string | null;
-  bars?: number | null;
-  countInBars?: number | null;
-}
-
 export interface TeacherSuggestion {
   lessonKey: string;
   label: string;
   why: string;
-  difficulty: TeacherDifficulty;
-  setupHint: TeacherSetupHint;
-  durationMin: number;
-  trackTitle?: string;
+  trackTitle: string;
 }
 
 export interface TeacherGreetingResponse {

@@ -16,7 +16,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { TeacherSuggestion } from "@/types/learningSession";
-import { ArrowLeft, RotateCcw, TrendingUp } from "lucide-react";
+import { ArrowLeft, Music } from "lucide-react";
 import { useState } from "react";
 
 interface LessonDebugCardProps {
@@ -25,32 +25,6 @@ interface LessonDebugCardProps {
   isLoading: boolean;
   onStart: () => void;
   onCancel: () => void;
-}
-
-function getDifficultyIcon(mode: string) {
-  switch (mode) {
-    case "easier":
-      return <RotateCcw className="h-3 w-3" />;
-    case "harder":
-      return <TrendingUp className="h-3 w-3" />;
-    default:
-      return null;
-  }
-}
-
-function getDifficultyLabel(mode: string) {
-  switch (mode) {
-    case "easier":
-      return "Easier";
-    case "harder":
-      return "Harder";
-    case "same":
-      return "Same level";
-    case "set":
-      return "Custom";
-    default:
-      return "";
-  }
 }
 
 export function LessonDebugCard({
@@ -66,25 +40,19 @@ export function LessonDebugCard({
     <div className="w-full max-w-3xl mx-auto space-y-6">
       <Card className="border-amber-500/30 bg-amber-500/5">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">{suggestion.label}</CardTitle>
-          </div>
+          {suggestion.trackTitle && (
+            <Badge
+              variant="secondary"
+              className="flex items-center gap-1 text-xs w-fit"
+            >
+              <Music className="h-3 w-3" />
+              {suggestion.trackTitle}
+            </Badge>
+          )}
+          <CardTitle className="text-lg">{suggestion.label}</CardTitle>
           <CardDescription>{suggestion.why}</CardDescription>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
-          {/* Lesson Details */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {suggestion.setupHint?.bpm && (
-              <Badge variant="outline" className="text-xs">
-                {suggestion.setupHint.bpm} BPM
-              </Badge>
-            )}
-            {suggestion.setupHint?.meter && (
-              <Badge variant="outline" className="text-xs">
-                {suggestion.setupHint.meter}
-              </Badge>
-            )}
-          </div>
 
           {/* Actions */}
           <div className="flex gap-2">
