@@ -836,14 +836,6 @@ export function LearnMode({
     async (suggestion: TeacherSuggestion) => {
       setIsLoadingLessonDebug(true);
 
-      // Apply setup hints if provided
-      if (suggestion.setupHint?.bpm) {
-        setMetronomeBpm(suggestion.setupHint.bpm);
-      }
-      if (suggestion.setupHint?.meter) {
-        setMetronomeTimeSignature(suggestion.setupHint.meter);
-      }
-
       // Build prompt from suggestion
       const lessonPrompt = `${suggestion.label}: ${suggestion.why}`;
 
@@ -851,11 +843,7 @@ export function LearnMode({
         const { data, error } = await supabase.functions.invoke("piano-learn", {
           body: {
             prompt: lessonPrompt,
-            difficulty:
-              suggestion.difficulty?.mode === "set" &&
-              suggestion.difficulty?.value
-                ? suggestion.difficulty.value
-                : 1,
+            difficulty: 1, // Lesson Coach will determine actual difficulty
             language,
             model,
             debug: true,
@@ -884,7 +872,7 @@ export function LearnMode({
         setIsLoadingLessonDebug(false);
       }
     },
-    [language, model, setMetronomeBpm, setMetronomeTimeSignature, toast]
+    [language, model, toast]
   );
 
   // Start the actual lesson after seeing the debug prompt
@@ -892,13 +880,8 @@ export function LearnMode({
     if (!lessonDebug) return;
 
     const suggestion = lessonDebug.suggestion;
-    let difficulty = 1;
-    if (suggestion.difficulty?.mode === "set" && suggestion.difficulty?.value) {
-      difficulty = suggestion.difficulty.value;
-    }
-
     const prompt = `${suggestion.label}: ${suggestion.why}`;
-    generateLesson(prompt, difficulty, undefined, suggestion.lessonKey);
+    generateLesson(prompt, 1, undefined, suggestion.lessonKey); // Lesson Coach will determine difficulty
   }, [lessonDebug, generateLesson]);
 
   const handleCancelLessonDebug = useCallback(() => {

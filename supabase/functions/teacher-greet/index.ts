@@ -76,16 +76,7 @@ interface TeacherSuggestion {
   lessonKey: string;
   label: string;
   why: string;
-  difficulty: { mode: string; value: number | null };
-  setupHint: {
-    bpm: number | null;
-    meter: string | null;
-    feel: string | null;
-    bars: number | null;
-    countInBars: number | null;
-  };
-  durationMin: number;
-  trackTitle?: string;
+  trackTitle: string;
 }
 
 interface TeacherResponse {
@@ -387,21 +378,19 @@ serve(async (req) => {
     const systemPrompt = `You are the Teacher agent for a piano practice app.
 
 Your job when the user opens Learning mode:
-1) Greet the user briefly, taking into account if you interracted with them on the day
+1) Greet the user briefly, taking into account if you interacted with them on the day
 2) Look at their recent activity and performance.
 3) Propose 1 to 4 next activities (lesson choices) that the user can pick from.
 4) Keep it lightweight and motivating. No lecturing. No long explanations.
 
 Important rules:
 - The user can choose; you are advising, not forcing.
-- Prefer short sessions: each suggestion should fit in 3–8 minutes.
 - Use the provided curriculum snapshot and candidate activities. Do not invent lessons or skills not present.
 - If the user hasn't practiced in a long time, recommend an easier re-entry choice.
-- If the user is stuck (repeated fail/close), propose a simpler version (lower difficulty / slower bpm / fewer bars).
-- If the user is succeeding (recent pass streak), propose either the next lesson or a slightly harder difficulty.
 - Balance: avoid always recommending the same track; include variety when appropriate.
 - IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include lesson keys (like "A1.4" or "B2.1") in the label. Example: "Eighth notes practice" NOT "A1.4: Eighth notes practice".
-- REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities. Focus on their progress, recent practice, and what makes sense for them today. Example: "Based on your progress with quarter notes, I think you're ready for eighth notes. The second option is a good review if you want to solidify basics first."
+- REQUIRED: The "trackTitle" field MUST match one of the track titles from the curriculum. Each lesson belongs to exactly one track.
+- REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities. Focus on their progress, recent practice, and what makes sense for them today.
 
 Return ONLY valid JSON following the schema provided.`;
 
@@ -430,6 +419,40 @@ Return ONLY valid JSON following the schema provided.`;
       difficulty: r.difficulty,
     }));
 
+    // Build lesson-to-track mapping for candidates
+    const lessonToTrackMap: Map<string, { trackKey: string; trackTitle: string }> = new Map();
+    const trackStartsEdges = edges.filter((e) => e.edge_type === "track_starts_with");
+    const lessonNextEdgesLocal = edges.filter((e) => e.edge_type === "lesson_next");
+    
+    const lessonNextMap: Map<string, string> = new Map();
+    for (const edge of lessonNextEdgesLocal) {
+      lessonNextMap.set(edge.source_key, edge.target_key);
+    }
+    
+    for (const startEdge of trackStartsEdges) {
+      const trackKey = startEdge.source_key;
+      const track = tracks.find((t) => t.key === trackKey);
+      const trackTitle = track?.title || trackKey;
+      let currentLesson = startEdge.target_key;
+      
+      lessonToTrackMap.set(currentLesson, { trackKey, trackTitle });
+      
+      while (lessonNextMap.has(currentLesson)) {
+        currentLesson = lessonNextMap.get(currentLesson)!;
+        lessonToTrackMap.set(currentLesson, { trackKey, trackTitle });
+      }
+    }
+
+    // Enrich candidates with track info for LLM
+    const candidatesWithTrack = candidates.map((c) => {
+      const trackInfo = lessonToTrackMap.get(c.lessonKey);
+      return {
+        ...c,
+        trackKey: trackInfo?.trackKey || c.trackKey,
+        trackTitle: trackInfo?.trackTitle || null,
+      };
+    });
+
     const userPrompt = `CONTEXT (today):
 - locale: ${language}
 - now: ${now.toISOString()}
@@ -441,8 +464,8 @@ CURRICULUM SNAPSHOT:
 - skills: ${JSON.stringify(skillsSummary)}
 
 CANDIDATE ACTIVITIES (precomputed, do NOT invent others):
-Note: "lastEvaluation: null" means the run wasn't graded.
-${JSON.stringify(candidates, null, 2)}
+Note: Each candidate includes its trackTitle. Use this exact trackTitle in your suggestions.
+${JSON.stringify(candidatesWithTrack, null, 2)}
 
 RECENT ACTIVITY:
 - lastLessonRuns: ${JSON.stringify(lessonRunsSummary)}
@@ -455,12 +478,10 @@ OUTPUT JSON SCHEMA:
       "lessonKey": "string",
       "label": "string (short activity name, NO lesson keys like A1.4)",
       "why": "string",
-      "difficulty": { "mode": "same|easier|harder|set", "value": number|null },
-      "setupHint": { "bpm": number|null, "meter": "string"|null, "feel": "string"|null, "bars": number|null, "countInBars": number|null },
-      "durationMin": number
+      "trackTitle": "string (REQUIRED: must match the trackTitle from the candidate)"
     }
   ],
-  "notes": "string (REQUIRED: Brief explanation to the user about why you picked these lessons based on their progress and what makes sense for them today)"
+  "notes": "string (REQUIRED: Brief explanation to the user about why you picked these lessons)"
 }`;
 
     // If debug mode, return context without calling LLM
@@ -514,13 +535,11 @@ OUTPUT JSON SCHEMA:
     // Build fallback response from candidates (used if LLM fails)
     const buildFallbackResponse = (): TeacherResponse => ({
       greeting: language === "fr" ? "Bonjour ! Prêt à pratiquer ?" : "Hello! Ready to practice?",
-      suggestions: candidates.slice(0, 3).map((c) => ({
+      suggestions: candidatesWithTrack.slice(0, 3).map((c) => ({
         lessonKey: c.lessonKey,
         label: c.title,
         why: c.goal,
-        difficulty: { mode: "same", value: null },
-        setupHint: { bpm: null, meter: null, feel: null, bars: null, countInBars: null },
-        durationMin: 5,
+        trackTitle: c.trackTitle || "",
       })),
       notes: null,
     });
@@ -551,48 +570,17 @@ OUTPUT JSON SCHEMA:
       }
     }
 
-    // Build a map of lesson -> track for enriching suggestions
-    // Walk track_starts_with + lesson_next chains to map each lesson to its track
-    const lessonToTrack: Map<string, string> = new Map();
-    const trackStartsEdges = edges.filter((e) => e.edge_type === "track_starts_with");
-    const lessonNextEdgesForTrack = edges.filter((e) => e.edge_type === "lesson_next");
-    
-    // Build a map for lesson_next traversal
-    const lessonNextMap: Map<string, string> = new Map();
-    for (const edge of lessonNextEdgesForTrack) {
-      lessonNextMap.set(edge.source_key, edge.target_key);
-    }
-    
-    // For each track, walk its lesson chain and map all lessons to the track
-    for (const startEdge of trackStartsEdges) {
-      const trackKey = startEdge.source_key;
-      let currentLesson = startEdge.target_key;
-      
-      // Add the first lesson
-      lessonToTrack.set(currentLesson, trackKey);
-      
-      // Walk the chain via lesson_next edges
-      while (lessonNextMap.has(currentLesson)) {
-        currentLesson = lessonNextMap.get(currentLesson)!;
-        lessonToTrack.set(currentLesson, trackKey);
-      }
-    }
-
-    // Validate and enrich suggestions with lesson data
+    // Validate suggestions - just ensure lessonKey exists
     const validatedSuggestions = teacherResponse.suggestions
       .filter((s) => lessons.has(s.lessonKey))
       .map((s) => {
-        const lesson = lessons.get(s.lessonKey)!;
-        const trackKey = lessonToTrack.get(s.lessonKey);
-        const track = trackKey ? tracks.find((t) => t.key === trackKey) : null;
+        // Use LLM-provided trackTitle, fallback to our mapping if missing
+        const trackInfo = lessonToTrackMap.get(s.lessonKey);
         return {
-          ...s,
-          lessonTitle: lesson.title,
-          lessonGoal: lesson.goal,
-          setupGuidance: lesson.setupGuidance,
-          evaluationGuidance: lesson.evaluationGuidance,
-          difficultyGuidance: lesson.difficultyGuidance,
-          trackTitle: track?.title,
+          lessonKey: s.lessonKey,
+          label: s.label,
+          why: s.why,
+          trackTitle: s.trackTitle || trackInfo?.trackTitle || "",
         };
       });
 

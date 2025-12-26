@@ -20,7 +20,7 @@ import {
   TeacherGreetingResponse,
   TeacherSuggestion,
 } from "@/types/learningSession";
-import { Clock, Loader2, Music } from "lucide-react";
+import { Loader2, Music } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -130,21 +130,15 @@ export function TeacherWelcome({
               onClick={() => onSelectActivity(suggestion)}
             >
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  {suggestion.trackTitle && (
-                    <Badge
-                      variant="secondary"
-                      className="flex items-center gap-1 text-xs"
-                    >
-                      <Music className="h-3 w-3" />
-                      {suggestion.trackTitle}
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                    <Clock className="h-3 w-3" />
-                    {suggestion.durationMin} min
-                  </div>
-                </div>
+                {suggestion.trackTitle && (
+                  <Badge
+                    variant="secondary"
+                    className="flex items-center gap-1 text-xs w-fit"
+                  >
+                    <Music className="h-3 w-3" />
+                    {suggestion.trackTitle}
+                  </Badge>
+                )}
                 <CardTitle className="text-base leading-tight mt-2">
                   {suggestion.label}
                 </CardTitle>
@@ -153,19 +147,7 @@ export function TeacherWelcome({
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {suggestion.setupHint?.bpm && (
-                    <Badge variant="outline" className="text-xs">
-                      {suggestion.setupHint.bpm} BPM
-                    </Badge>
-                  )}
-                  {suggestion.setupHint?.meter && (
-                    <Badge variant="outline" className="text-xs">
-                      {suggestion.setupHint.meter}
-                    </Badge>
-                  )}
-                </div>
-                <Button className="w-full mt-3" size="sm">
+                <Button className="w-full" size="sm">
                   {t("learnMode.startLesson", "Start Lesson")}
                 </Button>
               </CardContent>
