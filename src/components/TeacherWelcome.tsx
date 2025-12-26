@@ -20,17 +20,7 @@ import {
   TeacherGreetingResponse,
   TeacherSuggestion,
 } from "@/types/learningSession";
-import {
-  Bug,
-  ChevronRight,
-  Clock,
-  Eye,
-  Loader2,
-  Music,
-  RotateCcw,
-  Sparkles,
-  TrendingUp,
-} from "lucide-react";
+import { Clock, Loader2, Music } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -148,7 +138,6 @@ export function TeacherWelcome({
         {/* Greeting */}
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-semibold">{greeting.greeting}</h2>
           </div>
           {greeting.notes && (
@@ -157,34 +146,6 @@ export function TeacherWelcome({
             </p>
           )}
         </div>
-
-        {/* Debug info toggle when greeting is available */}
-        {debugData && (
-          <div className="flex justify-center">
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-muted-foreground"
-                >
-                  <Bug className="h-3 w-3" />
-                  Debug ({debugData.candidates.length} candidates)
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
-                <SheetHeader>
-                  <SheetTitle>LLM Prompt Preview</SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-120px)] mt-4">
-                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                    {debugData.prompt}
-                  </pre>
-                </ScrollArea>
-              </SheetContent>
-            </Sheet>
-          </div>
-        )}
 
         {/* Activity Suggestions */}
         <div className="grid gap-4 md:grid-cols-2">
