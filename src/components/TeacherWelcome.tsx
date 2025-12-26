@@ -130,15 +130,17 @@ export function TeacherWelcome({
               onClick={() => onSelectActivity(suggestion)}
             >
               <CardHeader className="pb-2">
-                {suggestion.trackTitle && (
-                  <Badge
-                    variant="secondary"
-                    className="flex items-center gap-1 text-xs w-fit"
-                  >
-                    <Music className="h-3 w-3" />
-                    {suggestion.trackTitle}
-                  </Badge>
-                )}
+                <div className="flex items-start justify-between gap-2">
+                  {suggestion.trackTitle && (
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1 text-xs"
+                    >
+                      <Music className="h-3 w-3" />
+                      {suggestion.trackTitle}
+                    </Badge>
+                  )}
+                </div>
                 <CardTitle className="text-base leading-tight mt-2">
                   {suggestion.label}
                 </CardTitle>
@@ -146,10 +148,20 @@ export function TeacherWelcome({
                   {suggestion.why}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-0">
-                <Button className="w-full" size="sm">
-                  {t("learnMode.startLesson", "Start Lesson")}
-                </Button>
+              <CardContent className="pt-0 flex gap-2 flex-col">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {suggestion.setupHint?.bpm && (
+                    <Badge variant="outline" className="text-xs">
+                      {suggestion.setupHint.bpm} BPM
+                    </Badge>
+                  )}
+                  {suggestion.setupHint?.meter && (
+                    <Badge variant="outline" className="text-xs">
+                      {suggestion.setupHint.meter}
+                    </Badge>
+                  )}
+                </div>
+                <Button>{t("learnMode.startLesson", "Start Lesson")}</Button>
               </CardContent>
             </Card>
           ))}

@@ -70,6 +70,10 @@ export interface TeacherSuggestion {
   label: string;
   why: string;
   trackTitle: string;
+  setupHint?: {
+    bpm?: number;
+    meter?: string;
+  };
 }
 
 export interface TeacherGreetingResponse {
