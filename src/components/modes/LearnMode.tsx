@@ -1,4 +1,4 @@
-import { LessonCard } from "@/components/LessonCard";
+import { LessonCard, SkillToUnlock } from "@/components/LessonCard";
 import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   CoachOutput,
   createInitialLessonState,
   GraderOutput,
+  LessonBrief,
   LessonFeelPreset,
   LessonMetronomeSettings,
   LessonMetronomeSoundType,
@@ -78,6 +79,7 @@ export function LearnMode({
   const [isLoadingTeacher, setIsLoadingTeacher] = useState(false);
   const [lessonDebug, setLessonDebug] = useState<LessonDebugState | null>(null);
   const [isLoadingLessonDebug, setIsLoadingLessonDebug] = useState(false);
+  const [skillToUnlock, setSkillToUnlock] = useState<SkillToUnlock | null>(null);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
   const generationRequestIdRef = useRef<string | null>(null);
@@ -93,6 +95,7 @@ export function LearnMode({
     hasEvaluatedRef.current = false;
     setIsLoading(false);
     setIsEvaluating(false);
+    setSkillToUnlock(null);
   }, []);
 
   // No auto-fetch on mount - user must click "Start"
@@ -166,6 +169,65 @@ export function LearnMode({
       setMetronomeFeel,
       setMetronomeSoundType,
     ]
+  );
+
+  // Fetch skill unlock status for a given skill key
+  const fetchSkillStatus = useCallback(
+    async (skillKey: string, skillTitle?: string): Promise<SkillToUnlock | null> => {
+      try {
+        const { data: skillState } = await supabase
+          .from("user_skill_state")
+          .select("unlocked")
+          .eq("skill_key", skillKey)
+          .maybeSingle();
+
+        return {
+          skillKey,
+          title: skillTitle || skillKey,
+          isUnlocked: skillState?.unlocked ?? false,
+        };
+      } catch (err) {
+        console.error("Failed to fetch skill status:", err);
+        return null;
+      }
+    },
+    []
+  );
+
+  // Fetch skill title from curriculum nodes
+  const fetchSkillTitle = useCallback(
+    async (skillKey: string): Promise<string> => {
+      try {
+        // Get latest published version
+        const { data: latestVersion } = await supabase
+          .from("curriculum_versions")
+          .select("id")
+          .eq("status", "published")
+          .order("published_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!latestVersion) return skillKey;
+
+        const { data: skillNode } = await supabase
+          .from("curriculum_nodes")
+          .select("data")
+          .eq("version_id", latestVersion.id)
+          .eq("node_key", skillKey)
+          .eq("node_type", "skill")
+          .maybeSingle();
+
+        if (skillNode?.data) {
+          const skillData = skillNode.data as Record<string, unknown>;
+          return (skillData.label as string) || skillKey;
+        }
+        return skillKey;
+      } catch (err) {
+        console.error("Failed to fetch skill title:", err);
+        return skillKey;
+      }
+    },
+    []
   );
 
   // Regenerate demo sequence with new BPM/meter settings
@@ -285,9 +347,64 @@ export function LearnMode({
 
         // Start lesson run tracking if we have a lesson key
         let lessonRunId: string | undefined;
+        let trackKey: string | undefined;
+        let trackTitle: string | undefined;
+        let awardedSkills: string[] = [];
+
         if (lessonNodeKey) {
+          // Fetch track and skill info from curriculum edges
+          const { data: latestVersion } = await supabase
+            .from("curriculum_versions")
+            .select("id")
+            .eq("status", "published")
+            .order("published_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestVersion) {
+            // Fetch edges related to this lesson
+            const { data: edges } = await supabase
+              .from("curriculum_edges")
+              .select("*")
+              .eq("version_id", latestVersion.id)
+              .or(`source_key.eq.${lessonNodeKey},target_key.eq.${lessonNodeKey}`);
+
+            for (const edge of edges || []) {
+              if (edge.source_key === lessonNodeKey && edge.edge_type === "lesson_awards_skill") {
+                awardedSkills.push(edge.target_key);
+              } else if (edge.target_key === lessonNodeKey && edge.edge_type === "track_contains_lesson") {
+                trackKey = edge.source_key;
+              }
+            }
+
+            // Fetch track title if we have a track key
+            if (trackKey) {
+              const { data: trackNode } = await supabase
+                .from("curriculum_nodes")
+                .select("data")
+                .eq("version_id", latestVersion.id)
+                .eq("node_key", trackKey)
+                .eq("node_type", "track")
+                .maybeSingle();
+
+              if (trackNode?.data) {
+                const trackData = trackNode.data as Record<string, unknown>;
+                trackTitle = (trackData.label as string) || trackKey;
+              }
+            }
+
+            // Fetch skill status for the first awarded skill
+            if (awardedSkills.length > 0) {
+              const skillTitle = await fetchSkillTitle(awardedSkills[0]);
+              const status = await fetchSkillStatus(awardedSkills[0], skillTitle);
+              setSkillToUnlock(status);
+            } else {
+              setSkillToUnlock(null);
+            }
+          }
+
           // Build lesson brief from available data
-          const brief = {
+          const brief: LessonBrief = {
             lessonKey: lessonNodeKey,
             title: data.instruction.split('\n')[0]?.substring(0, 100) || "Practice Exercise",
             goal: data.instruction,
@@ -295,8 +412,10 @@ export function LearnMode({
             evaluationGuidance: "Compare user's notes to the demo sequence",
             difficultyGuidance: "",
             requiredSkills: [],
-            awardedSkills: [],
+            awardedSkills,
             nextLessonKey: null,
+            trackKey,
+            trackTitle,
           };
           
           const runId = await startLessonRun(
@@ -310,6 +429,8 @@ export function LearnMode({
             brief           // Pass lesson brief
           );
           if (runId) lessonRunId = runId;
+        } else {
+          setSkillToUnlock(null);
         }
 
         setLesson({
@@ -323,6 +444,9 @@ export function LearnMode({
           userPrompt,
           lessonNodeKey,
           lessonRunId,
+          trackKey,
+          trackTitle,
+          awardedSkills,
         });
 
         hasEvaluatedRef.current = false;
@@ -351,6 +475,8 @@ export function LearnMode({
     },
     [
       applyMetronomeSettings,
+      fetchSkillStatus,
+      fetchSkillTitle,
       language,
       markUserAction,
       metronomeBpm,
@@ -453,6 +579,16 @@ export function LearnMode({
                 title: `🏆 Skills Awarded`,
                 description: coachOutput.awardedSkills.join(", "),
               });
+            }
+          }
+
+          // Update skill unlock status if skills were awarded
+          if (coachOutput.awardedSkills && coachOutput.awardedSkills.length > 0) {
+            const skillKey = coachOutput.awardedSkills[0];
+            const skillTitle = await fetchSkillTitle(skillKey);
+            const status = await fetchSkillStatus(skillKey, skillTitle);
+            if (status) {
+              setSkillToUnlock({ ...status, isUnlocked: true });
             }
           }
 
@@ -575,6 +711,8 @@ export function LearnMode({
     },
     [
       debugMode,
+      fetchSkillStatus,
+      fetchSkillTitle,
       language,
       lesson.instruction,
       lesson.lessonRunId,
@@ -584,6 +722,7 @@ export function LearnMode({
       model,
       onClearRecording,
       onPlaySequence,
+      regenerateLessonWithNewSettings,
       setMetronomeBpm,
       setMetronomeTimeSignature,
       t,
@@ -795,6 +934,8 @@ export function LearnMode({
           onPlay={handlePlay}
           onNext={handleNext}
           onLeave={handleLeave}
+          trackTitle={lesson.trackTitle}
+          skillToUnlock={skillToUnlock}
         />
       )}
     </div>
