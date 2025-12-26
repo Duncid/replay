@@ -22,9 +22,11 @@ import {
 } from "@/types/learningSession";
 import {
   Bug,
+  ChevronRight,
   Clock,
+  Eye,
   Loader2,
-  Play,
+  Music,
   RotateCcw,
   Sparkles,
   TrendingUp,
@@ -194,29 +196,26 @@ export function TeacherWelcome({
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base leading-tight">
-                    {suggestion.label}
-                  </CardTitle>
+                  {suggestion.trackTitle && (
+                    <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                      <Music className="h-3 w-3" />
+                      {suggestion.trackTitle}
+                    </Badge>
+                  )}
                   <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                     <Clock className="h-3 w-3" />
                     {suggestion.durationMin} min
                   </div>
                 </div>
+                <CardTitle className="text-base leading-tight mt-2">
+                  {suggestion.label}
+                </CardTitle>
                 <CardDescription className="text-sm">
                   {suggestion.why}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {suggestion.difficulty?.mode !== "same" && (
-                    <Badge
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      {getDifficultyIcon(suggestion.difficulty?.mode || "")}
-                      {getDifficultyLabel(suggestion.difficulty?.mode || "")}
-                    </Badge>
-                  )}
                   {suggestion.setupHint?.bpm && (
                     <Badge variant="outline" className="text-xs">
                       {suggestion.setupHint.bpm} BPM
@@ -228,8 +227,7 @@ export function TeacherWelcome({
                     </Badge>
                   )}
                 </div>
-                <Button className="w-full mt-3 gap-2" size="sm">
-                  <Play className="h-4 w-4" />
+                <Button className="w-full mt-3" size="sm">
                   {t("learnMode.startLesson", "Start Lesson")}
                 </Button>
               </CardContent>
