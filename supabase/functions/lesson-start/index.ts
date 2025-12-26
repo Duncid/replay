@@ -41,6 +41,8 @@ interface LessonBrief {
   requiredSkills: string[];
   awardedSkills: string[];
   nextLessonKey: string | null;
+  trackKey?: string;
+  trackTitle?: string;
 }
 
 interface LessonStartResponse {
@@ -126,6 +128,7 @@ serve(async (req) => {
     const requiredSkills: string[] = [];
     const awardedSkills: string[] = [];
     let nextLessonKey: string | null = null;
+    let trackKey: string | null = null;
 
     for (const edge of edges || []) {
       if (edge.source_key === lessonKey) {
@@ -137,7 +140,26 @@ serve(async (req) => {
       } else if (edge.target_key === lessonKey) {
         if (edge.edge_type === "lesson_requires_skill") {
           requiredSkills.push(edge.source_key);
+        } else if (edge.edge_type === "track_contains_lesson") {
+          trackKey = edge.source_key;
         }
+      }
+    }
+
+    // Fetch track title if we have a track key
+    let trackTitle: string | null = null;
+    if (trackKey) {
+      const { data: trackNode } = await supabase
+        .from("curriculum_nodes")
+        .select("data")
+        .eq("version_id", latestVersion.id)
+        .eq("node_key", trackKey)
+        .eq("node_type", "track")
+        .maybeSingle();
+      
+      if (trackNode?.data) {
+        const trackData = trackNode.data as Record<string, unknown>;
+        trackTitle = (trackData.label as string) || trackKey;
       }
     }
 
@@ -165,6 +187,8 @@ serve(async (req) => {
       requiredSkills,
       awardedSkills,
       nextLessonKey,
+      trackKey: trackKey || undefined,
+      trackTitle: trackTitle || undefined,
     };
 
     // 6. Build initial setup from suggestionHint or defaults

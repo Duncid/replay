@@ -45,6 +45,12 @@ export interface LessonState {
   lessonNodeKey?: string;
   /** Current lesson run ID for tracking */
   lessonRunId?: string;
+  /** Track key this lesson belongs to */
+  trackKey?: string;
+  /** Track title for display */
+  trackTitle?: string;
+  /** Skills that can be awarded by this lesson */
+  awardedSkills?: string[];
 }
 
 export interface LessonGenerationResponse {
@@ -137,6 +143,8 @@ export interface LessonBrief {
   requiredSkills: string[];
   awardedSkills: string[];
   nextLessonKey: string | null;
+  trackKey?: string;
+  trackTitle?: string;
 }
 
 // Grader output from lesson-evaluate
