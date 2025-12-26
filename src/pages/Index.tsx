@@ -26,7 +26,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1244,48 +1243,29 @@ const Index = () => {
               )}
 
               {activeMode === "learn" && (
-                <>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="justify-between"
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="justify-between"
+                    >
+                      {AI_MODELS.llm.find((m) => m.value === selectedModel)
+                        ?.label || selectedModel}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {AI_MODELS.llm.map((model) => (
+                      <DropdownMenuItem
+                        key={model.value}
+                        onClick={() => setSelectedModel(model.value)}
                       >
-                        {AI_MODELS.llm.find((m) => m.value === selectedModel)
-                          ?.label || selectedModel}
-                        <ChevronDown className="h-4 w-4 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {AI_MODELS.llm.map((model) => (
-                        <DropdownMenuItem
-                          key={model.value}
-                          onClick={() => setSelectedModel(model.value)}
-                        >
-                          {model.label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setQuestEditorOpen(true)}
-                    disabled={
-                      appState === "ai_playing" || appState === "waiting_for_ai"
-                    }
-                  >
-                    Quest Editor
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={learnMode.handleFreePractice}
-                  >
-                    {t("learnMode.freePractice", "Free Practice")}
-                  </Button>
-                </>
+                        {model.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
 
               {activeMode === "play" && isAutoreplyActive && (
@@ -1386,23 +1366,47 @@ const Index = () => {
                   </Popover>
                 )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {activeMode === "learn" && (
-                <div className="flex items-center gap-2 ml-auto">
-                  <Checkbox
-                    id="debug-mode"
-                    checked={debugMode}
-                    onCheckedChange={(checked) =>
-                      setDebugMode(checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor="debug-mode"
-                    className="cursor-pointer text-sm text-muted-foreground"
-                  >
-                    Debug
-                  </Label>
-                </div>
+                <>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <Label
+                      htmlFor="debug-mode"
+                      className="cursor-pointer text-sm text-muted-foreground"
+                    >
+                      Debug
+                    </Label>
+                    <Switch
+                      id="debug-mode"
+                      checked={debugMode}
+                      onCheckedChange={(checked) =>
+                        setDebugMode(checked === true)
+                      }
+                    />
+                  </div>
+                  {debugMode && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuestEditorOpen(true)}
+                        disabled={
+                          appState === "ai_playing" ||
+                          appState === "waiting_for_ai"
+                        }
+                      >
+                        Quest Editor
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={learnMode.handleFreePractice}
+                      >
+                        {t("learnMode.freePractice", "Free Practice")}
+                      </Button>
+                    </>
+                  )}
+                </>
               )}
               {/* Play/Stop - only shown when there's history */}
               {activeMode === "play" && playMode.history.length > 0 && (
