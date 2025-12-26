@@ -85,6 +85,7 @@ interface TeacherSuggestion {
     countInBars: number | null;
   };
   durationMin: number;
+  trackTitle?: string;
 }
 
 interface TeacherResponse {
@@ -399,6 +400,7 @@ Important rules:
 - If the user is stuck (repeated fail/close), propose a simpler version (lower difficulty / slower bpm / fewer bars).
 - If the user is succeeding (recent pass streak), propose either the next lesson or a slightly harder difficulty.
 - Balance: avoid always recommending the same track; include variety when appropriate.
+- IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include lesson keys (like "A1.4" or "B2.1") in the label. Example: "Eighth notes practice" NOT "A1.4: Eighth notes practice".
 
 Return ONLY valid JSON following the schema provided.`;
 
@@ -450,7 +452,7 @@ OUTPUT JSON SCHEMA:
   "suggestions": [
     {
       "lessonKey": "string",
-      "label": "string",
+      "label": "string (short activity name, NO lesson keys like A1.4)",
       "why": "string",
       "difficulty": { "mode": "same|easier|harder|set", "value": number|null },
       "setupHint": { "bpm": number|null, "meter": "string"|null, "feel": "string"|null, "bars": number|null, "countInBars": number|null },
@@ -548,11 +550,20 @@ OUTPUT JSON SCHEMA:
       }
     }
 
+    // Build a map of lesson -> track for enriching suggestions
+    const lessonToTrack: Map<string, string> = new Map();
+    const trackContainsEdges = edges.filter((e) => e.edge_type === "track_contains_lesson");
+    for (const edge of trackContainsEdges) {
+      lessonToTrack.set(edge.target_key, edge.source_key);
+    }
+
     // Validate and enrich suggestions with lesson data
     const validatedSuggestions = teacherResponse.suggestions
       .filter((s) => lessons.has(s.lessonKey))
       .map((s) => {
         const lesson = lessons.get(s.lessonKey)!;
+        const trackKey = lessonToTrack.get(s.lessonKey);
+        const track = trackKey ? tracks.find((t) => t.key === trackKey) : null;
         return {
           ...s,
           lessonTitle: lesson.title,
@@ -560,6 +571,7 @@ OUTPUT JSON SCHEMA:
           setupGuidance: lesson.setupGuidance,
           evaluationGuidance: lesson.evaluationGuidance,
           difficultyGuidance: lesson.difficultyGuidance,
+          trackTitle: track?.title,
         };
       });
 

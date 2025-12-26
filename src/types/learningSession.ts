@@ -85,6 +85,7 @@ export interface TeacherSuggestion {
   difficulty: TeacherDifficulty;
   setupHint: TeacherSetupHint;
   durationMin: number;
+  trackTitle?: string;
 }
 
 export interface TeacherGreetingResponse {
