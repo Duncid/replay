@@ -4,6 +4,16 @@
     "english": "English",
     "french": "French"
   },
+  "userMenu": {
+    "menuLabel": "Menu",
+    "currentUser": "User",
+    "switchUser": "Switch user",
+    "newUser": "New user",
+    "newUserDescription": "Enter a name for the new user.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Enter name...",
+    "create": "Create"
+  },
   "status": {
     "playing": "Playing",
     "replay": "Replay",
