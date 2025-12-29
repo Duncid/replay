@@ -9,6 +9,7 @@ import {
 import { MidiConnector } from "@/components/MidiConnector";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { QuestEditor } from "@/components/QuestEditor";
+import { UserMenu } from "@/components/UserMenu";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
 import { WhistleImportSheet } from "@/components/WhistleImportSheet";
@@ -283,15 +284,7 @@ const Index = () => {
     i18n.changeLanguage(language);
   }, [i18n, language]);
 
-  const languageOptions = [
-    { value: "en", label: t("language.english") },
-    { value: "fr", label: t("language.french") },
-  ];
-
-  const languageFlags: Record<string, string> = {
-    en: "🇺🇸",
-    fr: "🇫🇷",
-  };
+  // Language options moved to UserMenu component
 
   // Compositions hook for cloud save/load
   const handleCompositionLoad = useCallback(
@@ -1110,38 +1103,7 @@ const Index = () => {
         {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
         <div className="w-full flex items-center justify-between gap-4 p-2">
           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-between min-w-[56px]"
-                  aria-label={
-                    language === "fr"
-                      ? t("language.french")
-                      : t("language.english")
-                  }
-                >
-                  <span className="text-lg" aria-hidden="true">
-                    {languageFlags[language] ?? "🏳️"}
-                  </span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {languageOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.value}
-                    onClick={() => setLanguage(option.value)}
-                  >
-                    <span className="mr-2" aria-hidden="true">
-                      {languageFlags[option.value] ?? "🏳️"}
-                    </span>
-                    {option.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <UserMenu language={language} onLanguageChange={setLanguage} />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

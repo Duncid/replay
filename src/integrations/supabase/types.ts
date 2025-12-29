@@ -197,6 +197,7 @@ export type Database = {
           id: string
           lesson_brief: Json | null
           lesson_node_key: string
+          local_user_id: string | null
           metronome_context: Json | null
           setup: Json | null
           started_at: string
@@ -216,6 +217,7 @@ export type Database = {
           id?: string
           lesson_brief?: Json | null
           lesson_node_key: string
+          local_user_id?: string | null
           metronome_context?: Json | null
           setup?: Json | null
           started_at?: string
@@ -235,6 +237,7 @@ export type Database = {
           id?: string
           lesson_brief?: Json | null
           lesson_node_key?: string
+          local_user_id?: string | null
           metronome_context?: Json | null
           setup?: Json | null
           started_at?: string
@@ -244,6 +247,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "lesson_runs_local_user_id_fkey"
+            columns: ["local_user_id"]
+            isOneToOne: false
+            referencedRelation: "local_users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lesson_runs_version_id_fkey"
             columns: ["version_id"]
             isOneToOne: false
@@ -252,12 +262,34 @@ export type Database = {
           },
         ]
       }
+      local_users: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       practice_sessions: {
         Row: {
           created_at: string
           ended_at: string | null
           id: string
           lesson_run_ids: string[] | null
+          local_user_id: string | null
           started_at: string
         }
         Insert: {
@@ -265,6 +297,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           lesson_run_ids?: string[] | null
+          local_user_id?: string | null
           started_at?: string
         }
         Update: {
@@ -272,9 +305,18 @@ export type Database = {
           ended_at?: string | null
           id?: string
           lesson_run_ids?: string[] | null
+          local_user_id?: string | null
           started_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "practice_sessions_local_user_id_fkey"
+            columns: ["local_user_id"]
+            isOneToOne: false
+            referencedRelation: "local_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quest_graphs: {
         Row: {
@@ -305,6 +347,7 @@ export type Database = {
           created_at: string
           id: string
           last_practiced_at: string | null
+          local_user_id: string | null
           mastery: number
           skill_key: string
           unlocked: boolean
@@ -314,6 +357,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_practiced_at?: string | null
+          local_user_id?: string | null
           mastery?: number
           skill_key: string
           unlocked?: boolean
@@ -323,12 +367,21 @@ export type Database = {
           created_at?: string
           id?: string
           last_practiced_at?: string | null
+          local_user_id?: string | null
           mastery?: number
           skill_key?: string
           unlocked?: boolean
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_skill_state_local_user_id_fkey"
+            columns: ["local_user_id"]
+            isOneToOne: false
+            referencedRelation: "local_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

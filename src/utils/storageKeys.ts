@@ -16,4 +16,5 @@ export const STORAGE_KEYS = {
   LANGUAGE: "replay-language",
   MAGENTA_TEMPERATURE: "replay-magenta-temperature",
   DEBUG_MODE: "replay-debug-mode",
+  CURRENT_USER_ID: "replay-current-user-id",
 } as const;
