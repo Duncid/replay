@@ -147,6 +147,8 @@ interface MetronomeProps {
   onFeelChange?: (feel: FeelPreset) => void;
   soundType?: MetronomeSoundType;
   onSoundTypeChange?: (soundType: MetronomeSoundType) => void;
+  // Optional callback to expose metronome start time (Tone.now() when metronome starts)
+  onMetronomeStartTimeChange?: (startTime: number | null) => void;
 }
 
 interface ParsedTimeSignature {
@@ -286,6 +288,7 @@ export const Metronome = ({
   onFeelChange,
   soundType: controlledSoundType,
   onSoundTypeChange,
+  onMetronomeStartTimeChange,
 }: MetronomeProps) => {
   const [volume, setVolume] = useLocalStorage(STORAGE_KEYS.METRONOME_VOLUME, 70);
   const [beatUnit, setBeatUnit] = useLocalStorage<BeatUnit>(
@@ -335,6 +338,7 @@ export const Metronome = ({
   const nextStepTimeRef = useRef<number>(0);
   const currentScheduledStepRef = useRef<number>(0);
   const isPlayingRef = useRef<boolean>(false);
+  const metronomeStartTimeRef = useRef<number | null>(null);
 
   const bpmRef = useRef(bpm);
   const tapTimesRef = useRef<number[]>([]);
@@ -474,24 +478,37 @@ export const Metronome = ({
       await ensureAudioReady();
 
       isPlayingRef.current = true;
-      nextStepTimeRef.current = Tone.now();
+      const startTime = Tone.now();
+      nextStepTimeRef.current = startTime;
       currentScheduledStepRef.current = 0;
+      metronomeStartTimeRef.current = startTime;
+      
+      // Notify parent of start time
+      if (onMetronomeStartTimeChange) {
+        onMetronomeStartTimeChange(startTime);
+      }
 
       scheduler(plan);
       schedulerIntervalRef.current = setInterval(() => scheduler(plan), LOOKAHEAD_INTERVAL);
     },
-    [ensureAudioReady, scheduler],
+    [ensureAudioReady, scheduler, onMetronomeStartTimeChange],
   );
 
   const stopMetronome = useCallback(() => {
     isPlayingRef.current = false;
+    metronomeStartTimeRef.current = null;
+    
+    // Notify parent that metronome stopped
+    if (onMetronomeStartTimeChange) {
+      onMetronomeStartTimeChange(null);
+    }
 
     if (schedulerIntervalRef.current) {
       clearInterval(schedulerIntervalRef.current);
       schedulerIntervalRef.current = null;
     }
     setCurrentBeat(0);
-  }, []);
+  }, [onMetronomeStartTimeChange]);
 
   // Consolidated metronome lifecycle management
   // This single effect handles all start/stop/restart logic to avoid race conditions

@@ -51,6 +51,36 @@ export function secondsToBeats(seconds: number, qpm: number = DEFAULT_QPM): numb
 }
 
 /**
+ * Calculate beat timing relative to metronome using Tone.js timeline
+ * @param toneTime - Tone.now() value when the event occurred
+ * @param metronomeStartTime - Tone.now() value when metronome started
+ * @param bpm - Beats per minute
+ * @param timeSignature - Time signature string (e.g., "4/4")
+ * @returns Beat number (1-indexed) and offset in seconds, or null if invalid
+ */
+export function calculateMetronomeBeatTiming(
+  toneTime: number,
+  metronomeStartTime: number,
+  bpm: number,
+  timeSignature: string
+): { beat: number; beatOffset: number } | null {
+  const elapsedTime = toneTime - metronomeStartTime;
+  if (elapsedTime < 0) return null; // Before metronome started
+
+  const beatDuration = 60 / bpm;
+  const [numerator] = timeSignature.split("/").map(Number);
+  const beatsPerBar = numerator;
+  const barDuration = beatDuration * beatsPerBar;
+
+  const timeWithinBar = elapsedTime % barDuration;
+  const beat = Math.floor(timeWithinBar / beatDuration) + 1; // 1-indexed
+  const exactBeatTime = (beat - 1) * beatDuration;
+  const beatOffset = timeWithinBar - exactBeatTime;
+
+  return { beat, beatOffset };
+}
+
+/**
  * Create an empty NoteSequence with default tempo
  */
 export function createEmptyNoteSequence(qpm: number = DEFAULT_QPM, timeSignature = "4/4"): NoteSequence {

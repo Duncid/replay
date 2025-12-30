@@ -1,12 +1,14 @@
 import { useRef, useCallback, useState } from "react";
 import { NoteSequence, Note } from "@/types/noteSequence";
-import { noteNameToMidi, createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
+import { noteNameToMidi, createEmptyNoteSequence, calculateMetronomeBeatTiming } from "@/utils/noteSequenceUtils";
+import * as Tone from "tone";
 
 export interface RecordingNote {
   noteKey: string;
   pitch: number;
   startTime: number;
   velocity: number;
+  toneTime?: number; // Tone.now() when key was pressed
 }
 
 export interface RecordingResult {
@@ -21,6 +23,8 @@ interface UseRecordingManagerOptions {
   onRecordingUpdate?: (notes: Note[]) => void; // For live display
   pauseTimeoutMs?: number; // Time of silence before timeline pauses (default: 3000ms)
   resumeGapMs?: number; // Gap to add when resuming after pause (default: 1000ms)
+  metronomeIsPlaying?: boolean; // Whether metronome is currently playing
+  metronomeStartTime?: number; // Tone.now() value when metronome started
 }
 
 export function useRecordingManager({
@@ -30,6 +34,8 @@ export function useRecordingManager({
   onRecordingUpdate,
   pauseTimeoutMs = 3000,
   resumeGapMs = 1000,
+  metronomeIsPlaying = false,
+  metronomeStartTime,
 }: UseRecordingManagerOptions) {
   const [isRecording, setIsRecording] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -39,7 +45,7 @@ export function useRecordingManager({
 
   const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
   const lastRecordingRef = useRef<RecordingResult | null>(null);
-  const notePressDataRef = useRef<Map<string, { startTime: number; velocity: number }>>(new Map());
+  const notePressDataRef = useRef<Map<string, { startTime: number; velocity: number; toneTime?: number }>>(new Map());
   const recordingStartTimeRef = useRef<number | null>(null);
   const heldKeysCountRef = useRef(0);
 
@@ -249,11 +255,13 @@ export function useRecordingManager({
     setProgress(100);
 
     const startTimeSeconds = getCurrentVirtualTime();
+    // Capture Tone.now() immediately when key is pressed for precise metronome timing
+    const toneTime = metronomeIsPlaying && metronomeStartTime !== undefined ? Tone.now() : undefined;
 
-    notePressDataRef.current.set(noteKey, { startTime: startTimeSeconds, velocity });
+    notePressDataRef.current.set(noteKey, { startTime: startTimeSeconds, velocity, toneTime });
 
     console.log(`[RecordingManager] Note start: ${noteKey} at ${startTimeSeconds.toFixed(3)}s`);
-  }, [startRecording, getCurrentVirtualTime]);
+  }, [startRecording, getCurrentVirtualTime, metronomeIsPlaying, metronomeStartTime]);
 
   const addNoteEnd = useCallback((noteKey: string): Note | null => {
     if (recordingStartTimeRef.current === null) return null;
@@ -272,6 +280,20 @@ export function useRecordingManager({
       endTime: endTimeSeconds,
       velocity: pressData.velocity,
     };
+
+    // Calculate beat timing if metronome is playing and we have timing data
+    if (metronomeIsPlaying && metronomeStartTime !== undefined && pressData.toneTime !== undefined) {
+      const timing = calculateMetronomeBeatTiming(
+        pressData.toneTime,
+        metronomeStartTime,
+        bpm,
+        timeSignature
+      );
+      if (timing) {
+        note.beat = timing.beat;
+        note.beatOffset = timing.beatOffset;
+      }
+    }
 
     console.log(`[RecordingManager] Note end: ${noteKey}, start=${pressData.startTime.toFixed(3)}s, end=${endTimeSeconds.toFixed(3)}s, duration=${(endTimeSeconds - pressData.startTime).toFixed(3)}s`);
 
@@ -293,7 +315,7 @@ export function useRecordingManager({
     }
 
     return note;
-  }, [getCurrentVirtualTime, startPauseTimeout]);
+  }, [getCurrentVirtualTime, startPauseTimeout, metronomeIsPlaying, metronomeStartTime, bpm, timeSignature]);
 
   const cancelRecording = useCallback(() => {
     clearAllTimeouts();

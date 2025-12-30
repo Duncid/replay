@@ -199,6 +199,7 @@ const Index = () => {
     "4/4"
   );
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
+  const [metronomeStartTime, setMetronomeStartTime] = useState<number | null>(null);
   const [metronomeFeel, setMetronomeFeel] =
     useState<FeelPreset>("straight_beats");
   const [metronomeSoundType, setMetronomeSoundType] =
@@ -817,6 +818,8 @@ const Index = () => {
     },
     pauseTimeoutMs: 2000,
     resumeGapMs: 1000,
+    metronomeIsPlaying: activeMode === "learn" ? metronomeIsPlaying : false,
+    metronomeStartTime: activeMode === "learn" ? metronomeStartTime ?? undefined : undefined,
   });
 
   // Learn mode hook
@@ -1149,17 +1152,20 @@ const Index = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Metronome
-              bpm={metronomeBpm}
-              setBpm={setMetronomeBpm}
-              timeSignature={metronomeTimeSignature}
-              setTimeSignature={setMetronomeTimeSignature}
-              isPlaying={metronomeIsPlaying}
-              setIsPlaying={setMetronomeIsPlaying}
-              feel={activeMode === "learn" ? metronomeFeel : undefined}
-              onFeelChange={
-                activeMode === "learn" ? setMetronomeFeel : undefined
-              }
+              <Metronome
+                bpm={metronomeBpm}
+                setBpm={setMetronomeBpm}
+                timeSignature={metronomeTimeSignature}
+                setTimeSignature={setMetronomeTimeSignature}
+                isPlaying={metronomeIsPlaying}
+                setIsPlaying={setMetronomeIsPlaying}
+                feel={activeMode === "learn" ? metronomeFeel : undefined}
+                onFeelChange={
+                  activeMode === "learn" ? setMetronomeFeel : undefined
+                }
+                onMetronomeStartTimeChange={
+                  activeMode === "learn" ? setMetronomeStartTime : undefined
+                }
               soundType={
                 activeMode === "learn" ? metronomeSoundType : undefined
               }
