@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Play, X, Lock, Unlock, CheckCircle, TrendingDown, TrendingUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 export interface SkillToUnlock {
   skillKey: string;
@@ -85,7 +86,21 @@ export function LessonCard({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto border-border/50 backdrop-blur-sm bg-transparent border-0">
+    <Card className="w-full max-w-2xl mx-auto border-border/50 backdrop-blur-sm bg-transparent border-0 relative">
+      {/* Top right X button to leave lesson */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onLeave}
+        disabled={isLoading || isEvaluating}
+        className={cn(
+          "absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-foreground",
+          "z-10"
+        )}
+        aria-label={t("learnMode.leaveButton")}
+      >
+        <X className="h-4 w-4" />
+      </Button>
       <CardContent className="pt-6 space-y-4 border-0">
         {/* Track title */}
         {trackTitle && (

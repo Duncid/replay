@@ -346,9 +346,10 @@ export function LearnMode({
       const actionToken = userActionTokenRef.current;
       const requestId = crypto.randomUUID();
       generationRequestIdRef.current = requestId;
-      setIsLoading(true);
-      setLastComment(null);
+      // Clear debug state first, then set loading to ensure spinner shows
       setLessonDebug(null); // Clear any lesson debug state
+      setLastComment(null);
+      setIsLoading(true);
       const localizedPrompt =
         language === "fr"
           ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
@@ -519,6 +520,14 @@ export function LearnMode({
               : t("learnMode.generateErrorDescription"),
           variant: "destructive",
         });
+        // On error, return to practice plan screen (welcome phase)
+        setLesson(createInitialLessonState());
+        setPrompt("");
+        setLastComment(null);
+        setLessonDebug(null);
+        setLessonMode("practice");
+        setEvaluationResult(null);
+        onClearRecording();
       } finally {
         if (
           generationRequestIdRef.current === requestId &&
@@ -1018,48 +1027,54 @@ export function LearnMode({
     setTeacherGreeting(null);
   }, [markUserAction, onClearRecording]);
 
-  // When a suggestion is clicked, fetch the debug prompt first
+  // When a suggestion is clicked, fetch the debug prompt first (only in debug mode)
   const handleSelectActivity = useCallback(
     async (suggestion: TeacherSuggestion) => {
-      setIsLoadingLessonDebug(true);
-
       // Build prompt from suggestion
       const lessonPrompt = `${suggestion.label}: ${suggestion.why}`;
 
-      try {
-        const { data, error } = await supabase.functions.invoke("piano-learn", {
-          body: {
-            prompt: lessonPrompt,
-            difficulty: 1, // Lesson Coach will determine actual difficulty
-            language,
-            model,
-            debug: true,
-          },
-        });
+      // In debug mode, fetch debug prompt and show debug card
+      if (debugMode) {
+        setIsLoadingLessonDebug(true);
 
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        if (data?.debug && data?.prompt) {
-          setLessonDebug({
-            suggestion,
-            prompt: data.prompt,
+        try {
+          const { data, error } = await supabase.functions.invoke("piano-learn", {
+            body: {
+              prompt: lessonPrompt,
+              difficulty: 1, // Lesson Coach will determine actual difficulty
+              language,
+              model,
+              debug: true,
+            },
           });
-        } else {
-          throw new Error("Debug mode not returning expected data");
+
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          if (data?.debug && data?.prompt) {
+            setLessonDebug({
+              suggestion,
+              prompt: data.prompt,
+            });
+          } else {
+            throw new Error("Debug mode not returning expected data");
+          }
+        } catch (err) {
+          console.error("Failed to fetch lesson debug:", err);
+          toast({
+            title: "Error",
+            description: "Failed to prepare lesson",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingLessonDebug(false);
         }
-      } catch (err) {
-        console.error("Failed to fetch lesson debug:", err);
-        toast({
-          title: "Error",
-          description: "Failed to prepare lesson",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingLessonDebug(false);
+      } else {
+        // In normal mode, directly start the lesson
+        generateLesson(lessonPrompt, 1, undefined, suggestion.lessonKey);
       }
     },
-    [language, model, toast]
+    [debugMode, language, model, toast, generateLesson]
   );
 
   // Start the actual lesson after seeing the debug prompt
@@ -1121,8 +1136,20 @@ export function LearnMode({
           freePracticeEvaluation={freePracticeEvaluation}
           decidePrompt={evaluationDebug.decidePrompt}
         />
-      ) : lessonDebug ? (
-        /* Lesson Debug Card - shown after selecting a suggestion */
+      ) : isLoading && lesson.phase === "welcome" && !evaluationDebug ? (
+        /* Loading spinner while generating lesson after selecting activity */
+        /* This shows in both debug and normal mode when generating lesson */
+        /* Show when loading, in welcome phase, and not showing evaluation debug */
+        <div className="w-full max-w-2xl mx-auto">
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">
+              {t("learnMode.generatingLesson", "Generating lesson...")}
+            </p>
+          </div>
+        </div>
+      ) : debugMode && lessonDebug && !isLoading ? (
+        /* Lesson Debug Card - shown after selecting a suggestion (debug mode only) */
         <LessonDebugCard
           suggestion={lessonDebug.suggestion}
           prompt={lessonDebug.prompt}
@@ -1130,7 +1157,7 @@ export function LearnMode({
           onStart={handleStartLesson}
           onCancel={handleCancelLessonDebug}
         />
-      ) : isLoadingLessonDebug ? (
+      ) : debugMode && isLoadingLessonDebug ? (
         /* Loading lesson debug */
         <div className="w-full max-w-2xl mx-auto">
           <div className="flex flex-col items-center justify-center py-12 gap-4">

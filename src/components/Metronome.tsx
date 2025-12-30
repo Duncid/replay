@@ -493,27 +493,20 @@ export const Metronome = ({
     setCurrentBeat(0);
   }, []);
 
+  // Consolidated metronome lifecycle management
+  // This single effect handles all start/stop/restart logic to avoid race conditions
   useEffect(() => {
     if (isPlaying) {
+      // When playing, restart metronome with new stepPlan (or start if not already playing)
+      // The startMetronome function resets timing refs synchronously before starting
+      stopMetronome();
       startMetronome(stepPlan);
     } else {
+      // When not playing, ensure metronome is stopped
       stopMetronome();
     }
+    // Cleanup: stop metronome on unmount or when dependencies change
     return () => stopMetronome();
-  }, [isPlaying, startMetronome, stepPlan, stopMetronome]);
-
-  useEffect(() => {
-    if (isPlaying) {
-      nextStepTimeRef.current = Tone.now();
-      currentScheduledStepRef.current = 0;
-    }
-  }, [bpm, timeSignature, beatUnit, subdivision, isPlaying]);
-
-  useEffect(() => {
-    if (isPlaying) {
-      stopMetronome();
-      startMetronome(stepPlan);
-    }
   }, [isPlaying, startMetronome, stepPlan, stopMetronome]);
 
   const renderAccentGrid = () => (
