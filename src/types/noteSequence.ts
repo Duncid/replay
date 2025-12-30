@@ -12,6 +12,10 @@ export interface Note {
   endTime: number;
   /** Velocity (0.0-1.0, normalized from MIDI 0-127) */
   velocity: number;
+  /** Beat number when note was hit (1-indexed, e.g., 1-4 for 4/4) - only present when metronome is playing */
+  beat?: number;
+  /** Offset from exact beat time in seconds (negative = early, positive = late) - only present when metronome is playing */
+  beatOffset?: number;
 }
 
 export interface Tempo {

@@ -43,26 +43,15 @@ export function UserMenu({ language, onLanguageChange }: UserMenuProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="justify-between min-w-[56px]"
+            className="justify-between"
             aria-label={t("userMenu.menuLabel")}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-4 w-4" strokeWidth={3} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56 bg-popover">
-          {/* Current User Section */}
-          <DropdownMenuLabel className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {t("userMenu.currentUser")}:
-            </span>
-            <span className="font-medium">
-              {isLoading ? "..." : currentUser?.name ?? "—"}
-            </span>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-
           {/* User Selection */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">
             {t("userMenu.switchUser")}
@@ -80,7 +69,7 @@ export function UserMenu({ language, onLanguageChange }: UserMenuProps) {
 
           {/* New User */}
           <DropdownMenuItem onClick={() => setNewUserDialogOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
+            <UserPlus className="h-4 w-4" />
             {t("userMenu.newUser")}
           </DropdownMenuItem>
 
@@ -89,7 +78,7 @@ export function UserMenu({ language, onLanguageChange }: UserMenuProps) {
           {/* Language Submenu */}
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
-              <Globe className="h-4 w-4 mr-2" />
+              <Globe className="h-4 w-4" />
               {t("language.label")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover">

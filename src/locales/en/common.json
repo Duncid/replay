@@ -6,8 +6,7 @@
   },
   "userMenu": {
     "menuLabel": "Menu",
-    "currentUser": "User",
-    "switchUser": "Switch user",
+    "switchUser": "User",
     "newUser": "New user",
     "newUserDescription": "Enter a name for the new user.",
     "nameLabel": "Name",
