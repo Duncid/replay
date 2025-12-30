@@ -35,6 +35,7 @@ interface LearnModeProps {
   language: string;
   model: string;
   debugMode: boolean;
+  localUserId?: string | null;
   // Metronome control props
   metronomeBpm: number;
   setMetronomeBpm: (bpm: number) => void;
@@ -60,6 +61,7 @@ export function LearnMode({
   language,
   model,
   debugMode,
+  localUserId,
   metronomeBpm,
   setMetronomeBpm,
   metronomeTimeSignature,
@@ -88,7 +90,7 @@ export function LearnMode({
   const evaluationRequestIdRef = useRef<string | null>(null);
   const userActionTokenRef = useRef<string>(crypto.randomUUID());
   const { t } = useTranslation();
-  const { startLessonRun, incrementAttempts, endLessonRun } = useLessonRuns();
+  const { startLessonRun, incrementAttempts, endLessonRun } = useLessonRuns(localUserId);
 
   const markUserAction = useCallback(() => {
     userActionTokenRef.current = crypto.randomUUID();
@@ -107,7 +109,7 @@ export function LearnMode({
     setIsLoadingTeacher(true);
     try {
       const { data, error } = await supabase.functions.invoke("teacher-greet", {
-        body: { language, debug: false },
+        body: { language, debug: false, localUserId },
       });
 
       if (error) {
@@ -141,7 +143,7 @@ export function LearnMode({
     } finally {
       setIsLoadingTeacher(false);
     }
-  }, [language, toast]);
+  }, [language, localUserId, toast]);
 
   // Apply metronome settings from a lesson response
   const applyMetronomeSettings = useCallback(
@@ -927,6 +929,7 @@ export function LearnMode({
           onSelectActivity={handleSelectActivity}
           onStart={handleStartTeacherGreet}
           language={language}
+          localUserId={localUserId}
         />
       ) : lesson.phase === "prompt" ? (
         /* Initial Prompt Input */
