@@ -4,7 +4,7 @@ import { LessonBrief, LessonRun, LessonRunSetup } from "@/types/learningSession"
 import { NoteSequence } from "@/types/noteSequence";
 import { Json } from "@/integrations/supabase/types";
 
-export function useLessonRuns() {
+export function useLessonRuns(localUserId?: string | null) {
   const startLessonRun = useCallback(
     async (
       lessonNodeKey: string,
@@ -23,6 +23,7 @@ export function useLessonRuns() {
             attempt_count: 0,
             demo_sequence: demoSequence ? (demoSequence as unknown as Json) : null,
             lesson_brief: lessonBrief ? (lessonBrief as unknown as Json) : null,
+            local_user_id: localUserId || null,
           }])
           .select("id")
           .single();
@@ -38,7 +39,7 @@ export function useLessonRuns() {
         return null;
       }
     },
-    []
+    [localUserId]
   );
 
   const updateLessonRun = useCallback(
@@ -117,11 +118,17 @@ export function useLessonRuns() {
   const getRecentLessonRuns = useCallback(
     async (limit: number = 20): Promise<LessonRun[]> => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("lesson_runs")
           .select("*")
           .order("started_at", { ascending: false })
           .limit(limit);
+
+        if (localUserId) {
+          query = query.eq("local_user_id", localUserId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error("Failed to fetch recent lesson runs:", error);
@@ -144,18 +151,24 @@ export function useLessonRuns() {
         return [];
       }
     },
-    []
+    [localUserId]
   );
 
   const getLessonRunsForLesson = useCallback(
     async (lessonNodeKey: string, limit: number = 10): Promise<LessonRun[]> => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("lesson_runs")
           .select("*")
           .eq("lesson_node_key", lessonNodeKey)
           .order("started_at", { ascending: false })
           .limit(limit);
+
+        if (localUserId) {
+          query = query.eq("local_user_id", localUserId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error("Failed to fetch lesson runs for lesson:", error);
@@ -178,7 +191,7 @@ export function useLessonRuns() {
         return [];
       }
     },
-    []
+    [localUserId]
   );
 
   return {

@@ -60,6 +60,7 @@ interface TeacherWelcomeProps {
   onSelectActivity: (suggestion: TeacherSuggestion) => void;
   onStart: () => void;
   language?: string;
+  localUserId?: string | null;
 }
 
 export function TeacherWelcome({
@@ -68,6 +69,7 @@ export function TeacherWelcome({
   onSelectActivity,
   onStart,
   language = "en",
+  localUserId,
 }: TeacherWelcomeProps) {
   const { t } = useTranslation();
   const [debugData, setDebugData] = useState<TeacherDebugData | null>(null);
@@ -80,7 +82,7 @@ export function TeacherWelcome({
     setDebugError(null);
     try {
       const { data, error } = await supabase.functions.invoke("teacher-greet", {
-        body: { language, debug: true },
+        body: { language, debug: true, localUserId },
       });
 
       if (error) {
@@ -98,7 +100,7 @@ export function TeacherWelcome({
     } finally {
       setIsLoadingDebug(false);
     }
-  }, [language]);
+  }, [language, localUserId]);
 
   // Fetch debug data on mount
   useEffect(() => {

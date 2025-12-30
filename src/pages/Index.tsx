@@ -52,6 +52,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useLocalUsers } from "@/hooks/useLocalUsers";
 import { MagentaModelType, useMagenta } from "@/hooks/useMagenta";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import {
@@ -139,6 +140,7 @@ const normalizeCreativityToVAE = (creativity: number): number => {
 
 const Index = () => {
   const { t, i18n } = useTranslation();
+  const { currentUserId } = useLocalUsers();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(
@@ -828,6 +830,7 @@ const Index = () => {
     language,
     model: selectedModel,
     debugMode,
+    localUserId: currentUserId,
     // Metronome control props
     metronomeBpm,
     setMetronomeBpm,

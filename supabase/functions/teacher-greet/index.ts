@@ -91,7 +91,9 @@ serve(async (req) => {
   }
 
   try {
-    const { language = "en", debug = false } = await req.json();
+    const { language = "en", debug = false, localUserId = null } = await req.json();
+
+    console.log(`[teacher-greet] Request received - language: ${language}, debug: ${debug}, localUserId: ${localUserId}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -193,12 +195,18 @@ serve(async (req) => {
     const lessonRequiresEdges = edges.filter((e) => e.edge_type === "lesson_requires_skill");
     const lessonAwardsEdges = edges.filter((e) => e.edge_type === "lesson_awards_skill");
 
-    // 2. Fetch user activity data
-    const { data: recentRuns, error: runsError } = await supabase
+    // 2. Fetch user activity data (filtered by localUserId if provided)
+    let runsQuery = supabase
       .from("lesson_runs")
       .select("*")
       .order("started_at", { ascending: false })
       .limit(20);
+
+    if (localUserId) {
+      runsQuery = runsQuery.eq("local_user_id", localUserId);
+    }
+
+    const { data: recentRuns, error: runsError } = await runsQuery;
 
     if (runsError) {
       console.error("Error fetching lesson runs:", runsError);
@@ -206,11 +214,19 @@ serve(async (req) => {
 
     const lessonRuns: LessonRun[] = (recentRuns || []) as LessonRun[];
 
-    const { data: skillStates, error: skillsError } = await supabase.from("user_skill_state").select("*");
+    let skillsQuery = supabase.from("user_skill_state").select("*");
+
+    if (localUserId) {
+      skillsQuery = skillsQuery.eq("local_user_id", localUserId);
+    }
+
+    const { data: skillStates, error: skillsError } = await skillsQuery;
 
     if (skillsError) {
       console.error("Error fetching skill states:", skillsError);
     }
+
+    console.log(`[teacher-greet] Activity data: ${lessonRuns.length} runs, ${(skillStates || []).length} skill states for user ${localUserId || 'all'}`);
 
     const unlockedSkills = new Set(
       ((skillStates || []) as SkillState[]).filter((s) => s.unlocked).map((s) => s.skill_key),
