@@ -7,14 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import {
   TeacherGreetingResponse,
@@ -78,8 +70,6 @@ export function TeacherWelcome({
   const [debugData, setDebugData] = useState<TeacherDebugData | null>(null);
   const [isLoadingDebug, setIsLoadingDebug] = useState(false);
   const [debugError, setDebugError] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [showDebugCard, setShowDebugCard] = useState(false);
 
   const fetchDebugData = useCallback(async () => {
     setIsLoadingDebug(true);
@@ -113,30 +103,9 @@ export function TeacherWelcome({
     }
   }, [fetchDebugData, debugMode]);
 
-  // Show debug card before calling teacher-greet in debug mode
-  const handleStartWithDebug = useCallback(() => {
-    if (debugMode && debugData) {
-      setShowDebugCard(true);
-    } else {
-      onStart();
-    }
-  }, [debugMode, debugData, onStart]);
-
   const handleProceedFromDebug = useCallback(() => {
-    setShowDebugCard(false);
     onStart();
   }, [onStart]);
-
-  // Show debug card if in debug mode and user clicked Start
-  if (debugMode && showDebugCard && debugData) {
-    return (
-      <PracticePlanDebugCard
-        debugData={debugData}
-        onProceed={handleProceedFromDebug}
-        onCancel={() => setShowDebugCard(false)}
-      />
-    );
-  }
 
   // If greeting is available, show the suggestions UI
   if (greeting) {
@@ -205,95 +174,42 @@ export function TeacherWelcome({
 
   // Debug Card - shown by default before Start is clicked (only in debug mode)
   if (debugMode) {
-    return (
-      <div className="w-full max-w-3xl h-full flex flex-col justify-center items-center mx-auto space-y-6">
-        {/* Debug Card */}
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg">Teacher Context</CardTitle>
-            </div>
-            <CardDescription>
-              {isLoadingDebug
-                ? "Loading curriculum and activity data..."
-                : debugError
-                ? `Error: ${debugError}`
-                : debugData
-                ? `${debugData.curriculum.tracksCount} tracks, ${debugData.curriculum.lessonsCount} lessons, ${debugData.curriculum.edgesCount} edges, ${debugData.candidates.length} candidates`
-                : "No data"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-4">
-            {isLoadingDebug && (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm text-muted-foreground">
-                  Fetching debug data...
-                </span>
-              </div>
-            )}
+    if (isLoadingDebug) {
+      return (
+        <div className="w-full max-w-2xl mx-auto">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">
+            Loading curriculum and activity data...
+          </p>
+        </div>
+      );
+    }
 
-            {debugData && (
-              <div className="space-y-4">
-                {/* Signals Summary */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-md p-2 text-center">
-                    <div className="text-lg font-semibold">
-                      {debugData.signals.timeSinceLastPracticeHours ?? "∞"}
-                    </div>
-                    <div className="text-xs">Hours since practice</div>
-                  </div>
-                  <div className="rounded-md p-2 text-center">
-                    <div className="text-lg font-semibold">
-                      {debugData.signals.recentRunsCount}
-                    </div>
-                    <div className="text-xs">Recent runs</div>
-                  </div>
-                  <div className="rounded-md p-2 text-center">
-                    <div className="text-lg font-semibold">
-                      {debugData.signals.unlockedSkillsCount}
-                    </div>
-                    <div className="text-xs">Skills unlocked</div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-                    <SheetTrigger asChild>
-                      <Button variant="outline">Debug</Button>
-                    </SheetTrigger>
-                    <SheetContent
-                      side="right"
-                      className="w-[600px] sm:max-w-[600px]"
-                    >
-                      <SheetHeader>
-                        <SheetTitle>LLM Prompt Preview</SheetTitle>
-                      </SheetHeader>
-                      <ScrollArea className="h-[calc(100vh-120px)] mt-4">
-                        <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                          {debugData.prompt}
-                        </pre>
-                      </ScrollArea>
-                    </SheetContent>
-                  </Sheet>
-
-                  <Button onClick={handleStartWithDebug}>Start</Button>
-                </div>
-              </div>
-            )}
-
-            {debugError && (
-              <div className="flex gap-2">
+    if (debugError) {
+      return (
+        <div className="w-full max-w-3xl mx-auto space-y-6">
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardContent className="pt-6">
+              <div className="flex flex-col gap-2">
+                <p className="text-destructive">Error: {debugError}</p>
                 <Button variant="outline" size="sm" onClick={fetchDebugData}>
                   Retry
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    if (debugData) {
+      return (
+        <PracticePlanDebugCard
+          debugData={debugData}
+          onProceed={handleProceedFromDebug}
+        />
+      );
+    }
   }
 
   // Normal mode - just show Start button

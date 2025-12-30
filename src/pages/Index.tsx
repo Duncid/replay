@@ -444,13 +444,21 @@ const Index = () => {
     });
   };
 
+  const handleMidiError = useCallback((errorMessage: string) => {
+    toast({
+      title: "MIDI connection error",
+      description: errorMessage,
+      variant: "destructive",
+    });
+  }, [toast]);
+
   const {
     connectedDevice,
     error: midiError,
     isSupported: isMidiSupported,
     requestAccess,
     disconnect,
-  } = useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices);
+  } = useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices, handleMidiError);
 
   const stopAiPlayback = useCallback(() => {
     shouldStopAiRef.current = true;
@@ -866,7 +874,8 @@ const Index = () => {
         recordingManager.addNoteStart(noteKey, velocity);
       } else if (
         activeMode === "learn" &&
-        learnMode.lesson.phase === "your_turn"
+        learnMode.lesson.phase === "your_turn" &&
+        learnMode.lessonMode === "evaluation" // Only record in evaluation mode
       ) {
         learnRecordingManager.addNoteStart(noteKey, velocity);
       }
@@ -877,6 +886,7 @@ const Index = () => {
       recordingManager,
       learnMode.handleUserAction,
       learnMode.lesson.phase,
+      learnMode.lessonMode,
       learnRecordingManager,
       stopAiPlayback,
     ]
@@ -888,7 +898,8 @@ const Index = () => {
         recordingManager.addNoteEnd(noteKey);
       } else if (
         activeMode === "learn" &&
-        learnMode.lesson.phase === "your_turn"
+        learnMode.lesson.phase === "your_turn" &&
+        learnMode.lessonMode === "evaluation" // Only record in evaluation mode
       ) {
         learnRecordingManager.addNoteEnd(noteKey);
       }
@@ -898,6 +909,7 @@ const Index = () => {
       recordingManager,
       learnRecordingManager,
       learnMode.lesson.phase,
+      learnMode.lessonMode,
     ]
   );
 
@@ -1160,7 +1172,6 @@ const Index = () => {
           <MidiConnector
             isConnected={!!connectedDevice}
             deviceName={connectedDevice?.name || null}
-            error={midiError}
             isSupported={isMidiSupported}
             onConnect={requestAccess}
             onDisconnect={disconnect}

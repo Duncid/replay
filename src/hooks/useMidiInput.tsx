@@ -41,7 +41,8 @@ const midiToFrequency = (midiNote: number): number => {
 export const useMidiInput = (
   onNoteOn?: (noteKey: string, frequency: number, velocity: number) => void,
   onNoteOff?: (noteKey: string, frequency: number) => void,
-  onManualConnectNoDevices?: () => void
+  onManualConnectNoDevices?: () => void,
+  onError?: (errorMessage: string) => void
 ): UseMidiInputReturn => {
   const [devices, setDevices] = useState<MidiDevice[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<MidiDevice | null>(null);
@@ -111,7 +112,9 @@ export const useMidiInput = (
 
     if (!isSupported) {
       if (isManual) {
-        setError("Web MIDI API is not supported in this browser. Try Chrome, Edge, or Opera.");
+        const errorMessage = "Web MIDI API is not supported in this browser. Try Chrome, Edge, or Opera.";
+        setError(errorMessage);
+        onError?.(errorMessage);
       }
       return;
     }
@@ -165,10 +168,12 @@ export const useMidiInput = (
       if (isManual) {
         const errorMessage = err instanceof Error ? err.message : "Failed to access MIDI devices";
         setError(errorMessage);
+        // Show error in toast notification
+        onError?.(errorMessage);
       }
       console.error("[MIDI] Error:", err);
     }
-  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices, clearAllMidiHandlers]);
+  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices, onError, clearAllMidiHandlers]);
 
   const requestAccess = useCallback(async () => {
     await connectToDevices(true);

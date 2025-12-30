@@ -85,6 +85,9 @@ export function LearnMode({
   const [skillToUnlock, setSkillToUnlock] = useState<SkillToUnlock | null>(
     null
   );
+  // Lesson mode state
+  const [lessonMode, setLessonMode] = useState<"practice" | "evaluation">("practice");
+  const [evaluationResult, setEvaluationResult] = useState<"positive" | "negative" | null>(null);
   // Evaluation debug state
   const [evaluationDebug, setEvaluationDebug] = useState<{
     prompt: string;
@@ -302,6 +305,10 @@ export function LearnMode({
           })
           .eq("id", lesson.lessonRunId);
 
+        // Reset evaluation state when regenerating
+        setEvaluationResult(null);
+        setLastComment(null);
+
         // Play the new example
         setTimeout(() => onPlaySequence(data.sequence), 500);
       } catch (err) {
@@ -494,6 +501,9 @@ export function LearnMode({
           awardedSkills,
         });
 
+        // Reset to practice mode when starting a new lesson
+        setLessonMode("practice");
+        setEvaluationResult(null);
         hasEvaluatedRef.current = false;
         onClearRecording();
 
@@ -693,55 +703,15 @@ export function LearnMode({
             attempts: prev.attempts + 1,
           }));
 
-          // Handle coach's nextAction
-          const handleNextAction = (
-            action: CoachNextAction,
-            setupDelta?: Partial<LessonRunSetup>
-          ) => {
-            switch (action) {
-              case "RETRY_SAME":
-                // Keep lesson running, just show feedback
-                break;
-              case "MAKE_EASIER":
-              case "MAKE_HARDER": {
-                // Apply setup delta (e.g., adjust BPM) and regenerate demo sequence
-                const newBpm = setupDelta?.bpm ?? metronomeBpm;
-                const newMeter = setupDelta?.meter ?? metronomeTimeSignature;
+          // Determine evaluation result based on grader output
+          const isPositive = graderOutput.evaluation === "pass";
+          setEvaluationResult(isPositive ? "positive" : "negative");
+          
+          // Return to practice mode after evaluation
+          setLessonMode("practice");
 
-                if (setupDelta?.bpm) {
-                  setMetronomeBpm(setupDelta.bpm);
-                }
-                if (setupDelta?.meter) {
-                  setMetronomeTimeSignature(setupDelta.meter);
-                }
-
-                // Regenerate the lesson with the new settings
-                regenerateLessonWithNewSettings(newBpm, newMeter);
-                break;
-              }
-              case "EXIT_TO_MAIN_TEACHER":
-                // End lesson, return to welcome phase
-                setTimeout(() => {
-                  setLesson(createInitialLessonState());
-                  setPrompt("");
-                  setLastComment(null);
-                  onClearRecording();
-                  // Keep teacher greeting so user can pick another activity
-                }, 2000);
-                break;
-            }
-          };
-
-          handleNextAction(coachOutput.nextAction, coachOutput.setupDelta);
-
-          // Auto-replay example when not passing
-          if (graderOutput.evaluation !== "pass") {
-            setTimeout(() => {
-              if (lesson.targetSequence.notes.length > 0) {
-                onPlaySequence(lesson.targetSequence);
-              }
-            }, 1000);
-          }
+          // Don't auto-regenerate - let user decide with Make Easier/Harder buttons
+          // Store coach output for use in handleMakeEasier/harder
         } else {
           // FREE PRACTICE: Keep using piano-evaluate
           const { data, error } = await supabase.functions.invoke(
@@ -776,6 +746,13 @@ export function LearnMode({
             attempts: prev.attempts + 1,
           }));
 
+          // Determine evaluation result
+          const isPositive = evaluation === "correct";
+          setEvaluationResult(isPositive ? "positive" : "negative");
+          
+          // Return to practice mode after evaluation
+          setLessonMode("practice");
+
           // Debug mode: toast evaluation result
           if (debugMode) {
             const evalEmoji =
@@ -794,15 +771,6 @@ export function LearnMode({
               title: `${evalEmoji} ${evalLabel}`,
               description: `Evaluation: ${evaluation}`,
             });
-          }
-
-          // Auto-replay example when notes were wrong
-          if (evaluation === "wrong" || evaluation === "close") {
-            setTimeout(() => {
-              if (lesson.targetSequence.notes.length > 0) {
-                onPlaySequence(lesson.targetSequence);
-              }
-            }, 1000);
           }
         }
       } catch (error) {
@@ -915,33 +883,126 @@ export function LearnMode({
     ]
   );
 
-  // Watch for recording completion to trigger evaluation
+  // Watch for recording completion to trigger evaluation (only in evaluation mode)
+  // In practice mode, no recording or evaluation happens
+  // Only trigger if we're actively in evaluation mode and recording just completed
   useEffect(() => {
     if (
       lesson.phase === "your_turn" &&
+      lessonMode === "evaluation" &&
       userRecording &&
       userRecording.notes.length > 0 &&
       !isRecording &&
       !hasEvaluatedRef.current &&
-      !isEvaluating
+      !isEvaluating &&
+      !evaluationDebug // Don't trigger if debug card is already shown
     ) {
       hasEvaluatedRef.current = true;
       evaluateAttempt(userRecording);
     }
-  }, [lesson.phase, userRecording, isRecording, isEvaluating, evaluateAttempt]);
+  }, [lesson.phase, lessonMode, userRecording, isRecording, isEvaluating, evaluateAttempt, evaluationDebug]);
 
-  const handleNext = useCallback(() => {
-    generateLesson(
-      lesson.userPrompt,
-      lesson.difficulty + 1,
-      lesson.targetSequence,
-      lesson.lessonNodeKey
-    );
+  // Enter evaluation mode
+  const handleEvaluate = useCallback(() => {
+    setLessonMode("evaluation");
+    setEvaluationResult(null);
+    setLastComment(null);
+    // Clear any existing recording and reset evaluation state
+    onClearRecording();
+    hasEvaluatedRef.current = false;
+    setEvaluationDebug(null);
+    setGraderOutput(null);
+    setCoachOutput(null);
+    setFreePracticeEvaluation(null);
+    // Recording will start when user actually plays (handled by parent)
+    // Make sure we don't have any stale recording that would trigger evaluation immediately
+  }, [onClearRecording]);
+
+  // Make lesson easier (for negative evaluation results)
+  const handleMakeEasier = useCallback(() => {
+    if (!lesson.lessonRunId) return;
+    
+    // Use the coach's suggested adjustment if available
+    if (coachOutput?.setupDelta) {
+      const newBpm = coachOutput.setupDelta.bpm ?? metronomeBpm;
+      const newMeter = coachOutput.setupDelta.meter ?? metronomeTimeSignature;
+
+      if (coachOutput.setupDelta.bpm) {
+        setMetronomeBpm(coachOutput.setupDelta.bpm);
+      }
+      if (coachOutput.setupDelta.meter) {
+        setMetronomeTimeSignature(coachOutput.setupDelta.meter);
+      }
+
+      regenerateLessonWithNewSettings(newBpm, newMeter);
+    } else {
+      // Fallback: reduce difficulty and regenerate
+      generateLesson(
+        lesson.userPrompt,
+        Math.max(1, lesson.difficulty - 1),
+        lesson.targetSequence,
+        lesson.lessonNodeKey
+      );
+    }
+    
+    setEvaluationResult(null);
+    setLastComment(null);
   }, [
+    lesson.lessonRunId,
     lesson.userPrompt,
     lesson.difficulty,
     lesson.targetSequence,
     lesson.lessonNodeKey,
+    coachOutput,
+    metronomeBpm,
+    metronomeTimeSignature,
+    setMetronomeBpm,
+    setMetronomeTimeSignature,
+    regenerateLessonWithNewSettings,
+    generateLesson,
+  ]);
+
+  // Make lesson harder (for positive evaluation results)
+  const handleMakeHarder = useCallback(() => {
+    if (!lesson.lessonRunId) return;
+    
+    // Use the coach's suggested adjustment if available
+    if (coachOutput?.setupDelta) {
+      const newBpm = coachOutput.setupDelta.bpm ?? metronomeBpm;
+      const newMeter = coachOutput.setupDelta.meter ?? metronomeTimeSignature;
+
+      if (coachOutput.setupDelta.bpm) {
+        setMetronomeBpm(coachOutput.setupDelta.bpm);
+      }
+      if (coachOutput.setupDelta.meter) {
+        setMetronomeTimeSignature(coachOutput.setupDelta.meter);
+      }
+
+      regenerateLessonWithNewSettings(newBpm, newMeter);
+    } else {
+      // Fallback: increase difficulty and regenerate
+      generateLesson(
+        lesson.userPrompt,
+        lesson.difficulty + 1,
+        lesson.targetSequence,
+        lesson.lessonNodeKey
+      );
+    }
+    
+    setEvaluationResult(null);
+    setLastComment(null);
+  }, [
+    lesson.lessonRunId,
+    lesson.userPrompt,
+    lesson.difficulty,
+    lesson.targetSequence,
+    lesson.lessonNodeKey,
+    coachOutput,
+    metronomeBpm,
+    metronomeTimeSignature,
+    setMetronomeBpm,
+    setMetronomeTimeSignature,
+    regenerateLessonWithNewSettings,
     generateLesson,
   ]);
 
@@ -951,6 +1012,8 @@ export function LearnMode({
     setPrompt("");
     setLastComment(null);
     setLessonDebug(null);
+    setLessonMode("practice");
+    setEvaluationResult(null);
     onClearRecording();
     setTeacherGreeting(null);
   }, [markUserAction, onClearRecording]);
@@ -1033,7 +1096,10 @@ export function LearnMode({
     setFreePracticeEvaluation(null);
     setIsEvaluating(false);
     hasEvaluatedRef.current = false;
-  }, []);
+    // Return to practice mode when cancelling
+    setLessonMode("practice");
+    onClearRecording();
+  }, [onClearRecording]);
 
   const suggestions = [
     ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) ||
@@ -1130,9 +1196,14 @@ export function LearnMode({
           lastComment={lastComment}
           isEvaluating={isEvaluating}
           isLoading={isLoading || isPlaying}
+          mode={lessonMode}
+          evaluationResult={evaluationResult}
+          isRecording={isRecording && lessonMode === "evaluation"}
           onPlay={handlePlay}
-          onNext={handleNext}
+          onEvaluate={handleEvaluate}
           onLeave={handleLeave}
+          onMakeEasier={handleMakeEasier}
+          onMakeHarder={handleMakeHarder}
           trackTitle={lesson.trackTitle}
           skillToUnlock={skillToUnlock}
         />
@@ -1144,5 +1215,6 @@ export function LearnMode({
     markUserAction();
   }, [markUserAction]);
 
-  return { lesson, render, handleUserAction, handleFreePractice };
+  // Expose lesson mode to parent so it can control recording
+  return { lesson, render, handleUserAction, handleFreePractice, lessonMode };
 }

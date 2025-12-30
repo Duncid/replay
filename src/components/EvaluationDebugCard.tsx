@@ -54,7 +54,7 @@ export function EvaluationDebugCard({
     <div className="w-full max-w-3xl mx-auto space-y-6">
       <Card className="border-amber-500/30 bg-amber-500/5">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Lesson DEBUG CARD</CardTitle>
+          <CardTitle className="text-lg">Evaluation DEBUG</CardTitle>
           <CardDescription>
             Review the evaluation prompt and user recording before proceeding
           </CardDescription>
