@@ -23,6 +23,7 @@ import {
 import { Loader2, Music } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PracticePlanDebugCard } from "./PracticePlanDebugCard";
 
 export interface TeacherDebugData {
   debug: true;
@@ -61,6 +62,7 @@ interface TeacherWelcomeProps {
   onStart: () => void;
   language?: string;
   localUserId?: string | null;
+  debugMode?: boolean;
 }
 
 export function TeacherWelcome({
@@ -70,12 +72,14 @@ export function TeacherWelcome({
   onStart,
   language = "en",
   localUserId,
+  debugMode = false,
 }: TeacherWelcomeProps) {
   const { t } = useTranslation();
   const [debugData, setDebugData] = useState<TeacherDebugData | null>(null);
   const [isLoadingDebug, setIsLoadingDebug] = useState(false);
   const [debugError, setDebugError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showDebugCard, setShowDebugCard] = useState(false);
 
   const fetchDebugData = useCallback(async () => {
     setIsLoadingDebug(true);
@@ -102,10 +106,37 @@ export function TeacherWelcome({
     }
   }, [language, localUserId]);
 
-  // Fetch debug data on mount
+  // Fetch debug data on mount (only in debug mode)
   useEffect(() => {
-    fetchDebugData();
-  }, [fetchDebugData]);
+    if (debugMode) {
+      fetchDebugData();
+    }
+  }, [fetchDebugData, debugMode]);
+
+  // Show debug card before calling teacher-greet in debug mode
+  const handleStartWithDebug = useCallback(() => {
+    if (debugMode && debugData) {
+      setShowDebugCard(true);
+    } else {
+      onStart();
+    }
+  }, [debugMode, debugData, onStart]);
+
+  const handleProceedFromDebug = useCallback(() => {
+    setShowDebugCard(false);
+    onStart();
+  }, [onStart]);
+
+  // Show debug card if in debug mode and user clicked Start
+  if (debugMode && showDebugCard && debugData) {
+    return (
+      <PracticePlanDebugCard
+        debugData={debugData}
+        onProceed={handleProceedFromDebug}
+        onCancel={() => setShowDebugCard(false)}
+      />
+    );
+  }
 
   // If greeting is available, show the suggestions UI
   if (greeting) {
@@ -172,94 +203,103 @@ export function TeacherWelcome({
     );
   }
 
-  // Debug Card - shown by default before Start is clicked
+  // Debug Card - shown by default before Start is clicked (only in debug mode)
+  if (debugMode) {
+    return (
+      <div className="w-full max-w-3xl h-full flex flex-col justify-center items-center mx-auto space-y-6">
+        {/* Debug Card */}
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">Teacher Context</CardTitle>
+            </div>
+            <CardDescription>
+              {isLoadingDebug
+                ? "Loading curriculum and activity data..."
+                : debugError
+                ? `Error: ${debugError}`
+                : debugData
+                ? `${debugData.curriculum.tracksCount} tracks, ${debugData.curriculum.lessonsCount} lessons, ${debugData.curriculum.edgesCount} edges, ${debugData.candidates.length} candidates`
+                : "No data"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-4">
+            {isLoadingDebug && (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">
+                  Fetching debug data...
+                </span>
+              </div>
+            )}
+
+            {debugData && (
+              <div className="space-y-4">
+                {/* Signals Summary */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-md p-2 text-center">
+                    <div className="text-lg font-semibold">
+                      {debugData.signals.timeSinceLastPracticeHours ?? "∞"}
+                    </div>
+                    <div className="text-xs">Hours since practice</div>
+                  </div>
+                  <div className="rounded-md p-2 text-center">
+                    <div className="text-lg font-semibold">
+                      {debugData.signals.recentRunsCount}
+                    </div>
+                    <div className="text-xs">Recent runs</div>
+                  </div>
+                  <div className="rounded-md p-2 text-center">
+                    <div className="text-lg font-semibold">
+                      {debugData.signals.unlockedSkillsCount}
+                    </div>
+                    <div className="text-xs">Skills unlocked</div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="outline">Debug</Button>
+                    </SheetTrigger>
+                    <SheetContent
+                      side="right"
+                      className="w-[600px] sm:max-w-[600px]"
+                    >
+                      <SheetHeader>
+                        <SheetTitle>LLM Prompt Preview</SheetTitle>
+                      </SheetHeader>
+                      <ScrollArea className="h-[calc(100vh-120px)] mt-4">
+                        <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
+                          {debugData.prompt}
+                        </pre>
+                      </ScrollArea>
+                    </SheetContent>
+                  </Sheet>
+
+                  <Button onClick={handleStartWithDebug}>Start</Button>
+                </div>
+              </div>
+            )}
+
+            {debugError && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchDebugData}>
+                  Retry
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Normal mode - just show Start button
   return (
     <div className="w-full max-w-3xl h-full flex flex-col justify-center items-center mx-auto space-y-6">
-      {/* Debug Card */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">Teacher Context</CardTitle>
-          </div>
-          <CardDescription>
-            {isLoadingDebug
-              ? "Loading curriculum and activity data..."
-              : debugError
-              ? `Error: ${debugError}`
-              : debugData
-              ? `${debugData.curriculum.tracksCount} tracks, ${debugData.curriculum.lessonsCount} lessons, ${debugData.curriculum.edgesCount} edges, ${debugData.candidates.length} candidates`
-              : "No data"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0 space-y-4">
-          {isLoadingDebug && (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">
-                Fetching debug data...
-              </span>
-            </div>
-          )}
-
-          {debugData && (
-            <div className="space-y-4">
-              {/* Signals Summary */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-md p-2 text-center">
-                  <div className="text-lg font-semibold">
-                    {debugData.signals.timeSinceLastPracticeHours ?? "∞"}
-                  </div>
-                  <div className="text-xs">Hours since practice</div>
-                </div>
-                <div className="rounded-md p-2 text-center">
-                  <div className="text-lg font-semibold">
-                    {debugData.signals.recentRunsCount}
-                  </div>
-                  <div className="text-xs">Recent runs</div>
-                </div>
-                <div className="rounded-md p-2 text-center">
-                  <div className="text-lg font-semibold">
-                    {debugData.signals.unlockedSkillsCount}
-                  </div>
-                  <div className="text-xs">Skills unlocked</div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline">Debug</Button>
-                  </SheetTrigger>
-                  <SheetContent
-                    side="right"
-                    className="w-[600px] sm:max-w-[600px]"
-                  >
-                    <SheetHeader>
-                      <SheetTitle>LLM Prompt Preview</SheetTitle>
-                    </SheetHeader>
-                    <ScrollArea className="h-[calc(100vh-120px)] mt-4">
-                      <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                        {debugData.prompt}
-                      </pre>
-                    </ScrollArea>
-                  </SheetContent>
-                </Sheet>
-
-                <Button onClick={onStart}>Start</Button>
-              </div>
-            </div>
-          )}
-
-          {debugError && (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={fetchDebugData}>
-                Retry
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Button onClick={onStart}>Start</Button>
     </div>
   );
 }

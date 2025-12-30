@@ -85,7 +85,7 @@ export function LessonDebugCard({
             </Sheet>
 
             <Button onClick={onStart} disabled={isLoading} size="sm">
-              Start
+              GO
             </Button>
           </div>
         </CardContent>

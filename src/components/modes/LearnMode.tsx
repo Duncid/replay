@@ -1,5 +1,6 @@
 import { LessonCard, SkillToUnlock } from "@/components/LessonCard";
 import { LessonDebugCard } from "@/components/LessonDebugCard";
+import { EvaluationDebugCard } from "@/components/EvaluationDebugCard";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,6 +85,20 @@ export function LearnMode({
   const [skillToUnlock, setSkillToUnlock] = useState<SkillToUnlock | null>(
     null
   );
+  // Evaluation debug state
+  const [evaluationDebug, setEvaluationDebug] = useState<{
+    prompt: string;
+    userSequence: NoteSequence;
+    evaluationType: "structured" | "free";
+    pendingCall: () => Promise<void>;
+    decidePrompt?: string;
+  } | null>(null);
+  const [graderOutput, setGraderOutput] = useState<GraderOutput | null>(null);
+  const [coachOutput, setCoachOutput] = useState<CoachOutput | null>(null);
+  const [freePracticeEvaluation, setFreePracticeEvaluation] = useState<{
+    evaluation: "correct" | "close" | "wrong";
+    feedback: string;
+  } | null>(null);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
   const generationRequestIdRef = useRef<string | null>(null);
@@ -531,16 +546,24 @@ export function LearnMode({
     }
   }, [lesson.targetSequence, onPlaySequence]);
 
-  const evaluateAttempt = useCallback(
-    async (userSequence: NoteSequence) => {
+  // Helper to execute evaluation after debug approval
+  const executeEvaluation = useCallback(
+    async (
+      userSequence: NoteSequence,
+      evaluationType: "structured" | "free"
+    ) => {
       const actionToken = userActionTokenRef.current;
       const requestId = crypto.randomUUID();
       evaluationRequestIdRef.current = requestId;
       setIsEvaluating(true);
+      setEvaluationDebug(null);
+      setGraderOutput(null);
+      setCoachOutput(null);
+      setFreePracticeEvaluation(null);
 
       try {
         // STRUCTURED LESSON: Use lesson-evaluate → lesson-decide
-        if (lesson.lessonRunId) {
+        if (evaluationType === "structured" && lesson.lessonRunId) {
           // Step 1: Call lesson-evaluate
           const { data: graderData, error: graderError } =
             await supabase.functions.invoke("lesson-evaluate", {
@@ -564,6 +587,7 @@ export function LearnMode({
           if (graderData?.error) throw new Error(graderData.error);
 
           const graderOutput = graderData as GraderOutput;
+          setGraderOutput(graderOutput);
 
           // Debug mode: toast grader evaluation
           if (debugMode) {
@@ -587,6 +611,19 @@ export function LearnMode({
           }
 
           // Step 2: Call lesson-decide with grader output
+          // In debug mode, get prompt first and show it in results
+          let decidePrompt: string | undefined;
+          if (debugMode) {
+            decidePrompt = JSON.stringify(
+              {
+                lessonRunId: lesson.lessonRunId,
+                graderOutput,
+              },
+              null,
+              2
+            );
+          }
+
           const { data: coachData, error: coachError } =
             await supabase.functions.invoke("lesson-decide", {
               body: {
@@ -607,6 +644,15 @@ export function LearnMode({
           const coachOutput = coachData as CoachOutput & {
             awardedSkills?: string[];
           };
+          setCoachOutput(coachOutput);
+          
+          // Update debug card with decide prompt if in debug mode
+          if (debugMode && decidePrompt && evaluationDebug) {
+            setEvaluationDebug({
+              ...evaluationDebug,
+              decidePrompt,
+            });
+          }
 
           // Debug mode: toast coach decision and skills
           if (debugMode) {
@@ -722,6 +768,7 @@ export function LearnMode({
 
           const feedback = data.feedback as string;
           const evaluation = data.evaluation as "correct" | "close" | "wrong";
+          setFreePracticeEvaluation({ evaluation, feedback });
 
           setLastComment(feedback);
           setLesson((prev) => ({
@@ -790,6 +837,81 @@ export function LearnMode({
       setMetronomeTimeSignature,
       t,
       toast,
+    ]
+  );
+
+  // Main evaluateAttempt function - intercepts in debug mode
+  const evaluateAttempt = useCallback(
+    async (userSequence: NoteSequence) => {
+      // In debug mode, get prompt first and show debug card
+      if (debugMode) {
+        try {
+          let prompt = "";
+          const evaluationType: "structured" | "free" =
+            lesson.lessonRunId ? "structured" : "free";
+
+          // Get prompt by calling with debug: true
+          if (evaluationType === "structured") {
+            const { data: promptData } = await supabase.functions.invoke(
+              "lesson-evaluate",
+              {
+                body: {
+                  lessonRunId: lesson.lessonRunId,
+                  userSequence,
+                  metronomeContext: {
+                    bpm: metronomeBpm,
+                    meter: metronomeTimeSignature,
+                  },
+                  debug: true,
+                },
+              }
+            );
+            prompt = promptData?.prompt || JSON.stringify(promptData, null, 2);
+          } else {
+            // For free practice, construct prompt manually
+            prompt = JSON.stringify(
+              {
+                targetSequence: lesson.targetSequence,
+                userSequence,
+                instruction: lesson.instruction,
+                language,
+                model,
+              },
+              null,
+              2
+            );
+          }
+
+          // Show debug card
+          setEvaluationDebug({
+            prompt,
+            userSequence,
+            evaluationType,
+            pendingCall: () => executeEvaluation(userSequence, evaluationType),
+          });
+          return;
+        } catch (error) {
+          console.error("Failed to get debug prompt:", error);
+          // Fall through to normal execution
+        }
+      }
+
+      // Normal mode or debug failed - proceed directly
+      await executeEvaluation(
+        userSequence,
+        lesson.lessonRunId ? "structured" : "free"
+      );
+    },
+    [
+      debugMode,
+      lesson.lessonRunId,
+      lesson.targetSequence,
+      lesson.instruction,
+      metronomeBpm,
+      metronomeTimeSignature,
+      language,
+      model,
+      executeEvaluation,
     ]
   );
 
@@ -897,6 +1019,22 @@ export function LearnMode({
     }));
   }, []);
 
+  // Handle proceeding from evaluation debug card
+  const handleProceedEvaluation = useCallback(() => {
+    if (evaluationDebug) {
+      evaluationDebug.pendingCall();
+    }
+  }, [evaluationDebug]);
+
+  const handleCancelEvaluation = useCallback(() => {
+    setEvaluationDebug(null);
+    setGraderOutput(null);
+    setCoachOutput(null);
+    setFreePracticeEvaluation(null);
+    setIsEvaluating(false);
+    hasEvaluatedRef.current = false;
+  }, []);
+
   const suggestions = [
     ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) ||
       []),
@@ -904,7 +1042,20 @@ export function LearnMode({
 
   const render = () => (
     <>
-      {lessonDebug ? (
+      {evaluationDebug ? (
+        /* Evaluation Debug Card - shown before evaluation LLM calls */
+        <EvaluationDebugCard
+          prompt={evaluationDebug.prompt}
+          userSequence={evaluationDebug.userSequence}
+          evaluationType={evaluationDebug.evaluationType}
+          onProceed={handleProceedEvaluation}
+          onCancel={handleCancelEvaluation}
+          graderOutput={graderOutput}
+          coachOutput={coachOutput}
+          freePracticeEvaluation={freePracticeEvaluation}
+          decidePrompt={evaluationDebug.decidePrompt}
+        />
+      ) : lessonDebug ? (
         /* Lesson Debug Card - shown after selecting a suggestion */
         <LessonDebugCard
           suggestion={lessonDebug.suggestion}
@@ -930,6 +1081,7 @@ export function LearnMode({
           onStart={handleStartTeacherGreet}
           language={language}
           localUserId={localUserId}
+          debugMode={debugMode}
         />
       ) : lesson.phase === "prompt" ? (
         /* Initial Prompt Input */
