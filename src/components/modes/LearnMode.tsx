@@ -5,7 +5,7 @@ import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useLessonRuns } from "@/hooks/useLessonRuns";
+// import { useLessonRuns } from "@/hooks/useLessonRuns"; // No longer needed - lesson-start handles lesson run creation
 import { supabase } from "@/integrations/supabase/client";
 import {
   CoachNextAction,
@@ -17,6 +17,7 @@ import {
   LessonMetronomeSettings,
   LessonMetronomeSoundType,
   LessonRunSetup,
+  LessonStartResponse,
   LessonState,
   TeacherGreetingResponse,
   TeacherSuggestion,
@@ -108,7 +109,9 @@ export function LearnMode({
   const evaluationRequestIdRef = useRef<string | null>(null);
   const userActionTokenRef = useRef<string>(crypto.randomUUID());
   const { t } = useTranslation();
-  const { startLessonRun, incrementAttempts, endLessonRun } = useLessonRuns(localUserId);
+  // Note: useLessonRuns hook kept for potential future use
+  // lesson-start now handles lesson run creation
+  // const { incrementAttempts, endLessonRun } = useLessonRuns(localUserId);
 
   const markUserAction = useCallback(() => {
     userActionTokenRef.current = crypto.randomUUID();
@@ -263,54 +266,111 @@ export function LearnMode({
 
       setIsLoading(true);
       try {
-        const regeneratePrompt = lesson.userPrompt || lesson.instruction;
-        const localizedPrompt =
-          language === "fr"
-            ? `${regeneratePrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
-            : regeneratePrompt;
+        if (lesson.lessonNodeKey) {
+          // CURRICULUM LESSON: Use lesson-start with setup overrides
+          // Note: This creates a new lesson run. The old run remains for history.
+          const { data, error } = await supabase.functions.invoke("lesson-start", {
+            body: {
+              lessonKey: lesson.lessonNodeKey,
+              language,
+              debug: false,
+              suggestionHint: {
+                setup: {
+                  bpm: newBpm,
+                  meter: newMeter,
+                },
+              },
+            },
+          });
 
-        const { data, error } = await supabase.functions.invoke("piano-learn", {
-          body: {
-            prompt: localizedPrompt,
-            difficulty: lesson.difficulty,
-            language,
-            model,
-            debug: false,
-            // Pass the new BPM/meter so the AI generates at the right tempo
-            metronomeBpm: newBpm,
-            metronomeTimeSignature: newMeter,
-          },
-        });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
 
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
+          const lessonStartData = data as LessonStartResponse;
 
-        if (!data?.instruction || !data?.sequence) {
-          throw new Error("Invalid lesson response");
+          if (!lessonStartData.instruction) {
+            throw new Error("Invalid lesson response");
+          }
+
+          // Apply metronome settings from the response
+          if (lessonStartData.metronome) {
+            applyMetronomeSettings(lessonStartData.metronome);
+          }
+
+          // Update the lesson with the new data
+          setLesson((prev) => ({
+            ...prev,
+            targetSequence: lessonStartData.demoSequence || prev.targetSequence,
+            instruction: lessonStartData.instruction,
+            lessonRunId: lessonStartData.lessonRunId, // New lesson run ID
+            trackKey: lessonStartData.lessonBrief.trackKey,
+            trackTitle: lessonStartData.lessonBrief.trackTitle,
+            awardedSkills: lessonStartData.lessonBrief.awardedSkills || [],
+          }));
+
+          // Update skill unlock status if there are awarded skills
+          if (lessonStartData.lessonBrief.awardedSkills && lessonStartData.lessonBrief.awardedSkills.length > 0) {
+            const skillKey = lessonStartData.lessonBrief.awardedSkills[0];
+            const skillTitle = await fetchSkillTitle(skillKey);
+            const status = await fetchSkillStatus(skillKey, skillTitle);
+            if (status) {
+              setSkillToUnlock(status);
+            }
+          }
+
+          // Reset evaluation state when regenerating
+          setEvaluationResult(null);
+          setLastComment(null);
+
+          // Play the new example
+          setTimeout(() => onPlaySequence(lessonStartData.demoSequence || lesson.targetSequence), 500);
+        } else {
+          // FREE-FORM PRACTICE: Use piano-learn
+          const regeneratePrompt = lesson.userPrompt || lesson.instruction;
+          const localizedPrompt =
+            language === "fr"
+              ? `${regeneratePrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
+              : regeneratePrompt;
+
+          const { data, error } = await supabase.functions.invoke("piano-learn", {
+            body: {
+              prompt: localizedPrompt,
+              difficulty: lesson.difficulty,
+              language,
+              model,
+              debug: false,
+              // Pass the new BPM/meter so the AI generates at the right tempo
+              metronomeBpm: newBpm,
+              metronomeTimeSignature: newMeter,
+            },
+          });
+
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          if (!data?.instruction || !data?.sequence) {
+            throw new Error("Invalid lesson response");
+          }
+
+          // Apply metronome settings from the AI response
+          if (data.metronome) {
+            applyMetronomeSettings(data.metronome);
+          }
+
+          // Update the lesson with the new sequence
+          setLesson((prev) => ({
+            ...prev,
+            targetSequence: data.sequence,
+            instruction: data.instruction,
+          }));
+
+          // Reset evaluation state when regenerating
+          setEvaluationResult(null);
+          setLastComment(null);
+
+          // Play the new example
+          setTimeout(() => onPlaySequence(data.sequence), 500);
         }
-
-        // Update the lesson with the new sequence
-        setLesson((prev) => ({
-          ...prev,
-          targetSequence: data.sequence,
-          instruction: data.instruction,
-        }));
-
-        // Update the demo_sequence in the lesson_runs table
-        await supabase
-          .from("lesson_runs")
-          .update({
-            demo_sequence: data.sequence,
-            setup: { bpm: newBpm, meter: newMeter },
-          })
-          .eq("id", lesson.lessonRunId);
-
-        // Reset evaluation state when regenerating
-        setEvaluationResult(null);
-        setLastComment(null);
-
-        // Play the new example
-        setTimeout(() => onPlaySequence(data.sequence), 500);
       } catch (err) {
         console.error("Failed to regenerate lesson:", err);
         toast({
@@ -324,10 +384,14 @@ export function LearnMode({
     },
     [
       lesson.lessonRunId,
-      lesson.targetSequence.notes.length,
+      lesson.lessonNodeKey,
+      lesson.targetSequence,
       lesson.userPrompt,
       lesson.instruction,
       lesson.difficulty,
+      applyMetronomeSettings,
+      fetchSkillStatus,
+      fetchSkillTitle,
       language,
       model,
       onPlaySequence,
@@ -350,145 +414,113 @@ export function LearnMode({
       setLessonDebug(null); // Clear any lesson debug state
       setLastComment(null);
       setIsLoading(true);
-      const localizedPrompt =
-        language === "fr"
-          ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
-          : userPrompt;
 
       try {
-        const { data, error } = await supabase.functions.invoke("piano-learn", {
-          body: {
-            prompt: localizedPrompt,
-            difficulty,
-            previousSequence,
-            language,
-            model,
-            debug: false,
-          },
-        });
-
-        if (
-          generationRequestIdRef.current !== requestId ||
-          userActionTokenRef.current !== actionToken
-        )
-          return;
-
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        if (!data?.instruction || !data?.sequence) {
-          throw new Error("Invalid lesson response");
-        }
-
-        // Apply metronome settings from the AI response
-        if (data.metronome) {
-          applyMetronomeSettings(data.metronome);
-        }
-
-        // Start lesson run tracking if we have a lesson key
         let lessonRunId: string | undefined;
+        let instruction: string;
+        let targetSequence: NoteSequence;
         let trackKey: string | undefined;
         let trackTitle: string | undefined;
-        const awardedSkills: string[] = [];
+        let awardedSkills: string[] = [];
+        let lessonBrief: LessonBrief | undefined;
+        let metronomeSettings: LessonMetronomeSettings | undefined;
 
         if (lessonNodeKey) {
-          // Fetch track and skill info from curriculum edges
-          const { data: latestVersion } = await supabase
-            .from("curriculum_versions")
-            .select("id")
-            .eq("status", "published")
-            .order("published_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // CURRICULUM LESSON: Use lesson-start
+          const { data, error } = await supabase.functions.invoke("lesson-start", {
+            body: {
+              lessonKey: lessonNodeKey,
+              language,
+              debug: false,
+            },
+          });
 
-          if (latestVersion) {
-            // Fetch edges related to this lesson
-            const { data: edges } = await supabase
-              .from("curriculum_edges")
-              .select("*")
-              .eq("version_id", latestVersion.id)
-              .or(
-                `source_key.eq.${lessonNodeKey},target_key.eq.${lessonNodeKey}`
-              );
+          if (
+            generationRequestIdRef.current !== requestId ||
+            userActionTokenRef.current !== actionToken
+          )
+            return;
 
-            for (const edge of edges || []) {
-              if (
-                edge.source_key === lessonNodeKey &&
-                edge.edge_type === "lesson_awards_skill"
-              ) {
-                awardedSkills.push(edge.target_key);
-              } else if (
-                edge.target_key === lessonNodeKey &&
-                edge.edge_type === "track_contains_lesson"
-              ) {
-                trackKey = edge.source_key;
-              }
-            }
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
 
-            // Fetch track title if we have a track key
-            if (trackKey) {
-              const { data: trackNode } = await supabase
-                .from("curriculum_nodes")
-                .select("data")
-                .eq("version_id", latestVersion.id)
-                .eq("node_key", trackKey)
-                .eq("node_type", "track")
-                .maybeSingle();
+          const lessonStartData = data as LessonStartResponse;
 
-              if (trackNode?.data) {
-                const trackData = trackNode.data as Record<string, unknown>;
-                trackTitle = (trackData.label as string) || trackKey;
-              }
-            }
-
-            // Fetch skill status for the first awarded skill
-            if (awardedSkills.length > 0) {
-              const skillTitle = await fetchSkillTitle(awardedSkills[0]);
-              const status = await fetchSkillStatus(
-                awardedSkills[0],
-                skillTitle
-              );
-              setSkillToUnlock(status);
-            } else {
-              setSkillToUnlock(null);
-            }
+          if (!lessonStartData.instruction) {
+            throw new Error("Invalid lesson response");
           }
 
-          // Build lesson brief from available data
-          const brief: LessonBrief = {
-            lessonKey: lessonNodeKey,
-            title:
-              data.instruction.split("\n")[0]?.substring(0, 100) ||
-              "Practice Exercise",
-            goal: data.instruction,
-            setupGuidance: "",
-            evaluationGuidance: "Compare user's notes to the demo sequence",
-            difficultyGuidance: "",
-            requiredSkills: [],
-            awardedSkills,
-            nextLessonKey: null,
-            trackKey,
-            trackTitle,
-          };
+          lessonRunId = lessonStartData.lessonRunId;
+          instruction = lessonStartData.instruction;
+          targetSequence = lessonStartData.demoSequence || { notes: [], totalTime: 0 };
+          lessonBrief = lessonStartData.lessonBrief;
+          metronomeSettings = lessonStartData.metronome;
+          trackKey = lessonBrief.trackKey;
+          trackTitle = lessonBrief.trackTitle;
+          awardedSkills = lessonBrief.awardedSkills || [];
 
-          const runId = await startLessonRun(
-            lessonNodeKey,
-            difficulty,
-            {
-              bpm: data.metronome?.bpm || metronomeBpm,
-              meter: data.metronome?.timeSignature || metronomeTimeSignature,
-            },
-            data.sequence, // Pass demo sequence
-            brief // Pass lesson brief
-          );
-          if (runId) lessonRunId = runId;
+          // Apply metronome settings from the response
+          if (metronomeSettings) {
+            applyMetronomeSettings(metronomeSettings);
+          }
+
+          // Fetch skill status for the first awarded skill
+          if (awardedSkills.length > 0) {
+            const skillTitle = await fetchSkillTitle(awardedSkills[0]);
+            const status = await fetchSkillStatus(
+              awardedSkills[0],
+              skillTitle
+            );
+            setSkillToUnlock(status);
+          } else {
+            setSkillToUnlock(null);
+          }
         } else {
+          // FREE-FORM PRACTICE: Use piano-learn
+          const localizedPrompt =
+            language === "fr"
+              ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
+              : userPrompt;
+
+          const { data, error } = await supabase.functions.invoke("piano-learn", {
+            body: {
+              prompt: localizedPrompt,
+              difficulty,
+              previousSequence,
+              language,
+              model,
+              debug: false,
+            },
+          });
+
+          if (
+            generationRequestIdRef.current !== requestId ||
+            userActionTokenRef.current !== actionToken
+          )
+            return;
+
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          if (!data?.instruction || !data?.sequence) {
+            throw new Error("Invalid lesson response");
+          }
+
+          instruction = data.instruction;
+          targetSequence = data.sequence;
+          metronomeSettings = data.metronome;
+
+          // Apply metronome settings from the AI response
+          if (metronomeSettings) {
+            applyMetronomeSettings(metronomeSettings);
+          }
+
           setSkillToUnlock(null);
         }
 
         setLesson({
-          instruction: data.instruction,
-          targetSequence: data.sequence,
+          instruction,
+          targetSequence,
           phase: "your_turn",
           attempts: 0,
           validations: 0,
@@ -509,7 +541,7 @@ export function LearnMode({
         onClearRecording();
 
         // Automatically play the demo
-        setTimeout(() => onPlaySequence(data.sequence), 500);
+        setTimeout(() => onPlaySequence(targetSequence), 500);
       } catch (error) {
         console.error("Failed to generate lesson:", error);
         toast({
@@ -548,7 +580,6 @@ export function LearnMode({
       model,
       onClearRecording,
       onPlaySequence,
-      startLessonRun,
       t,
       toast,
     ]
@@ -1038,12 +1069,12 @@ export function LearnMode({
         setIsLoadingLessonDebug(true);
 
         try {
-          const { data, error } = await supabase.functions.invoke("piano-learn", {
+          // For curriculum lessons, use lesson-start; for free-form, use piano-learn
+          // Since suggestions always have lessonKey, use lesson-start
+          const { data, error } = await supabase.functions.invoke("lesson-start", {
             body: {
-              prompt: lessonPrompt,
-              difficulty: 1, // Lesson Coach will determine actual difficulty
+              lessonKey: suggestion.lessonKey,
               language,
-              model,
               debug: true,
             },
           });
@@ -1051,10 +1082,13 @@ export function LearnMode({
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
 
-          if (data?.debug && data?.prompt) {
+          // In debug mode, lesson-start returns { prompt, lessonBrief, setup }
+          // In non-debug mode, it returns { composedPrompt, ... }
+          const debugPrompt = data?.prompt || data?.composedPrompt;
+          if (debugPrompt) {
             setLessonDebug({
               suggestion,
-              prompt: data.prompt,
+              prompt: debugPrompt,
             });
           } else {
             throw new Error("Debug mode not returning expected data");
@@ -1063,7 +1097,7 @@ export function LearnMode({
           console.error("Failed to fetch lesson debug:", err);
           toast({
             title: "Error",
-            description: "Failed to prepare lesson",
+            description: err instanceof Error ? err.message : "Failed to prepare lesson",
             variant: "destructive",
           });
         } finally {
@@ -1074,7 +1108,7 @@ export function LearnMode({
         generateLesson(lessonPrompt, 1, undefined, suggestion.lessonKey);
       }
     },
-    [debugMode, language, model, toast, generateLesson]
+    [debugMode, language, toast, generateLesson]
   );
 
   // Start the actual lesson after seeing the debug prompt
