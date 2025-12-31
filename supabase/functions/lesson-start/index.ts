@@ -66,11 +66,28 @@ serve(async (req) => {
   }
 
   try {
-    const { lessonKey, suggestionHint, language = "en", debug = false } = await req.json();
+    const { 
+      lessonKey, 
+      suggestionHint, 
+      language = "en", 
+      debug = false,
+      setupOverrides,
+      regenerate = false,
+      lessonRunId,
+      localUserId,
+    } = await req.json();
 
     if (!lessonKey) {
       return new Response(
         JSON.stringify({ error: "lessonKey is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If regenerating, we need a lessonRunId
+    if (regenerate && !lessonRunId) {
+      return new Response(
+        JSON.stringify({ error: "lessonRunId is required when regenerate is true" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -164,12 +181,18 @@ serve(async (req) => {
     }
 
     // 4. Fetch user's recent runs for this lesson (for context)
-    const { data: recentRuns, error: runsError } = await supabase
+    let recentRunsQuery = supabase
       .from("lesson_runs")
       .select("*")
       .eq("lesson_node_key", lessonKey)
       .order("started_at", { ascending: false })
       .limit(5);
+    
+    if (localUserId) {
+      recentRunsQuery = recentRunsQuery.eq("local_user_id", localUserId);
+    }
+
+    const { data: recentRuns, error: runsError } = await recentRunsQuery;
 
     if (runsError) {
       console.error("Error fetching recent runs:", runsError);
@@ -191,8 +214,15 @@ serve(async (req) => {
       trackTitle: trackTitle || undefined,
     };
 
-    // 6. Build initial setup from suggestionHint or defaults
-    const setup: LessonRunSetup = {
+    // 6. Build initial setup from setupOverrides, suggestionHint, or defaults
+    // If setupOverrides provided (for regeneration), use them directly
+    const setup: LessonRunSetup = setupOverrides ? {
+      bpm: setupOverrides.bpm ?? 80,
+      meter: setupOverrides.meter ?? "4/4",
+      feel: setupOverrides.feel ?? "straight_beats",
+      bars: setupOverrides.bars ?? 2,
+      countInBars: setupOverrides.countInBars ?? 1,
+    } : {
       bpm: suggestionHint?.bpm || 80,
       meter: suggestionHint?.meter || "4/4",
       feel: suggestionHint?.feel || "straight_beats",
@@ -380,7 +410,7 @@ Return your response using the provided function.`;
       ...introData.setupAdjustments,
     };
 
-    // 9. Create lesson_run row
+    // 9. Create or update lesson_run row
     const initialState = {
       turn: 0,
       passStreak: 0,
@@ -389,25 +419,57 @@ Return your response using the provided function.`;
       phase: "intro",
     };
 
-    const { data: lessonRun, error: insertError } = await supabase
-      .from("lesson_runs")
-      .insert({
-        lesson_node_key: lessonKey,
-        version_id: latestVersion.id,
-        difficulty: suggestionHint?.difficulty?.value || 1,
-        setup: finalSetup,
-        lesson_brief: lessonBrief,
-        demo_sequence: introData.demoSequence || null,
-        state: initialState,
-        ai_feedback: introData.instruction,
-      })
-      .select()
-      .single();
+    let lessonRun;
+    let dbError;
 
-    if (insertError) {
-      console.error("Error creating lesson run:", insertError);
+    if (regenerate && lessonRunId) {
+      // Update existing lesson run instead of creating new one
+      const { data, error } = await supabase
+        .from("lesson_runs")
+        .update({
+          setup: finalSetup,
+          lesson_brief: lessonBrief,
+          demo_sequence: introData.demoSequence || null,
+          state: initialState,
+          ai_feedback: introData.instruction,
+          attempt_count: 0,
+          user_recording: null,
+          evaluation: null,
+          diagnosis: null,
+          ended_at: null,
+        })
+        .eq("id", lessonRunId)
+        .select()
+        .single();
+      
+      lessonRun = data;
+      dbError = error;
+    } else {
+      // Create new lesson run
+      const { data, error } = await supabase
+        .from("lesson_runs")
+        .insert({
+          lesson_node_key: lessonKey,
+          version_id: latestVersion.id,
+          difficulty: suggestionHint?.difficulty?.value || 1,
+          setup: finalSetup,
+          lesson_brief: lessonBrief,
+          demo_sequence: introData.demoSequence || null,
+          state: initialState,
+          ai_feedback: introData.instruction,
+          local_user_id: localUserId || null,
+        })
+        .select()
+        .single();
+      
+      lessonRun = data;
+      dbError = error;
+    }
+
+    if (dbError) {
+      console.error("Error creating/updating lesson run:", dbError);
       return new Response(
-        JSON.stringify({ error: "Failed to create lesson run" }),
+        JSON.stringify({ error: "Failed to create/update lesson run" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
