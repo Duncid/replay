@@ -5,8 +5,23 @@ import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-// import { useLessonRuns } from "@/hooks/useLessonRuns"; // No longer needed - lesson-start handles lesson run creation
 import { supabase } from "@/integrations/supabase/client";
+import {
+  useDecideNextAction,
+  useEvaluateFreeFormLesson,
+  useEvaluateStructuredLesson,
+  useRegenerateCurriculumLesson,
+  useRegenerateFreeFormLesson,
+  useStartCurriculumLesson,
+  useStartFreeFormLesson,
+  useTeacherGreeting,
+  useSkillStatus,
+  useSkillTitle,
+} from "@/hooks/useLessonQueries";
+import {
+  fetchSkillStatus,
+  fetchSkillTitle,
+} from "@/services/lessonService";
 import {
   CoachNextAction,
   CoachOutput,
@@ -49,10 +64,38 @@ interface LearnModeProps {
   setMetronomeSoundType?: (soundType: LessonMetronomeSoundType) => void;
 }
 
-interface LessonDebugState {
+// Unified debug state
+type DebugState =
+  | {
+      type: "lesson";
   suggestion: TeacherSuggestion;
   prompt: string;
 }
+  | {
+      type: "evaluation";
+      prompt: string;
+      userSequence: NoteSequence;
+      evaluationType: "structured" | "free";
+      pendingCall: () => Promise<void>;
+      decidePrompt?: string;
+    }
+  | null;
+
+// Unified evaluation state
+type EvaluationState =
+  | {
+      type: "structured";
+      graderOutput: GraderOutput;
+      coachOutput?: CoachOutput & { awardedSkills?: string[] };
+    }
+  | {
+      type: "free";
+      freePracticeEvaluation: {
+        evaluation: "correct" | "close" | "wrong";
+        feedback: string;
+      };
+    }
+  | null;
 
 export function LearnMode({
   isPlaying,
@@ -75,13 +118,33 @@ export function LearnMode({
 }: LearnModeProps) {
   const [prompt, setPrompt] = useState("");
   const [lesson, setLesson] = useState<LessonState>(createInitialLessonState());
-  const [isLoading, setIsLoading] = useState(false);
   const [lastComment, setLastComment] = useState<string | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [teacherGreeting, setTeacherGreeting] =
-    useState<TeacherGreetingResponse | null>(null);
-  const [isLoadingTeacher, setIsLoadingTeacher] = useState(false);
-  const [lessonDebug, setLessonDebug] = useState<LessonDebugState | null>(null);
+  // React Query hooks
+  const [shouldFetchGreeting, setShouldFetchGreeting] = useState(false);
+  const {
+    data: teacherGreeting,
+    isLoading: isLoadingTeacher,
+    error: teacherGreetingError,
+  } = useTeacherGreeting(language, localUserId, shouldFetchGreeting);
+
+  const startCurriculumLessonMutation = useStartCurriculumLesson();
+  const startFreeFormLessonMutation = useStartFreeFormLesson();
+  const regenerateCurriculumLessonMutation = useRegenerateCurriculumLesson();
+  const regenerateFreeFormLessonMutation = useRegenerateFreeFormLesson();
+  const evaluateStructuredLessonMutation = useEvaluateStructuredLesson();
+  const evaluateFreeFormLessonMutation = useEvaluateFreeFormLesson();
+  const decideNextActionMutation = useDecideNextAction();
+
+  // Combined loading state from mutations
+  const isLoading =
+    startCurriculumLessonMutation.isPending ||
+    startFreeFormLessonMutation.isPending ||
+    regenerateCurriculumLessonMutation.isPending ||
+    regenerateFreeFormLessonMutation.isPending;
+
+  // Consolidated debug state
+  const [debugState, setDebugState] = useState<DebugState>(null);
   const [isLoadingLessonDebug, setIsLoadingLessonDebug] = useState(false);
   const [skillToUnlock, setSkillToUnlock] = useState<SkillToUnlock | null>(
     null
@@ -89,82 +152,44 @@ export function LearnMode({
   // Lesson mode state
   const [lessonMode, setLessonMode] = useState<"practice" | "evaluation">("practice");
   const [evaluationResult, setEvaluationResult] = useState<"positive" | "negative" | null>(null);
-  // Evaluation debug state
-  const [evaluationDebug, setEvaluationDebug] = useState<{
-    prompt: string;
-    userSequence: NoteSequence;
-    evaluationType: "structured" | "free";
-    pendingCall: () => Promise<void>;
-    decidePrompt?: string;
-  } | null>(null);
-  const [graderOutput, setGraderOutput] = useState<GraderOutput | null>(null);
-  const [coachOutput, setCoachOutput] = useState<CoachOutput | null>(null);
-  const [freePracticeEvaluation, setFreePracticeEvaluation] = useState<{
-    evaluation: "correct" | "close" | "wrong";
-    feedback: string;
-  } | null>(null);
+  // Consolidated evaluation state
+  const [evaluationState, setEvaluationState] = useState<EvaluationState>(null);
   const { toast } = useToast();
   const hasEvaluatedRef = useRef(false);
-  const generationRequestIdRef = useRef<string | null>(null);
-  const evaluationRequestIdRef = useRef<string | null>(null);
+  // userActionTokenRef is kept to prevent stale updates when user performs new actions
+  // React Query handles request cancellation automatically
   const userActionTokenRef = useRef<string>(crypto.randomUUID());
   const { t } = useTranslation();
-  // Note: useLessonRuns hook kept for potential future use
-  // lesson-start now handles lesson run creation
-  // const { incrementAttempts, endLessonRun } = useLessonRuns(localUserId);
 
   const markUserAction = useCallback(() => {
     userActionTokenRef.current = crypto.randomUUID();
-    generationRequestIdRef.current = null;
-    evaluationRequestIdRef.current = null;
     hasEvaluatedRef.current = false;
-    setIsLoading(false);
     setIsEvaluating(false);
     setSkillToUnlock(null);
+    setEvaluationState(null);
+    setDebugState(null);
   }, []);
 
   // No auto-fetch on mount - user must click "Start"
 
   // Fetch teacher greeting when user clicks Start
-  const handleStartTeacherGreet = useCallback(async () => {
-    setIsLoadingTeacher(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("teacher-greet", {
-        body: { language, debug: false, localUserId },
-      });
+  const handleStartTeacherGreet = useCallback(() => {
+    setShouldFetchGreeting(true);
+  }, []);
 
-      if (error) {
-        console.error("Teacher greet error:", error);
+  // Show error toast if teacher greeting fails
+  useEffect(() => {
+    if (teacherGreetingError) {
         toast({
           title: "Error",
-          description: "Failed to get teacher greeting",
+        description:
+          teacherGreetingError instanceof Error
+            ? teacherGreetingError.message
+            : "Failed to connect to teacher",
           variant: "destructive",
         });
-        return;
-      }
-
-      if (data?.error) {
-        console.error("Teacher greet returned error:", data.error);
-        toast({
-          title: "Error",
-          description: data.error,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setTeacherGreeting(data as TeacherGreetingResponse);
-    } catch (err) {
-      console.error("Failed to fetch teacher greeting:", err);
-      toast({
-        title: "Error",
-        description: "Failed to connect to teacher",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingTeacher(false);
     }
-  }, [language, localUserId, toast]);
+  }, [teacherGreetingError, toast]);
 
   // Apply metronome settings from a lesson response
   const applyMetronomeSettings = useCallback(
@@ -196,67 +221,7 @@ export function LearnMode({
     ]
   );
 
-  // Fetch skill unlock status for a given skill key
-  const fetchSkillStatus = useCallback(
-    async (
-      skillKey: string,
-      skillTitle?: string
-    ): Promise<SkillToUnlock | null> => {
-      try {
-        const { data: skillState } = await supabase
-          .from("user_skill_state")
-          .select("unlocked")
-          .eq("skill_key", skillKey)
-          .maybeSingle();
-
-        return {
-          skillKey,
-          title: skillTitle || skillKey,
-          isUnlocked: skillState?.unlocked ?? false,
-        };
-      } catch (err) {
-        console.error("Failed to fetch skill status:", err);
-        return null;
-      }
-    },
-    []
-  );
-
-  // Fetch skill title from curriculum nodes
-  const fetchSkillTitle = useCallback(
-    async (skillKey: string): Promise<string> => {
-      try {
-        // Get latest published version
-        const { data: latestVersion } = await supabase
-          .from("curriculum_versions")
-          .select("id")
-          .eq("status", "published")
-          .order("published_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!latestVersion) return skillKey;
-
-        const { data: skillNode } = await supabase
-          .from("curriculum_nodes")
-          .select("data")
-          .eq("version_id", latestVersion.id)
-          .eq("node_key", skillKey)
-          .eq("node_type", "skill")
-          .maybeSingle();
-
-        if (skillNode?.data) {
-          const skillData = skillNode.data as Record<string, unknown>;
-          return (skillData.label as string) || skillKey;
-        }
-        return skillKey;
-      } catch (err) {
-        console.error("Failed to fetch skill title:", err);
-        return skillKey;
-      }
-    },
-    []
-  );
+  // Note: fetchSkillStatus and fetchSkillTitle are now imported from lessonService
 
   // Regenerate demo sequence with new BPM/meter settings
   const regenerateLessonWithNewSettings = useCallback(
@@ -264,33 +229,18 @@ export function LearnMode({
       if (!lesson.lessonRunId || lesson.targetSequence.notes.length === 0)
         return;
 
-      setIsLoading(true);
       try {
         if (lesson.lessonNodeKey) {
           // CURRICULUM LESSON: Use lesson-start with setup overrides
           // Note: This creates a new lesson run. The old run remains for history.
-          const { data, error } = await supabase.functions.invoke("lesson-start", {
-            body: {
-              lessonKey: lesson.lessonNodeKey,
-              language,
-              debug: false,
-              suggestionHint: {
-                setup: {
-                  bpm: newBpm,
-                  meter: newMeter,
-                },
-              },
+          const lessonStartData = await regenerateCurriculumLessonMutation.mutateAsync({
+            lessonKey: lesson.lessonNodeKey,
+            language,
+            setupOverrides: {
+              bpm: newBpm,
+              meter: newMeter,
             },
           });
-
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
-          const lessonStartData = data as LessonStartResponse;
-
-          if (!lessonStartData.instruction) {
-            throw new Error("Invalid lesson response");
-          }
 
           // Apply metronome settings from the response
           if (lessonStartData.metronome) {
@@ -326,50 +276,39 @@ export function LearnMode({
           setTimeout(() => onPlaySequence(lessonStartData.demoSequence || lesson.targetSequence), 500);
         } else {
           // FREE-FORM PRACTICE: Use piano-learn
-          const regeneratePrompt = lesson.userPrompt || lesson.instruction;
-          const localizedPrompt =
-            language === "fr"
-              ? `${regeneratePrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
-              : regeneratePrompt;
+        const regeneratePrompt = lesson.userPrompt || lesson.instruction;
+        const localizedPrompt =
+          language === "fr"
+            ? `${regeneratePrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
+            : regeneratePrompt;
 
-          const { data, error } = await supabase.functions.invoke("piano-learn", {
-            body: {
-              prompt: localizedPrompt,
-              difficulty: lesson.difficulty,
-              language,
-              model,
-              debug: false,
-              // Pass the new BPM/meter so the AI generates at the right tempo
-              metronomeBpm: newBpm,
-              metronomeTimeSignature: newMeter,
-            },
+          const data = await regenerateFreeFormLessonMutation.mutateAsync({
+            prompt: localizedPrompt,
+            difficulty: lesson.difficulty,
+            newBpm,
+            newMeter,
+            language,
+            model,
           });
-
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
-          if (!data?.instruction || !data?.sequence) {
-            throw new Error("Invalid lesson response");
-          }
 
           // Apply metronome settings from the AI response
           if (data.metronome) {
             applyMetronomeSettings(data.metronome);
-          }
+        }
 
-          // Update the lesson with the new sequence
-          setLesson((prev) => ({
-            ...prev,
-            targetSequence: data.sequence,
-            instruction: data.instruction,
-          }));
+        // Update the lesson with the new sequence
+        setLesson((prev) => ({
+          ...prev,
+          targetSequence: data.sequence,
+          instruction: data.instruction,
+        }));
 
-          // Reset evaluation state when regenerating
-          setEvaluationResult(null);
-          setLastComment(null);
+        // Reset evaluation state when regenerating
+        setEvaluationResult(null);
+        setLastComment(null);
 
-          // Play the new example
-          setTimeout(() => onPlaySequence(data.sequence), 500);
+        // Play the new example
+        setTimeout(() => onPlaySequence(data.sequence), 500);
         }
       } catch (err) {
         console.error("Failed to regenerate lesson:", err);
@@ -378,8 +317,6 @@ export function LearnMode({
           description: "Failed to regenerate lesson with new settings",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
     },
     [
@@ -395,6 +332,8 @@ export function LearnMode({
       language,
       model,
       onPlaySequence,
+      regenerateCurriculumLessonMutation,
+      regenerateFreeFormLessonMutation,
       toast,
     ]
   );
@@ -408,12 +347,9 @@ export function LearnMode({
     ) => {
       markUserAction();
       const actionToken = userActionTokenRef.current;
-      const requestId = crypto.randomUUID();
-      generationRequestIdRef.current = requestId;
       // Clear debug state first, then set loading to ensure spinner shows
-      setLessonDebug(null); // Clear any lesson debug state
+      setDebugState(null); // Clear any debug state
       setLastComment(null);
-      setIsLoading(true);
 
       try {
         let lessonRunId: string | undefined;
@@ -427,27 +363,18 @@ export function LearnMode({
 
         if (lessonNodeKey) {
           // CURRICULUM LESSON: Use lesson-start
-          const { data, error } = await supabase.functions.invoke("lesson-start", {
-            body: {
-              lessonKey: lessonNodeKey,
-              language,
-              debug: false,
-            },
-          });
+          const lessonStartData = await startCurriculumLessonMutation.mutateAsync({
+            lessonKey: lessonNodeKey,
+            language,
+            debug: false,
+        });
 
-          if (
-            generationRequestIdRef.current !== requestId ||
-            userActionTokenRef.current !== actionToken
-          )
-            return;
+        // Check if user performed a new action (React Query handles request cancellation)
+        if (userActionTokenRef.current !== actionToken) return;
 
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
-          const lessonStartData = data as LessonStartResponse;
-
-          if (!lessonStartData.instruction) {
-            throw new Error("Invalid lesson response");
+          // Type guard for debug mode response
+          if ("prompt" in lessonStartData) {
+            throw new Error("Unexpected debug response in non-debug mode");
           }
 
           lessonRunId = lessonStartData.lessonRunId;
@@ -462,19 +389,19 @@ export function LearnMode({
           // Apply metronome settings from the response
           if (metronomeSettings) {
             applyMetronomeSettings(metronomeSettings);
-          }
+            }
 
-          // Fetch skill status for the first awarded skill
-          if (awardedSkills.length > 0) {
-            const skillTitle = await fetchSkillTitle(awardedSkills[0]);
-            const status = await fetchSkillStatus(
-              awardedSkills[0],
-              skillTitle
-            );
-            setSkillToUnlock(status);
-          } else {
-            setSkillToUnlock(null);
-          }
+            // Fetch skill status for the first awarded skill
+            if (awardedSkills.length > 0) {
+              const skillTitle = await fetchSkillTitle(awardedSkills[0]);
+              const status = await fetchSkillStatus(
+                awardedSkills[0],
+                skillTitle
+              );
+              setSkillToUnlock(status);
+            } else {
+              setSkillToUnlock(null);
+            }
         } else {
           // FREE-FORM PRACTICE: Use piano-learn
           const localizedPrompt =
@@ -482,29 +409,17 @@ export function LearnMode({
               ? `${userPrompt} (Réponds uniquement en français et formule des consignes musicales concises.)`
               : userPrompt;
 
-          const { data, error } = await supabase.functions.invoke("piano-learn", {
-            body: {
-              prompt: localizedPrompt,
-              difficulty,
-              previousSequence,
-              language,
-              model,
-              debug: false,
-            },
+          const data = await startFreeFormLessonMutation.mutateAsync({
+            prompt: localizedPrompt,
+            difficulty,
+            previousSequence,
+            language,
+            model,
+            debug: false,
           });
 
-          if (
-            generationRequestIdRef.current !== requestId ||
-            userActionTokenRef.current !== actionToken
-          )
-            return;
-
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
-          if (!data?.instruction || !data?.sequence) {
-            throw new Error("Invalid lesson response");
-          }
+          // Check if user performed a new action (React Query handles request cancellation)
+          if (userActionTokenRef.current !== actionToken) return;
 
           instruction = data.instruction;
           targetSequence = data.sequence;
@@ -556,18 +471,12 @@ export function LearnMode({
         setLesson(createInitialLessonState());
         setPrompt("");
         setLastComment(null);
-        setLessonDebug(null);
+        setDebugState(null);
         setLessonMode("practice");
         setEvaluationResult(null);
         onClearRecording();
-      } finally {
-        if (
-          generationRequestIdRef.current === requestId &&
-          userActionTokenRef.current === actionToken
-        ) {
-          setIsLoading(false);
-        }
       }
+      // Note: React Query mutations handle loading state and cancellation automatically
     },
     [
       applyMetronomeSettings,
@@ -603,41 +512,31 @@ export function LearnMode({
       evaluationType: "structured" | "free"
     ) => {
       const actionToken = userActionTokenRef.current;
-      const requestId = crypto.randomUUID();
-      evaluationRequestIdRef.current = requestId;
       setIsEvaluating(true);
-      setEvaluationDebug(null);
-      setGraderOutput(null);
-      setCoachOutput(null);
-      setFreePracticeEvaluation(null);
+      setDebugState(null);
+      setEvaluationState(null);
 
       try {
         // STRUCTURED LESSON: Use lesson-evaluate → lesson-decide
         if (evaluationType === "structured" && lesson.lessonRunId) {
           // Step 1: Call lesson-evaluate
-          const { data: graderData, error: graderError } =
-            await supabase.functions.invoke("lesson-evaluate", {
-              body: {
+          const graderOutput = await evaluateStructuredLessonMutation.mutateAsync({
                 lessonRunId: lesson.lessonRunId,
                 userSequence,
                 metronomeContext: {
                   bpm: metronomeBpm,
                   meter: metronomeTimeSignature,
-                },
               },
             });
 
-          if (
-            evaluationRequestIdRef.current !== requestId ||
-            userActionTokenRef.current !== actionToken
-          )
-            return;
+          // Check if user performed a new action (React Query handles request cancellation)
+          if (userActionTokenRef.current !== actionToken) return;
 
-          if (graderError) throw graderError;
-          if (graderData?.error) throw new Error(graderData.error);
-
-          const graderOutput = graderData as GraderOutput;
-          setGraderOutput(graderOutput);
+          // Store grader output temporarily (will be combined with coach output)
+          setEvaluationState({
+            type: "structured",
+            graderOutput,
+          });
 
           // Debug mode: toast grader evaluation
           if (debugMode) {
@@ -674,38 +573,31 @@ export function LearnMode({
             );
           }
 
-          const { data: coachData, error: coachError } =
-            await supabase.functions.invoke("lesson-decide", {
-              body: {
+          const coachOutput = await decideNextActionMutation.mutateAsync({
                 lessonRunId: lesson.lessonRunId,
                 graderOutput,
-              },
-            });
+          });
 
-          if (
-            evaluationRequestIdRef.current !== requestId ||
-            userActionTokenRef.current !== actionToken
-          )
-            return;
+          // Check if user performed a new action (React Query handles request cancellation)
+          if (userActionTokenRef.current !== actionToken) return;
 
-          if (coachError) throw coachError;
-          if (coachData?.error) throw new Error(coachData.error);
-
-          const coachOutput = coachData as CoachOutput & {
-            awardedSkills?: string[];
-          };
-          setCoachOutput(coachOutput);
+          // Update evaluation state with both grader and coach output
+          setEvaluationState({
+            type: "structured",
+            graderOutput,
+            coachOutput,
+          });
           
           // Update debug card with decide prompt if in debug mode
-          if (debugMode && decidePrompt && evaluationDebug) {
-            setEvaluationDebug({
-              ...evaluationDebug,
+          if (debugMode && decidePrompt && debugState?.type === "evaluation") {
+            setDebugState({
+              ...debugState,
               decidePrompt,
             });
           }
 
           // Debug mode: toast coach decision and skills
-          if (debugMode) {
+          if (debugMode && coachOutput) {
             toast({
               title: `🎯 Coach: ${coachOutput.nextAction}`,
               description: coachOutput.setupDelta
@@ -726,7 +618,7 @@ export function LearnMode({
 
           // Update skill unlock status if skills were awarded
           if (
-            coachOutput.awardedSkills &&
+            coachOutput?.awardedSkills &&
             coachOutput.awardedSkills.length > 0
           ) {
             const skillKey = coachOutput.awardedSkills[0];
@@ -753,32 +645,24 @@ export function LearnMode({
           // Don't auto-regenerate - let user decide with Make Easier/Harder buttons
           // Store coach output for use in handleMakeEasier/harder
         } else {
-          // FREE PRACTICE: Keep using piano-evaluate
-          const { data, error } = await supabase.functions.invoke(
-            "piano-evaluate",
-            {
-              body: {
+          // FREE PRACTICE: Use piano-evaluate
+          const result = await evaluateFreeFormLessonMutation.mutateAsync({
                 targetSequence: lesson.targetSequence,
                 userSequence,
                 instruction: lesson.instruction,
                 language,
                 model,
-              },
-            }
-          );
+          });
 
-          if (
-            evaluationRequestIdRef.current !== requestId ||
-            userActionTokenRef.current !== actionToken
-          )
-            return;
+          // Check if user performed a new action (React Query handles request cancellation)
+          if (userActionTokenRef.current !== actionToken) return;
 
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
-          const feedback = data.feedback as string;
-          const evaluation = data.evaluation as "correct" | "close" | "wrong";
-          setFreePracticeEvaluation({ evaluation, feedback });
+          setEvaluationState({
+            type: "free",
+            freePracticeEvaluation: result,
+          });
+          
+          const { evaluation, feedback } = result;
 
           setLastComment(feedback);
           setLesson((prev) => ({
@@ -817,14 +701,9 @@ export function LearnMode({
         console.error("Failed to evaluate attempt:", error);
         setLastComment(t("learnMode.evaluationFallback"));
       } finally {
-        if (
-          evaluationRequestIdRef.current === requestId &&
-          userActionTokenRef.current === actionToken
-        ) {
-          setIsEvaluating(false);
-          hasEvaluatedRef.current = false;
-          onClearRecording();
-        }
+        setIsEvaluating(false);
+        hasEvaluatedRef.current = false;
+        onClearRecording();
       }
     },
     [
@@ -860,21 +739,21 @@ export function LearnMode({
 
           // Get prompt by calling with debug: true
           if (evaluationType === "structured") {
-            const { data: promptData } = await supabase.functions.invoke(
-              "lesson-evaluate",
+            // For structured lessons, we need to call the service with debug mode
+            // Since the service doesn't return the prompt directly, we'll construct it
+            // based on what we know the function receives
+            prompt = JSON.stringify(
               {
-                body: {
                   lessonRunId: lesson.lessonRunId,
                   userSequence,
                   metronomeContext: {
                     bpm: metronomeBpm,
                     meter: metronomeTimeSignature,
                   },
-                  debug: true,
                 },
-              }
+              null,
+              2
             );
-            prompt = promptData?.prompt || JSON.stringify(promptData, null, 2);
           } else {
             // For free practice, construct prompt manually
             prompt = JSON.stringify(
@@ -891,7 +770,8 @@ export function LearnMode({
           }
 
           // Show debug card
-          setEvaluationDebug({
+          setDebugState({
+            type: "evaluation",
             prompt,
             userSequence,
             evaluationType,
@@ -935,12 +815,12 @@ export function LearnMode({
       !isRecording &&
       !hasEvaluatedRef.current &&
       !isEvaluating &&
-      !evaluationDebug // Don't trigger if debug card is already shown
+      !(debugState?.type === "evaluation") // Don't trigger if debug card is already shown
     ) {
       hasEvaluatedRef.current = true;
       evaluateAttempt(userRecording);
     }
-  }, [lesson.phase, lessonMode, userRecording, isRecording, isEvaluating, evaluateAttempt, evaluationDebug]);
+  }, [lesson.phase, lessonMode, userRecording, isRecording, isEvaluating, evaluateAttempt, debugState]);
 
   // Enter evaluation mode
   const handleEvaluate = useCallback(() => {
@@ -950,10 +830,8 @@ export function LearnMode({
     // Clear any existing recording and reset evaluation state
     onClearRecording();
     hasEvaluatedRef.current = false;
-    setEvaluationDebug(null);
-    setGraderOutput(null);
-    setCoachOutput(null);
-    setFreePracticeEvaluation(null);
+    setDebugState(null);
+    setEvaluationState(null);
     // Recording will start when user actually plays (handled by parent)
     // Make sure we don't have any stale recording that would trigger evaluation immediately
   }, [onClearRecording]);
@@ -963,6 +841,7 @@ export function LearnMode({
     if (!lesson.lessonRunId) return;
     
     // Use the coach's suggested adjustment if available
+    const coachOutput = evaluationState?.type === "structured" ? evaluationState.coachOutput : undefined;
     if (coachOutput?.setupDelta) {
       const newBpm = coachOutput.setupDelta.bpm ?? metronomeBpm;
       const newMeter = coachOutput.setupDelta.meter ?? metronomeTimeSignature;
@@ -993,7 +872,7 @@ export function LearnMode({
     lesson.difficulty,
     lesson.targetSequence,
     lesson.lessonNodeKey,
-    coachOutput,
+    evaluationState,
     metronomeBpm,
     metronomeTimeSignature,
     setMetronomeBpm,
@@ -1007,6 +886,7 @@ export function LearnMode({
     if (!lesson.lessonRunId) return;
     
     // Use the coach's suggested adjustment if available
+    const coachOutput = evaluationState?.type === "structured" ? evaluationState.coachOutput : undefined;
     if (coachOutput?.setupDelta) {
       const newBpm = coachOutput.setupDelta.bpm ?? metronomeBpm;
       const newMeter = coachOutput.setupDelta.meter ?? metronomeTimeSignature;
@@ -1037,7 +917,7 @@ export function LearnMode({
     lesson.difficulty,
     lesson.targetSequence,
     lesson.lessonNodeKey,
-    coachOutput,
+    evaluationState,
     metronomeBpm,
     metronomeTimeSignature,
     setMetronomeBpm,
@@ -1051,7 +931,7 @@ export function LearnMode({
     setLesson(createInitialLessonState());
     setPrompt("");
     setLastComment(null);
-    setLessonDebug(null);
+    setDebugState(null);
     setLessonMode("practice");
     setEvaluationResult(null);
     onClearRecording();
@@ -1071,24 +951,18 @@ export function LearnMode({
         try {
           // For curriculum lessons, use lesson-start; for free-form, use piano-learn
           // Since suggestions always have lessonKey, use lesson-start
-          const { data, error } = await supabase.functions.invoke("lesson-start", {
-            body: {
-              lessonKey: suggestion.lessonKey,
-              language,
-              debug: true,
-            },
+          const data = await startCurriculumLessonMutation.mutateAsync({
+            lessonKey: suggestion.lessonKey,
+            language,
+            debug: true,
           });
 
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
           // In debug mode, lesson-start returns { prompt, lessonBrief, setup }
-          // In non-debug mode, it returns { composedPrompt, ... }
-          const debugPrompt = data?.prompt || data?.composedPrompt;
-          if (debugPrompt) {
-            setLessonDebug({
+          if ("prompt" in data && data.prompt) {
+            setDebugState({
+              type: "lesson",
               suggestion,
-              prompt: debugPrompt,
+              prompt: data.prompt,
             });
           } else {
             throw new Error("Debug mode not returning expected data");
@@ -1108,20 +982,20 @@ export function LearnMode({
         generateLesson(lessonPrompt, 1, undefined, suggestion.lessonKey);
       }
     },
-    [debugMode, language, toast, generateLesson]
+    [debugMode, language, toast, generateLesson, startCurriculumLessonMutation]
   );
 
   // Start the actual lesson after seeing the debug prompt
   const handleStartLesson = useCallback(() => {
-    if (!lessonDebug) return;
+    if (debugState?.type !== "lesson") return;
 
-    const suggestion = lessonDebug.suggestion;
+    const suggestion = debugState.suggestion;
     const prompt = `${suggestion.label}: ${suggestion.why}`;
     generateLesson(prompt, 1, undefined, suggestion.lessonKey); // Lesson Coach will determine difficulty
-  }, [lessonDebug, generateLesson]);
+  }, [debugState, generateLesson]);
 
   const handleCancelLessonDebug = useCallback(() => {
-    setLessonDebug(null);
+    setDebugState(null);
   }, []);
 
   const handleFreePractice = useCallback(() => {
@@ -1133,16 +1007,14 @@ export function LearnMode({
 
   // Handle proceeding from evaluation debug card
   const handleProceedEvaluation = useCallback(() => {
-    if (evaluationDebug) {
-      evaluationDebug.pendingCall();
+    if (debugState?.type === "evaluation") {
+      debugState.pendingCall();
     }
-  }, [evaluationDebug]);
+  }, [debugState]);
 
   const handleCancelEvaluation = useCallback(() => {
-    setEvaluationDebug(null);
-    setGraderOutput(null);
-    setCoachOutput(null);
-    setFreePracticeEvaluation(null);
+    setDebugState(null);
+    setEvaluationState(null);
     setIsEvaluating(false);
     hasEvaluatedRef.current = false;
     // Return to practice mode when cancelling
@@ -1157,20 +1029,20 @@ export function LearnMode({
 
   const render = () => (
     <>
-      {evaluationDebug ? (
+      {debugState?.type === "evaluation" ? (
         /* Evaluation Debug Card - shown before evaluation LLM calls */
         <EvaluationDebugCard
-          prompt={evaluationDebug.prompt}
-          userSequence={evaluationDebug.userSequence}
-          evaluationType={evaluationDebug.evaluationType}
+          prompt={debugState.prompt}
+          userSequence={debugState.userSequence}
+          evaluationType={debugState.evaluationType}
           onProceed={handleProceedEvaluation}
           onCancel={handleCancelEvaluation}
-          graderOutput={graderOutput}
-          coachOutput={coachOutput}
-          freePracticeEvaluation={freePracticeEvaluation}
-          decidePrompt={evaluationDebug.decidePrompt}
+          graderOutput={evaluationState?.type === "structured" ? evaluationState.graderOutput : undefined}
+          coachOutput={evaluationState?.type === "structured" ? evaluationState.coachOutput : undefined}
+          freePracticeEvaluation={evaluationState?.type === "free" ? evaluationState.freePracticeEvaluation : undefined}
+          decidePrompt={debugState.decidePrompt}
         />
-      ) : isLoading && lesson.phase === "welcome" && !evaluationDebug ? (
+      ) : isLoading && lesson.phase === "welcome" && debugState?.type !== "evaluation" ? (
         /* Loading spinner while generating lesson after selecting activity */
         /* This shows in both debug and normal mode when generating lesson */
         /* Show when loading, in welcome phase, and not showing evaluation debug */
@@ -1182,11 +1054,11 @@ export function LearnMode({
             </p>
           </div>
         </div>
-      ) : debugMode && lessonDebug && !isLoading ? (
+      ) : debugMode && debugState?.type === "lesson" && !isLoading ? (
         /* Lesson Debug Card - shown after selecting a suggestion (debug mode only) */
         <LessonDebugCard
-          suggestion={lessonDebug.suggestion}
-          prompt={lessonDebug.prompt}
+          suggestion={debugState.suggestion}
+          prompt={debugState.prompt}
           isLoading={isLoading}
           onStart={handleStartLesson}
           onCancel={handleCancelLessonDebug}
