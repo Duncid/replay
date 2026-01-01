@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { UseMutationResult } from "@tanstack/react-query";
 import {
   LessonStateGroup,
   ModeStateGroup,
@@ -15,6 +16,10 @@ import {
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
 import { SkillToUnlock } from "@/components/LessonCard";
+import {
+  fetchSkillStatus,
+  fetchSkillTitle,
+} from "@/services/lessonService";
 
 // Types for debug and evaluation state
 export type DebugState =
@@ -47,11 +52,6 @@ export type EvaluationState =
       };
     }
   | null;
-import {
-  fetchSkillStatus,
-  fetchSkillTitle,
-} from "@/services/lessonService";
-// React Query mutations are passed as parameters to avoid duplicate hook calls
 
 export interface LessonEngineCallbacks {
   onPlaySequence: (sequence: NoteSequence) => void;
@@ -73,18 +73,23 @@ export interface LessonEngineState {
   setDebugState: React.Dispatch<React.SetStateAction<DebugState>>;
   setEvaluationState: React.Dispatch<React.SetStateAction<EvaluationState>>;
   debugState: DebugState;
+  evaluationState: EvaluationState;
   hasEvaluatedRef: React.MutableRefObject<boolean>;
   userActionTokenRef: React.MutableRefObject<string>;
 }
 
+// Generic mutation type for lesson engine
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyMutation = UseMutationResult<any, Error, any, unknown>;
+
 export interface LessonEngineMutations {
-  startCurriculumLesson: ReturnType<typeof useStartCurriculumLesson>;
-  startFreeFormLesson: ReturnType<typeof useStartFreeFormLesson>;
-  regenerateCurriculumLesson: ReturnType<typeof useRegenerateCurriculumLesson>;
-  regenerateFreeFormLesson: ReturnType<typeof useRegenerateFreeFormLesson>;
-  evaluateStructuredLesson: ReturnType<typeof useEvaluateStructuredLesson>;
-  evaluateFreeFormLesson: ReturnType<typeof useEvaluateFreeFormLesson>;
-  decideNextAction: ReturnType<typeof useDecideNextAction>;
+  startCurriculumLesson: AnyMutation;
+  startFreeFormLesson: AnyMutation;
+  regenerateCurriculumLesson: AnyMutation;
+  regenerateFreeFormLesson: AnyMutation;
+  evaluateStructuredLesson: AnyMutation;
+  evaluateFreeFormLesson: AnyMutation;
+  decideNextAction: AnyMutation;
 }
 
 export function useLessonEngine(
