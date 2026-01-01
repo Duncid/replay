@@ -66,7 +66,7 @@ serve(async (req) => {
   }
 
   try {
-    const { lessonRunId, graderOutput, debug = false } = await req.json();
+    const { lessonRunId, graderOutput, debug = false, localUserId: requestedUserId } = await req.json();
 
     if (!lessonRunId) {
       return new Response(
@@ -99,6 +99,15 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Lesson run not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Security check: if localUserId is provided in request, verify it matches lessonRun
+    if (requestedUserId && lessonRun.local_user_id && lessonRun.local_user_id !== requestedUserId) {
+      console.error(`Security violation: Requested user ${requestedUserId} does not match lesson run user ${lessonRun.local_user_id}`);
+      return new Response(
+        JSON.stringify({ error: "Lesson run does not belong to the specified user" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -259,12 +268,6 @@ GRADER'S ASSESSMENT:
 - Grader suggestion: ${graderOutput.suggestedAdjustment}
 ${graderOutput.nextSetup ? `- Suggested setup: ${JSON.stringify(graderOutput.nextSetup)}` : ""}
 
-GRADER'S ASSESSMENT:
-- Evaluation: ${graderOutput.evaluation}
-- Diagnosis: ${graderOutput.diagnosis.join(", ")}
-- Grader feedback: ${graderOutput.feedbackText}
-- Grader suggestion: ${graderOutput.suggestedAdjustment}
-${graderOutput.nextSetup ? `- Suggested setup: ${JSON.stringify(graderOutput.nextSetup)}` : ""}
 
 ${guardrailHint ? `GUARDRAIL HINT: ${guardrailHint}` : ""}
 ${skillUnlockStatus}
