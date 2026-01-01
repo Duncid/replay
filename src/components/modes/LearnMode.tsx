@@ -3,17 +3,13 @@ import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { EvaluationDebugCard } from "@/components/EvaluationDebugCard";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useDecideNextAction,
-  useEvaluateFreeFormLesson,
   useEvaluateStructuredLesson,
   useRegenerateCurriculumLesson,
-  useRegenerateFreeFormLesson,
   useStartCurriculumLesson,
-  useStartFreeFormLesson,
   useTeacherGreeting,
   useSkillStatus,
   useSkillTitle,
@@ -38,7 +34,7 @@ import {
   TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
-import { Loader2, Send } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLessonState } from "@/hooks/useLessonState";
@@ -118,19 +114,14 @@ export function LearnMode({
 
   // React Query mutations (used for both loading state and passed to engine)
   const startCurriculumLessonMutation = useStartCurriculumLesson();
-  const startFreeFormLessonMutation = useStartFreeFormLesson();
   const regenerateCurriculumLessonMutation = useRegenerateCurriculumLesson();
-  const regenerateFreeFormLessonMutation = useRegenerateFreeFormLesson();
   const evaluateStructuredLessonMutation = useEvaluateStructuredLesson();
-  const evaluateFreeFormLessonMutation = useEvaluateFreeFormLesson();
   const decideNextActionMutation = useDecideNextAction();
   
   // Combined loading state from mutations
   const isLoading =
     startCurriculumLessonMutation.isPending ||
-    startFreeFormLessonMutation.isPending ||
-    regenerateCurriculumLessonMutation.isPending ||
-    regenerateFreeFormLessonMutation.isPending;
+    regenerateCurriculumLessonMutation.isPending;
 
   // Additional state
   const [debugState, setDebugState] = useState<DebugState>(null);
@@ -221,11 +212,8 @@ export function LearnMode({
     },
     {
       startCurriculumLesson: startCurriculumLessonMutation,
-      startFreeFormLesson: startFreeFormLessonMutation,
       regenerateCurriculumLesson: regenerateCurriculumLessonMutation,
-      regenerateFreeFormLesson: regenerateFreeFormLessonMutation,
       evaluateStructuredLesson: evaluateStructuredLessonMutation,
-      evaluateFreeFormLesson: evaluateFreeFormLessonMutation,
       decideNextAction: decideNextActionMutation,
     },
     {
@@ -250,11 +238,6 @@ export function LearnMode({
   } = engine;
 
   // All business logic is now in useLessonEngine hook
-
-  const handleSubmit = useCallback(() => {
-    if (!prompt.trim() || isLoading) return;
-    generateLesson(prompt.trim());
-  }, [prompt, isLoading, generateLesson]);
 
   const handlePlay = useCallback(() => {
     if (lesson.targetSequence.notes.length > 0) {
@@ -371,10 +354,6 @@ export function LearnMode({
     setDebugState(null);
   }, []);
 
-  const handleFreePractice = useCallback(() => {
-    updateLesson({ phase: "prompt" });
-  }, [updateLesson]);
-
   // Handle proceeding from evaluation debug card
   const handleProceedEvaluation = useCallback(() => {
     if (debugState?.type === "evaluation") {
@@ -392,11 +371,6 @@ export function LearnMode({
     onClearRecording();
   }, [onClearRecording, setLessonState, setMode]);
 
-  const suggestions = [
-    ...((t("learnMode.suggestions", { returnObjects: true }) as string[]) ||
-      []),
-  ];
-
   const render = () => (
     <>
       {debugState?.type === "evaluation" ? (
@@ -409,7 +383,6 @@ export function LearnMode({
           onCancel={handleCancelEvaluation}
           graderOutput={evaluationState?.type === "structured" ? evaluationState.graderOutput : undefined}
           coachOutput={evaluationState?.type === "structured" ? evaluationState.coachOutput : undefined}
-          freePracticeEvaluation={evaluationState?.type === "free" ? evaluationState.freePracticeEvaluation : undefined}
           decidePrompt={debugState.decidePrompt}
         />
       ) : isLoading && lesson.phase === "welcome" && debugState?.type !== "lesson" ? (
@@ -452,46 +425,6 @@ export function LearnMode({
           localUserId={localUserId}
           debugMode={debugMode}
         />
-      ) : lesson.phase === "prompt" ? (
-        /* Initial Prompt Input */
-        <div className="w-full max-w-2xl mx-auto space-y-3">
-          <Textarea
-            placeholder={t("learnMode.promptPlaceholder")}
-            value={prompt}
-            onChange={(e) => setLessonState((prev) => ({ ...prev, prompt: e.target.value }))}
-            disabled={isLoading || isPlaying}
-            className="min-h-[120px] text-lg resize-none"
-          />
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion) => (
-              <Button
-                key={suggestion}
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setLessonState((prev) => ({ ...prev, prompt: suggestion }));
-                  generateLesson(suggestion);
-                }}
-                disabled={isLoading || isPlaying}
-                className="text-muted-foreground"
-              >
-                {suggestion}
-              </Button>
-            ))}
-          </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={!prompt.trim() || isLoading || isPlaying}
-            className="w-full gap-2"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-            {t("learnMode.startLearning")}
-          </Button>
-        </div>
       ) : (
         /* Active Lesson */
         <LessonCard
@@ -519,5 +452,5 @@ export function LearnMode({
   }, [markUserAction]);
 
   // Expose lesson mode to parent so it can control recording
-  return { lesson, render, handleUserAction, handleFreePractice, lessonMode };
+  return { lesson, render, handleUserAction, lessonMode };
 }

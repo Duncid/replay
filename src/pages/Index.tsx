@@ -14,6 +14,7 @@ import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
 import { WhistleImportSheet } from "@/components/WhistleImportSheet";
 import { LearnMode } from "@/components/modes/LearnMode";
+import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
 import { PlayEntry, PlayMode } from "@/components/modes/PlayMode";
 import {
   AlertDialog,
@@ -371,6 +372,12 @@ const Index = () => {
   const [learnModeRecording, setLearnModeRecording] =
     useState<NoteSequence | null>(null);
   const learnModeRecordingRef = useRef<NoteSequence | null>(null);
+  const [learnModeType, setLearnModeType] = useState<"curriculum" | "free-practice">("curriculum");
+  
+  // Free practice recording
+  const [freePracticeRecording, setFreePracticeRecording] =
+    useState<NoteSequence | null>(null);
+  const freePracticeRecordingRef = useRef<NoteSequence | null>(null);
 
   // Recording manager for play mode
   const handleRecordingComplete = useCallback(
@@ -807,7 +814,7 @@ const Index = () => {
     setSaveBeforeOpenDialogOpen(false);
   }, []);
 
-  // Learn mode recording manager
+  // Learn mode recording manager (for curriculum lessons)
   const learnRecordingManager = useRecordingManager({
     bpm: metronomeBpm,
     timeSignature: metronomeTimeSignature,
@@ -818,11 +825,26 @@ const Index = () => {
     },
     pauseTimeoutMs: 2000,
     resumeGapMs: 1000,
-    metronomeIsPlaying: activeMode === "learn" ? metronomeIsPlaying : false,
-    metronomeStartTime: activeMode === "learn" ? metronomeStartTime ?? undefined : undefined,
+    metronomeIsPlaying: activeMode === "learn" && learnModeType === "curriculum" ? metronomeIsPlaying : false,
+    metronomeStartTime: activeMode === "learn" && learnModeType === "curriculum" ? metronomeStartTime ?? undefined : undefined,
   });
 
-  // Learn mode hook
+  // Free practice recording manager
+  const freePracticeRecordingManager = useRecordingManager({
+    bpm: metronomeBpm,
+    timeSignature: metronomeTimeSignature,
+    onRecordingComplete: (result) => {
+      setFreePracticeRecording(result.sequence);
+      freePracticeRecordingRef.current = result.sequence;
+      setAppState("idle");
+    },
+    pauseTimeoutMs: 2000,
+    resumeGapMs: 1000,
+    metronomeIsPlaying: activeMode === "learn" && learnModeType === "free-practice" ? metronomeIsPlaying : false,
+    metronomeStartTime: activeMode === "learn" && learnModeType === "free-practice" ? metronomeStartTime ?? undefined : undefined,
+  });
+
+  // Learn mode hook (curriculum lessons)
   const learnMode = LearnMode({
     isPlaying: appState === "ai_playing",
     onPlaySequence: (sequence) => {
@@ -832,7 +854,7 @@ const Index = () => {
     onStartRecording: () => {
       // Recording starts automatically when user plays
     },
-    isRecording: appState === "user_playing" && activeMode === "learn",
+    isRecording: appState === "user_playing" && activeMode === "learn" && learnModeType === "curriculum",
     userRecording: learnModeRecording,
     onClearRecording: () => {
       setLearnModeRecording(null);
@@ -855,6 +877,37 @@ const Index = () => {
       setMetronomeSoundType(soundType as MetronomeSoundType),
   });
 
+  // Free practice mode props (used in JSX)
+  const freePracticeModeProps = {
+    isPlaying: appState === "ai_playing",
+    onPlaySequence: (sequence: NoteSequence) => {
+      pianoRef.current?.ensureAudioReady();
+      setTimeout(() => playSequence(sequence, undefined, true), 50);
+    },
+    isRecording: appState === "user_playing" && activeMode === "learn" && learnModeType === "free-practice",
+    userRecording: freePracticeRecording,
+    onClearRecording: () => {
+      setFreePracticeRecording(null);
+      freePracticeRecordingRef.current = null;
+    },
+    language,
+    model: selectedModel,
+    // Metronome control props
+    metronomeBpm,
+    setMetronomeBpm,
+    metronomeTimeSignature,
+    setMetronomeTimeSignature,
+    metronomeIsPlaying,
+    setMetronomeIsPlaying,
+    setMetronomeFeel: (feel: LessonFeelPreset) =>
+      setMetronomeFeel(feel as FeelPreset),
+    setMetronomeSoundType: (soundType: LessonMetronomeSoundType) =>
+      setMetronomeSoundType(soundType as MetronomeSoundType),
+    onLeave: () => {
+      setLearnModeType("curriculum");
+    },
+  };
+
   // Handle note events from Piano
   const handleNoteStart = useCallback(
     (noteKey: string, frequency: number, velocity: number) => {
@@ -863,24 +916,31 @@ const Index = () => {
       }
 
       if (activeMode === "learn") {
-        learnMode.handleUserAction();
+        if (learnModeType === "curriculum") {
+          learnMode.handleUserAction();
+        }
       }
 
       if (appState !== "user_playing") {
         currentRequestIdRef.current = null;
         recordingManager.hideProgress();
         learnRecordingManager.hideProgress();
+        freePracticeRecordingManager.hideProgress();
         setAppState("user_playing");
       }
 
       if (activeMode === "play") {
         recordingManager.addNoteStart(noteKey, velocity);
-      } else if (
-        activeMode === "learn" &&
-        learnMode.lesson.phase === "your_turn" &&
-        learnMode.lessonMode === "evaluation" // Only record in evaluation mode
-      ) {
-        learnRecordingManager.addNoteStart(noteKey, velocity);
+      } else if (activeMode === "learn") {
+        if (learnModeType === "curriculum" &&
+          learnMode.lesson.phase === "your_turn" &&
+          learnMode.lessonMode === "evaluation") {
+          // Only record in evaluation mode for curriculum
+          learnRecordingManager.addNoteStart(noteKey, velocity);
+        } else if (learnModeType === "free-practice") {
+          // Always record for free practice
+          freePracticeRecordingManager.addNoteStart(noteKey, velocity);
+        }
       }
     },
     [
@@ -891,6 +951,8 @@ const Index = () => {
       learnMode.lesson.phase,
       learnMode.lessonMode,
       learnRecordingManager,
+      freePracticeRecordingManager,
+      learnModeType,
       stopAiPlayback,
     ]
   );
@@ -899,20 +961,26 @@ const Index = () => {
     (noteKey: string, frequency: number) => {
       if (activeMode === "play") {
         recordingManager.addNoteEnd(noteKey);
-      } else if (
-        activeMode === "learn" &&
-        learnMode.lesson.phase === "your_turn" &&
-        learnMode.lessonMode === "evaluation" // Only record in evaluation mode
-      ) {
-        learnRecordingManager.addNoteEnd(noteKey);
+      } else if (activeMode === "learn") {
+        if (learnModeType === "curriculum" &&
+          learnMode.lesson.phase === "your_turn" &&
+          learnMode.lessonMode === "evaluation") {
+          // Only record in evaluation mode for curriculum
+          learnRecordingManager.addNoteEnd(noteKey);
+        } else if (learnModeType === "free-practice") {
+          // Always record for free practice
+          freePracticeRecordingManager.addNoteEnd(noteKey);
+        }
       }
     },
     [
       activeMode,
       recordingManager,
       learnRecordingManager,
+      freePracticeRecordingManager,
       learnMode.lesson.phase,
       learnMode.lessonMode,
+      learnModeType,
     ]
   );
 
@@ -1382,7 +1450,9 @@ const Index = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={learnMode.handleFreePractice}
+                        onClick={() => {
+                          setLearnModeType("free-practice");
+                        }}
                       >
                         {t("learnMode.freePractice", "Free Practice")}
                       </Button>
@@ -1625,7 +1695,13 @@ const Index = () => {
             </div>
           </div>
           <TabsContent value="play">{playMode.render()}</TabsContent>
-          <TabsContent value="learn">{learnMode.render()}</TabsContent>
+          <TabsContent value="learn">
+            {learnModeType === "free-practice" ? (
+              <FreePracticeMode {...freePracticeModeProps} />
+            ) : (
+              learnMode.render()
+            )}
+          </TabsContent>
         </Tabs>
       </div>
 
