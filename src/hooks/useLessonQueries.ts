@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  decideNextAction,
   evaluateFreeFormLesson,
   evaluateStructuredLesson,
   fetchSkillStatus,
@@ -10,7 +9,6 @@ import {
   regenerateFreeFormLesson,
   startCurriculumLesson,
   startFreeFormLesson,
-  DecideNextActionParams,
   EvaluateFreeFormLessonParams,
   EvaluateStructuredLessonParams,
   FetchTeacherGreetingParams,
@@ -20,7 +18,6 @@ import {
   StartFreeFormLessonParams,
 } from "@/services/lessonService";
 import { SkillToUnlock } from "@/components/LessonCard";
-import { TeacherGreetingResponse } from "@/types/learningSession";
 
 /**
  * React Query hooks for lesson-related API calls
@@ -90,6 +87,7 @@ export function useRegenerateFreeFormLesson() {
 
 /**
  * Mutation to evaluate a structured lesson
+ * Returns combined grader + coach output from the merged endpoint
  */
 export function useEvaluateStructuredLesson() {
   return useMutation({
@@ -105,15 +103,6 @@ export function useEvaluateFreeFormLesson() {
   return useMutation({
     mutationFn: (params: EvaluateFreeFormLessonParams) =>
       evaluateFreeFormLesson(params),
-  });
-}
-
-/**
- * Mutation to get coach decision
- */
-export function useDecideNextAction() {
-  return useMutation({
-    mutationFn: (params: DecideNextActionParams) => decideNextAction(params),
   });
 }
 
@@ -151,4 +140,3 @@ export function useSkillTitle(skillKey: string | null) {
     staleTime: 30 * 60 * 1000, // 30 minutes - skill titles don't change often
   });
 }
-
