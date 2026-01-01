@@ -208,6 +208,7 @@ export function LearnMode({
       setDebugState,
       setEvaluationState,
       debugState,
+      evaluationState,
       hasEvaluatedRef,
       userActionTokenRef,
     },
@@ -305,8 +306,8 @@ export function LearnMode({
     setMode("practice");
     setEvaluationResult(null);
     onClearRecording();
-    setTeacherGreeting(null);
-  }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode]);
+    setShouldFetchGreeting(false);
+  }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode, setShouldFetchGreeting]);
 
   // When a suggestion is clicked, fetch the debug prompt first (only in debug mode)
   const handleSelectActivity = useCallback(
@@ -410,7 +411,7 @@ export function LearnMode({
           freePracticeEvaluation={evaluationState?.type === "free" ? evaluationState.freePracticeEvaluation : undefined}
           decidePrompt={debugState.decidePrompt}
         />
-      ) : isLoading && lesson.phase === "welcome" && debugState?.type !== "evaluation" ? (
+      ) : isLoading && lesson.phase === "welcome" && debugState?.type !== "lesson" ? (
         /* Loading spinner while generating lesson after selecting activity */
         /* This shows in both debug and normal mode when generating lesson */
         /* Show when loading, in welcome phase, and not showing evaluation debug */

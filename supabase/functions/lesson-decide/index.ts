@@ -36,6 +36,18 @@ interface LessonState {
   phase: string;
 }
 
+interface SkillUnlockGuidance {
+  skillKey: string;
+  guidance: string;
+}
+
+interface CurriculumNodeData {
+  title?: string;
+  awardedSkills?: string[];
+  skillUnlockGuidance?: Record<string, string>;
+  [key: string]: unknown;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -45,6 +57,8 @@ const corsHeaders = {
 const PASS_STREAK_THRESHOLD = 2; // Suggest harder/exit after 2 passes
 const FAIL_STREAK_THRESHOLD = 3; // Suggest easier after 3 fails
 const MAX_ATTEMPTS = 5; // Suggest exit after 5 attempts (fatigue)
+const SKILL_UNLOCK_MIN_DIFFICULTY = 6; // Minimum difficulty for skill unlock
+const SKILL_UNLOCK_CONSECUTIVE_PASSES = 3; // Number of consecutive passes needed
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -97,6 +111,8 @@ serve(async (req) => {
       lastDecision: null,
       phase: "feedback",
     };
+    const currentDifficulty = (lessonRun.difficulty || 1) as number;
+    const localUserId = lessonRun.local_user_id as string | null;
 
     // Handle case where lesson_brief is not populated (free-form lessons from piano-learn)
     const lessonKey = lessonBrief?.lessonKey || lessonRun.lesson_node_key || "unknown";
@@ -104,7 +120,66 @@ serve(async (req) => {
     const lessonGoal = lessonBrief?.goal || "Play the demonstrated sequence accurately";
     const awardedSkills = lessonBrief?.awardedSkills || [];
 
-    // 2. Update streaks based on evaluation
+    // 2. Fetch skill unlock guidance from curriculum_nodes (if this is a curriculum lesson)
+    let skillUnlockGuidance: SkillUnlockGuidance[] = [];
+    if (awardedSkills.length > 0 && lessonRun.version_id) {
+      const { data: nodeData } = await supabase
+        .from("curriculum_nodes")
+        .select("data")
+        .eq("version_id", lessonRun.version_id)
+        .eq("node_key", lessonKey)
+        .maybeSingle();
+      
+      if (nodeData?.data) {
+        const currData = nodeData.data as CurriculumNodeData;
+        if (currData.skillUnlockGuidance) {
+          skillUnlockGuidance = Object.entries(currData.skillUnlockGuidance).map(([skillKey, guidance]) => ({
+            skillKey,
+            guidance,
+          }));
+        }
+      }
+    }
+
+    // 3. Check consecutive passes at difficulty >= SKILL_UNLOCK_MIN_DIFFICULTY for this lesson
+    let consecutiveHighDiffPasses = 0;
+    if (awardedSkills.length > 0 && localUserId) {
+      // Query recent lesson_runs for this lesson and user, ordered by started_at desc
+      const { data: recentRuns } = await supabase
+        .from("lesson_runs")
+        .select("id, difficulty, evaluation")
+        .eq("lesson_node_key", lessonKey)
+        .eq("local_user_id", localUserId)
+        .order("started_at", { ascending: false })
+        .limit(10);
+      
+      if (recentRuns) {
+        // Count consecutive passes at high difficulty, starting from most recent
+        // Include the current attempt if it passed
+        const allRuns = [...recentRuns];
+        
+        for (const run of allRuns) {
+          // Skip the current run (we'll add current attempt separately)
+          if (run.id === lessonRunId) continue;
+          
+          const runDifficulty = (run.difficulty || 1) as number;
+          const runEval = run.evaluation as string | null;
+          
+          if (runDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY && runEval === "pass") {
+            consecutiveHighDiffPasses++;
+          } else {
+            break; // Stop counting at first non-qualifying run
+          }
+        }
+      }
+      
+      // Add current attempt if it qualifies
+      if (currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY && graderOutput.evaluation === "pass") {
+        consecutiveHighDiffPasses++;
+      }
+    }
+
+    // 4. Update streaks based on evaluation
     const newState: LessonState = {
       turn: currentState.turn + 1,
       passStreak: graderOutput.evaluation === "pass" ? currentState.passStreak + 1 : 0,
@@ -114,7 +189,7 @@ serve(async (req) => {
       phase: "feedback",
     };
 
-    // 3. Apply guardrails (deterministic suggestions for the coach)
+    // 5. Apply guardrails (deterministic suggestions for the coach)
     let guardrailHint = "";
     let suggestedAction: CoachNextAction | null = null;
 
@@ -129,7 +204,28 @@ serve(async (req) => {
       suggestedAction = "MAKE_EASIER";
     }
 
-    // 4. Build Coach prompt
+    // 6. Build skill unlock status for the prompt
+    const skillUnlockStatus = awardedSkills.length > 0 ? `
+SKILL UNLOCK CRITERIA:
+- General rule: ${SKILL_UNLOCK_CONSECUTIVE_PASSES} consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+ required to unlock skills
+- Current difficulty: ${currentDifficulty}
+- Consecutive high-difficulty passes: ${consecutiveHighDiffPasses}/${SKILL_UNLOCK_CONSECUTIVE_PASSES}
+- Qualifies for unlock: ${consecutiveHighDiffPasses >= SKILL_UNLOCK_CONSECUTIVE_PASSES ? "YES" : "NO"}
+
+SKILLS THAT CAN BE AWARDED:
+${awardedSkills.map(sk => {
+  const guidance = skillUnlockGuidance.find(g => g.skillKey === sk);
+  return `- ${sk}${guidance ? `: ${guidance.guidance}` : ""}`;
+}).join("\n")}
+
+DECISION GUIDANCE:
+- Set awardSkills to TRUE only if the student has ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+
+- Current status: ${consecutiveHighDiffPasses >= SKILL_UNLOCK_CONSECUTIVE_PASSES 
+    ? "AWARD SKILLS - Criteria met!" 
+    : `NOT YET - Need ${SKILL_UNLOCK_CONSECUTIVE_PASSES - consecutiveHighDiffPasses} more consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+`}` 
+    : "";
+
+    // 7. Build Coach prompt
     const systemPrompt = `You are a supportive piano lesson coach. Your job is to give encouraging feedback and decide what happens next.
 You trust the grader's assessment completely - do NOT re-evaluate the performance.
 
@@ -142,6 +238,7 @@ CURRENT SETUP:
 - BPM: ${setup.bpm || 80}
 - Meter: ${setup.meter || "4/4"}
 - Bars: ${setup.bars || 2}
+- Difficulty: ${currentDifficulty}
 
 LESSON STATE:
 - Turn: ${newState.turn}
@@ -157,6 +254,7 @@ GRADER'S ASSESSMENT:
 ${graderOutput.nextSetup ? `- Suggested setup: ${JSON.stringify(graderOutput.nextSetup)}` : ""}
 
 ${guardrailHint ? `GUARDRAIL HINT: ${guardrailHint}` : ""}
+${skillUnlockStatus}
 
 YOUR AVAILABLE ACTIONS:
 - RETRY_SAME: Have them try again with the same setup
@@ -188,12 +286,19 @@ Use the provided function to submit your decision.`;
           graderOutput,
           guardrailHint,
           suggestedAction,
+          skillUnlockStatus: {
+            awardedSkills,
+            skillUnlockGuidance,
+            consecutiveHighDiffPasses,
+            meetsUnlockCriteria: consecutiveHighDiffPasses >= SKILL_UNLOCK_CONSECUTIVE_PASSES,
+            currentDifficulty,
+          },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 5. Call LLM with tool calling for structured output
+    // 8. Call LLM with tool calling for structured output
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(
@@ -248,7 +353,7 @@ Use the provided function to submit your decision.`;
                   },
                   awardSkills: {
                     type: "boolean",
-                    description: "Whether to award the lesson's skills based on demonstrated mastery (true if passStreak >= 2)",
+                    description: `Whether to award the lesson's skills. ONLY set to true if ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+ have been achieved.`,
                   },
                 },
                 required: ["feedbackText", "nextAction"],
@@ -284,25 +389,20 @@ Use the provided function to submit your decision.`;
       }
     } catch (e) {
       console.error("Failed to parse LLM response:", e);
-      // Fallback based on guardrails or grader suggestion
+      // Fallback based on guardrails or grader suggestion - NO automatic skill awarding
       coachOutput = {
         feedbackText: graderOutput.evaluation === "pass" 
           ? "Good job! Let's keep going." 
           : "Nice try! Let's give it another shot.",
         nextAction: suggestedAction || "RETRY_SAME",
-        awardSkills: newState.passStreak >= PASS_STREAK_THRESHOLD,
+        awardSkills: false, // Never auto-award in fallback
       };
     }
 
-    // 6. Award skills if conditions are met
-    const shouldAwardSkills = coachOutput.awardSkills || (
-      newState.passStreak >= PASS_STREAK_THRESHOLD &&
-      (coachOutput.nextAction === "EXIT_TO_MAIN_TEACHER" || coachOutput.nextAction === "MAKE_HARDER")
-    );
-
+    // 9. Award skills ONLY if coach explicitly says awardSkills === true
     const awardedSkillKeys: string[] = [];
-    if (shouldAwardSkills && awardedSkills.length > 0) {
-      console.log("Awarding skills:", awardedSkills);
+    if (coachOutput.awardSkills === true && awardedSkills.length > 0 && localUserId) {
+      console.log("Awarding skills (coach approved):", awardedSkills);
       
       for (const skillKey of awardedSkills) {
         const { error: upsertError } = await supabase
@@ -310,23 +410,24 @@ Use the provided function to submit your decision.`;
           .upsert(
             {
               skill_key: skillKey,
+              local_user_id: localUserId,
               unlocked: true,
               mastery: 1,
               last_practiced_at: new Date().toISOString(),
             },
-            { onConflict: "skill_key" }
+            { onConflict: "skill_key,local_user_id" }
           );
 
         if (upsertError) {
           console.error("Error upserting skill:", skillKey, upsertError);
         } else {
           awardedSkillKeys.push(skillKey);
-          console.log("Awarded skill:", skillKey);
+          console.log("Awarded skill:", skillKey, "to user:", localUserId);
         }
       }
     }
 
-    // 7. Update lesson state with decision
+    // 10. Update lesson state with decision
     newState.lastDecision = coachOutput.nextAction;
     newState.phase = coachOutput.nextAction === "EXIT_TO_MAIN_TEACHER" ? "exit" : 
                      coachOutput.nextAction === "RETRY_SAME" ? "practice" : "intro";
@@ -341,6 +442,7 @@ Use the provided function to submit your decision.`;
     const updateData: Record<string, unknown> = {
       state: newState,
       ai_feedback: coachOutput.feedbackText,
+      evaluation: graderOutput.evaluation, // Store the evaluation for consecutive pass tracking
     };
 
     if (coachOutput.nextAction === "EXIT_TO_MAIN_TEACHER") {
@@ -360,13 +462,21 @@ Use the provided function to submit your decision.`;
       console.error("Error updating lesson run:", updateError);
     }
 
-    console.log("Coach decision:", lessonRunId, coachOutput.nextAction, "Awarded:", awardedSkillKeys);
+    console.log("Coach decision:", lessonRunId, coachOutput.nextAction, 
+      "Awarded:", awardedSkillKeys, 
+      "ConsecutiveHighDiffPasses:", consecutiveHighDiffPasses);
 
     return new Response(JSON.stringify({
       ...coachOutput,
       state: newState,
       setup: newSetup,
       awardedSkills: awardedSkillKeys,
+      skillUnlockProgress: {
+        consecutiveHighDiffPasses,
+        required: SKILL_UNLOCK_CONSECUTIVE_PASSES,
+        minDifficulty: SKILL_UNLOCK_MIN_DIFFICULTY,
+        currentDifficulty,
+      },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
