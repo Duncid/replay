@@ -234,6 +234,7 @@ export function LearnMode({
       debugMode,
       metronomeBpm,
       metronomeTimeSignature,
+      localUserId,
     }
   );
 

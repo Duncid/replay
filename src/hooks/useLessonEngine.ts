@@ -102,6 +102,7 @@ export function useLessonEngine(
     debugMode: boolean;
     metronomeBpm: number;
     metronomeTimeSignature: string;
+    localUserId?: string | null;
   }
 ) {
   const { toast } = useToast();
@@ -129,6 +130,7 @@ export function useLessonEngine(
           const lessonStartData = await mutations.regenerateCurriculumLesson.mutateAsync({
             lessonKey: lesson.lessonNodeKey,
             language: options.language,
+            localUserId: options.localUserId,
             setupOverrides: {
               bpm: newBpm,
               meter: newMeter,
@@ -154,7 +156,7 @@ export function useLessonEngine(
           if (lessonStartData.lessonBrief.awardedSkills && lessonStartData.lessonBrief.awardedSkills.length > 0) {
             const skillKey = lessonStartData.lessonBrief.awardedSkills[0];
             const skillTitle = await fetchSkillTitle(skillKey);
-            const status = await fetchSkillStatus(skillKey, skillTitle);
+            const status = await fetchSkillStatus(skillKey, skillTitle, options.localUserId);
             if (status) {
               state.setSkillToUnlock(status);
             }
@@ -247,6 +249,7 @@ export function useLessonEngine(
           const lessonStartData = await mutations.startCurriculumLesson.mutateAsync({
             lessonKey: lessonNodeKey,
             language: options.language,
+            localUserId: options.localUserId,
             debug: false,
           });
 
@@ -275,7 +278,7 @@ export function useLessonEngine(
           // Fetch skill status for the first awarded skill
           if (awardedSkills.length > 0) {
             const skillTitle = await fetchSkillTitle(awardedSkills[0]);
-            const status = await fetchSkillStatus(awardedSkills[0], skillTitle);
+            const status = await fetchSkillStatus(awardedSkills[0], skillTitle, options.localUserId);
             state.setSkillToUnlock(status);
           } else {
             state.setSkillToUnlock(null);
@@ -437,6 +440,7 @@ export function useLessonEngine(
           const coachOutput = await mutations.decideNextAction.mutateAsync({
             lessonRunId: lesson.lessonRunId,
             graderOutput,
+            localUserId: options.localUserId,
           });
 
           // Check if user performed a new action (React Query handles request cancellation)
@@ -484,7 +488,7 @@ export function useLessonEngine(
           ) {
             const skillKey = coachOutput.awardedSkills[0];
             const skillTitle = await fetchSkillTitle(skillKey);
-            const status = await fetchSkillStatus(skillKey, skillTitle);
+            const status = await fetchSkillStatus(skillKey, skillTitle, options.localUserId);
             if (status) {
               state.setSkillToUnlock({ ...status, isUnlocked: true });
             }

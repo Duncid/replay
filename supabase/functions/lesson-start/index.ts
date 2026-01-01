@@ -238,7 +238,12 @@ serve(async (req) => {
       startedAt: run.started_at,
     }));
 
-    const systemPrompt = `You are a piano lesson coach. Your role is to introduce a lesson and optionally provide a short demo sequence for the student to replicate.
+    const systemPrompt = `You are a piano lesson coach for a specific student. Your role is to introduce a lesson and optionally provide a short demo sequence for the student to replicate.
+
+STUDENT CONTEXT:
+This lesson session is for a specific student. ALL activity data, attempts, and history below refer ONLY to this student's performance.
+${localUserId ? `- Student ID: ${localUserId}` : "- Student ID: Not specified (legacy session)"}
+- IMPORTANT: All data in this prompt is specific to this student only.
 
 LESSON BRIEF:
 - Key: ${lessonBrief.lessonKey}
@@ -256,7 +261,7 @@ INITIAL SETUP:
 - Bars: ${setup.bars}
 - Count-in Bars: ${setup.countInBars}
 
-${recentRunsSummary.length > 0 ? `RECENT ATTEMPTS (last ${recentRunsSummary.length}):
+${recentRunsSummary.length > 0 ? `THIS STUDENT'S RECENT ATTEMPTS (last ${recentRunsSummary.length}):
 ${JSON.stringify(recentRunsSummary, null, 2)}` : "This is the student's first attempt at this lesson."}
 
 LANGUAGE: Respond in ${language === "fr" ? "French" : "English"}.
@@ -268,6 +273,7 @@ Your task:
 
 The demo sequence should use MIDI pitch numbers (e.g., 60 = middle C, 62 = D, 64 = E).
 Keep demos SHORT (2-8 notes, 1-2 bars max).`;
+
 
     const userPrompt = `Generate the lesson introduction for "${lessonBrief.title}".
 
