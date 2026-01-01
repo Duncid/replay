@@ -121,12 +121,16 @@ export function useDecideNextAction() {
  * Query to fetch skill status
  * Note: This is a query because skill status doesn't change frequently
  */
-export function useSkillStatus(skillKey: string | null, skillTitle?: string) {
+export function useSkillStatus(
+  skillKey: string | null, 
+  skillTitle?: string,
+  localUserId?: string | null
+) {
   return useQuery({
-    queryKey: ["skillStatus", skillKey, skillTitle],
+    queryKey: ["skillStatus", skillKey, skillTitle, localUserId],
     queryFn: () => {
       if (!skillKey) return null;
-      return fetchSkillStatus(skillKey, skillTitle);
+      return fetchSkillStatus(skillKey, skillTitle, localUserId);
     },
     enabled: !!skillKey,
     staleTime: 10 * 60 * 1000, // 10 minutes

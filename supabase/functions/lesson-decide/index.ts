@@ -226,8 +226,13 @@ DECISION GUIDANCE:
     : "";
 
     // 7. Build Coach prompt
-    const systemPrompt = `You are a supportive piano lesson coach. Your job is to give encouraging feedback and decide what happens next.
+    const systemPrompt = `You are a supportive piano lesson coach for a specific student. Your job is to give encouraging feedback and decide what happens next.
 You trust the grader's assessment completely - do NOT re-evaluate the performance.
+
+STUDENT CONTEXT:
+This lesson session is for a specific student. ALL activity data, streaks, attempts, and decisions below refer ONLY to this student's performance history.
+${localUserId ? `- Student ID: ${localUserId}` : "- Student ID: Not specified (legacy session)"}
+- IMPORTANT: All data in this prompt is specific to this student only.
 
 LESSON BRIEF:
 - Key: ${lessonKey}
@@ -241,11 +246,18 @@ CURRENT SETUP:
 - Bars: ${setup.bars || 2}
 - Difficulty: ${currentDifficulty}
 
-LESSON STATE:
+LESSON STATE (for this student):
 - Turn: ${newState.turn}
-- Total attempts: ${lessonRun.attempt_count || 0}
-- Pass streak: ${newState.passStreak}
-- Fail streak: ${newState.failStreak}
+- Total attempts (this student): ${lessonRun.attempt_count || 0}
+- Pass streak (this student): ${newState.passStreak}
+- Fail streak (this student): ${newState.failStreak}
+
+GRADER'S ASSESSMENT:
+- Evaluation: ${graderOutput.evaluation}
+- Diagnosis: ${graderOutput.diagnosis.join(", ")}
+- Grader feedback: ${graderOutput.feedbackText}
+- Grader suggestion: ${graderOutput.suggestedAdjustment}
+${graderOutput.nextSetup ? `- Suggested setup: ${JSON.stringify(graderOutput.nextSetup)}` : ""}
 
 GRADER'S ASSESSMENT:
 - Evaluation: ${graderOutput.evaluation}
@@ -263,34 +275,9 @@ YOUR AVAILABLE ACTIONS:
 - MAKE_HARDER: Increase difficulty (faster BPM, more bars, etc.)
 - EXIT_TO_MAIN_TEACHER: End this lesson, return to lesson selection
 
-SKILL AWARD GUIDANCE:
-
-General Rule: Only award a skill if the user has been successful on an exercise with a difficulty at or above 6 for 3 consecutive times.
-
-Current Status:
-- Has 3 consecutive passes at difficulty >= 6: ${hasThreeConsecutivePassesAtDifficulty6 ? "YES" : "NO"}
-- Current difficulty: ${lessonRun.difficulty || 1}
-- Current evaluation: ${graderOutput.evaluation}
-- Pass streak: ${newState.passStreak}
-
-${awardedSkills.length > 0 ? `Specific Guidance for Each Skill:
-${awardedSkills.map(skillKey => {
-  const guidance = skillGuidanceMap.get(skillKey);
-  return `- ${skillKey}: ${guidance || "No specific guidance provided"}`;
-}).join("\n")}` : ""}
-
-You should award skills when:
-- The student has demonstrated consistent mastery (3 consecutive passes at difficulty >= 6)
-- The student is ready to move on (EXIT_TO_MAIN_TEACHER or MAKE_HARDER)
-- The performance shows genuine understanding, not just luck
-
-Do NOT award skills if:
-- The student has not met the 3 consecutive passes at difficulty >= 6 requirement
-- The student is still struggling (failStreak > 0)
-- The passes seem accidental or inconsistent
-- You're making the lesson easier (MAKE_EASIER)
-
-Set awardSkills to true ONLY when you genuinely believe the student has mastered the skill according to the criteria above.
+SKILL AWARD GUIDANCE (already detailed above in SKILL UNLOCK CRITERIA section):
+- Set awardSkills to true ONLY when the student meets all unlock criteria
+- Review the SKILL UNLOCK CRITERIA section above for exact requirements
 
 COACHING STYLE:
 - Be encouraging but honest

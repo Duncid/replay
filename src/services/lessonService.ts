@@ -15,6 +15,7 @@ import { NoteSequence } from "@/types/noteSequence";
 export interface StartCurriculumLessonParams {
   lessonKey: string;
   language: string;
+  localUserId?: string | null;
   debug?: boolean;
 }
 
@@ -31,6 +32,7 @@ export interface RegenerateCurriculumLessonParams {
   lessonKey: string;
   setupOverrides?: Partial<LessonRunSetup>;
   language: string;
+  localUserId?: string | null;
   debug?: boolean;
 }
 
@@ -65,6 +67,7 @@ export interface EvaluateFreeFormLessonParams {
 export interface DecideNextActionParams {
   lessonRunId: string;
   graderOutput: GraderOutput;
+  localUserId?: string | null;
 }
 
 export interface FetchTeacherGreetingParams {
@@ -84,6 +87,7 @@ export async function startCurriculumLesson(
     body: {
       lessonKey: params.lessonKey,
       language: params.language,
+      localUserId: params.localUserId,
       debug: params.debug || false,
     },
   });
@@ -150,6 +154,7 @@ export async function regenerateCurriculumLesson(
     body: {
       lessonKey: params.lessonKey,
       language: params.language,
+      localUserId: params.localUserId,
       debug: params.debug || false,
       suggestionHint: params.setupOverrides
         ? {
@@ -266,6 +271,7 @@ export async function decideNextAction(
     body: {
       lessonRunId: params.lessonRunId,
       graderOutput: params.graderOutput,
+      localUserId: params.localUserId,
     },
   });
 
@@ -309,18 +315,24 @@ export async function fetchTeacherGreeting(
  */
 export async function fetchSkillStatus(
   skillKey: string,
-  skillTitle?: string
+  skillTitle?: string,
+  localUserId?: string | null
 ): Promise<{
   skillKey: string;
   title: string;
   isUnlocked: boolean;
 } | null> {
   try {
-    const { data: skillState } = await supabase
+    let query = supabase
       .from("user_skill_state")
       .select("unlocked")
-      .eq("skill_key", skillKey)
-      .maybeSingle();
+      .eq("skill_key", skillKey);
+    
+    if (localUserId) {
+      query = query.eq("local_user_id", localUserId);
+    }
+
+    const { data: skillState } = await query.maybeSingle();
 
     return {
       skillKey,
