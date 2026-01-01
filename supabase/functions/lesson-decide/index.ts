@@ -233,6 +233,7 @@ LESSON BRIEF:
 - Key: ${lessonKey}
 - Title: ${lessonTitle}
 - Goal: ${lessonGoal}
+${awardedSkills.length > 0 ? `- Skills that can be awarded: ${awardedSkills.join(", ")}` : "- No skills are awarded by this lesson"}
 
 CURRENT SETUP:
 - BPM: ${setup.bpm || 80}
@@ -261,6 +262,35 @@ YOUR AVAILABLE ACTIONS:
 - MAKE_EASIER: Reduce difficulty (slower BPM, fewer bars, etc.)
 - MAKE_HARDER: Increase difficulty (faster BPM, more bars, etc.)
 - EXIT_TO_MAIN_TEACHER: End this lesson, return to lesson selection
+
+SKILL AWARD GUIDANCE:
+
+General Rule: Only award a skill if the user has been successful on an exercise with a difficulty at or above 6 for 3 consecutive times.
+
+Current Status:
+- Has 3 consecutive passes at difficulty >= 6: ${hasThreeConsecutivePassesAtDifficulty6 ? "YES" : "NO"}
+- Current difficulty: ${lessonRun.difficulty || 1}
+- Current evaluation: ${graderOutput.evaluation}
+- Pass streak: ${newState.passStreak}
+
+${awardedSkills.length > 0 ? `Specific Guidance for Each Skill:
+${awardedSkills.map(skillKey => {
+  const guidance = skillGuidanceMap.get(skillKey);
+  return `- ${skillKey}: ${guidance || "No specific guidance provided"}`;
+}).join("\n")}` : ""}
+
+You should award skills when:
+- The student has demonstrated consistent mastery (3 consecutive passes at difficulty >= 6)
+- The student is ready to move on (EXIT_TO_MAIN_TEACHER or MAKE_HARDER)
+- The performance shows genuine understanding, not just luck
+
+Do NOT award skills if:
+- The student has not met the 3 consecutive passes at difficulty >= 6 requirement
+- The student is still struggling (failStreak > 0)
+- The passes seem accidental or inconsistent
+- You're making the lesson easier (MAKE_EASIER)
+
+Set awardSkills to true ONLY when you genuinely believe the student has mastered the skill according to the criteria above.
 
 COACHING STYLE:
 - Be encouraging but honest
