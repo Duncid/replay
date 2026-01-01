@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { GraderOutput, CoachOutput } from "@/types/learningSession";
+import { EvaluationOutput } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
 import { useState } from "react";
 
@@ -24,13 +24,11 @@ interface EvaluationDebugCardProps {
   evaluationType: "structured" | "free";
   onProceed: () => void;
   onCancel?: () => void;
-  graderOutput?: GraderOutput | null;
-  coachOutput?: CoachOutput | null;
+  evaluationOutput?: EvaluationOutput | null;
   freePracticeEvaluation?: {
     evaluation: "correct" | "close" | "wrong";
     feedback: string;
   } | null;
-  decidePrompt?: string;
 }
 
 export function EvaluationDebugCard({
@@ -39,16 +37,14 @@ export function EvaluationDebugCard({
   evaluationType,
   onProceed,
   onCancel,
-  graderOutput,
-  coachOutput,
+  evaluationOutput,
   freePracticeEvaluation,
-  decidePrompt,
 }: EvaluationDebugCardProps) {
   const [promptSheetOpen, setPromptSheetOpen] = useState(false);
   const [evalSheetOpen, setEvalSheetOpen] = useState(false);
   const [recordingSheetOpen, setRecordingSheetOpen] = useState(false);
 
-  const hasResults = graderOutput || coachOutput || freePracticeEvaluation;
+  const hasResults = evaluationOutput || freePracticeEvaluation;
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
@@ -144,19 +140,11 @@ export function EvaluationDebugCard({
                   </SheetHeader>
                   <ScrollArea className="h-[calc(100vh-120px)] mt-4">
                     <div className="space-y-4">
-                      {graderOutput && (
+                      {evaluationOutput && (
                         <div>
-                          <h4 className="font-semibold mb-2">Grader Output</h4>
+                          <h4 className="font-semibold mb-2">Evaluation Output</h4>
                           <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                            {JSON.stringify(graderOutput, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                      {coachOutput && (
-                        <div>
-                          <h4 className="font-semibold mb-2">Coach Output</h4>
-                          <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                            {JSON.stringify(coachOutput, null, 2)}
+                            {JSON.stringify(evaluationOutput, null, 2)}
                           </pre>
                         </div>
                       )}
@@ -165,14 +153,6 @@ export function EvaluationDebugCard({
                           <h4 className="font-semibold mb-2">Evaluation</h4>
                           <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
                             {JSON.stringify(freePracticeEvaluation, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                      {decidePrompt && (
-                        <div>
-                          <h4 className="font-semibold mb-2">Lesson-Decide Prompt</h4>
-                          <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                            {decidePrompt}
                           </pre>
                         </div>
                       )}

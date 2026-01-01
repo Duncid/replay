@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
-  CoachOutput,
-  GraderOutput,
+  EvaluationOutput,
+  LessonMetronomeSettings,
   LessonStartResponse,
   LessonRunSetup,
 } from "@/types/learningSession";
@@ -53,6 +53,7 @@ export interface EvaluateStructuredLessonParams {
     bpm: number;
     meter: string;
   };
+  localUserId?: string | null;
   debug?: boolean;
 }
 
@@ -64,11 +65,6 @@ export interface EvaluateFreeFormLessonParams {
   model: string;
 }
 
-export interface DecideNextActionParams {
-  lessonRunId: string;
-  graderOutput: GraderOutput;
-  localUserId?: string | null;
-}
 
 export interface FetchTeacherGreetingParams {
   language: string;
@@ -111,13 +107,7 @@ export async function startFreeFormLesson(
 ): Promise<{
   instruction: string;
   sequence: NoteSequence;
-  metronome?: {
-    bpm?: number;
-    timeSignature?: string;
-    isActive?: boolean;
-    feel?: string;
-    soundType?: string;
-  };
+  metronome?: LessonMetronomeSettings;
 }> {
   const { data, error } = await supabase.functions.invoke("piano-learn", {
     body: {
@@ -178,13 +168,7 @@ export async function regenerateFreeFormLesson(
 ): Promise<{
   instruction: string;
   sequence: NoteSequence;
-  metronome?: {
-    bpm?: number;
-    timeSignature?: string;
-    isActive?: boolean;
-    feel?: string;
-    soundType?: string;
-  };
+  metronome?: LessonMetronomeSettings;
 }> {
   const { data, error } = await supabase.functions.invoke("piano-learn", {
     body: {
@@ -214,15 +198,17 @@ export async function regenerateFreeFormLesson(
 
 /**
  * Evaluate a structured (curriculum) lesson attempt
+ * Returns combined grader + coach output from the merged endpoint
  */
 export async function evaluateStructuredLesson(
   params: EvaluateStructuredLessonParams
-): Promise<GraderOutput> {
+): Promise<EvaluationOutput> {
   const { data, error } = await supabase.functions.invoke("lesson-evaluate", {
     body: {
       lessonRunId: params.lessonRunId,
       userSequence: params.userSequence,
       metronomeContext: params.metronomeContext,
+      localUserId: params.localUserId,
       debug: params.debug || false,
     },
   });
@@ -230,7 +216,7 @@ export async function evaluateStructuredLesson(
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
 
-  return data as GraderOutput;
+  return data as EvaluationOutput;
 }
 
 /**
@@ -259,26 +245,6 @@ export async function evaluateFreeFormLesson(
     evaluation: data.evaluation as "correct" | "close" | "wrong",
     feedback: data.feedback as string,
   };
-}
-
-/**
- * Get coach decision for next action after evaluation
- */
-export async function decideNextAction(
-  params: DecideNextActionParams
-): Promise<CoachOutput & { awardedSkills?: string[] }> {
-  const { data, error } = await supabase.functions.invoke("lesson-decide", {
-    body: {
-      lessonRunId: params.lessonRunId,
-      graderOutput: params.graderOutput,
-      localUserId: params.localUserId,
-    },
-  });
-
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-
-  return data as CoachOutput & { awardedSkills?: string[] };
 }
 
 /**

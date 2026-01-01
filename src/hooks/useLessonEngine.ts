@@ -10,7 +10,7 @@ import {
   LessonMetronomeSettings,
   LessonBrief,
   LessonState,
-  GraderOutput,
+  EvaluationOutput,
   CoachOutput,
   TeacherSuggestion,
 } from "@/types/learningSession";
@@ -38,11 +38,11 @@ export type DebugState =
     }
   | null;
 
+// EvaluationState now uses combined EvaluationOutput
 export type EvaluationState =
   | {
       type: "structured";
-      graderOutput: GraderOutput;
-      coachOutput?: CoachOutput & { awardedSkills?: string[] };
+      evaluationOutput: EvaluationOutput;
     }
   | {
       type: "free";
@@ -86,7 +86,6 @@ export interface LessonEngineMutations {
   startCurriculumLesson: AnyMutation;
   regenerateCurriculumLesson: AnyMutation;
   evaluateStructuredLesson: AnyMutation;
-  decideNextAction: AnyMutation;
 }
 
 export function useLessonEngine(
@@ -302,113 +301,66 @@ export function useLessonEngine(
       state.setEvaluationState(null);
 
       try {
-        // STRUCTURED LESSON: Use lesson-evaluate → lesson-decide
+        // STRUCTURED LESSON: Use merged lesson-evaluate endpoint
         if (lesson.lessonRunId) {
-          // Step 1: Call lesson-evaluate
-          const graderOutput = await mutations.evaluateStructuredLesson.mutateAsync({
+          // Call merged lesson-evaluate (returns combined grader + coach output)
+          const evaluationOutput = await mutations.evaluateStructuredLesson.mutateAsync({
             lessonRunId: lesson.lessonRunId,
             userSequence,
             metronomeContext: {
               bpm: options.metronomeBpm,
               meter: options.metronomeTimeSignature,
             },
-          });
-
-          // Check if user performed a new action (React Query handles request cancellation)
-          if (state.userActionTokenRef.current !== actionToken) return;
-
-          // Store grader output temporarily (will be combined with coach output)
-          state.setEvaluationState({
-            type: "structured",
-            graderOutput,
-          });
-
-          // Debug mode: toast grader evaluation
-          if (options.debugMode) {
-            const evalEmoji =
-              graderOutput.evaluation === "pass"
-                ? "✅"
-                : graderOutput.evaluation === "close"
-                ? "⚠️"
-                : "❌";
-            const evalLabel =
-              graderOutput.evaluation === "pass"
-                ? "Pass"
-                : graderOutput.evaluation === "close"
-                ? "Close"
-                : "Fail";
-            toast({
-              title: `${evalEmoji} Grader: ${evalLabel}`,
-              description:
-                graderOutput.diagnosis?.join(", ") || graderOutput.feedbackText,
-            });
-          }
-
-          // Step 2: Call lesson-decide with grader output
-          // In debug mode, get prompt first and show it in results
-          let decidePrompt: string | undefined;
-          if (options.debugMode) {
-            decidePrompt = JSON.stringify(
-              {
-                lessonRunId: lesson.lessonRunId,
-                graderOutput,
-              },
-              null,
-              2
-            );
-          }
-
-          const coachOutput = await mutations.decideNextAction.mutateAsync({
-            lessonRunId: lesson.lessonRunId,
-            graderOutput,
             localUserId: options.localUserId,
           });
 
           // Check if user performed a new action (React Query handles request cancellation)
           if (state.userActionTokenRef.current !== actionToken) return;
 
-          // Update evaluation state with both grader and coach output
+          // Store evaluation output
           state.setEvaluationState({
             type: "structured",
-            graderOutput,
-            coachOutput,
+            evaluationOutput,
           });
 
-          // Update debug card with decide prompt if in debug mode
-          if (options.debugMode && decidePrompt && state.debugState?.type === "evaluation") {
-            state.setDebugState({
-              ...state.debugState,
-              decidePrompt,
-            });
-          }
-
-          // Debug mode: toast coach decision and skills
-          if (options.debugMode && coachOutput) {
+          // Debug mode: toast evaluation results
+          if (options.debugMode) {
+            const evalEmoji =
+              evaluationOutput.evaluation === "pass"
+                ? "✅"
+                : evaluationOutput.evaluation === "close"
+                ? "⚠️"
+                : "❌";
+            const evalLabel =
+              evaluationOutput.evaluation === "pass"
+                ? "Pass"
+                : evaluationOutput.evaluation === "close"
+                ? "Close"
+                : "Fail";
             toast({
-              title: `🎯 Coach: ${coachOutput.nextAction}`,
-              description: coachOutput.setupDelta
-                ? `Setup: ${JSON.stringify(coachOutput.setupDelta)}`
+              title: `${evalEmoji} Evaluation: ${evalLabel}`,
+              description: evaluationOutput.diagnosis?.join(", ") || evaluationOutput.feedbackText,
+            });
+
+            toast({
+              title: `🎯 Coach: ${evaluationOutput.nextAction}`,
+              description: evaluationOutput.setupDelta
+                ? `Setup: ${JSON.stringify(evaluationOutput.setupDelta)}`
                 : undefined,
             });
 
-            if (
-              coachOutput.awardedSkills &&
-              coachOutput.awardedSkills.length > 0
-            ) {
+            if (evaluationOutput.awardedSkills && evaluationOutput.awardedSkills.length > 0) {
               toast({
                 title: `🏆 Skills Awarded`,
-                description: coachOutput.awardedSkills.join(", "),
+                description: evaluationOutput.awardedSkills.join(", "),
               });
             }
           }
 
-          // Update skill unlock status if skills were awarded (before setting evaluation result)
+          // Update skill unlock status if skills were awarded
           let skillUnlockStatus = null;
-          if (
-            coachOutput?.awardedSkills &&
-            coachOutput.awardedSkills.length > 0
-          ) {
-            const skillKey = coachOutput.awardedSkills[0];
+          if (evaluationOutput.awardedSkills && evaluationOutput.awardedSkills.length > 0) {
+            const skillKey = evaluationOutput.awardedSkills[0];
             const skillTitle = await fetchSkillTitle(skillKey);
             const status = await fetchSkillStatus(skillKey, skillTitle, options.localUserId);
             if (status) {
@@ -416,8 +368,8 @@ export function useLessonEngine(
             }
           }
 
-          // Determine evaluation result based on grader output
-          const isPositive = graderOutput.evaluation === "pass";
+          // Determine evaluation result based on evaluation
+          const isPositive = evaluationOutput.evaluation === "pass";
           
           // Update all state together (skills, evaluation result, feedback, attempts)
           if (skillUnlockStatus) {
@@ -426,7 +378,7 @@ export function useLessonEngine(
           state.setEvaluationResult(isPositive ? "positive" : "negative");
           state.setLessonState((prev) => ({
             ...prev,
-            lastComment: coachOutput.feedbackText,
+            lastComment: evaluationOutput.feedbackText,
             lesson: { ...prev.lesson, attempts: prev.lesson.attempts + 1 },
           }));
 
@@ -509,17 +461,17 @@ export function useLessonEngine(
     const { lesson } = state.lessonState;
     if (!lesson.lessonRunId) return;
 
-    // Use the coach's suggested adjustment if available
-    const coachOutput = state.evaluationState?.type === "structured" ? state.evaluationState.coachOutput : undefined;
-    if (coachOutput?.setupDelta) {
-      const newBpm = coachOutput.setupDelta.bpm ?? options.metronomeBpm;
-      const newMeter = coachOutput.setupDelta.meter ?? options.metronomeTimeSignature;
+    // Use the evaluation's suggested adjustment if available
+    const evalOutput = state.evaluationState?.type === "structured" ? state.evaluationState.evaluationOutput : undefined;
+    if (evalOutput?.setupDelta) {
+      const newBpm = evalOutput.setupDelta.bpm ?? options.metronomeBpm;
+      const newMeter = evalOutput.setupDelta.meter ?? options.metronomeTimeSignature;
 
-      if (coachOutput.setupDelta.bpm && callbacks.setMetronomeBpm) {
-        callbacks.setMetronomeBpm(coachOutput.setupDelta.bpm);
+      if (evalOutput.setupDelta.bpm && callbacks.setMetronomeBpm) {
+        callbacks.setMetronomeBpm(evalOutput.setupDelta.bpm);
       }
-      if (coachOutput.setupDelta.meter && callbacks.setMetronomeTimeSignature) {
-        callbacks.setMetronomeTimeSignature(coachOutput.setupDelta.meter);
+      if (evalOutput.setupDelta.meter && callbacks.setMetronomeTimeSignature) {
+        callbacks.setMetronomeTimeSignature(evalOutput.setupDelta.meter);
       }
 
       regenerateLessonWithNewSettings(newBpm, newMeter);
@@ -535,24 +487,24 @@ export function useLessonEngine(
 
     state.setEvaluationResult(null);
     state.setLessonState((prev) => ({ ...prev, lastComment: null }));
-  }, [state, options, regenerateLessonWithNewSettings, generateLesson]);
+  }, [state, options, callbacks, regenerateLessonWithNewSettings, generateLesson]);
 
   // Make lesson harder (for positive evaluation results)
   const handleMakeHarder = useCallback(() => {
     const { lesson } = state.lessonState;
     if (!lesson.lessonRunId) return;
 
-    // Use the coach's suggested adjustment if available
-    const coachOutput = state.evaluationState?.type === "structured" ? state.evaluationState.coachOutput : undefined;
-    if (coachOutput?.setupDelta) {
-      const newBpm = coachOutput.setupDelta.bpm ?? options.metronomeBpm;
-      const newMeter = coachOutput.setupDelta.meter ?? options.metronomeTimeSignature;
+    // Use the evaluation's suggested adjustment if available
+    const evalOutput = state.evaluationState?.type === "structured" ? state.evaluationState.evaluationOutput : undefined;
+    if (evalOutput?.setupDelta) {
+      const newBpm = evalOutput.setupDelta.bpm ?? options.metronomeBpm;
+      const newMeter = evalOutput.setupDelta.meter ?? options.metronomeTimeSignature;
 
-      if (coachOutput.setupDelta.bpm && callbacks.setMetronomeBpm) {
-        callbacks.setMetronomeBpm(coachOutput.setupDelta.bpm);
+      if (evalOutput.setupDelta.bpm && callbacks.setMetronomeBpm) {
+        callbacks.setMetronomeBpm(evalOutput.setupDelta.bpm);
       }
-      if (coachOutput.setupDelta.meter && callbacks.setMetronomeTimeSignature) {
-        callbacks.setMetronomeTimeSignature(coachOutput.setupDelta.meter);
+      if (evalOutput.setupDelta.meter && callbacks.setMetronomeTimeSignature) {
+        callbacks.setMetronomeTimeSignature(evalOutput.setupDelta.meter);
       }
 
       regenerateLessonWithNewSettings(newBpm, newMeter);
@@ -568,7 +520,7 @@ export function useLessonEngine(
 
     state.setEvaluationResult(null);
     state.setLessonState((prev) => ({ ...prev, lastComment: null }));
-  }, [state, options, regenerateLessonWithNewSettings, generateLesson]);
+  }, [state, options, callbacks, regenerateLessonWithNewSettings, generateLesson]);
 
   return {
     generateLesson,

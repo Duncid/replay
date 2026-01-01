@@ -6,13 +6,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  useDecideNextAction,
   useEvaluateStructuredLesson,
   useRegenerateCurriculumLesson,
   useStartCurriculumLesson,
   useTeacherGreeting,
-  useSkillStatus,
-  useSkillTitle,
 } from "@/hooks/useLessonQueries";
 import {
   fetchSkillStatus,
@@ -116,7 +113,6 @@ export function LearnMode({
   const startCurriculumLessonMutation = useStartCurriculumLesson();
   const regenerateCurriculumLessonMutation = useRegenerateCurriculumLesson();
   const evaluateStructuredLessonMutation = useEvaluateStructuredLesson();
-  const decideNextActionMutation = useDecideNextAction();
   
   // Combined loading state from mutations
   const isLoading =
@@ -214,7 +210,6 @@ export function LearnMode({
       startCurriculumLesson: startCurriculumLessonMutation,
       regenerateCurriculumLesson: regenerateCurriculumLessonMutation,
       evaluateStructuredLesson: evaluateStructuredLessonMutation,
-      decideNextAction: decideNextActionMutation,
     },
     {
       language,
@@ -381,9 +376,7 @@ export function LearnMode({
           evaluationType={debugState.evaluationType}
           onProceed={handleProceedEvaluation}
           onCancel={handleCancelEvaluation}
-          graderOutput={evaluationState?.type === "structured" ? evaluationState.graderOutput : undefined}
-          coachOutput={evaluationState?.type === "structured" ? evaluationState.coachOutput : undefined}
-          decidePrompt={debugState.decidePrompt}
+          evaluationOutput={evaluationState?.type === "structured" ? evaluationState.evaluationOutput : undefined}
         />
       ) : isLoading && lesson.phase === "welcome" && debugState?.type !== "lesson" ? (
         /* Loading spinner while generating lesson after selecting activity */

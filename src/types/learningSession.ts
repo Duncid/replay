@@ -141,13 +141,27 @@ export interface GraderOutput {
   nextSetup?: Partial<LessonRunSetup>;
 }
 
-// Coach decision from lesson-decide
+// Coach decision from lesson-decide (DEPRECATED - merged into EvaluationOutput)
 export type CoachNextAction = "RETRY_SAME" | "MAKE_EASIER" | "MAKE_HARDER" | "EXIT_TO_MAIN_TEACHER";
 
 export interface CoachOutput {
   feedbackText: string;
   nextAction: CoachNextAction;
   setupDelta?: Partial<LessonRunSetup>;
+  exitHint?: string;
+}
+
+// Combined evaluation output from merged lesson-evaluate endpoint
+export interface EvaluationOutput {
+  // Grader fields
+  evaluation: "pass" | "close" | "fail";
+  diagnosis: string[];
+  suggestedAdjustment: "easier" | "same" | "harder";
+  // Coach fields
+  feedbackText: string;
+  nextAction: CoachNextAction;
+  setupDelta?: Partial<LessonRunSetup>;
+  awardedSkills?: string[];
   exitHint?: string;
 }
 
