@@ -40,9 +40,8 @@ export function EvaluationDebugCard({
   evaluationOutput,
   freePracticeEvaluation,
 }: EvaluationDebugCardProps) {
-  const [promptSheetOpen, setPromptSheetOpen] = useState(false);
+  const [requestSheetOpen, setRequestSheetOpen] = useState(false);
   const [evalSheetOpen, setEvalSheetOpen] = useState(false);
-  const [recordingSheetOpen, setRecordingSheetOpen] = useState(false);
 
   const hasResults = evaluationOutput || freePracticeEvaluation;
 
@@ -82,10 +81,10 @@ export function EvaluationDebugCard({
               </Button>
             )}
 
-            <Sheet open={promptSheetOpen} onOpenChange={setPromptSheetOpen}>
+            <Sheet open={requestSheetOpen} onOpenChange={setRequestSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm">
-                  Debug Prompt
+                  Debug Request
                 </Button>
               </SheetTrigger>
               <SheetContent
@@ -93,32 +92,11 @@ export function EvaluationDebugCard({
                 className="w-[600px] sm:max-w-[600px]"
               >
                 <SheetHeader>
-                  <SheetTitle>LLM Prompt Preview</SheetTitle>
+                  <SheetTitle>LLM Evaluation Request</SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="h-[calc(100vh-120px)] mt-4">
                   <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
                     {prompt}
-                  </pre>
-                </ScrollArea>
-              </SheetContent>
-            </Sheet>
-
-            <Sheet open={recordingSheetOpen} onOpenChange={setRecordingSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Debug Recording
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-[600px] sm:max-w-[600px]"
-              >
-                <SheetHeader>
-                  <SheetTitle>User Recorded Sequence</SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-120px)] mt-4">
-                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-                    {JSON.stringify(userSequence, null, 2)}
                   </pre>
                 </ScrollArea>
               </SheetContent>
