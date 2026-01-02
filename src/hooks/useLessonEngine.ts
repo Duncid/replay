@@ -416,31 +416,34 @@ export function useLessonEngine(
   const evaluateAttempt = useCallback(
     async (userSequence: NoteSequence) => {
       const { lesson } = state.lessonState;
-      // In debug mode, get prompt first and show debug card
+      
+      // In debug mode, fetch full prompt from edge function first
       if (options.debugMode) {
         try {
-          const prompt = JSON.stringify(
-            {
-              lessonRunId: lesson.lessonRunId,
-              userSequence,
-              metronomeContext: {
-                bpm: options.metronomeBpm,
-                meter: options.metronomeTimeSignature,
-              },
-            },
-            null,
-            2
-          );
-
-          // Show debug card
-          state.setDebugState({
-            type: "evaluation",
-            prompt,
+          // Call edge function with debug=true to get the full LLM prompt
+          const debugResponse = await mutations.evaluateStructuredLesson.mutateAsync({
+            lessonRunId: lesson.lessonRunId,
             userSequence,
-            evaluationType: "structured",
-            pendingCall: () => executeEvaluation(userSequence),
+            metronomeContext: {
+              bpm: options.metronomeBpm,
+              meter: options.metronomeTimeSignature,
+            },
+            localUserId: options.localUserId,
+            debug: true,
           });
-          return;
+
+          // Type guard: debug response has 'prompt' field
+          if ('prompt' in debugResponse) {
+            // Show debug card with full LLM prompt from edge function
+            state.setDebugState({
+              type: "evaluation",
+              prompt: debugResponse.prompt,
+              userSequence,
+              evaluationType: "structured",
+              pendingCall: () => executeEvaluation(userSequence),
+            });
+            return;
+          }
         } catch (error) {
           console.error("Failed to get debug prompt:", error);
           // Fall through to normal execution
@@ -454,6 +457,7 @@ export function useLessonEngine(
       state,
       options,
       executeEvaluation,
+      mutations,
     ]
   );
 
