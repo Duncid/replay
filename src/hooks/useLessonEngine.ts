@@ -72,6 +72,7 @@ export interface LessonEngineState {
   setSkillToUnlock: (skill: SkillToUnlock | null) => void;
   setDebugState: React.Dispatch<React.SetStateAction<DebugState>>;
   setEvaluationState: React.Dispatch<React.SetStateAction<EvaluationState>>;
+  setShowEvaluationScreen: (show: boolean) => void;
   debugState: DebugState;
   evaluationState: EvaluationState;
   hasEvaluatedRef: React.MutableRefObject<boolean>;
@@ -382,8 +383,8 @@ export function useLessonEngine(
             lesson: { ...prev.lesson, attempts: prev.lesson.attempts + 1 },
           }));
 
-          // Return to practice mode after evaluation
-          state.setMode("practice");
+          // Show evaluation screen instead of immediately returning to practice
+          state.setShowEvaluationScreen(true);
         } else {
           throw new Error("Lesson run ID is required for evaluation");
         }

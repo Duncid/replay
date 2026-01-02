@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Play, X, Lock, Unlock, CheckCircle, TrendingDown, TrendingUp } from "lucide-react";
+import { Loader2, Play, X, Lock, Unlock, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -11,38 +11,29 @@ export interface SkillToUnlock {
 }
 
 export type LessonMode = "practice" | "evaluation";
-export type EvaluationResult = "positive" | "negative" | null;
 
 interface LessonCardProps {
   instruction: string;
-  lastComment: string | null;
   isEvaluating: boolean;
   isLoading?: boolean;
   mode: LessonMode;
-  evaluationResult?: EvaluationResult;
   isRecording?: boolean;
   onPlay: () => void;
   onEvaluate: () => void;
   onLeave: () => void;
-  onMakeEasier?: () => void;
-  onMakeHarder?: () => void;
   trackTitle?: string;
   skillToUnlock?: SkillToUnlock | null;
 }
 
 export function LessonCard({
   instruction,
-  lastComment,
   isEvaluating,
   isLoading,
   mode,
-  evaluationResult,
   isRecording = false,
   onPlay,
   onEvaluate,
   onLeave,
-  onMakeEasier,
-  onMakeHarder,
   trackTitle,
   skillToUnlock,
 }: LessonCardProps) {
@@ -74,14 +65,7 @@ export function LessonCard({
         </p>
       );
     }
-    // Practice mode: show teacher comment
-    if (lastComment) {
-      return (
-        <p className="text-muted-foreground italic text-center text-lg font-sans">
-          {lastComment}
-        </p>
-      );
-    }
+    // Practice mode: no comment display (moved to EvaluationScreen)
     return null;
   };
 
@@ -142,7 +126,7 @@ export function LessonCard({
         {/* Actions - different based on mode */}
         <div className="flex justify-center gap-3 pt-2">
           {mode === "practice" ? (
-            // Practice mode actions: Play, Evaluate, Make easier (if negative result)
+            // Practice mode actions: Play, Evaluate
             <>
               <Button
                 variant="outline"
@@ -161,27 +145,6 @@ export function LessonCard({
                 <CheckCircle className="w-4 h-4" />
                 {t("learnMode.evaluateButton", "Evaluate")}
               </Button>
-              {evaluationResult === "negative" && onMakeEasier && (
-                <Button
-                  onClick={onMakeEasier}
-                  disabled={isLoading || isEvaluating}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <TrendingDown className="w-4 h-4" />
-                  {t("learnMode.makeEasier", "Make Easier")}
-                </Button>
-              )}
-              {evaluationResult === "positive" && onMakeHarder && (
-                <Button
-                  onClick={onMakeHarder}
-                  disabled={isLoading || isEvaluating}
-                  className="gap-2"
-                >
-                  <TrendingUp className="w-4 h-4" />
-                  {t("learnMode.makeHarder", "Make Harder")}
-                </Button>
-              )}
             </>
           ) : (
             // Evaluation mode actions: Leave Evaluation
