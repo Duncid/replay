@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Types
+type CoachNextAction = "RETRY_SAME" | "MAKE_EASIER" | "MAKE_HARDER" | "EXIT_TO_MAIN_TEACHER";
+
 interface Note {
   pitch: number;
   startTime: number;
@@ -15,19 +17,50 @@ interface NoteSequence {
 }
 
 interface MetronomeContext {
-  t0: number; // Timestamp when metronome started
+  t0: number;
   bpm: number;
   meter: string;
   feel?: string;
   countInBars?: number;
 }
 
-interface GraderOutput {
+interface EvaluationOutput {
   evaluation: "pass" | "close" | "fail";
   diagnosis: string[];
   feedbackText: string;
-  suggestedAdjustment: "easier" | "same" | "harder";
-  nextSetup?: Record<string, unknown>;
+  nextAction: CoachNextAction;
+  setupDelta?: Record<string, unknown>;
+  awardedSkills?: string[];
+  exitHint?: string;
+}
+
+interface LessonBrief {
+  lessonKey: string;
+  title: string;
+  goal: string;
+  awardedSkills: string[];
+  evaluationGuidance?: string;
+  [key: string]: unknown;
+}
+
+interface LessonState {
+  turn: number;
+  passStreak: number;
+  failStreak: number;
+  lastDecision: CoachNextAction | null;
+  phase: string;
+}
+
+interface SkillUnlockGuidance {
+  skillKey: string;
+  guidance: string;
+}
+
+interface CurriculumNodeData {
+  title?: string;
+  awardedSkills?: string[];
+  skillUnlockGuidance?: Record<string, string>;
+  [key: string]: unknown;
 }
 
 const corsHeaders = {
@@ -35,13 +68,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Guardrail constants
+const PASS_STREAK_THRESHOLD = 2;
+const FAIL_STREAK_THRESHOLD = 3;
+const MAX_ATTEMPTS = 5;
+const SKILL_UNLOCK_MIN_DIFFICULTY = 6;
+const SKILL_UNLOCK_CONSECUTIVE_PASSES = 3;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { lessonRunId, userSequence, metronomeContext, debug = false } = await req.json();
+    const { 
+      lessonRunId, 
+      userSequence, 
+      metronomeContext, 
+      debug = false,
+      localUserId: requestedUserId 
+    } = await req.json();
 
     if (!lessonRunId) {
       return new Response(
@@ -62,7 +108,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Fetch lesson_run to get lesson_brief, demo_sequence, setup, state
+    // 1. Fetch lesson_run
     const { data: lessonRun, error: runError } = await supabase
       .from("lesson_runs")
       .select("*")
@@ -77,32 +123,105 @@ serve(async (req) => {
       );
     }
 
-    const lessonBrief = lessonRun.lesson_brief as Record<string, unknown> | null;
+    // Security check
+    if (requestedUserId && lessonRun.local_user_id && lessonRun.local_user_id !== requestedUserId) {
+      console.error(`Security violation: Requested user ${requestedUserId} does not match lesson run user ${lessonRun.local_user_id}`);
+      return new Response(
+        JSON.stringify({ error: "Lesson run does not belong to the specified user" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const lessonBrief = lessonRun.lesson_brief as LessonBrief | null;
     const demoSequence = lessonRun.demo_sequence as NoteSequence | null;
     const setup = (lessonRun.setup || {}) as Record<string, unknown>;
-    const state = (lessonRun.state || {}) as Record<string, unknown>;
+    const currentState = (lessonRun.state as LessonState) || {
+      turn: 0,
+      passStreak: 0,
+      failStreak: 0,
+      lastDecision: null,
+      phase: "feedback",
+    };
+    const currentDifficulty = (lessonRun.difficulty || 1) as number;
+    const localUserId = lessonRun.local_user_id as string | null;
 
-    // Handle case where lesson_brief is not populated (free-form lessons from piano-learn)
+    // Extract lesson info
     const lessonKey = lessonBrief?.lessonKey || lessonRun.lesson_node_key || "unknown";
     const lessonTitle = lessonBrief?.title || "Practice Exercise";
     const lessonGoal = lessonBrief?.goal || "Play the demonstrated sequence accurately";
     const evaluationGuidance = lessonBrief?.evaluationGuidance || "";
+    const awardedSkills = lessonBrief?.awardedSkills || [];
 
-    // 2. Build Grader prompt
-    const systemPrompt = `You are a piano lesson grader. Your ONLY job is to assess the student's performance objectively.
-You do NOT provide encouragement or coaching - just pure assessment.
+    // 2. Fetch skill unlock guidance from curriculum_nodes
+    let skillUnlockGuidance: SkillUnlockGuidance[] = [];
+    if (awardedSkills.length > 0 && lessonRun.version_id) {
+      const { data: nodeData } = await supabase
+        .from("curriculum_nodes")
+        .select("data")
+        .eq("version_id", lessonRun.version_id)
+        .eq("node_key", lessonKey)
+        .maybeSingle();
+      
+      if (nodeData?.data) {
+        const currData = nodeData.data as CurriculumNodeData;
+        if (currData.skillUnlockGuidance) {
+          skillUnlockGuidance = Object.entries(currData.skillUnlockGuidance).map(([skillKey, guidance]) => ({
+            skillKey,
+            guidance,
+          }));
+        }
+      }
+    }
+
+    // 3. Check consecutive passes at high difficulty
+    let consecutiveHighDiffPasses = 0;
+    if (awardedSkills.length > 0 && localUserId) {
+      const { data: recentRuns } = await supabase
+        .from("lesson_runs")
+        .select("id, difficulty, evaluation")
+        .eq("lesson_node_key", lessonKey)
+        .eq("local_user_id", localUserId)
+        .order("started_at", { ascending: false })
+        .limit(10);
+      
+      if (recentRuns) {
+        for (const run of recentRuns) {
+          if (run.id === lessonRunId) continue;
+          const runDifficulty = (run.difficulty || 1) as number;
+          const runEval = run.evaluation as string | null;
+          
+          if (runDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY && runEval === "pass") {
+            consecutiveHighDiffPasses++;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    // 4. Build the merged evaluation + coaching prompt
+    const systemPrompt = `You are a piano lesson evaluator AND coach combined. Your job is to:
+1. EVALUATE the student's performance objectively
+2. PROVIDE encouraging feedback
+3. DECIDE what happens next
+
+STUDENT CONTEXT:
+${localUserId ? `- Student ID: ${localUserId}` : "- Student ID: Not specified (legacy session)"}
+- All data in this prompt is specific to this student only.
 
 LESSON BRIEF:
 - Key: ${lessonKey}
 - Title: ${lessonTitle}
 - Goal: ${lessonGoal}
 ${evaluationGuidance ? `- Evaluation Guidance: ${evaluationGuidance}` : ""}
+${awardedSkills.length > 0 ? `- Skills that can be awarded: ${awardedSkills.join(", ")}` : "- No skills are awarded by this lesson"}
 
 CURRENT SETUP:
 - BPM: ${setup.bpm || 80}
 - Meter: ${setup.meter || "4/4"}
 - Feel: ${setup.feel || "straight_beats"}
 - Bars: ${setup.bars || 2}
+- Difficulty: ${currentDifficulty}
 
 ${metronomeContext ? `METRONOME CONTEXT:
 - Start time (t0): ${metronomeContext.t0}
@@ -116,6 +235,12 @@ ${JSON.stringify(demoSequence, null, 2)}` : "No demo sequence - evaluate based o
 
 USER'S RECORDED SEQUENCE:
 ${JSON.stringify(userSequence, null, 2)}
+
+LESSON STATE (for this student):
+- Turn: ${currentState.turn}
+- Total attempts: ${lessonRun.attempt_count || 0}
+- Pass streak: ${currentState.passStreak}
+- Fail streak: ${currentState.failStreak}
 
 GRADING CRITERIA:
 1. PITCH ACCURACY: Did they play the correct notes?
@@ -133,23 +258,65 @@ DIAGNOSIS TAGS (use these exactly):
 - timing_early, timing_late, timing_good
 - rhythm_correct, rhythm_inconsistent, rhythm_wrong
 - notes_complete, notes_missing, notes_extra
-- velocity_good, velocity_weak, velocity_strong`;
+- velocity_good, velocity_weak, velocity_strong
 
-    const userPrompt = `Evaluate the student's performance and return your assessment using the provided function.
+YOUR AVAILABLE ACTIONS:
+- RETRY_SAME: Have them try again with the same setup
+- MAKE_EASIER: Reduce difficulty (slower BPM, fewer bars)
+- MAKE_HARDER: Increase difficulty (faster BPM, more bars)
+- EXIT_TO_MAIN_TEACHER: End this lesson, return to lesson selection
 
-Be objective and precise. Focus on what they did right and wrong.`;
+GUARDRAILS:
+${lessonRun.attempt_count >= MAX_ATTEMPTS ? `- Student has made ${lessonRun.attempt_count} attempts. Consider suggesting EXIT.` : ""}
+${currentState.passStreak >= PASS_STREAK_THRESHOLD ? `- Student has passed ${currentState.passStreak} times in a row. Consider MAKE_HARDER or EXIT.` : ""}
+${currentState.failStreak >= FAIL_STREAK_THRESHOLD ? `- Student has struggled ${currentState.failStreak} times. Consider MAKE_EASIER.` : ""}
+
+${awardedSkills.length > 0 ? `SKILL UNLOCK CRITERIA:
+- Required: ${SKILL_UNLOCK_CONSECUTIVE_PASSES} consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+
+- Current difficulty: ${currentDifficulty}
+- Consecutive high-difficulty passes so far: ${consecutiveHighDiffPasses}
+- If this attempt passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+, total will be: ${currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY ? consecutiveHighDiffPasses + 1 : consecutiveHighDiffPasses}
+- Set awardSkills to true ONLY if criteria will be met after this attempt
+
+SKILLS THAT CAN BE AWARDED:
+${awardedSkills.map(sk => {
+  const guidance = skillUnlockGuidance.find(g => g.skillKey === sk);
+  return `- ${sk}${guidance ? `: ${guidance.guidance}` : ""}`;
+}).join("\n")}` : ""}
+
+COACHING STYLE:
+- Be encouraging but honest
+- Keep feedback brief (2-3 sentences max)
+- Focus on what they did well AND what to improve
+- If suggesting MAKE_EASIER, frame it positively ("Let's build up to this")
+- If suggesting EXIT, make it feel like progress, not failure`;
+
+    const userPrompt = `Evaluate the student's performance and provide coaching feedback using the provided function.`;
 
     const composedPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
 
     // If debug mode, return the prompt without calling LLM
     if (debug) {
       return new Response(
-        JSON.stringify({ prompt: composedPrompt, lessonBrief, setup, demoSequence, userSequence }),
+        JSON.stringify({ 
+          prompt: composedPrompt, 
+          lessonBrief, 
+          setup, 
+          state: currentState,
+          demoSequence, 
+          userSequence,
+          skillUnlockStatus: {
+            awardedSkills,
+            skillUnlockGuidance,
+            consecutiveHighDiffPasses,
+            currentDifficulty,
+          },
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 3. Call LLM with tool calling for structured output
+    // 5. Call LLM with tool calling for structured output
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(
@@ -175,7 +342,7 @@ Be objective and precise. Focus on what they did right and wrong.`;
             type: "function",
             function: {
               name: "submit_evaluation",
-              description: "Submit the grading evaluation for the student's performance",
+              description: "Submit the evaluation, coaching feedback, and next action decision",
               parameters: {
                 type: "object",
                 properties: {
@@ -191,23 +358,33 @@ Be objective and precise. Focus on what they did right and wrong.`;
                   },
                   feedbackText: {
                     type: "string",
-                    description: "Brief factual feedback (1-2 sentences) about the performance",
+                    description: "Encouraging, constructive feedback for the student (2-3 sentences)",
                   },
-                  suggestedAdjustment: {
+                  nextAction: {
                     type: "string",
-                    enum: ["easier", "same", "harder"],
-                    description: "Suggested difficulty adjustment based on performance",
+                    enum: ["RETRY_SAME", "MAKE_EASIER", "MAKE_HARDER", "EXIT_TO_MAIN_TEACHER"],
+                    description: "What should happen next in the lesson",
                   },
-                  nextSetup: {
+                  setupDelta: {
                     type: "object",
-                    description: "Optional setup changes if suggesting easier/harder",
+                    description: "Setup changes if making easier/harder (e.g., { bpm: 70 })",
                     properties: {
                       bpm: { type: "number" },
                       bars: { type: "number" },
+                      meter: { type: "string" },
+                      feel: { type: "string" },
                     },
                   },
+                  exitHint: {
+                    type: "string",
+                    description: "If exiting, a hint for the main teacher about what to suggest next",
+                  },
+                  awardSkills: {
+                    type: "boolean",
+                    description: `Whether to award the lesson's skills. ONLY set to true if ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+ will be achieved.`,
+                  },
                 },
-                required: ["evaluation", "diagnosis", "feedbackText", "suggestedAdjustment"],
+                required: ["evaluation", "diagnosis", "feedbackText", "nextAction"],
               },
             },
           },
@@ -226,48 +403,136 @@ Be objective and precise. Focus on what they did right and wrong.`;
     }
 
     const llmData = await llmResponse.json();
-    console.log("Grader LLM response:", JSON.stringify(llmData, null, 2));
+    console.log("Evaluation LLM response:", JSON.stringify(llmData, null, 2));
 
     // Extract the tool call result
-    let graderOutput: GraderOutput;
+    let evaluationOutput: EvaluationOutput;
 
     try {
       const toolCall = llmData.choices?.[0]?.message?.tool_calls?.[0];
       if (toolCall?.function?.arguments) {
-        graderOutput = JSON.parse(toolCall.function.arguments);
+        const parsed = JSON.parse(toolCall.function.arguments);
+        evaluationOutput = {
+          evaluation: parsed.evaluation,
+          diagnosis: parsed.diagnosis,
+          feedbackText: parsed.feedbackText,
+          nextAction: parsed.nextAction,
+          setupDelta: parsed.setupDelta,
+          exitHint: parsed.exitHint,
+          awardedSkills: [],
+        };
+        
+        // Handle skill awarding
+        if (parsed.awardSkills === true && awardedSkills.length > 0 && localUserId) {
+          // Verify the unlock criteria is actually met
+          const willPass = evaluationOutput.evaluation === "pass";
+          const atHighDiff = currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY;
+          const totalPasses = willPass && atHighDiff ? consecutiveHighDiffPasses + 1 : consecutiveHighDiffPasses;
+          
+          if (totalPasses >= SKILL_UNLOCK_CONSECUTIVE_PASSES) {
+            console.log("Awarding skills (criteria met):", awardedSkills);
+            
+            for (const skillKey of awardedSkills) {
+              const { error: upsertError } = await supabase
+                .from("user_skill_state")
+                .upsert(
+                  {
+                    skill_key: skillKey,
+                    local_user_id: localUserId,
+                    unlocked: true,
+                    mastery: 1,
+                    last_practiced_at: new Date().toISOString(),
+                  },
+                  { onConflict: "skill_key,local_user_id" }
+                );
+
+              if (upsertError) {
+                console.error("Error upserting skill:", skillKey, upsertError);
+              } else {
+                evaluationOutput.awardedSkills!.push(skillKey);
+                console.log("Awarded skill:", skillKey, "to user:", localUserId);
+              }
+            }
+          }
+        }
       } else {
         throw new Error("No tool call in response");
       }
     } catch (e) {
       console.error("Failed to parse LLM response:", e);
-      // Fallback to a conservative evaluation
-      graderOutput = {
+      // Fallback evaluation
+      evaluationOutput = {
         evaluation: "close",
         diagnosis: ["evaluation_error"],
-        feedbackText: "Unable to fully evaluate the performance. Please try again.",
-        suggestedAdjustment: "same",
+        feedbackText: "Nice try! Let's give it another shot.",
+        nextAction: "RETRY_SAME",
+        awardedSkills: [],
       };
     }
 
-    // 4. Update lesson_run with evaluation results
+    // 6. Update lesson state
+    const newState: LessonState = {
+      turn: currentState.turn + 1,
+      passStreak: evaluationOutput.evaluation === "pass" ? currentState.passStreak + 1 : 0,
+      failStreak: evaluationOutput.evaluation === "fail" || evaluationOutput.evaluation === "close" 
+        ? currentState.failStreak + 1 : 0,
+      lastDecision: evaluationOutput.nextAction,
+      phase: evaluationOutput.nextAction === "EXIT_TO_MAIN_TEACHER" ? "exit" : 
+             evaluationOutput.nextAction === "RETRY_SAME" ? "practice" : "intro",
+    };
+
+    // Apply setup delta if provided
+    let newSetup = setup;
+    if (evaluationOutput.setupDelta && 
+        (evaluationOutput.nextAction === "MAKE_EASIER" || evaluationOutput.nextAction === "MAKE_HARDER")) {
+      newSetup = { ...setup, ...evaluationOutput.setupDelta };
+    }
+
+    // 7. Update the lesson run
+    const updateData: Record<string, unknown> = {
+      user_recording: userSequence,
+      metronome_context: metronomeContext,
+      evaluation: evaluationOutput.evaluation,
+      diagnosis: evaluationOutput.diagnosis,
+      ai_feedback: evaluationOutput.feedbackText,
+      state: newState,
+      attempt_count: (lessonRun.attempt_count || 0) + 1,
+    };
+
+    if (evaluationOutput.nextAction === "EXIT_TO_MAIN_TEACHER") {
+      updateData.ended_at = new Date().toISOString();
+    }
+
+    if (newSetup !== setup) {
+      updateData.setup = newSetup;
+    }
+
     const { error: updateError } = await supabase
       .from("lesson_runs")
-      .update({
-        user_recording: userSequence,
-        metronome_context: metronomeContext,
-        evaluation: graderOutput.evaluation,
-        diagnosis: graderOutput.diagnosis,
-        attempt_count: (lessonRun.attempt_count || 0) + 1,
-      })
+      .update(updateData)
       .eq("id", lessonRunId);
 
     if (updateError) {
       console.error("Error updating lesson run:", updateError);
     }
 
-    console.log("Evaluation complete:", lessonRunId, graderOutput.evaluation);
+    console.log("Evaluation complete:", lessonRunId, evaluationOutput.evaluation, 
+      "Action:", evaluationOutput.nextAction,
+      "Awarded:", evaluationOutput.awardedSkills);
 
-    return new Response(JSON.stringify(graderOutput), {
+    return new Response(JSON.stringify({
+      ...evaluationOutput,
+      state: newState,
+      setup: newSetup,
+      skillUnlockProgress: awardedSkills.length > 0 ? {
+        consecutiveHighDiffPasses: evaluationOutput.evaluation === "pass" && currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY
+          ? consecutiveHighDiffPasses + 1
+          : consecutiveHighDiffPasses,
+        required: SKILL_UNLOCK_CONSECUTIVE_PASSES,
+        minDifficulty: SKILL_UNLOCK_MIN_DIFFICULTY,
+        currentDifficulty,
+      } : undefined,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

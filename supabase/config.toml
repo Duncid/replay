@@ -23,6 +23,3 @@ verify_jwt = false
 
 [functions.lesson-evaluate]
 verify_jwt = false
-
-[functions.lesson-decide]
-verify_jwt = false

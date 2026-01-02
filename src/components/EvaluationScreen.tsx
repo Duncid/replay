@@ -1,0 +1,161 @@
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CheckCircle, XCircle, AlertCircle, TrendingDown, TrendingUp, LogOut, RotateCcw, Unlock } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import { SkillToUnlock } from "./LessonCard";
+
+type EvaluationResult = "pass" | "close" | "fail";
+
+interface EvaluationScreenProps {
+  evaluation: EvaluationResult;
+  feedbackText: string;
+  awardedSkills?: SkillToUnlock[];
+  onReturnToPractice: () => void;
+  onMakeEasier: () => void;
+  onMakeHarder: () => void;
+  onFinishLesson: () => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function EvaluationScreen({
+  evaluation,
+  feedbackText,
+  awardedSkills,
+  onReturnToPractice,
+  onMakeEasier,
+  onMakeHarder,
+  onFinishLesson,
+  isOpen,
+  onOpenChange,
+}: EvaluationScreenProps) {
+  const { t } = useTranslation();
+
+  const getEvaluationConfig = () => {
+    switch (evaluation) {
+      case "pass":
+        return {
+          icon: CheckCircle,
+          iconColor: "text-green-500",
+          bgColor: "bg-green-500/10",
+          borderColor: "border-green-500/20",
+          title: t("evaluation.passTitle", "Great job!"),
+        };
+      case "close":
+        return {
+          icon: AlertCircle,
+          iconColor: "text-yellow-500",
+          bgColor: "bg-yellow-500/10",
+          borderColor: "border-yellow-500/20",
+          title: t("evaluation.closeTitle", "Almost there!"),
+        };
+      case "fail":
+        return {
+          icon: XCircle,
+          iconColor: "text-red-500",
+          bgColor: "bg-red-500/10",
+          borderColor: "border-red-500/20",
+          title: t("evaluation.failTitle", "Keep practicing!"),
+        };
+    }
+  };
+
+  const config = getEvaluationConfig();
+  const Icon = config.icon;
+  const isPassing = evaluation === "pass";
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className={cn(
+            "mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4",
+            config.bgColor,
+            "border",
+            config.borderColor
+          )}>
+            <Icon className={cn("w-8 h-8", config.iconColor)} />
+          </div>
+          <DialogTitle className="text-center text-xl">
+            {config.title}
+          </DialogTitle>
+          <DialogDescription className="text-center text-base pt-2">
+            {feedbackText}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Awarded Skills */}
+        {awardedSkills && awardedSkills.length > 0 && (
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mt-2">
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
+              <Unlock className="w-4 h-4" />
+              <span className="font-medium text-sm">
+                {t("evaluation.skillsUnlocked", "Skills Unlocked!")}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {awardedSkills.map((skill) => (
+                <span
+                  key={skill.skillKey}
+                  className="bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-1 rounded text-sm"
+                >
+                  {skill.title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-2 mt-4">
+          {/* Primary action: Return to Practice */}
+          <Button
+            onClick={onReturnToPractice}
+            className="w-full gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            {t("evaluation.returnToPractice", "Return to Practice")}
+          </Button>
+
+          {/* Secondary action: Adjust difficulty */}
+          {isPassing ? (
+            <Button
+              variant="outline"
+              onClick={onMakeHarder}
+              className="w-full gap-2"
+            >
+              <TrendingUp className="w-4 h-4" />
+              {t("evaluation.tryHarder", "Try Harder")}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={onMakeEasier}
+              className="w-full gap-2"
+            >
+              <TrendingDown className="w-4 h-4" />
+              {t("evaluation.lowerDifficulty", "Lower Difficulty")}
+            </Button>
+          )}
+
+          {/* Tertiary action: Finish */}
+          <Button
+            variant="ghost"
+            onClick={onFinishLesson}
+            className="w-full gap-2 text-muted-foreground"
+          >
+            <LogOut className="w-4 h-4" />
+            {t("evaluation.finishLesson", "Finish Lesson")}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

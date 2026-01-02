@@ -1,10 +1,9 @@
 import { LessonCard, SkillToUnlock } from "@/components/LessonCard";
 import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { EvaluationDebugCard } from "@/components/EvaluationDebugCard";
+import { EvaluationScreen } from "@/components/EvaluationScreen";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import {
   useEvaluateStructuredLesson,
   useRegenerateCurriculumLesson,
@@ -12,22 +11,9 @@ import {
   useTeacherGreeting,
 } from "@/hooks/useLessonQueries";
 import {
-  fetchSkillStatus,
-  fetchSkillTitle,
-} from "@/services/lessonService";
-import {
-  CoachNextAction,
-  CoachOutput,
-  createInitialLessonState,
-  GraderOutput,
-  LessonBrief,
   LessonFeelPreset,
   LessonMetronomeSettings,
   LessonMetronomeSoundType,
-  LessonRunSetup,
-  LessonStartResponse,
-  LessonState,
-  TeacherGreetingResponse,
   TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
@@ -122,6 +108,7 @@ export function LearnMode({
   // Additional state
   const [debugState, setDebugState] = useState<DebugState>(null);
   const [evaluationState, setEvaluationState] = useState<EvaluationState>(null);
+  const [showEvaluationScreen, setShowEvaluationScreen] = useState(false);
   
   // Refs
   const hasEvaluatedRef = useRef(false);
@@ -194,6 +181,7 @@ export function LearnMode({
       setSkillToUnlock,
       setDebugState,
       setEvaluationState,
+      setShowEvaluationScreen,
       debugState,
       evaluationState,
       hasEvaluatedRef,
@@ -422,21 +410,47 @@ export function LearnMode({
         /* Active Lesson */
         <LessonCard
           instruction={lesson.instruction}
-          lastComment={lastComment}
           isEvaluating={isEvaluating}
           isLoading={isLoading || isPlaying}
           mode={lessonMode}
-          evaluationResult={evaluationResult}
           isRecording={isRecording && lessonMode === "evaluation"}
           onPlay={handlePlay}
           onEvaluate={handleEvaluate}
           onLeave={handleLeave}
-          onMakeEasier={handleMakeEasier}
-          onMakeHarder={handleMakeHarder}
           trackTitle={lesson.trackTitle}
           skillToUnlock={skillToUnlock}
         />
       )}
+
+      {/* Evaluation Screen Modal */}
+      <EvaluationScreen
+        evaluation={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.evaluation : "close"}
+        feedbackText={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.feedbackText : ""}
+        awardedSkills={evaluationState?.type === "structured" && evaluationState.evaluationOutput.awardedSkills?.length 
+          ? evaluationState.evaluationOutput.awardedSkills.map(key => ({ skillKey: key, title: key, isUnlocked: true }))
+          : undefined}
+        onReturnToPractice={() => {
+          setShowEvaluationScreen(false);
+          setMode("practice");
+          setEvaluationState(null);
+          onClearRecording();
+          hasEvaluatedRef.current = false;
+        }}
+        onMakeEasier={() => {
+          setShowEvaluationScreen(false);
+          handleMakeEasier();
+        }}
+        onMakeHarder={() => {
+          setShowEvaluationScreen(false);
+          handleMakeHarder();
+        }}
+        onFinishLesson={() => {
+          setShowEvaluationScreen(false);
+          handleLeave();
+        }}
+        isOpen={showEvaluationScreen}
+        onOpenChange={setShowEvaluationScreen}
+      />
     </>
   );
 
