@@ -4,8 +4,26 @@ import {
   LessonMetronomeSettings,
   LessonStartResponse,
   LessonRunSetup,
+  LessonBrief,
+  LessonMachineState,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
+
+// Debug response from lesson-evaluate when debug=true
+export interface EvaluationDebugResponse {
+  prompt: string;
+  lessonBrief: LessonBrief;
+  setup: LessonRunSetup;
+  state: LessonMachineState;
+  demoSequence: NoteSequence;
+  userSequence: NoteSequence;
+  skillUnlockStatus: {
+    awardedSkills: string[];
+    skillUnlockGuidance: Array<{ skillKey: string; guidance: string }>;
+    consecutiveHighDiffPasses: number;
+    currentDifficulty: number;
+  };
+}
 
 /**
  * Service layer for all lesson-related API calls
@@ -199,10 +217,11 @@ export async function regenerateFreeFormLesson(
 /**
  * Evaluate a structured (curriculum) lesson attempt
  * Returns combined grader + coach output from the merged endpoint
+ * In debug mode, returns the full prompt instead of calling the LLM
  */
 export async function evaluateStructuredLesson(
   params: EvaluateStructuredLessonParams
-): Promise<EvaluationOutput> {
+): Promise<EvaluationOutput | EvaluationDebugResponse> {
   const { data, error } = await supabase.functions.invoke("lesson-evaluate", {
     body: {
       lessonRunId: params.lessonRunId,
@@ -216,7 +235,8 @@ export async function evaluateStructuredLesson(
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
 
-  return data as EvaluationOutput;
+  // Return data as-is - caller must check for 'prompt' field to determine type
+  return data as EvaluationOutput | EvaluationDebugResponse;
 }
 
 /**
