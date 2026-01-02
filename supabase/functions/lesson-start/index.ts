@@ -76,6 +76,7 @@ serve(async (req) => {
       regenerate = false,
       lessonRunId,
       localUserId,
+      difficulty,
     } = await req.json();
 
     if (!lessonKey) {
@@ -448,6 +449,7 @@ Return your response using the provided function.`;
           evaluation: null,
           diagnosis: null,
           ended_at: null,
+          ...(difficulty !== undefined && { difficulty }),
         })
         .eq("id", lessonRunId)
         .select()
@@ -462,7 +464,7 @@ Return your response using the provided function.`;
         .insert({
           lesson_node_key: lessonKey,
           version_id: latestVersion.id,
-          difficulty: suggestionHint?.difficulty?.value || 1,
+          difficulty: difficulty || suggestionHint?.difficulty?.value || 1,
           setup: finalSetup,
           lesson_brief: lessonBrief,
           demo_sequence: introData.demoSequence || null,

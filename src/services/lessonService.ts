@@ -35,6 +35,7 @@ export interface StartCurriculumLessonParams {
   language: string;
   localUserId?: string | null;
   debug?: boolean;
+  difficulty?: number;
 }
 
 export interface StartFreeFormLessonParams {
@@ -52,6 +53,7 @@ export interface RegenerateCurriculumLessonParams {
   language: string;
   localUserId?: string | null;
   debug?: boolean;
+  difficulty?: number;
 }
 
 export interface RegenerateFreeFormLessonParams {
@@ -103,6 +105,7 @@ export async function startCurriculumLesson(
       language: params.language,
       localUserId: params.localUserId,
       debug: params.debug || false,
+      difficulty: params.difficulty,
     },
   });
 
@@ -164,6 +167,7 @@ export async function regenerateCurriculumLesson(
       language: params.language,
       localUserId: params.localUserId,
       debug: params.debug || false,
+      difficulty: params.difficulty,
       suggestionHint: params.setupOverrides
         ? {
             setup: params.setupOverrides,
