@@ -163,6 +163,10 @@ export function useLessonEngine(
         state.setEvaluationResult(null);
         state.setLessonState((prev) => ({ ...prev, lastComment: null }));
 
+        // Reset to practice mode when regenerating lesson
+        state.setMode("practice");
+        state.hasEvaluatedRef.current = false;
+
         // Play the new example
         setTimeout(() => callbacks.onPlaySequence(lessonStartData.demoSequence || lesson.targetSequence), 500);
       } catch (err) {
@@ -523,6 +527,8 @@ export function useLessonEngine(
 
     state.setEvaluationResult(null);
     state.setLessonState((prev) => ({ ...prev, lastComment: null }));
+    state.setEvaluationState(null);
+    state.hasEvaluatedRef.current = false;
   }, [state, options, callbacks, regenerateLessonWithNewSettings, generateLesson]);
 
   // Make lesson harder (for positive evaluation results)
@@ -556,6 +562,8 @@ export function useLessonEngine(
 
     state.setEvaluationResult(null);
     state.setLessonState((prev) => ({ ...prev, lastComment: null }));
+    state.setEvaluationState(null);
+    state.hasEvaluatedRef.current = false;
   }, [state, options, callbacks, regenerateLessonWithNewSettings, generateLesson]);
 
   return {
