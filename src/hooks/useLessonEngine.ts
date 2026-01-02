@@ -115,9 +115,9 @@ export function useLessonEngine(
     state.setDebugState(null);
   }, [state]);
 
-  // Regenerate demo sequence with new BPM/meter settings
+  // Regenerate demo sequence with new BPM/meter settings (and optionally new difficulty)
   const regenerateLessonWithNewSettings = useCallback(
-    async (newBpm: number, newMeter: string) => {
+    async (newBpm: number, newMeter: string, newDifficulty?: number) => {
       const { lesson } = state.lessonState;
       if (!lesson.lessonRunId || !lesson.lessonNodeKey || lesson.targetSequence.notes.length === 0)
         return;
@@ -132,6 +132,7 @@ export function useLessonEngine(
             bpm: newBpm,
             meter: newMeter,
           },
+          difficulty: newDifficulty,
         });
 
         // Apply metronome settings from the response
@@ -209,6 +210,7 @@ export function useLessonEngine(
           language: options.language,
           localUserId: options.localUserId,
           debug: false,
+          difficulty: difficulty,
         });
 
         // Check if user performed a new action (React Query handles request cancellation)
@@ -516,7 +518,7 @@ export function useLessonEngine(
         callbacks.setMetronomeTimeSignature(evalOutput.setupDelta.meter);
       }
 
-      regenerateLessonWithNewSettings(newBpm, newMeter);
+      regenerateLessonWithNewSettings(newBpm, newMeter, Math.max(1, lesson.difficulty - 1));
     } else {
       // Fallback: reduce difficulty and regenerate
       generateLesson(
@@ -551,7 +553,7 @@ export function useLessonEngine(
         callbacks.setMetronomeTimeSignature(evalOutput.setupDelta.meter);
       }
 
-      regenerateLessonWithNewSettings(newBpm, newMeter);
+      regenerateLessonWithNewSettings(newBpm, newMeter, lesson.difficulty + 1);
     } else {
       // Fallback: increase difficulty and regenerate
       generateLesson(
