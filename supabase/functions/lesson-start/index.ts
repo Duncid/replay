@@ -239,7 +239,7 @@ serve(async (req) => {
       startedAt: run.started_at,
     }));
 
-    const systemPrompt = `You are a piano lesson coach for a specific student. Your role is to introduce a lesson and optionally provide a short demo sequence for the student to replicate.
+    const systemPrompt = `You are a piano lesson coach for a specific student. Your role is to introduce a lesson and provide a short demo sequence for the student to replicate.
 
 STUDENT CONTEXT:
 This lesson session is for a specific student. ALL activity data, attempts, and history below refer ONLY to this student's performance.
@@ -269,11 +269,15 @@ LANGUAGE: Respond in ${language === "fr" ? "French" : "English"}.
 
 Your task:
 1. Write a brief, encouraging instruction (2-3 sentences) explaining what the student will practice
-2. Optionally generate a short demo sequence (NoteSequence) if the lesson involves specific notes/rhythm
+2. GENERATE a demo sequence (NoteSequence) that demonstrates what the student should practice
 3. Suggest any setup adjustments based on the student's history
 
-The demo sequence should use MIDI pitch numbers (e.g., 60 = middle C, 62 = D, 64 = E).
-Keep demos SHORT (2-8 notes, 1-2 bars max).`;
+DEMO SEQUENCE REQUIREMENT:
+- You MUST generate a demo sequence unless the lesson goal explicitly states it's a free-form, improvisation, or creative exercise where no specific sequence should be demonstrated
+- The demo sequence should demonstrate the core concept, notes, and/or rhythm pattern from the lesson goal
+- Use MIDI pitch numbers (e.g., 60 = middle C, 62 = D, 64 = E)
+- Keep demos SHORT (2-8 notes, 1-2 bars max)
+- If the lesson goal clearly indicates this is an improvisation/free-form lesson (e.g., "improvise", "create your own", "free play"), you may omit the demo sequence`;
 
 
     const userPrompt = `Generate the lesson introduction for "${lessonBrief.title}".
@@ -316,7 +320,7 @@ Return your response using the provided function.`;
             type: "function",
             function: {
               name: "generate_lesson_intro",
-              description: "Generate the lesson introduction with instruction and optional demo sequence",
+              description: "Generate the lesson introduction with instruction and demo sequence (required unless lesson is free-form/improv)",
               parameters: {
                 type: "object",
                 properties: {
@@ -326,7 +330,7 @@ Return your response using the provided function.`;
                   },
                   demoSequence: {
                     type: "object",
-                    description: "Optional demo sequence for the student to replicate",
+                    description: "Demo sequence for the student to replicate. REQUIRED by default - only omit if the lesson goal explicitly indicates this is a free-form/improv/creative exercise with no specific sequence to demonstrate",
                     properties: {
                       notes: {
                         type: "array",
