@@ -182,6 +182,7 @@ export interface LessonStartResponse {
   metronome?: LessonMetronomeSettings;
   lessonBrief: LessonBrief;
   composedPrompt?: string; // When debug: true
+  difficulty?: number;
 }
 
 export const createInitialLessonState = (): LessonState => ({

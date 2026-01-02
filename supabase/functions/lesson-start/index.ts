@@ -53,6 +53,7 @@ interface LessonStartResponse {
   metronome?: LessonMetronomeSettings;
   lessonBrief: LessonBrief;
   composedPrompt?: string;
+  difficulty?: number;
 }
 
 const corsHeaders = {
@@ -494,6 +495,7 @@ Return your response using the provided function.`;
       },
       lessonBrief,
       composedPrompt, // Include for debugging
+      difficulty: lessonRun.difficulty,
     };
 
     console.log("Lesson started:", lessonRun.id);

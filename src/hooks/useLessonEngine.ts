@@ -147,6 +147,7 @@ export function useLessonEngine(
           trackKey: lessonStartData.lessonBrief.trackKey,
           trackTitle: lessonStartData.lessonBrief.trackTitle,
           awardedSkills: lessonStartData.lessonBrief.awardedSkills || [],
+          difficulty: lessonStartData.difficulty ?? lesson.difficulty,
         });
 
         // Update skill unlock status if there are awarded skills
@@ -226,6 +227,7 @@ export function useLessonEngine(
         const trackKey = lessonBrief.trackKey;
         const trackTitle = lessonBrief.trackTitle;
         const awardedSkills = lessonBrief.awardedSkills || [];
+        const lessonDifficulty = lessonStartData.difficulty ?? difficulty;
 
         // Apply metronome settings from the response
         if (metronomeSettings) {
@@ -248,7 +250,7 @@ export function useLessonEngine(
           attempts: 0,
           validations: 0,
           feedback: null,
-          difficulty,
+          difficulty: lessonDifficulty,
           userPrompt,
           lessonNodeKey,
           lessonRunId,

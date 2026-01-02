@@ -1,8 +1,9 @@
 import { LessonCard, SkillToUnlock } from "@/components/LessonCard";
 import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { EvaluationDebugCard } from "@/components/EvaluationDebugCard";
-import { EvaluationScreen } from "@/components/EvaluationScreen";
+import { FeedbackScreen } from "@/components/FeedbackScreen";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
 import {
   useEvaluateStructuredLesson,
@@ -17,7 +18,6 @@ import {
   TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
-import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLessonState } from "@/hooks/useLessonState";
@@ -249,19 +249,27 @@ export function LearnMode({
     }
   }, [lesson.phase, lessonMode, userRecording, isRecording, isEvaluating, evaluateAttempt, debugState]);
 
-  // Enter evaluation mode
+  // Enter evaluation mode or return to practice
   const handleEvaluate = useCallback(() => {
-    setMode("evaluation");
-    setEvaluationResult(null);
-    setLessonState((prev) => ({ ...prev, lastComment: null }));
-    // Clear any existing recording and reset evaluation state
-    onClearRecording();
-    hasEvaluatedRef.current = false;
-    setDebugState(null);
-    setEvaluationState(null);
-    // Recording will start when user actually plays (handled by parent)
-    // Make sure we don't have any stale recording that would trigger evaluation immediately
-  }, [onClearRecording]);
+    if (lessonMode === "practice") {
+      // Switch to evaluation mode
+      setMode("evaluation");
+      setEvaluationResult(null);
+      setLessonState((prev) => ({ ...prev, lastComment: null }));
+      // Clear any existing recording and reset evaluation state
+      onClearRecording();
+      hasEvaluatedRef.current = false;
+      setDebugState(null);
+      setEvaluationState(null);
+      // Recording will start when user actually plays (handled by parent)
+      // Make sure we don't have any stale recording that would trigger evaluation immediately
+    } else {
+      // Switch back to practice mode
+      setMode("practice");
+      onClearRecording();
+      hasEvaluatedRef.current = false;
+    }
+  }, [lessonMode, onClearRecording, setMode, setEvaluationResult, setLessonState]);
 
   // handleMakeEasier and handleMakeHarder are now in useLessonEngine hook
 
@@ -381,14 +389,7 @@ export function LearnMode({
         /* Loading spinner while generating lesson after selecting activity */
         /* This shows in both debug and normal mode when generating lesson */
         /* Show when loading, in welcome phase, and not showing evaluation debug */
-        <div className="w-full max-w-2xl mx-auto">
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">
-              {t("learnMode.generatingLesson", "Generating lesson...")}
-            </p>
-          </div>
-        </div>
+        <LoadingSpinner message={t("learnMode.generatingLesson", "Generating lesson...")} />
       ) : debugMode && debugState?.type === "lesson" && !isLoading ? (
         /* Lesson Debug Card - shown after selecting a suggestion (debug mode only) */
         <LessonDebugCard
@@ -400,12 +401,7 @@ export function LearnMode({
         />
       ) : debugMode && isLoadingLessonDebug ? (
         /* Loading lesson debug */
-        <div className="w-full max-w-2xl mx-auto">
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Preparing lesson...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Preparing lesson..." />
       ) : lesson.phase === "welcome" ? (
         /* Teacher Welcome */
         <TeacherWelcome
@@ -416,6 +412,34 @@ export function LearnMode({
           language={language}
           localUserId={localUserId}
           debugMode={debugMode}
+        />
+      ) : showEvaluationScreen ? (
+        /* Feedback Screen - replaces the dialog */
+        <FeedbackScreen
+          evaluation={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.evaluation : "close"}
+          feedbackText={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.feedbackText : ""}
+          awardedSkills={evaluationState?.type === "structured" && evaluationState.awardedSkillsWithTitles?.length 
+            ? evaluationState.awardedSkillsWithTitles
+            : undefined}
+          onReturnToPractice={() => {
+            setShowEvaluationScreen(false);
+            setMode("practice");
+            setEvaluationState(null);
+            onClearRecording();
+            hasEvaluatedRef.current = false;
+          }}
+          onMakeEasier={() => {
+            setShowEvaluationScreen(false);
+            handleMakeEasier();
+          }}
+          onMakeHarder={() => {
+            setShowEvaluationScreen(false);
+            handleMakeHarder();
+          }}
+          onFinishLesson={() => {
+            setShowEvaluationScreen(false);
+            handleLeave();
+          }}
         />
       ) : (
         /* Active Lesson */
@@ -430,38 +454,10 @@ export function LearnMode({
           onLeave={handleLeave}
           trackTitle={lesson.trackTitle}
           skillToUnlock={skillToUnlock}
+          debugMode={debugMode}
+          difficulty={lesson.difficulty}
         />
       )}
-
-      {/* Evaluation Screen Modal */}
-      <EvaluationScreen
-        evaluation={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.evaluation : "close"}
-        feedbackText={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.feedbackText : ""}
-        awardedSkills={evaluationState?.type === "structured" && evaluationState.awardedSkillsWithTitles?.length 
-          ? evaluationState.awardedSkillsWithTitles
-          : undefined}
-        onReturnToPractice={() => {
-          setShowEvaluationScreen(false);
-          setMode("practice");
-          setEvaluationState(null);
-          onClearRecording();
-          hasEvaluatedRef.current = false;
-        }}
-        onMakeEasier={() => {
-          setShowEvaluationScreen(false);
-          handleMakeEasier();
-        }}
-        onMakeHarder={() => {
-          setShowEvaluationScreen(false);
-          handleMakeHarder();
-        }}
-        onFinishLesson={() => {
-          setShowEvaluationScreen(false);
-          handleLeave();
-        }}
-        isOpen={showEvaluationScreen}
-        onOpenChange={setShowEvaluationScreen}
-      />
     </>
   );
 

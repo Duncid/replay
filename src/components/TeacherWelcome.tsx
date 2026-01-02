@@ -12,10 +12,11 @@ import {
   TeacherGreetingResponse,
   TeacherSuggestion,
 } from "@/types/learningSession";
-import { Loader2, Music } from "lucide-react";
+import { Music } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PracticePlanDebugCard } from "./PracticePlanDebugCard";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 export interface TeacherDebugData {
   debug: true;
@@ -163,12 +164,7 @@ export function TeacherWelcome({
   // Loading state for initial greeting fetch (after Start is clicked)
   if (isLoading) {
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">
-          {t("learnMode.loadingTeacher", "Preparing your lesson...")}
-        </p>
-      </div>
+      <LoadingSpinner message={t("learnMode.loadingTeacher", "Preparing your lesson...")} />
     );
   }
 
@@ -176,12 +172,7 @@ export function TeacherWelcome({
   if (debugMode) {
     if (isLoadingDebug) {
       return (
-        <div className="w-full max-w-2xl mx-auto">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">
-            Loading curriculum and activity data...
-          </p>
-        </div>
+        <LoadingSpinner message="Loading curriculum and activity data..." />
       );
     }
 

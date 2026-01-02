@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Play, X, Lock, Unlock, CheckCircle } from "lucide-react";
+import { Loader2, Play, X, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,8 @@ interface LessonCardProps {
   onLeave: () => void;
   trackTitle?: string;
   skillToUnlock?: SkillToUnlock | null;
+  debugMode?: boolean;
+  difficulty?: number;
 }
 
 export function LessonCard({
@@ -36,6 +38,8 @@ export function LessonCard({
   onLeave,
   trackTitle,
   skillToUnlock,
+  debugMode = false,
+  difficulty,
 }: LessonCardProps) {
   const { t } = useTranslation();
 
@@ -102,27 +106,6 @@ export function LessonCard({
           {getContext()}
         </div>
 
-        {/* Skill to unlock */}
-        {skillToUnlock && (
-          <div className="flex items-center justify-center gap-2 text-sm">
-            {skillToUnlock.isUnlocked ? (
-              <>
-                <Unlock className="w-4 h-4 text-green-500" />
-                <span className="text-green-600 dark:text-green-400">
-                  {skillToUnlock.title}
-                </span>
-              </>
-            ) : (
-              <>
-                <Lock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">
-                  {t("learnMode.skillToUnlock", "Skill")}: {skillToUnlock.title}
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
         {/* Actions - different based on mode */}
         <div className="flex justify-center gap-3 pt-2">
           {mode === "practice" ? (
@@ -147,19 +130,38 @@ export function LessonCard({
               </Button>
             </>
           ) : (
-            // Evaluation mode actions: Leave Evaluation
+            // Evaluation mode actions: Back to Practice
             <Button
-              variant="ghost"
-              onClick={onLeave}
+              variant="outline"
+              onClick={onEvaluate}
               disabled={isLoading || isEvaluating}
-              className="gap-2 text-muted-foreground"
+              className="gap-2"
             >
               <X className="w-4 h-4" />
-              {t("learnMode.leaveEvaluation", "Leave Evaluation")}
+              {t("learnMode.backToPractice", "Back to Practice")}
             </Button>
           )}
         </div>
       </CardContent>
+      {/* Debug bar - shows difficulty and skill info when debug mode is active */}
+      {debugMode && (
+        <div className="border-t border-border/50 px-4 py-2 bg-muted/30">
+          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+            {typeof difficulty === "number" && (
+              <span>Difficulty: {difficulty}</span>
+            )}
+            {skillToUnlock && (
+              <span>
+                Skill: {skillToUnlock.skillKey}
+                {skillToUnlock.title && ` (${skillToUnlock.title})`}
+              </span>
+            )}
+            {typeof difficulty !== "number" && !skillToUnlock && (
+              <span className="text-muted-foreground/50">No debug info available</span>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
