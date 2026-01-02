@@ -43,6 +43,7 @@ export type EvaluationState =
   | {
       type: "structured";
       evaluationOutput: EvaluationOutput;
+      awardedSkillsWithTitles?: SkillToUnlock[];
     }
   | {
       type: "free";
@@ -295,6 +296,10 @@ export function useLessonEngine(
     async (
       userSequence: NoteSequence
     ) => {
+      console.log("executeEvaluation called", { 
+        userSequenceLength: userSequence.notes.length,
+        lessonRunId: state.lessonState.lesson.lessonRunId 
+      });
       const { lesson } = state.lessonState;
       const actionToken = state.userActionTokenRef.current;
       state.setLessonState((prev) => ({ ...prev, isEvaluating: true }));
@@ -360,12 +365,25 @@ export function useLessonEngine(
 
           // Update skill unlock status if skills were awarded
           let skillUnlockStatus = null;
+          let awardedSkillsWithTitles: SkillToUnlock[] = [];
+          
           if (evaluationOutput.awardedSkills && evaluationOutput.awardedSkills.length > 0) {
-            const skillKey = evaluationOutput.awardedSkills[0];
-            const skillTitle = await fetchSkillTitle(skillKey);
-            const status = await fetchSkillStatus(skillKey, skillTitle, options.localUserId);
-            if (status) {
-              skillUnlockStatus = { ...status, isUnlocked: true };
+            // Fetch titles for all awarded skills
+            awardedSkillsWithTitles = await Promise.all(
+              evaluationOutput.awardedSkills.map(async (skillKey) => {
+                const skillTitle = await fetchSkillTitle(skillKey);
+                const status = await fetchSkillStatus(skillKey, skillTitle, options.localUserId);
+                return { 
+                  skillKey, 
+                  title: skillTitle, 
+                  isUnlocked: true 
+                };
+              })
+            );
+            
+            // Set the first skill as the primary skill to unlock (for backward compatibility)
+            if (awardedSkillsWithTitles.length > 0) {
+              skillUnlockStatus = awardedSkillsWithTitles[0];
             }
           }
 
@@ -383,8 +401,17 @@ export function useLessonEngine(
             lesson: { ...prev.lesson, attempts: prev.lesson.attempts + 1 },
           }));
 
+          // Update evaluation state with awarded skills (including titles)
+          state.setEvaluationState({
+            type: "structured",
+            evaluationOutput,
+            awardedSkillsWithTitles,
+          });
+
           // Show evaluation screen instead of immediately returning to practice
+          console.log("executeEvaluation: Setting showEvaluationScreen to true");
           state.setShowEvaluationScreen(true);
+          console.log("executeEvaluation: Evaluation complete, screen should show");
         } else {
           throw new Error("Lesson run ID is required for evaluation");
         }
@@ -395,6 +422,10 @@ export function useLessonEngine(
           lastComment: t("learnMode.evaluationFallback"),
           isEvaluating: false,
         }));
+        // Clear debug state on error
+        state.setDebugState(null);
+        // Don't show evaluation screen on error - return to practice mode
+        state.setMode("practice");
       } finally {
         state.hasEvaluatedRef.current = false;
         // Ensure isEvaluating is always reset

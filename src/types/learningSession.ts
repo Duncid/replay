@@ -156,7 +156,6 @@ export interface EvaluationOutput {
   // Grader fields
   evaluation: "pass" | "close" | "fail";
   diagnosis: string[];
-  suggestedAdjustment: "easier" | "same" | "harder";
   // Coach fields
   feedbackText: string;
   nextAction: CoachNextAction;

@@ -338,11 +338,22 @@ export function LearnMode({
   }, []);
 
   // Handle proceeding from evaluation debug card
-  const handleProceedEvaluation = useCallback(() => {
+  const handleProceedEvaluation = useCallback(async () => {
     if (debugState?.type === "evaluation") {
-      debugState.pendingCall();
+      try {
+        console.log("handleProceedEvaluation: Calling pendingCall");
+        await debugState.pendingCall();
+        console.log("handleProceedEvaluation: pendingCall completed");
+      } catch (error) {
+        console.error("Error in handleProceedEvaluation:", error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to evaluate performance",
+          variant: "destructive",
+        });
+      }
     }
-  }, [debugState]);
+  }, [debugState, toast]);
 
   const handleCancelEvaluation = useCallback(() => {
     setDebugState(null);
@@ -426,8 +437,8 @@ export function LearnMode({
       <EvaluationScreen
         evaluation={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.evaluation : "close"}
         feedbackText={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.feedbackText : ""}
-        awardedSkills={evaluationState?.type === "structured" && evaluationState.evaluationOutput.awardedSkills?.length 
-          ? evaluationState.evaluationOutput.awardedSkills.map(key => ({ skillKey: key, title: key, isUnlocked: true }))
+        awardedSkills={evaluationState?.type === "structured" && evaluationState.awardedSkillsWithTitles?.length 
+          ? evaluationState.awardedSkillsWithTitles
           : undefined}
         onReturnToPractice={() => {
           setShowEvaluationScreen(false);
