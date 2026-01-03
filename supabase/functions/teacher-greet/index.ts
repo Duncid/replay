@@ -299,6 +299,33 @@ serve(async (req) => {
       accessibleLessons.set(track.key, accessible);
     }
 
+    // Build available lessons list (lessons where requirements are fulfilled)
+    const availableLessons: Array<{
+      lessonKey: string;
+      title: string;
+      goal: string;
+      trackKey: string;
+      trackTitle: string;
+    }> = [];
+
+    for (const [trackKey, accessibleLessonKeys] of accessibleLessons) {
+      const track = tracks.find((t) => t.key === trackKey);
+      const trackTitle = track?.title || trackKey;
+
+      for (const lessonKey of accessibleLessonKeys) {
+        const lesson = lessons.get(lessonKey);
+        if (lesson) {
+          availableLessons.push({
+            lessonKey,
+            title: lesson.title,
+            goal: lesson.goal,
+            trackKey,
+            trackTitle,
+          });
+        }
+      }
+    }
+
     // 4. Build candidate activities
     const candidates: CandidateActivity[] = [];
     const now = new Date();
@@ -436,7 +463,7 @@ Your job when the user opens Learning mode:
 
 Important rules:
 - The user can choose; you are advising, not forcing.
-- Use the provided curriculum snapshot and candidate activities. Do not invent lessons or skills not present.
+- Use the provided available lessons and candidate activities. Do not invent lessons or skills not present.
 - If the user hasn't practiced in a long time, recommend an easier re-entry choice.
 - Balance: avoid always recommending the same track; include variety when appropriate.
 - IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include lesson keys (like "A1.4" or "B2.1") in the label. Example: "Eighth notes practice" NOT "A1.4: Eighth notes practice".
@@ -444,24 +471,6 @@ Important rules:
 - REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities. Focus on their progress, recent practice, and what makes sense for them today.
 
 Return ONLY valid JSON following the schema provided.`;
-
-    const tracksSummary = tracks.map((t) => ({
-      key: t.key,
-      title: t.title,
-      startLesson: t.startLesson,
-    }));
-
-    const lessonsSummary = [...lessons.values()].slice(0, 20).map((l) => ({
-      key: l.key,
-      title: l.title,
-      goal: l.goal,
-    }));
-
-    const skillsSummary = [...skills.values()].map((s) => ({
-      key: s.key,
-      title: s.title,
-      unlocked: unlockedSkills.has(s.key),
-    }));
 
     const lessonRunsSummary = lessonRuns.slice(0, 10).map((r) => ({
       lessonKey: r.lesson_node_key,
@@ -516,10 +525,8 @@ Return ONLY valid JSON following the schema provided.`;
 - now: ${now.toISOString()}
 - timeSinceLastPracticeHours: ${timeSinceLastPracticeHours ?? "never practiced"}
 
-CURRICULUM SNAPSHOT:
-- tracks: ${JSON.stringify(tracksSummary)}
-- lessons: ${JSON.stringify(lessonsSummary)}
-- skills: ${JSON.stringify(skillsSummary)}
+AVAILABLE LESSONS (requirements fulfilled - user can access these):
+${JSON.stringify(availableLessons, null, 2)}
 
 CANDIDATE ACTIVITIES (precomputed, do NOT invent others):
 Note: Each candidate includes its trackTitle. Use this exact trackTitle in your suggestions.
@@ -553,9 +560,8 @@ OUTPUT JSON SCHEMA:
             lessonsCount: lessons.size,
             skillsCount: skills.size,
             edgesCount: edges.length,
-            tracks: tracksSummary,
-            lessons: lessonsSummary.slice(0, 10),
-            skills: skillsSummary,
+            availableLessonsCount: availableLessons.length,
+            availableLessons: availableLessons,
           },
           candidates,
           signals: {
