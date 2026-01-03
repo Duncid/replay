@@ -38,38 +38,17 @@ export function PracticePlanDebugCard({
               <div className="text-sm text-muted-foreground">
                 {debugData.curriculum.tracksCount} tracks,{" "}
                 {debugData.curriculum.lessonsCount} lessons,{" "}
+                {debugData.curriculum.availableLessonsCount} lessons unlocked,{" "}
                 {debugData.curriculum.skillsCount} skills
               </div>
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold mb-2">Signals</h4>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-md p-2 text-center bg-muted/50">
-                  <div className="text-lg font-semibold">
-                    {debugData.signals.timeSinceLastPracticeHours ?? "∞"}
-                  </div>
-                  <div className="text-xs">Hours since practice</div>
-                </div>
-                <div className="rounded-md p-2 text-center bg-muted/50">
-                  <div className="text-lg font-semibold">
-                    {debugData.signals.recentRunsCount}
-                  </div>
-                  <div className="text-xs">Recent runs</div>
-                </div>
-                <div className="rounded-md p-2 text-center bg-muted/50">
-                  <div className="text-lg font-semibold">
-                    {debugData.signals.unlockedSkillsCount}
-                  </div>
-                  <div className="text-xs">Skills unlocked</div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Candidates</h4>
+              <h4 className="text-sm font-semibold mb-2">User Activity</h4>
               <div className="text-sm text-muted-foreground">
-                {debugData.candidates.length} lesson candidates available
+                {debugData.signals.timeSinceLastPracticeHours ?? "∞"} hours
+                since practice, {debugData.signals.recentRunsCount} recent runs,{" "}
+                {debugData.signals.unlockedSkillsCount} skills unlocked
               </div>
             </div>
           </div>

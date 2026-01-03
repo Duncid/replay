@@ -25,6 +25,7 @@ export interface TeacherDebugData {
     lessonsCount: number;
     skillsCount: number;
     edgesCount: number;
+    availableLessonsCount: number;
     tracks: Array<{ key: string; title: string; startLesson?: string }>;
     lessons: Array<{ key: string; title: string; goal: string }>;
     skills: Array<{ key: string; title: string; unlocked: boolean }>;
