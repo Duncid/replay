@@ -614,21 +614,27 @@ Return your response using the provided function.`;
 
     if (regenerate && lessonRunId) {
       // Update existing lesson run instead of creating new one
+      const updateData: Record<string, unknown> = {
+        setup: finalSetup,
+        lesson_brief: lessonBrief,
+        demo_sequence: introData.demoSequence || null,
+        state: initialState,
+        ai_feedback: introData.instruction,
+        attempt_count: 0,
+        user_recording: null,
+        evaluation: null,
+        diagnosis: null,
+        ended_at: null,
+      };
+
+      // Always update difficulty if provided in request (not undefined)
+      if (difficulty !== undefined) {
+        updateData.difficulty = difficulty;
+      }
+
       const { data, error } = await supabase
         .from("lesson_runs")
-        .update({
-          setup: finalSetup,
-          lesson_brief: lessonBrief,
-          demo_sequence: introData.demoSequence || null,
-          state: initialState,
-          ai_feedback: introData.instruction,
-          attempt_count: 0,
-          user_recording: null,
-          evaluation: null,
-          diagnosis: null,
-          ended_at: null,
-          ...(difficulty !== undefined && { difficulty }),
-        })
+        .update(updateData)
         .eq("id", lessonRunId)
         .select()
         .single();

@@ -385,12 +385,15 @@ export function useLessonEngine(
               description: evaluationOutput.diagnosis?.join(", ") || evaluationOutput.feedbackText,
             });
 
-            toast({
-              title: `🎯 Coach: ${evaluationOutput.nextAction}`,
-              description: evaluationOutput.setupDelta
-                ? `Setup: ${JSON.stringify(evaluationOutput.setupDelta)}`
-                : undefined,
-            });
+            // Only show coach action toast in debug mode (actions are visible in UI buttons)
+            if (options.debugMode) {
+              toast({
+                title: `🎯 Coach: ${evaluationOutput.nextAction}`,
+                description: evaluationOutput.setupDelta
+                  ? `Setup: ${JSON.stringify(evaluationOutput.setupDelta)}`
+                  : undefined,
+              });
+            }
 
             if (evaluationOutput.awardedSkills && evaluationOutput.awardedSkills.length > 0) {
               toast({
@@ -536,6 +539,9 @@ export function useLessonEngine(
     const { lesson } = state.lessonState;
     if (!lesson.lessonRunId) return;
 
+    // Calculate new difficulty (min 1)
+    const newDifficulty = Math.max(1, lesson.difficulty - 1);
+
     // Use the evaluation's suggested adjustment if available
     const evalOutput = state.evaluationState?.type === "structured" ? state.evaluationState.evaluationOutput : undefined;
     if (evalOutput?.setupDelta) {
@@ -549,14 +555,14 @@ export function useLessonEngine(
         callbacks.setMetronomeTimeSignature(evalOutput.setupDelta.meter);
       }
 
-      regenerateLessonWithNewSettings(newBpm, newMeter, Math.max(1, lesson.difficulty - 1));
+      regenerateLessonWithNewSettings(newBpm, newMeter, newDifficulty);
     } else {
-      // Fallback: reduce difficulty and regenerate
-      generateLesson(
-        lesson.userPrompt,
-        Math.max(1, lesson.difficulty - 1),
-        lesson.targetSequence,
-        lesson.lessonNodeKey
+      // Always use regenerateLessonWithNewSettings to update existing lesson run
+      // Use current metronome settings with decremented difficulty
+      regenerateLessonWithNewSettings(
+        options.metronomeBpm,
+        options.metronomeTimeSignature,
+        newDifficulty
       );
     }
 
@@ -564,13 +570,16 @@ export function useLessonEngine(
     state.setLessonState((prev) => ({ ...prev, lastComment: null }));
     state.setEvaluationState(null);
     state.hasEvaluatedRef.current = false;
-  }, [state, options, callbacks, regenerateLessonWithNewSettings, generateLesson]);
+  }, [state, options, callbacks, regenerateLessonWithNewSettings]);
 
   // Make lesson harder (for positive evaluation results)
   const handleMakeHarder = useCallback(() => {
     const { lesson } = state.lessonState;
     if (!lesson.lessonRunId) return;
 
+    // Calculate new difficulty (max 6)
+    const newDifficulty = Math.min(6, lesson.difficulty + 1);
+
     // Use the evaluation's suggested adjustment if available
     const evalOutput = state.evaluationState?.type === "structured" ? state.evaluationState.evaluationOutput : undefined;
     if (evalOutput?.setupDelta) {
@@ -584,14 +593,14 @@ export function useLessonEngine(
         callbacks.setMetronomeTimeSignature(evalOutput.setupDelta.meter);
       }
 
-      regenerateLessonWithNewSettings(newBpm, newMeter, Math.min(6, lesson.difficulty + 1));
+      regenerateLessonWithNewSettings(newBpm, newMeter, newDifficulty);
     } else {
-      // Fallback: increase difficulty and regenerate
-      generateLesson(
-        lesson.userPrompt,
-        Math.min(6, lesson.difficulty + 1),
-        lesson.targetSequence,
-        lesson.lessonNodeKey
+      // Always use regenerateLessonWithNewSettings to update existing lesson run
+      // Use current metronome settings with incremented difficulty
+      regenerateLessonWithNewSettings(
+        options.metronomeBpm,
+        options.metronomeTimeSignature,
+        newDifficulty
       );
     }
 
@@ -599,7 +608,7 @@ export function useLessonEngine(
     state.setLessonState((prev) => ({ ...prev, lastComment: null }));
     state.setEvaluationState(null);
     state.hasEvaluatedRef.current = false;
-  }, [state, options, callbacks, regenerateLessonWithNewSettings, generateLesson]);
+  }, [state, options, callbacks, regenerateLessonWithNewSettings]);
 
   return {
     generateLesson,
