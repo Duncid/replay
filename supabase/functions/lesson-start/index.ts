@@ -297,15 +297,6 @@ serve(async (req) => {
 
     const systemPrompt = `You are a piano lesson coach for a specific student. Your role is to introduce a lesson and provide a short demo sequence for the student to replicate.
 
-STUDENT CONTEXT:
-This lesson session is for a specific student. ALL activity data, attempts, and history below refer ONLY to this student's performance.
-${
-  localUserId
-    ? `- Student ID: ${localUserId}`
-    : "- Student ID: Not specified (legacy session)"
-}
-- IMPORTANT: All data in this prompt is specific to this student only.
-
 LESSON BRIEF:
 - Key: ${lessonBrief.lessonKey}
 - Title: ${lessonBrief.title}
@@ -352,11 +343,6 @@ ${
           recentRunsSummary.length
         }):
 ${JSON.stringify(recentRunsSummary, null, 2)}
-
-IMPORTANT: The sequences shown above (demoSequence field) are sequences the student has already practiced.
-- AVOID repeating these exact sequences
-- Generate a NEW variation that teaches the same lesson goal but with different notes/rhythm
-- If this is a regeneration (difficulty adjustment), create a sequence appropriate for difficulty level ${currentDifficulty}
 `
       : `THIS STUDENT'S PAST ACTIVITY AT THIS LESSON (last ${
           recentRunsSummary.length
@@ -405,10 +391,7 @@ Your task:
 DEMO SEQUENCE REQUIREMENT:
 - You MUST generate a demo sequence unless the lesson goal explicitly states it's a free-form, improvisation, or creative exercise where no specific sequence should be demonstrated
 - The demo sequence should demonstrate the core concept, notes, and/or rhythm pattern from the lesson goal
-- Use MIDI pitch numbers (e.g., 60 = middle C, 62 = D, 64 = E)
-- Keep demos SHORT (2-8 notes, 1-2 bars max)
-- If the lesson goal clearly indicates this is an improvisation/free-form lesson (e.g., "improvise", "create your own", "free play"), you may omit the demo sequence
-- IMPORTANT: Do NOT repeat sequences from the student's recent attempts (shown in recentRunsSummary above) OR session history (shown in sequenceHistory above)`;
+- Use MIDI pitch numbers (e.g., 60 = middle C, 62 = D, 64 = E)`;
 
     const userPrompt = `Generate the lesson introduction for "${lessonBrief.title}".
 

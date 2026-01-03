@@ -1,11 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
@@ -35,9 +29,6 @@ export function PracticePlanDebugCard({
       <Card className="border-amber-500/30 bg-amber-500/5">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">LessonSelection (Debug)</CardTitle>
-          <CardDescription>
-            Review the LLM prompt and activity data before proceeding
-          </CardDescription>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
           {/* Activity Data Summary */}
@@ -47,8 +38,7 @@ export function PracticePlanDebugCard({
               <div className="text-sm text-muted-foreground">
                 {debugData.curriculum.tracksCount} tracks,{" "}
                 {debugData.curriculum.lessonsCount} lessons,{" "}
-                {debugData.curriculum.skillsCount} skills,{" "}
-                {debugData.curriculum.edgesCount} edges
+                {debugData.curriculum.skillsCount} skills
               </div>
             </div>
 

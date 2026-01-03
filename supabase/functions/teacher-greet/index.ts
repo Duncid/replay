@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface Note {
@@ -91,9 +92,15 @@ serve(async (req) => {
   }
 
   try {
-    const { language = "en", debug = false, localUserId = null } = await req.json();
+    const {
+      language = "en",
+      debug = false,
+      localUserId = null,
+    } = await req.json();
 
-    console.log(`[teacher-greet] Request received - language: ${language}, debug: ${debug}, localUserId: ${localUserId}`);
+    console.log(
+      `[teacher-greet] Request received - language: ${language}, debug: ${debug}, localUserId: ${localUserId}`
+    );
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -123,7 +130,7 @@ serve(async (req) => {
           suggestions: [],
           notes: null,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -144,7 +151,11 @@ serve(async (req) => {
         description?: string;
         unlockGuidance?: string;
       }>;
-      edges?: Array<{ source_key: string; target_key: string; edge_type: string }>;
+      edges?: Array<{
+        source_key: string;
+        target_key: string;
+        edge_type: string;
+      }>;
     };
 
     // Parse curriculum data from snapshot
@@ -155,7 +166,10 @@ serve(async (req) => {
     }));
 
     const tracks: TrackNode[] = (snapshot.tracks || []).map((t) => {
-      const startEdge = edges.find((e) => e.source_key === t.trackKey && e.edge_type === "track_starts_with");
+      const startEdge = edges.find(
+        (e) =>
+          e.source_key === t.trackKey && e.edge_type === "track_starts_with"
+      );
       return {
         key: t.trackKey,
         title: t.title || t.trackKey,
@@ -187,13 +201,17 @@ serve(async (req) => {
     }
 
     console.log(
-      `[teacher-greet] Curriculum loaded: ${tracks.length} tracks, ${lessons.size} lessons, ${skills.size} skills, ${edges.length} edges`,
+      `[teacher-greet] Curriculum loaded: ${tracks.length} tracks, ${lessons.size} lessons, ${skills.size} skills, ${edges.length} edges`
     );
 
     // Build edge lookups
     const lessonNextEdges = edges.filter((e) => e.edge_type === "lesson_next");
-    const lessonRequiresEdges = edges.filter((e) => e.edge_type === "lesson_requires_skill");
-    const lessonAwardsEdges = edges.filter((e) => e.edge_type === "lesson_awards_skill");
+    const lessonRequiresEdges = edges.filter(
+      (e) => e.edge_type === "lesson_requires_skill"
+    );
+    const lessonAwardsEdges = edges.filter(
+      (e) => e.edge_type === "lesson_awards_skill"
+    );
 
     // 2. Fetch user activity data (filtered by localUserId if provided)
     let runsQuery = supabase
@@ -226,10 +244,16 @@ serve(async (req) => {
       console.error("Error fetching skill states:", skillsError);
     }
 
-    console.log(`[teacher-greet] Activity data: ${lessonRuns.length} runs, ${(skillStates || []).length} skill states for user ${localUserId || 'all'}`);
+    console.log(
+      `[teacher-greet] Activity data: ${lessonRuns.length} runs, ${
+        (skillStates || []).length
+      } skill states for user ${localUserId || "all"}`
+    );
 
     const unlockedSkills = new Set(
-      ((skillStates || []) as SkillState[]).filter((s) => s.unlocked).map((s) => s.skill_key),
+      ((skillStates || []) as SkillState[])
+        .filter((s) => s.unlocked)
+        .map((s) => s.skill_key)
     );
 
     // 3. Compute accessible lessons per track
@@ -248,13 +272,17 @@ serve(async (req) => {
         if (!lesson) break;
 
         // Add required skills for this lesson
-        const requiredEdges = lessonRequiresEdges.filter((e) => e.source_key === current);
+        const requiredEdges = lessonRequiresEdges.filter(
+          (e) => e.source_key === current
+        );
         for (const edge of requiredEdges) {
           activeRequiredSkills.add(edge.target_key);
         }
 
         // Check if all required skills are unlocked
-        const allRequirementsMet = [...activeRequiredSkills].every((sk) => unlockedSkills.has(sk));
+        const allRequirementsMet = [...activeRequiredSkills].every((sk) =>
+          unlockedSkills.has(sk)
+        );
 
         if (allRequirementsMet) {
           accessible.add(current);
@@ -293,7 +321,9 @@ serve(async (req) => {
       if (lesson) {
         const runs = runsByLesson.get(lastPracticedKey) || [];
         const recentEvals = runs.slice(0, 3).map((r) => r.evaluation || "none");
-        const attemptsLast7Days = runs.filter((r) => new Date(r.started_at) >= sevenDaysAgo).length;
+        const attemptsLast7Days = runs.filter(
+          (r) => new Date(r.started_at) >= sevenDaysAgo
+        ).length;
 
         candidates.push({
           lessonKey: lastPracticedKey,
@@ -346,7 +376,9 @@ serve(async (req) => {
     }
 
     const sortedTracks = [...tracks].sort(
-      (a, b) => (practiceCountByTrack.get(a.key) || 0) - (practiceCountByTrack.get(b.key) || 0),
+      (a, b) =>
+        (practiceCountByTrack.get(a.key) || 0) -
+        (practiceCountByTrack.get(b.key) || 0)
     );
 
     for (const track of sortedTracks) {
@@ -387,11 +419,14 @@ serve(async (req) => {
     // 5. Calculate signals
     const timeSinceLastPracticeHours =
       lessonRuns.length > 0
-        ? Math.round((now.getTime() - new Date(lessonRuns[0].started_at).getTime()) / (1000 * 60 * 60))
+        ? Math.round(
+            (now.getTime() - new Date(lessonRuns[0].started_at).getTime()) /
+              (1000 * 60 * 60)
+          )
         : null;
 
     // 6. Build LLM prompt
-    const systemPrompt = `You are the Teacher agent for a piano practice app.
+    const systemPrompt = `You are the Teacher agent for an app teaching music through piano.
 
 Your job when the user opens Learning mode:
 1) Greet the user briefly, taking into account if you interacted with them on the day
@@ -436,23 +471,30 @@ Return ONLY valid JSON following the schema provided.`;
     }));
 
     // Build lesson-to-track mapping for candidates
-    const lessonToTrackMap: Map<string, { trackKey: string; trackTitle: string }> = new Map();
-    const trackStartsEdges = edges.filter((e) => e.edge_type === "track_starts_with");
-    const lessonNextEdgesLocal = edges.filter((e) => e.edge_type === "lesson_next");
-    
+    const lessonToTrackMap: Map<
+      string,
+      { trackKey: string; trackTitle: string }
+    > = new Map();
+    const trackStartsEdges = edges.filter(
+      (e) => e.edge_type === "track_starts_with"
+    );
+    const lessonNextEdgesLocal = edges.filter(
+      (e) => e.edge_type === "lesson_next"
+    );
+
     const lessonNextMap: Map<string, string> = new Map();
     for (const edge of lessonNextEdgesLocal) {
       lessonNextMap.set(edge.source_key, edge.target_key);
     }
-    
+
     for (const startEdge of trackStartsEdges) {
       const trackKey = startEdge.source_key;
       const track = tracks.find((t) => t.key === trackKey);
       const trackTitle = track?.title || trackKey;
       let currentLesson = startEdge.target_key;
-      
+
       lessonToTrackMap.set(currentLesson, { trackKey, trackTitle });
-      
+
       while (lessonNextMap.has(currentLesson)) {
         currentLesson = lessonNextMap.get(currentLesson)!;
         lessonToTrackMap.set(currentLesson, { trackKey, trackTitle });
@@ -523,7 +565,7 @@ OUTPUT JSON SCHEMA:
           },
           prompt: fullPrompt,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -533,24 +575,30 @@ OUTPUT JSON SCHEMA:
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const llmResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
+    const llmResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      }
+    );
 
     // Build fallback response from candidates (used if LLM fails)
     const buildFallbackResponse = (): TeacherResponse => ({
-      greeting: language === "fr" ? "Bonjour ! Prêt à pratiquer ?" : "Hello! Ready to practice?",
+      greeting:
+        language === "fr"
+          ? "Bonjour ! Prêt à pratiquer ?"
+          : "Hello! Ready to practice?",
       suggestions: candidatesWithTrack.slice(0, 3).map((c) => ({
         lessonKey: c.lessonKey,
         label: c.title,
@@ -606,7 +654,7 @@ OUTPUT JSON SCHEMA:
         suggestions: validatedSuggestions,
         notes: teacherResponse.notes,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error in teacher-greet:", error);
@@ -614,7 +662,10 @@ OUTPUT JSON SCHEMA:
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });
