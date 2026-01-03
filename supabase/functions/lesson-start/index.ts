@@ -20,6 +20,7 @@ interface LessonRunSetup {
   feel?: string;
   bars?: number;
   countInBars?: number;
+  difficulty?: number;
 }
 
 interface LessonMetronomeSettings {
@@ -59,7 +60,8 @@ interface LessonStartResponse {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -68,10 +70,10 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      lessonKey, 
-      suggestionHint, 
-      language = "en", 
+    const {
+      lessonKey,
+      suggestionHint,
+      language = "en",
       debug = false,
       setupOverrides,
       regenerate = false,
@@ -82,17 +84,22 @@ serve(async (req) => {
     } = await req.json();
 
     if (!lessonKey) {
-      return new Response(
-        JSON.stringify({ error: "lessonKey is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "lessonKey is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // If regenerating, we need a lessonRunId
     if (regenerate && !lessonRunId) {
       return new Response(
-        JSON.stringify({ error: "lessonRunId is required when regenerate is true" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "lessonRunId is required when regenerate is true",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -114,7 +121,10 @@ serve(async (req) => {
       console.error("Error fetching published version:", versionError);
       return new Response(
         JSON.stringify({ error: "No published curriculum found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -130,8 +140,13 @@ serve(async (req) => {
     if (nodeError || !lessonNode) {
       console.error("Error fetching lesson node:", nodeError);
       return new Response(
-        JSON.stringify({ error: `Lesson '${lessonKey}' not found in published curriculum` }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: `Lesson '${lessonKey}' not found in published curriculum`,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -177,7 +192,7 @@ serve(async (req) => {
         .eq("node_key", trackKey)
         .eq("node_type", "track")
         .maybeSingle();
-      
+
       if (trackNode?.data) {
         const trackData = trackNode.data as Record<string, unknown>;
         trackTitle = (trackData.label as string) || trackKey;
@@ -191,7 +206,7 @@ serve(async (req) => {
       .eq("lesson_node_key", lessonKey)
       .order("started_at", { ascending: false })
       .limit(5);
-    
+
     if (localUserId) {
       recentRunsQuery = recentRunsQuery.eq("local_user_id", localUserId);
     }
@@ -207,11 +222,16 @@ serve(async (req) => {
     const lessonBrief: LessonBrief = {
       lessonKey,
       title: (lessonData.label as string) || lessonKey,
-      goal: (lessonData.goal as string) || (lessonData.prompt as string) || "Complete the exercise",
+      goal:
+        (lessonData.goal as string) ||
+        (lessonData.prompt as string) ||
+        "Complete the exercise",
       setupGuidance: (lessonData.setupGuidance as string) || "",
       evaluationGuidance: (lessonData.evaluationGuidance as string) || "",
       difficultyGuidance: (lessonData.difficultyGuidance as string) || "",
-      level: (lessonData.level as "beginner" | "intermediate" | "advanced") || "beginner",
+      level:
+        (lessonData.level as "beginner" | "intermediate" | "advanced") ||
+        "beginner",
       requiredSkills,
       awardedSkills,
       nextLessonKey,
@@ -221,19 +241,21 @@ serve(async (req) => {
 
     // 6. Build initial setup from setupOverrides, suggestionHint, or defaults
     // If setupOverrides provided (for regeneration), use them directly
-    const setup: LessonRunSetup = setupOverrides ? {
-      bpm: setupOverrides.bpm ?? 80,
-      meter: setupOverrides.meter ?? "4/4",
-      feel: setupOverrides.feel ?? "straight_beats",
-      bars: setupOverrides.bars ?? 2,
-      countInBars: setupOverrides.countInBars ?? 1,
-    } : {
-      bpm: suggestionHint?.bpm || 80,
-      meter: suggestionHint?.meter || "4/4",
-      feel: suggestionHint?.feel || "straight_beats",
-      bars: suggestionHint?.bars || 2,
-      countInBars: suggestionHint?.countInBars || 1,
-    };
+    const setup: LessonRunSetup = setupOverrides
+      ? {
+          bpm: setupOverrides.bpm ?? 80,
+          meter: setupOverrides.meter ?? "4/4",
+          feel: setupOverrides.feel ?? "straight_beats",
+          bars: setupOverrides.bars ?? 2,
+          countInBars: setupOverrides.countInBars ?? 1,
+        }
+      : {
+          bpm: suggestionHint?.bpm || 80,
+          meter: suggestionHint?.meter || "4/4",
+          feel: suggestionHint?.feel || "straight_beats",
+          bars: suggestionHint?.bars || 2,
+          countInBars: suggestionHint?.countInBars || 1,
+        };
 
     // Get current difficulty (from request, or from most recent run if regenerating)
     let currentDifficulty = difficulty;
@@ -244,64 +266,148 @@ serve(async (req) => {
         .select("difficulty")
         .eq("id", lessonRunId)
         .single();
-      currentDifficulty = existingRun?.difficulty || suggestionHint?.difficulty?.value || 1;
+      currentDifficulty =
+        existingRun?.difficulty || suggestionHint?.difficulty?.value || 3;
     } else if (currentDifficulty === undefined) {
-      currentDifficulty = suggestionHint?.difficulty?.value || 1;
+      currentDifficulty = suggestionHint?.difficulty?.value || 3;
     }
 
     // 7. Build Coach INTRO prompt
-    const recentRunsSummary = (recentRuns || []).map(run => ({
-      evaluation: run.evaluation,
-      difficulty: run.difficulty,
-      attemptCount: run.attempt_count,
-      startedAt: run.started_at,
-      setup: run.setup,
-      demoSequence: run.demo_sequence,
-    }));
+    const recentRunsSummary = (recentRuns || []).map((run) => {
+      if (regenerate) {
+        // During regeneration, include sequences to avoid repeats
+        return {
+          evaluation: run.evaluation,
+          difficulty: run.difficulty,
+          attemptCount: run.attempt_count,
+          startedAt: run.started_at,
+          setup: run.setup,
+          demoSequence: run.demo_sequence,
+        };
+      } else {
+        // At initialization, only include activity history (no sequences)
+        return {
+          evaluation: run.evaluation,
+          difficulty: run.difficulty,
+          attemptCount: run.attempt_count,
+          startedAt: run.started_at,
+        };
+      }
+    });
 
     const systemPrompt = `You are a piano lesson coach for a specific student. Your role is to introduce a lesson and provide a short demo sequence for the student to replicate.
 
 STUDENT CONTEXT:
 This lesson session is for a specific student. ALL activity data, attempts, and history below refer ONLY to this student's performance.
-${localUserId ? `- Student ID: ${localUserId}` : "- Student ID: Not specified (legacy session)"}
+${
+  localUserId
+    ? `- Student ID: ${localUserId}`
+    : "- Student ID: Not specified (legacy session)"
+}
 - IMPORTANT: All data in this prompt is specific to this student only.
 
 LESSON BRIEF:
 - Key: ${lessonBrief.lessonKey}
 - Title: ${lessonBrief.title}
 - Goal: ${lessonBrief.goal}
-${lessonBrief.setupGuidance ? `- Setup Guidance: ${lessonBrief.setupGuidance}` : ""}
-${lessonBrief.difficultyGuidance ? `- Difficulty Guidance: ${lessonBrief.difficultyGuidance}` : ""}
-- Required Skills: ${requiredSkills.length > 0 ? requiredSkills.join(", ") : "None"}
+${
+  lessonBrief.setupGuidance
+    ? `- Setup Guidance: ${lessonBrief.setupGuidance}`
+    : ""
+}
+${
+  lessonBrief.difficultyGuidance
+    ? `- Difficulty Guidance: ${lessonBrief.difficultyGuidance}`
+    : ""
+}
+- Required Skills: ${
+      requiredSkills.length > 0 ? requiredSkills.join(", ") : "None"
+    }
 - Awards Skills: ${awardedSkills.length > 0 ? awardedSkills.join(", ") : "None"}
 
-CURRENT DIFFICULTY: ${currentDifficulty}
-${regenerate ? `- This is a regeneration of an ongoing lesson session. Generate a NEW sequence appropriate for difficulty level ${currentDifficulty}.` : ""}
+${
+  regenerate
+    ? `CURRENT DIFFICULTY: ${currentDifficulty}
+- This is a regeneration of an ongoing lesson session. Generate a NEW sequence appropriate for difficulty level ${currentDifficulty}.`
+    : ""
+}
 
-INITIAL SETUP:
+DIFFICULTY SYSTEM:
+- Scale: 1-6 (1 = easiest, 6 = hardest)
+- Starting difficulty: New lessons typically start at 3, unless the student has prior experience
+- Lesson level: ${lessonBrief.level}
+
+DIFFICULTY LEVELS:
+Difficulty is relative to the complexity of the lesson itself (lesson level: ${
+      lessonBrief.level
+    }).
+For a beginner level lesson, difficulty 1 means 2 to 4 notes, single notes only, slow tempo. Difficulty 6 means up to 12 notes, simple chords.
+For an intermediate level lesson, difficulty 1 means 4 to 8 notes, mostly single notes, up to moderate tempo. Difficulty 6 means up to 18 notes, simple chords, varied rhythms. 
+For an advanced level lesson, difficulty 1 means 6 to 12 notes, simple chords, up to moderate tempo. Difficulty 6 means up to 24 notes, complex chords, advanced rhythms.
+
+${
+  regenerate
+    ? `CURRENT SETUP:
 - BPM: ${setup.bpm}
 - Meter: ${setup.meter}
 - Feel: ${setup.feel}
 - Bars: ${setup.bars}
 - Count-in Bars: ${setup.countInBars}
+`
+    : (recentRuns || []).length > 0
+    ? `PAST SETUP HISTORY (from recent sessions, for context only):
+${JSON.stringify(
+  (recentRuns || [])
+    .map((run) => run.setup || {})
+    .filter((s: Record<string, unknown>) => Object.keys(s).length > 0),
+  null,
+  2
+)}
 
-${recentRunsSummary.length > 0 ? `THIS STUDENT'S RECENT ATTEMPTS AT THIS LESSON (last ${recentRunsSummary.length}):
+Note: Use this past setup history as context. DETERMINE the appropriate initial setup based on student history, lesson level, difficulty guidance, and lesson requirements.
+`
+    : ""
+}
+
+${
+  recentRunsSummary.length > 0
+    ? regenerate
+      ? `THIS STUDENT'S RECENT ATTEMPTS AT THIS LESSON (last ${
+          recentRunsSummary.length
+        }):
 ${JSON.stringify(recentRunsSummary, null, 2)}
 
 IMPORTANT: The sequences shown above (demoSequence field) are sequences the student has already practiced.
 - AVOID repeating these exact sequences
 - Generate a NEW variation that teaches the same lesson goal but with different notes/rhythm
-${regenerate ? `- If this is a regeneration (difficulty adjustment), create a sequence appropriate for difficulty level ${currentDifficulty}` : ""}
-` : "This is the student's first attempt at this lesson."}
+- If this is a regeneration (difficulty adjustment), create a sequence appropriate for difficulty level ${currentDifficulty}
+`
+      : `THIS STUDENT'S PAST ACTIVITY AT THIS LESSON (last ${
+          recentRunsSummary.length
+        } sessions):
+${JSON.stringify(recentRunsSummary, null, 2)}
 
-${sequenceHistory && sequenceHistory.length > 0 ? `SEQUENCES ALREADY PRACTICED IN THIS SESSION (from localStorage):
+IMPORTANT: Use this activity history (difficulty, evaluation, attempt count) to inform your difficulty and setup decisions.
+- Review the student's past performance (pass/fail patterns, difficulty progression, attempt counts)
+- Consider adjusting the starting difficulty or setup if the student has consistently struggled or excelled
+- Note: Sequences are not shown here as they are not relevant for initial difficulty selection
+- Determine appropriate difficulty based on the DIFFICULTY SYSTEM guidance above and past activity
+`
+    : "This is the student's first attempt at this lesson."
+}
+
+${
+  sequenceHistory && sequenceHistory.length > 0
+    ? `SEQUENCES ALREADY PRACTICED IN THIS SESSION (from localStorage):
 ${JSON.stringify(sequenceHistory, null, 2)}
 
 IMPORTANT: The sequences shown above are sequences the student has already practiced in this session.
 - AVOID repeating these exact sequences
 - Generate a NEW variation that teaches the same lesson goal but with different notes/rhythm
 - Create variation while maintaining the lesson goal
-` : ""}
+`
+    : ""
+}
 
 LANGUAGE: Respond in ${language === "fr" ? "French" : "English"}.
 
@@ -309,8 +415,16 @@ Your task:
 1. Write a brief, encouraging instruction (2-3 sentences) explaining what the student will practice
 2. GENERATE a demo sequence (NoteSequence) that demonstrates what the student should practice
    - Must be DIFFERENT from any sequences in the recent attempts (from database) AND session history (from localStorage)
-   - Appropriate for difficulty level ${currentDifficulty}
-3. Suggest any setup adjustments based on the student's history and current difficulty
+   ${
+     regenerate
+       ? `- Appropriate for difficulty level ${currentDifficulty}`
+       : "- Appropriate for the difficulty level you determine"
+   }
+3. ${
+      regenerate
+        ? "Suggest any setup adjustments based on the student's history and current difficulty"
+        : "DETERMINE the initial difficulty (1-6) and setup (BPM, meter, feel, bars, count-in bars) based on student history, lesson level, and setup guidance"
+    }
 
 DEMO SEQUENCE REQUIREMENT:
 - You MUST generate a demo sequence unless the lesson goal explicitly states it's a free-form, improvisation, or creative exercise where no specific sequence should be demonstrated
@@ -319,7 +433,6 @@ DEMO SEQUENCE REQUIREMENT:
 - Keep demos SHORT (2-8 notes, 1-2 bars max)
 - If the lesson goal clearly indicates this is an improvisation/free-form lesson (e.g., "improvise", "create your own", "free play"), you may omit the demo sequence
 - IMPORTANT: Do NOT repeat sequences from the student's recent attempts (shown in recentRunsSummary above) OR session history (shown in sequenceHistory above)`;
-
 
     const userPrompt = `Generate the lesson introduction for "${lessonBrief.title}".
 
@@ -333,39 +446,64 @@ Return your response using the provided function.`;
         type: "function",
         function: {
           name: "generate_lesson_intro",
-          description: "Generate the lesson introduction with instruction and demo sequence (required unless lesson is free-form/improv)",
+          description:
+            "Generate the lesson introduction with instruction and demo sequence (required unless lesson is free-form/improv)",
           parameters: {
             type: "object",
             properties: {
               instruction: {
                 type: "string",
-                description: "Brief, encouraging instruction explaining what the student will practice (2-3 sentences)",
+                description:
+                  "Brief, encouraging instruction explaining what the student will practice (2-3 sentences)",
               },
               demoSequence: {
                 type: "object",
-                description: "Demo sequence for the student to replicate. REQUIRED by default - only omit if the lesson goal explicitly indicates this is a free-form/improv/creative exercise with no specific sequence to demonstrate",
+                description:
+                  "Demo sequence for the student to replicate. REQUIRED by default - only omit if the lesson goal explicitly indicates this is a free-form/improv/creative exercise with no specific sequence to demonstrate",
                 properties: {
                   notes: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        pitch: { type: "number", description: "MIDI pitch (60 = middle C)" },
-                        startTime: { type: "number", description: "Start time in seconds" },
-                        endTime: { type: "number", description: "End time in seconds" },
-                        velocity: { type: "number", description: "Velocity 0-127, default 80" },
+                        pitch: {
+                          type: "number",
+                          description: "MIDI pitch (60 = middle C)",
+                        },
+                        startTime: {
+                          type: "number",
+                          description: "Start time in seconds",
+                        },
+                        endTime: {
+                          type: "number",
+                          description: "End time in seconds",
+                        },
+                        velocity: {
+                          type: "number",
+                          description: "Velocity 0-127, default 80",
+                        },
                       },
                       required: ["pitch", "startTime", "endTime"],
                     },
                   },
-                  totalTime: { type: "number", description: "Total duration in seconds" },
+                  totalTime: {
+                    type: "number",
+                    description: "Total duration in seconds",
+                  },
                 },
                 required: ["notes", "totalTime"],
               },
               setupAdjustments: {
                 type: "object",
-                description: "Optional adjustments to the initial setup",
+                description: regenerate
+                  ? "Optional adjustments to the current setup. Difficulty is already set, so it will be ignored if provided."
+                  : "REQUIRED for initialization: Provide the initial difficulty (1-6) and setup values (BPM, meter, feel, bars, count-in bars) based on past activity, lesson level, and setup guidance.",
                 properties: {
+                  difficulty: {
+                    type: "number",
+                    description:
+                      "Difficulty level 1-6. Required for initialization, ignored during regeneration.",
+                  },
                   bpm: { type: "number" },
                   meter: { type: "string" },
                   feel: { type: "string" },
@@ -397,17 +535,20 @@ Return your response using the provided function.`;
         { role: "user", content: userPrompt },
       ],
       tools: toolsDefinition,
-      tool_choice: { type: "function", function: { name: "generate_lesson_intro" } },
+      tool_choice: {
+        type: "function",
+        function: { name: "generate_lesson_intro" },
+      },
     };
 
     // If debug mode, return the prompt without calling LLM
     if (debug) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           request: debugRequest,
           prompt: composedPrompt,
-          lessonBrief, 
-          setup 
+          lessonBrief,
+          setup,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -418,25 +559,34 @@ Return your response using the provided function.`;
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    const llmResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+    const llmResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(debugRequest),
-    });
+      }
+    );
 
     if (!llmResponse.ok) {
       const errorText = await llmResponse.text();
       console.error("LLM API error:", llmResponse.status, errorText);
       return new Response(
         JSON.stringify({ error: "Failed to generate lesson introduction" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -447,7 +597,7 @@ Return your response using the provided function.`;
     let introData: {
       instruction: string;
       demoSequence?: NoteSequence;
-      setupAdjustments?: Partial<LessonRunSetup>;
+      setupAdjustments?: Partial<LessonRunSetup & { difficulty?: number }>;
       metronome?: LessonMetronomeSettings;
     };
 
@@ -466,10 +616,12 @@ Return your response using the provided function.`;
       };
     }
 
-    // Apply any setup adjustments
+    // Apply any setup adjustments (but extract difficulty separately)
+    const { difficulty: llmDifficulty, ...setupWithoutDifficulty } =
+      introData.setupAdjustments || {};
     const finalSetup: LessonRunSetup = {
       ...setup,
-      ...introData.setupAdjustments,
+      ...setupWithoutDifficulty,
     };
 
     // 9. Create or update lesson_run row
@@ -504,7 +656,7 @@ Return your response using the provided function.`;
         .eq("id", lessonRunId)
         .select()
         .single();
-      
+
       lessonRun = data;
       dbError = error;
     } else {
@@ -514,7 +666,10 @@ Return your response using the provided function.`;
         .insert({
           lesson_node_key: lessonKey,
           version_id: latestVersion.id,
-          difficulty: difficulty || suggestionHint?.difficulty?.value || 1,
+          difficulty:
+            !regenerate && introData.setupAdjustments?.difficulty
+              ? introData.setupAdjustments.difficulty
+              : difficulty || suggestionHint?.difficulty?.value || 3,
           setup: finalSetup,
           lesson_brief: lessonBrief,
           demo_sequence: introData.demoSequence || null,
@@ -524,7 +679,7 @@ Return your response using the provided function.`;
         })
         .select()
         .single();
-      
+
       lessonRun = data;
       dbError = error;
     }
@@ -533,7 +688,10 @@ Return your response using the provided function.`;
       console.error("Error creating/updating lesson run:", dbError);
       return new Response(
         JSON.stringify({ error: "Failed to create/update lesson run" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -562,8 +720,13 @@ Return your response using the provided function.`;
   } catch (error) {
     console.error("Error in lesson-start:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });
