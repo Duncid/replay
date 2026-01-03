@@ -350,6 +350,7 @@ export function compileCurriculum(questData: QuestData): CompilationResult {
         setupGuidance: node.data.setupGuidance,
         evaluationGuidance: node.data.evaluationGuidance,
         difficultyGuidance: node.data.difficultyGuidance,
+        level: node.data.level,
         trackKey,
         requiresSkills,
         awardsSkills,

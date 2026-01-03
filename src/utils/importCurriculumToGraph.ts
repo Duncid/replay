@@ -43,6 +43,7 @@ export interface SchemaImportLesson {
   setupGuidance?: string;
   evaluationGuidance?: string;
   difficultyGuidance?: string;
+  level?: "beginner" | "intermediate" | "advanced";
   requiresSkills?: string[];
   awardsSkills: string[];
   nextLesson: string | null;
@@ -367,6 +368,7 @@ export function importCurriculumToGraph(
           setupGuidance: lesson.setupGuidance,
           evaluationGuidance: lesson.evaluationGuidance,
           difficultyGuidance: lesson.difficultyGuidance,
+          level: lesson.level,
         },
       });
 
@@ -775,6 +777,9 @@ export function exportGraphToSchema(questData: QuestData): SchemaImportFormat {
       }
       if (node.data.difficultyGuidance) {
         lesson.difficultyGuidance = node.data.difficultyGuidance;
+      }
+      if (node.data.level) {
+        lesson.level = node.data.level;
       }
 
       return lesson;

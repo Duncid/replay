@@ -2,7 +2,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Types
-type CoachNextAction = "RETRY_SAME" | "MAKE_EASIER" | "MAKE_HARDER" | "EXIT_TO_MAIN_TEACHER";
+type CoachNextAction =
+  | "RETRY_SAME"
+  | "MAKE_EASIER"
+  | "MAKE_HARDER"
+  | "EXIT_TO_MAIN_TEACHER";
 
 interface Note {
   pitch: number;
@@ -40,6 +44,7 @@ interface LessonBrief {
   goal: string;
   awardedSkills: string[];
   evaluationGuidance?: string;
+  level?: "beginner" | "intermediate" | "advanced";
   [key: string]: unknown;
 }
 
@@ -65,7 +70,8 @@ interface CurriculumNodeData {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 // Guardrail constants
@@ -81,25 +87,31 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      lessonRunId, 
-      userSequence, 
-      metronomeContext, 
+    const {
+      lessonRunId,
+      userSequence,
+      metronomeContext,
       debug = false,
-      localUserId: requestedUserId 
+      localUserId: requestedUserId,
     } = await req.json();
 
     if (!lessonRunId) {
       return new Response(
         JSON.stringify({ error: "lessonRunId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     if (!userSequence) {
       return new Response(
         JSON.stringify({ error: "userSequence is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -117,18 +129,29 @@ serve(async (req) => {
 
     if (runError || !lessonRun) {
       console.error("Error fetching lesson run:", runError);
-      return new Response(
-        JSON.stringify({ error: "Lesson run not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Lesson run not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Security check
-    if (requestedUserId && lessonRun.local_user_id && lessonRun.local_user_id !== requestedUserId) {
-      console.error(`Security violation: Requested user ${requestedUserId} does not match lesson run user ${lessonRun.local_user_id}`);
+    if (
+      requestedUserId &&
+      lessonRun.local_user_id &&
+      lessonRun.local_user_id !== requestedUserId
+    ) {
+      console.error(
+        `Security violation: Requested user ${requestedUserId} does not match lesson run user ${lessonRun.local_user_id}`
+      );
       return new Response(
-        JSON.stringify({ error: "Lesson run does not belong to the specified user" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Lesson run does not belong to the specified user",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -146,10 +169,13 @@ serve(async (req) => {
     const localUserId = lessonRun.local_user_id as string | null;
 
     // Extract lesson info
-    const lessonKey = lessonBrief?.lessonKey || lessonRun.lesson_node_key || "unknown";
+    const lessonKey =
+      lessonBrief?.lessonKey || lessonRun.lesson_node_key || "unknown";
     const lessonTitle = lessonBrief?.title || "Practice Exercise";
-    const lessonGoal = lessonBrief?.goal || "Play the demonstrated sequence accurately";
+    const lessonGoal =
+      lessonBrief?.goal || "Play the demonstrated sequence accurately";
     const evaluationGuidance = lessonBrief?.evaluationGuidance || "";
+    const lessonLevel = lessonBrief?.level || "beginner";
     const awardedSkills = lessonBrief?.awardedSkills || [];
 
     // 2. Fetch skill unlock guidance from curriculum_nodes
@@ -161,11 +187,13 @@ serve(async (req) => {
         .eq("version_id", lessonRun.version_id)
         .eq("node_key", lessonKey)
         .maybeSingle();
-      
+
       if (nodeData?.data) {
         const currData = nodeData.data as CurriculumNodeData;
         if (currData.skillUnlockGuidance) {
-          skillUnlockGuidance = Object.entries(currData.skillUnlockGuidance).map(([skillKey, guidance]) => ({
+          skillUnlockGuidance = Object.entries(
+            currData.skillUnlockGuidance
+          ).map(([skillKey, guidance]) => ({
             skillKey,
             guidance,
           }));
@@ -183,14 +211,17 @@ serve(async (req) => {
         .eq("local_user_id", localUserId)
         .order("started_at", { ascending: false })
         .limit(10);
-      
+
       if (recentRuns) {
         for (const run of recentRuns) {
           if (run.id === lessonRunId) continue;
           const runDifficulty = (run.difficulty || 1) as number;
           const runEval = run.evaluation as string | null;
-          
-          if (runDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY && runEval === "pass") {
+
+          if (
+            runDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY &&
+            runEval === "pass"
+          ) {
             consecutiveHighDiffPasses++;
           } else {
             break;
@@ -206,7 +237,11 @@ serve(async (req) => {
 3. DECIDE what happens next
 
 STUDENT CONTEXT:
-${localUserId ? `- Student ID: ${localUserId}` : "- Student ID: Not specified (legacy session)"}
+${
+  localUserId
+    ? `- Student ID: ${localUserId}`
+    : "- Student ID: Not specified (legacy session)"
+}
 - All data in this prompt is specific to this student only.
 
 LESSON BRIEF:
@@ -214,7 +249,11 @@ LESSON BRIEF:
 - Title: ${lessonTitle}
 - Goal: ${lessonGoal}
 ${evaluationGuidance ? `- Evaluation Guidance: ${evaluationGuidance}` : ""}
-${awardedSkills.length > 0 ? `- Skills that can be awarded: ${awardedSkills.join(", ")}` : "- No skills are awarded by this lesson"}
+${
+  awardedSkills.length > 0
+    ? `- Skills that can be awarded: ${awardedSkills.join(", ")}`
+    : "- No skills are awarded by this lesson"
+}
 
 CURRENT SETUP:
 - BPM: ${setup.bpm || 80}
@@ -223,15 +262,41 @@ CURRENT SETUP:
 - Bars: ${setup.bars || 2}
 - Difficulty: ${currentDifficulty}
 
-${metronomeContext ? `METRONOME CONTEXT:
+DIFFICULTY SYSTEM:
+- Scale: 1-6 (1 = easiest, 6 = hardest)
+- Starting difficulty: New lessons typically start at 3, unless the student has prior experience
+- Current difficulty: ${currentDifficulty}
+- Lesson level: ${lessonLevel}
+
+DIFFICULTY LEVELS:
+Difficulty is relative to the complexity of the lesson itself (lesson level: ${lessonLevel}).
+For a beginner level lesson, difficulty 1 means 2 to 4 notes, single notes only, slow tempo. Difficulty 6 means up to 12 notes, simple chords.
+For an intermediate level lesson, difficulty 1 means 4 to 8 notes, mostly single notes, up to moderate tempo. Difficulty 6 means up to 18 notes, simple chords, varied rhythms. 
+For an advanced level lesson, difficulty 1 means 6 to 12 notes, simple chords, up to moderate tempo. Difficulty 6 means up to 24 notes, complex chords, advanced rhythms.
+
+ADJUSTING DIFFICULTY:
+- When choosing MAKE_EASIER: Reduce difficulty by 1 (e.g., 5 → 4). If already at 1, focus on setup adjustments (slower BPM, fewer bars)
+- When choosing MAKE_HARDER: Increase difficulty by 1 (e.g., 4 → 5). If at 6 (maximum), focus on setup adjustments (faster BPM, more bars) or consider EXIT
+- Typical adjustments: ±1 per decision. Only adjust by ±2 if the student is significantly struggling or excelling
+- You can also adjust setup (BPM, bars) without changing difficulty number if the change is minor
+
+${
+  metronomeContext
+    ? `METRONOME CONTEXT:
 - Start time (t0): ${metronomeContext.t0}
 - BPM: ${metronomeContext.bpm}
 - Meter: ${metronomeContext.meter}
 - Feel: ${metronomeContext.feel || "straight_beats"}
-- Count-in bars: ${metronomeContext.countInBars || 1}` : "No metronome context provided."}
+- Count-in bars: ${metronomeContext.countInBars || 1}`
+    : "No metronome context provided."
+}
 
-${demoSequence ? `EXPECTED DEMO SEQUENCE:
-${JSON.stringify(demoSequence, null, 2)}` : "No demo sequence - evaluate based on lesson goal."}
+${
+  demoSequence
+    ? `EXPECTED DEMO SEQUENCE:
+${JSON.stringify(demoSequence, null, 2)}`
+    : "No demo sequence - evaluate based on lesson goal."
+}
 
 USER'S RECORDED SEQUENCE:
 ${JSON.stringify(userSequence, null, 2)}
@@ -261,28 +326,50 @@ DIAGNOSIS TAGS (use these exactly):
 - velocity_good, velocity_weak, velocity_strong
 
 YOUR AVAILABLE ACTIONS:
-- RETRY_SAME: Have them try again with the same setup
-- MAKE_EASIER: Reduce difficulty (slower BPM, fewer bars)
-- MAKE_HARDER: Increase difficulty (faster BPM, more bars)
+- RETRY_SAME: Have them try again with the same setup and difficulty
+- MAKE_EASIER: Reduce difficulty by 1 (or adjust setup: slower BPM, fewer bars) if at difficulty 1
+- MAKE_HARDER: Increase difficulty by 1 (or adjust setup: faster BPM, more bars) if at difficulty 6 (maximum)
 - EXIT_TO_MAIN_TEACHER: End this lesson, return to lesson selection
 
 GUARDRAILS:
-${lessonRun.attempt_count >= MAX_ATTEMPTS ? `- Student has made ${lessonRun.attempt_count} attempts. Consider suggesting EXIT.` : ""}
-${currentState.passStreak >= PASS_STREAK_THRESHOLD ? `- Student has passed ${currentState.passStreak} times in a row. Consider MAKE_HARDER or EXIT.` : ""}
-${currentState.failStreak >= FAIL_STREAK_THRESHOLD ? `- Student has struggled ${currentState.failStreak} times. Consider MAKE_EASIER.` : ""}
+${
+  lessonRun.attempt_count >= MAX_ATTEMPTS
+    ? `- Student has made ${lessonRun.attempt_count} attempts. Consider suggesting EXIT.`
+    : ""
+}
+${
+  currentState.passStreak >= PASS_STREAK_THRESHOLD
+    ? `- Student has passed ${currentState.passStreak} times in a row. Consider MAKE_HARDER or EXIT.`
+    : ""
+}
+${
+  currentState.failStreak >= FAIL_STREAK_THRESHOLD
+    ? `- Student has struggled ${currentState.failStreak} times. Consider MAKE_EASIER.`
+    : ""
+}
 
-${awardedSkills.length > 0 ? `SKILL UNLOCK CRITERIA:
-- Required: ${SKILL_UNLOCK_CONSECUTIVE_PASSES} consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+
+${
+  awardedSkills.length > 0
+    ? `SKILL UNLOCK CRITERIA:
+- Required: ${SKILL_UNLOCK_CONSECUTIVE_PASSES} consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY} (maximum difficulty)
 - Current difficulty: ${currentDifficulty}
 - Consecutive high-difficulty passes so far: ${consecutiveHighDiffPasses}
-- If this attempt passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+, total will be: ${currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY ? consecutiveHighDiffPasses + 1 : consecutiveHighDiffPasses}
+- If this attempt passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY} (maximum), total will be: ${
+        currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY
+          ? consecutiveHighDiffPasses + 1
+          : consecutiveHighDiffPasses
+      }
 - Set awardSkills to true ONLY if criteria will be met after this attempt
 
 SKILLS THAT CAN BE AWARDED:
-${awardedSkills.map(sk => {
-  const guidance = skillUnlockGuidance.find(g => g.skillKey === sk);
-  return `- ${sk}${guidance ? `: ${guidance.guidance}` : ""}`;
-}).join("\n")}` : ""}
+${awardedSkills
+  .map((sk) => {
+    const guidance = skillUnlockGuidance.find((g) => g.skillKey === sk);
+    return `- ${sk}${guidance ? `: ${guidance.guidance}` : ""}`;
+  })
+  .join("\n")}`
+    : ""
+}
 
 COACHING STYLE:
 - Be encouraging but honest
@@ -298,12 +385,12 @@ COACHING STYLE:
     // If debug mode, return the prompt without calling LLM
     if (debug) {
       return new Response(
-        JSON.stringify({ 
-          prompt: composedPrompt, 
-          lessonBrief, 
-          setup, 
+        JSON.stringify({
+          prompt: composedPrompt,
+          lessonBrief,
+          setup,
           state: currentState,
-          demoSequence, 
+          demoSequence,
           userSequence,
           skillUnlockStatus: {
             awardedSkills,
@@ -321,84 +408,112 @@ COACHING STYLE:
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    const llmResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "submit_evaluation",
-              description: "Submit the evaluation, coaching feedback, and next action decision",
-              parameters: {
-                type: "object",
-                properties: {
-                  evaluation: {
-                    type: "string",
-                    enum: ["pass", "close", "fail"],
-                    description: "Overall evaluation: pass (80%+), close (50-80%), fail (<50%)",
-                  },
-                  diagnosis: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Array of diagnosis tags describing what went right/wrong",
-                  },
-                  feedbackText: {
-                    type: "string",
-                    description: "Encouraging, constructive feedback for the student (2-3 sentences)",
-                  },
-                  nextAction: {
-                    type: "string",
-                    enum: ["RETRY_SAME", "MAKE_EASIER", "MAKE_HARDER", "EXIT_TO_MAIN_TEACHER"],
-                    description: "What should happen next in the lesson",
-                  },
-                  setupDelta: {
-                    type: "object",
-                    description: "Setup changes if making easier/harder (e.g., { bpm: 70 })",
-                    properties: {
-                      bpm: { type: "number" },
-                      bars: { type: "number" },
-                      meter: { type: "string" },
-                      feel: { type: "string" },
+    const llmResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "submit_evaluation",
+                description:
+                  "Submit the evaluation, coaching feedback, and next action decision",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    evaluation: {
+                      type: "string",
+                      enum: ["pass", "close", "fail"],
+                      description:
+                        "Overall evaluation: pass (80%+), close (50-80%), fail (<50%)",
+                    },
+                    diagnosis: {
+                      type: "array",
+                      items: { type: "string" },
+                      description:
+                        "Array of diagnosis tags describing what went right/wrong",
+                    },
+                    feedbackText: {
+                      type: "string",
+                      description:
+                        "Encouraging, constructive feedback for the student (2-3 sentences)",
+                    },
+                    nextAction: {
+                      type: "string",
+                      enum: [
+                        "RETRY_SAME",
+                        "MAKE_EASIER",
+                        "MAKE_HARDER",
+                        "EXIT_TO_MAIN_TEACHER",
+                      ],
+                      description: "What should happen next in the lesson",
+                    },
+                    setupDelta: {
+                      type: "object",
+                      description:
+                        "Setup changes if making easier/harder (e.g., { bpm: 70 })",
+                      properties: {
+                        bpm: { type: "number" },
+                        bars: { type: "number" },
+                        meter: { type: "string" },
+                        feel: { type: "string" },
+                      },
+                    },
+                    exitHint: {
+                      type: "string",
+                      description:
+                        "If exiting, a hint for the main teacher about what to suggest next",
+                    },
+                    awardSkills: {
+                      type: "boolean",
+                      description: `Whether to award the lesson's skills. ONLY set to true if ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY} (maximum) will be achieved.`,
                     },
                   },
-                  exitHint: {
-                    type: "string",
-                    description: "If exiting, a hint for the main teacher about what to suggest next",
-                  },
-                  awardSkills: {
-                    type: "boolean",
-                    description: `Whether to award the lesson's skills. ONLY set to true if ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY}+ will be achieved.`,
-                  },
+                  required: [
+                    "evaluation",
+                    "diagnosis",
+                    "feedbackText",
+                    "nextAction",
+                  ],
                 },
-                required: ["evaluation", "diagnosis", "feedbackText", "nextAction"],
               },
             },
+          ],
+          tool_choice: {
+            type: "function",
+            function: { name: "submit_evaluation" },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "submit_evaluation" } },
-      }),
-    });
+        }),
+      }
+    );
 
     if (!llmResponse.ok) {
       const errorText = await llmResponse.text();
       console.error("LLM API error:", llmResponse.status, errorText);
       return new Response(
         JSON.stringify({ error: "Failed to evaluate performance" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -421,17 +536,24 @@ COACHING STYLE:
           exitHint: parsed.exitHint,
           awardedSkills: [],
         };
-        
+
         // Handle skill awarding
-        if (parsed.awardSkills === true && awardedSkills.length > 0 && localUserId) {
+        if (
+          parsed.awardSkills === true &&
+          awardedSkills.length > 0 &&
+          localUserId
+        ) {
           // Verify the unlock criteria is actually met
           const willPass = evaluationOutput.evaluation === "pass";
           const atHighDiff = currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY;
-          const totalPasses = willPass && atHighDiff ? consecutiveHighDiffPasses + 1 : consecutiveHighDiffPasses;
-          
+          const totalPasses =
+            willPass && atHighDiff
+              ? consecutiveHighDiffPasses + 1
+              : consecutiveHighDiffPasses;
+
           if (totalPasses >= SKILL_UNLOCK_CONSECUTIVE_PASSES) {
             console.log("Awarding skills (criteria met):", awardedSkills);
-            
+
             for (const skillKey of awardedSkills) {
               const { error: upsertError } = await supabase
                 .from("user_skill_state")
@@ -450,7 +572,12 @@ COACHING STYLE:
                 console.error("Error upserting skill:", skillKey, upsertError);
               } else {
                 evaluationOutput.awardedSkills!.push(skillKey);
-                console.log("Awarded skill:", skillKey, "to user:", localUserId);
+                console.log(
+                  "Awarded skill:",
+                  skillKey,
+                  "to user:",
+                  localUserId
+                );
               }
             }
           }
@@ -473,18 +600,31 @@ COACHING STYLE:
     // 6. Update lesson state
     const newState: LessonState = {
       turn: currentState.turn + 1,
-      passStreak: evaluationOutput.evaluation === "pass" ? currentState.passStreak + 1 : 0,
-      failStreak: evaluationOutput.evaluation === "fail" || evaluationOutput.evaluation === "close" 
-        ? currentState.failStreak + 1 : 0,
+      passStreak:
+        evaluationOutput.evaluation === "pass"
+          ? currentState.passStreak + 1
+          : 0,
+      failStreak:
+        evaluationOutput.evaluation === "fail" ||
+        evaluationOutput.evaluation === "close"
+          ? currentState.failStreak + 1
+          : 0,
       lastDecision: evaluationOutput.nextAction,
-      phase: evaluationOutput.nextAction === "EXIT_TO_MAIN_TEACHER" ? "exit" : 
-             evaluationOutput.nextAction === "RETRY_SAME" ? "practice" : "intro",
+      phase:
+        evaluationOutput.nextAction === "EXIT_TO_MAIN_TEACHER"
+          ? "exit"
+          : evaluationOutput.nextAction === "RETRY_SAME"
+          ? "practice"
+          : "intro",
     };
 
     // Apply setup delta if provided
     let newSetup = setup;
-    if (evaluationOutput.setupDelta && 
-        (evaluationOutput.nextAction === "MAKE_EASIER" || evaluationOutput.nextAction === "MAKE_HARDER")) {
+    if (
+      evaluationOutput.setupDelta &&
+      (evaluationOutput.nextAction === "MAKE_EASIER" ||
+        evaluationOutput.nextAction === "MAKE_HARDER")
+    ) {
       newSetup = { ...setup, ...evaluationOutput.setupDelta };
     }
 
@@ -516,30 +656,49 @@ COACHING STYLE:
       console.error("Error updating lesson run:", updateError);
     }
 
-    console.log("Evaluation complete:", lessonRunId, evaluationOutput.evaluation, 
-      "Action:", evaluationOutput.nextAction,
-      "Awarded:", evaluationOutput.awardedSkills);
+    console.log(
+      "Evaluation complete:",
+      lessonRunId,
+      evaluationOutput.evaluation,
+      "Action:",
+      evaluationOutput.nextAction,
+      "Awarded:",
+      evaluationOutput.awardedSkills
+    );
 
-    return new Response(JSON.stringify({
-      ...evaluationOutput,
-      state: newState,
-      setup: newSetup,
-      skillUnlockProgress: awardedSkills.length > 0 ? {
-        consecutiveHighDiffPasses: evaluationOutput.evaluation === "pass" && currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY
-          ? consecutiveHighDiffPasses + 1
-          : consecutiveHighDiffPasses,
-        required: SKILL_UNLOCK_CONSECUTIVE_PASSES,
-        minDifficulty: SKILL_UNLOCK_MIN_DIFFICULTY,
-        currentDifficulty,
-      } : undefined,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        ...evaluationOutput,
+        state: newState,
+        setup: newSetup,
+        skillUnlockProgress:
+          awardedSkills.length > 0
+            ? {
+                consecutiveHighDiffPasses:
+                  evaluationOutput.evaluation === "pass" &&
+                  currentDifficulty >= SKILL_UNLOCK_MIN_DIFFICULTY
+                    ? consecutiveHighDiffPasses + 1
+                    : consecutiveHighDiffPasses,
+                required: SKILL_UNLOCK_CONSECUTIVE_PASSES,
+                minDifficulty: SKILL_UNLOCK_MIN_DIFFICULTY,
+                currentDifficulty,
+              }
+            : undefined,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error in lesson-evaluate:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });

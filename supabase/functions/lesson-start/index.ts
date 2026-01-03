@@ -38,6 +38,7 @@ interface LessonBrief {
   setupGuidance: string;
   evaluationGuidance: string;
   difficultyGuidance: string;
+  level?: "beginner" | "intermediate" | "advanced";
   requiredSkills: string[];
   awardedSkills: string[];
   nextLessonKey: string | null;
@@ -209,6 +210,7 @@ serve(async (req) => {
       setupGuidance: (lessonData.setupGuidance as string) || "",
       evaluationGuidance: (lessonData.evaluationGuidance as string) || "",
       difficultyGuidance: (lessonData.difficultyGuidance as string) || "",
+      level: (lessonData.level as "beginner" | "intermediate" | "advanced") || "beginner",
       requiredSkills,
       awardedSkills,
       nextLessonKey,
