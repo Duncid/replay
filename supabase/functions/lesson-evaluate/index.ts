@@ -386,10 +386,94 @@ COACHING STYLE:
 
     const composedPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
 
+    // Build the complete request structure for debug mode
+    const toolsDefinition = [
+      {
+        type: "function",
+        function: {
+          name: "submit_evaluation",
+          description:
+            "Submit the evaluation, coaching feedback, and next action decision",
+          parameters: {
+            type: "object",
+            properties: {
+              evaluation: {
+                type: "string",
+                enum: ["pass", "close", "fail"],
+                description:
+                  "Overall evaluation: pass (80%+), close (50-80%), fail (<50%)",
+              },
+              diagnosis: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "Array of diagnosis tags describing what went right/wrong",
+              },
+              feedbackText: {
+                type: "string",
+                description:
+                  "Encouraging, constructive feedback for the student (2-3 sentences)",
+              },
+              nextAction: {
+                type: "string",
+                enum: [
+                  "RETRY_SAME",
+                  "MAKE_EASIER",
+                  "MAKE_HARDER",
+                  "EXIT_TO_MAIN_TEACHER",
+                ],
+                description: "What should happen next in the lesson",
+              },
+              setupDelta: {
+                type: "object",
+                description:
+                  "Setup changes if making easier/harder (e.g., { bpm: 70 })",
+                properties: {
+                  bpm: { type: "number" },
+                  bars: { type: "number" },
+                  meter: { type: "string" },
+                  feel: { type: "string" },
+                },
+              },
+              exitHint: {
+                type: "string",
+                description:
+                  "If exiting, a hint for the main teacher about what to suggest next",
+              },
+              awardSkills: {
+                type: "boolean",
+                description: `Whether to award the lesson's skills. ONLY set to true if ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY} (maximum) will be achieved.`,
+              },
+            },
+            required: [
+              "evaluation",
+              "diagnosis",
+              "feedbackText",
+              "nextAction",
+            ],
+          },
+        },
+      },
+    ];
+
+    const debugRequest = {
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: toolsDefinition,
+      tool_choice: {
+        type: "function",
+        function: { name: "submit_evaluation" },
+      },
+    };
+
     // If debug mode, return the prompt without calling LLM
     if (debug) {
       return new Response(
         JSON.stringify({
+          request: debugRequest,
           prompt: composedPrompt,
           lessonBrief,
           setup,
@@ -427,85 +511,7 @@ COACHING STYLE:
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "submit_evaluation",
-                description:
-                  "Submit the evaluation, coaching feedback, and next action decision",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    evaluation: {
-                      type: "string",
-                      enum: ["pass", "close", "fail"],
-                      description:
-                        "Overall evaluation: pass (80%+), close (50-80%), fail (<50%)",
-                    },
-                    diagnosis: {
-                      type: "array",
-                      items: { type: "string" },
-                      description:
-                        "Array of diagnosis tags describing what went right/wrong",
-                    },
-                    feedbackText: {
-                      type: "string",
-                      description:
-                        "Encouraging, constructive feedback for the student (2-3 sentences)",
-                    },
-                    nextAction: {
-                      type: "string",
-                      enum: [
-                        "RETRY_SAME",
-                        "MAKE_EASIER",
-                        "MAKE_HARDER",
-                        "EXIT_TO_MAIN_TEACHER",
-                      ],
-                      description: "What should happen next in the lesson",
-                    },
-                    setupDelta: {
-                      type: "object",
-                      description:
-                        "Setup changes if making easier/harder (e.g., { bpm: 70 })",
-                      properties: {
-                        bpm: { type: "number" },
-                        bars: { type: "number" },
-                        meter: { type: "string" },
-                        feel: { type: "string" },
-                      },
-                    },
-                    exitHint: {
-                      type: "string",
-                      description:
-                        "If exiting, a hint for the main teacher about what to suggest next",
-                    },
-                    awardSkills: {
-                      type: "boolean",
-                      description: `Whether to award the lesson's skills. ONLY set to true if ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY} (maximum) will be achieved.`,
-                    },
-                  },
-                  required: [
-                    "evaluation",
-                    "diagnosis",
-                    "feedbackText",
-                    "nextAction",
-                  ],
-                },
-              },
-            },
-          ],
-          tool_choice: {
-            type: "function",
-            function: { name: "submit_evaluation" },
-          },
-        }),
+        body: JSON.stringify(debugRequest),
       }
     );
 

@@ -327,10 +327,88 @@ Return your response using the provided function.`;
 
     const composedPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
 
+    // Build the complete request structure for debug mode
+    const toolsDefinition = [
+      {
+        type: "function",
+        function: {
+          name: "generate_lesson_intro",
+          description: "Generate the lesson introduction with instruction and demo sequence (required unless lesson is free-form/improv)",
+          parameters: {
+            type: "object",
+            properties: {
+              instruction: {
+                type: "string",
+                description: "Brief, encouraging instruction explaining what the student will practice (2-3 sentences)",
+              },
+              demoSequence: {
+                type: "object",
+                description: "Demo sequence for the student to replicate. REQUIRED by default - only omit if the lesson goal explicitly indicates this is a free-form/improv/creative exercise with no specific sequence to demonstrate",
+                properties: {
+                  notes: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        pitch: { type: "number", description: "MIDI pitch (60 = middle C)" },
+                        startTime: { type: "number", description: "Start time in seconds" },
+                        endTime: { type: "number", description: "End time in seconds" },
+                        velocity: { type: "number", description: "Velocity 0-127, default 80" },
+                      },
+                      required: ["pitch", "startTime", "endTime"],
+                    },
+                  },
+                  totalTime: { type: "number", description: "Total duration in seconds" },
+                },
+                required: ["notes", "totalTime"],
+              },
+              setupAdjustments: {
+                type: "object",
+                description: "Optional adjustments to the initial setup",
+                properties: {
+                  bpm: { type: "number" },
+                  meter: { type: "string" },
+                  feel: { type: "string" },
+                  bars: { type: "number" },
+                  countInBars: { type: "number" },
+                },
+              },
+              metronome: {
+                type: "object",
+                description: "Metronome settings for this lesson",
+                properties: {
+                  bpm: { type: "number" },
+                  timeSignature: { type: "string" },
+                  isActive: { type: "boolean" },
+                  feel: { type: "string" },
+                },
+              },
+            },
+            required: ["instruction"],
+          },
+        },
+      },
+    ];
+
+    const debugRequest = {
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: toolsDefinition,
+      tool_choice: { type: "function", function: { name: "generate_lesson_intro" } },
+    };
+
     // If debug mode, return the prompt without calling LLM
     if (debug) {
       return new Response(
-        JSON.stringify({ prompt: composedPrompt, lessonBrief, setup }),
+        JSON.stringify({ 
+          request: debugRequest,
+          prompt: composedPrompt,
+          lessonBrief, 
+          setup 
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -350,75 +428,7 @@ Return your response using the provided function.`;
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_lesson_intro",
-              description: "Generate the lesson introduction with instruction and demo sequence (required unless lesson is free-form/improv)",
-              parameters: {
-                type: "object",
-                properties: {
-                  instruction: {
-                    type: "string",
-                    description: "Brief, encouraging instruction explaining what the student will practice (2-3 sentences)",
-                  },
-                  demoSequence: {
-                    type: "object",
-                    description: "Demo sequence for the student to replicate. REQUIRED by default - only omit if the lesson goal explicitly indicates this is a free-form/improv/creative exercise with no specific sequence to demonstrate",
-                    properties: {
-                      notes: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            pitch: { type: "number", description: "MIDI pitch (60 = middle C)" },
-                            startTime: { type: "number", description: "Start time in seconds" },
-                            endTime: { type: "number", description: "End time in seconds" },
-                            velocity: { type: "number", description: "Velocity 0-127, default 80" },
-                          },
-                          required: ["pitch", "startTime", "endTime"],
-                        },
-                      },
-                      totalTime: { type: "number", description: "Total duration in seconds" },
-                    },
-                    required: ["notes", "totalTime"],
-                  },
-                  setupAdjustments: {
-                    type: "object",
-                    description: "Optional adjustments to the initial setup",
-                    properties: {
-                      bpm: { type: "number" },
-                      meter: { type: "string" },
-                      feel: { type: "string" },
-                      bars: { type: "number" },
-                      countInBars: { type: "number" },
-                    },
-                  },
-                  metronome: {
-                    type: "object",
-                    description: "Metronome settings for this lesson",
-                    properties: {
-                      bpm: { type: "number" },
-                      timeSignature: { type: "string" },
-                      isActive: { type: "boolean" },
-                      feel: { type: "string" },
-                    },
-                  },
-                },
-                required: ["instruction"],
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_lesson_intro" } },
-      }),
+        body: JSON.stringify(debugRequest),
     });
 
     if (!llmResponse.ok) {
