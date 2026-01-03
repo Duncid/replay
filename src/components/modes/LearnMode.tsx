@@ -1,9 +1,11 @@
-import { LessonCard, SkillToUnlock } from "@/components/LessonCard";
+import { SkillToUnlock } from "@/components/LessonCard";
 import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { EvaluationDebugCard } from "@/components/EvaluationDebugCard";
 import { FeedbackScreen } from "@/components/FeedbackScreen";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { LessonPractice } from "@/components/modes/LessonPractice";
+import { LessonEvaluation } from "@/components/modes/LessonEvaluation";
 import { useToast } from "@/hooks/use-toast";
 import {
   useEvaluateStructuredLesson,
@@ -373,37 +375,37 @@ export function LearnMode({
     onClearRecording();
   }, [onClearRecording, setLessonState, setMode]);
 
-  const render = () => (
-    <>
-      {debugState?.type === "evaluation" ? (
-        /* Evaluation Debug Card - shown before evaluation LLM calls */
-        <EvaluationDebugCard
-          prompt={debugState.prompt}
-          userSequence={debugState.userSequence}
-          evaluationType={debugState.evaluationType}
-          onProceed={handleProceedEvaluation}
-          onCancel={handleCancelEvaluation}
-          evaluationOutput={evaluationState?.type === "structured" ? evaluationState.evaluationOutput : undefined}
-        />
-      ) : isLoading && lesson.phase === "welcome" && debugState?.type !== "lesson" ? (
-        /* Loading spinner while generating lesson after selecting activity */
-        /* This shows in both debug and normal mode when generating lesson */
-        /* Show when loading, in welcome phase, and not showing evaluation debug */
-        <LoadingSpinner message={t("learnMode.generatingLesson", "Generating lesson...")} />
-      ) : debugMode && debugState?.type === "lesson" && !isLoading ? (
-        /* Lesson Debug Card - shown after selecting a suggestion (debug mode only) */
-        <LessonDebugCard
-          suggestion={debugState.suggestion}
-          prompt={debugState.prompt}
-          isLoading={isLoading}
-          onStart={handleStartLesson}
-          onCancel={handleCancelLessonDebug}
-        />
-      ) : debugMode && isLoadingLessonDebug ? (
-        /* Loading lesson debug */
-        <LoadingSpinner message="Preparing lesson..." />
-      ) : lesson.phase === "welcome" ? (
-        /* Teacher Welcome */
+  const render = () => {
+    // ============================================
+    // LESSON SELECTION (lesson.phase === "welcome")
+    // ============================================
+    if (lesson.phase === "welcome") {
+      // Debug: Show lesson debug card before starting (highest priority)
+      if (debugMode && debugState?.type === "lesson" && !isLoading) {
+        return (
+          <LessonDebugCard
+            suggestion={debugState.suggestion}
+            prompt={debugState.prompt}
+            isLoading={isLoading}
+            onStart={handleStartLesson}
+            onCancel={handleCancelLessonDebug}
+          />
+        );
+      }
+      
+      // Loading: Generating lesson after selection
+      if (isLoading || isLoadingLessonDebug) {
+        return (
+          <LoadingSpinner 
+            message={isLoadingLessonDebug 
+              ? "Preparing lesson..." 
+              : t("learnMode.generatingLesson", "Generating lesson...")} 
+          />
+        );
+      }
+      
+      // Default: Show teacher welcome with suggestions
+      return (
         <TeacherWelcome
           greeting={teacherGreeting}
           isLoading={isLoadingTeacher}
@@ -413,53 +415,95 @@ export function LearnMode({
           localUserId={localUserId}
           debugMode={debugMode}
         />
-      ) : showEvaluationScreen ? (
-        /* Feedback Screen - replaces the dialog */
-        <FeedbackScreen
-          evaluation={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.evaluation : "close"}
-          feedbackText={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.feedbackText : ""}
-          awardedSkills={evaluationState?.type === "structured" && evaluationState.awardedSkillsWithTitles?.length 
-            ? evaluationState.awardedSkillsWithTitles
-            : undefined}
-          onReturnToPractice={() => {
-            setShowEvaluationScreen(false);
-            setMode("practice");
-            setEvaluationState(null);
-            onClearRecording();
-            hasEvaluatedRef.current = false;
-          }}
-          onMakeEasier={() => {
-            setShowEvaluationScreen(false);
-            handleMakeEasier();
-          }}
-          onMakeHarder={() => {
-            setShowEvaluationScreen(false);
-            handleMakeHarder();
-          }}
-          onFinishLesson={() => {
-            setShowEvaluationScreen(false);
-            handleLeave();
-          }}
-        />
-      ) : (
-        /* Active Lesson */
-        <LessonCard
+      );
+    }
+
+    // ============================================
+    // LESSON FLOW (lesson.phase === "your_turn")
+    // ============================================
+    if (lesson.phase === "your_turn") {
+      // Debug: Show evaluation debug card (before evaluation LLM call) - highest priority
+      if (debugState?.type === "evaluation") {
+        return (
+          <EvaluationDebugCard
+            prompt={debugState.prompt}
+            userSequence={debugState.userSequence}
+            evaluationType={debugState.evaluationType}
+            onProceed={handleProceedEvaluation}
+            onCancel={handleCancelEvaluation}
+            evaluationOutput={evaluationState?.type === "structured" ? evaluationState.evaluationOutput : undefined}
+          />
+        );
+      }
+      
+      // Feedback: Show feedback screen after evaluation
+      if (showEvaluationScreen) {
+        return (
+          <FeedbackScreen
+            evaluation={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.evaluation : "close"}
+            feedbackText={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.feedbackText : ""}
+            awardedSkills={evaluationState?.type === "structured" && evaluationState.awardedSkillsWithTitles?.length 
+              ? evaluationState.awardedSkillsWithTitles
+              : undefined}
+            onReturnToPractice={() => {
+              setShowEvaluationScreen(false);
+              setMode("practice");
+              setEvaluationState(null);
+              onClearRecording();
+              hasEvaluatedRef.current = false;
+            }}
+            onMakeEasier={() => {
+              setShowEvaluationScreen(false);
+              handleMakeEasier();
+            }}
+            onMakeHarder={() => {
+              setShowEvaluationScreen(false);
+              handleMakeHarder();
+            }}
+            onFinishLesson={() => {
+              setShowEvaluationScreen(false);
+              handleLeave();
+            }}
+          />
+        );
+      }
+      
+      // Evaluation: User is recording their attempt
+      if (lessonMode === "evaluation") {
+        return (
+          <LessonEvaluation
+            instruction={lesson.instruction}
+            isEvaluating={isEvaluating}
+            isLoading={isLoading || isPlaying}
+            isRecording={isRecording}
+            onBackToPractice={handleEvaluate}
+            onLeave={handleLeave}
+            trackTitle={lesson.trackTitle}
+            skillToUnlock={skillToUnlock}
+            debugMode={debugMode}
+            difficulty={lesson.difficulty}
+          />
+        );
+      }
+      
+      // Practice: User is practicing the lesson
+      return (
+        <LessonPractice
           instruction={lesson.instruction}
-          isEvaluating={isEvaluating}
           isLoading={isLoading || isPlaying}
-          mode={lessonMode}
-          isRecording={isRecording && lessonMode === "evaluation"}
           onPlay={handlePlay}
-          onEvaluate={handleEvaluate}
+          onStartEvaluation={handleEvaluate}
           onLeave={handleLeave}
           trackTitle={lesson.trackTitle}
           skillToUnlock={skillToUnlock}
           debugMode={debugMode}
           difficulty={lesson.difficulty}
         />
-      )}
-    </>
-  );
+      );
+    }
+    
+    return null;
+  };
 
   const handleUserAction = useCallback(() => {
     markUserAction();

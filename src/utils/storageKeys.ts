@@ -17,4 +17,5 @@ export const STORAGE_KEYS = {
   MAGENTA_TEMPERATURE: "replay-magenta-temperature",
   DEBUG_MODE: "replay-debug-mode",
   CURRENT_USER_ID: "replay-current-user-id",
+  LESSON_SEQUENCE_HISTORY: "replay-lesson-sequence-history",
 } as const;

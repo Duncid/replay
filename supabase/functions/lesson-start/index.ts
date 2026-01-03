@@ -78,6 +78,7 @@ serve(async (req) => {
       lessonRunId,
       localUserId,
       difficulty,
+      sequenceHistory,
     } = await req.json();
 
     if (!lessonKey) {
@@ -234,12 +235,28 @@ serve(async (req) => {
       countInBars: suggestionHint?.countInBars || 1,
     };
 
+    // Get current difficulty (from request, or from most recent run if regenerating)
+    let currentDifficulty = difficulty;
+    if (currentDifficulty === undefined && regenerate && lessonRunId) {
+      // When regenerating, get difficulty from existing run
+      const { data: existingRun } = await supabase
+        .from("lesson_runs")
+        .select("difficulty")
+        .eq("id", lessonRunId)
+        .single();
+      currentDifficulty = existingRun?.difficulty || suggestionHint?.difficulty?.value || 1;
+    } else if (currentDifficulty === undefined) {
+      currentDifficulty = suggestionHint?.difficulty?.value || 1;
+    }
+
     // 7. Build Coach INTRO prompt
     const recentRunsSummary = (recentRuns || []).map(run => ({
       evaluation: run.evaluation,
       difficulty: run.difficulty,
       attemptCount: run.attempt_count,
       startedAt: run.started_at,
+      setup: run.setup,
+      demoSequence: run.demo_sequence,
     }));
 
     const systemPrompt = `You are a piano lesson coach for a specific student. Your role is to introduce a lesson and provide a short demo sequence for the student to replicate.
@@ -258,6 +275,9 @@ ${lessonBrief.difficultyGuidance ? `- Difficulty Guidance: ${lessonBrief.difficu
 - Required Skills: ${requiredSkills.length > 0 ? requiredSkills.join(", ") : "None"}
 - Awards Skills: ${awardedSkills.length > 0 ? awardedSkills.join(", ") : "None"}
 
+CURRENT DIFFICULTY: ${currentDifficulty}
+${regenerate ? `- This is a regeneration of an ongoing lesson session. Generate a NEW sequence appropriate for difficulty level ${currentDifficulty}.` : ""}
+
 INITIAL SETUP:
 - BPM: ${setup.bpm}
 - Meter: ${setup.meter}
@@ -265,22 +285,40 @@ INITIAL SETUP:
 - Bars: ${setup.bars}
 - Count-in Bars: ${setup.countInBars}
 
-${recentRunsSummary.length > 0 ? `THIS STUDENT'S RECENT ATTEMPTS (last ${recentRunsSummary.length}):
-${JSON.stringify(recentRunsSummary, null, 2)}` : "This is the student's first attempt at this lesson."}
+${recentRunsSummary.length > 0 ? `THIS STUDENT'S RECENT ATTEMPTS AT THIS LESSON (last ${recentRunsSummary.length}):
+${JSON.stringify(recentRunsSummary, null, 2)}
+
+IMPORTANT: The sequences shown above (demoSequence field) are sequences the student has already practiced.
+- AVOID repeating these exact sequences
+- Generate a NEW variation that teaches the same lesson goal but with different notes/rhythm
+${regenerate ? `- If this is a regeneration (difficulty adjustment), create a sequence appropriate for difficulty level ${currentDifficulty}` : ""}
+` : "This is the student's first attempt at this lesson."}
+
+${sequenceHistory && sequenceHistory.length > 0 ? `SEQUENCES ALREADY PRACTICED IN THIS SESSION (from localStorage):
+${JSON.stringify(sequenceHistory, null, 2)}
+
+IMPORTANT: The sequences shown above are sequences the student has already practiced in this session.
+- AVOID repeating these exact sequences
+- Generate a NEW variation that teaches the same lesson goal but with different notes/rhythm
+- Create variation while maintaining the lesson goal
+` : ""}
 
 LANGUAGE: Respond in ${language === "fr" ? "French" : "English"}.
 
 Your task:
 1. Write a brief, encouraging instruction (2-3 sentences) explaining what the student will practice
 2. GENERATE a demo sequence (NoteSequence) that demonstrates what the student should practice
-3. Suggest any setup adjustments based on the student's history
+   - Must be DIFFERENT from any sequences in the recent attempts (from database) AND session history (from localStorage)
+   - Appropriate for difficulty level ${currentDifficulty}
+3. Suggest any setup adjustments based on the student's history and current difficulty
 
 DEMO SEQUENCE REQUIREMENT:
 - You MUST generate a demo sequence unless the lesson goal explicitly states it's a free-form, improvisation, or creative exercise where no specific sequence should be demonstrated
 - The demo sequence should demonstrate the core concept, notes, and/or rhythm pattern from the lesson goal
 - Use MIDI pitch numbers (e.g., 60 = middle C, 62 = D, 64 = E)
 - Keep demos SHORT (2-8 notes, 1-2 bars max)
-- If the lesson goal clearly indicates this is an improvisation/free-form lesson (e.g., "improvise", "create your own", "free play"), you may omit the demo sequence`;
+- If the lesson goal clearly indicates this is an improvisation/free-form lesson (e.g., "improvise", "create your own", "free play"), you may omit the demo sequence
+- IMPORTANT: Do NOT repeat sequences from the student's recent attempts (shown in recentRunsSummary above) OR session history (shown in sequenceHistory above)`;
 
 
     const userPrompt = `Generate the lesson introduction for "${lessonBrief.title}".
