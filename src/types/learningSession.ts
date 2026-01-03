@@ -125,6 +125,7 @@ export interface LessonBrief {
   setupGuidance: string;
   evaluationGuidance: string;
   difficultyGuidance: string;
+  level?: "beginner" | "intermediate" | "advanced";
   requiredSkills: string[];
   awardedSkills: string[];
   nextLessonKey: string | null;

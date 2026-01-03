@@ -553,12 +553,12 @@ export function useLessonEngine(
         callbacks.setMetronomeTimeSignature(evalOutput.setupDelta.meter);
       }
 
-      regenerateLessonWithNewSettings(newBpm, newMeter, lesson.difficulty + 1);
+      regenerateLessonWithNewSettings(newBpm, newMeter, Math.min(6, lesson.difficulty + 1));
     } else {
       // Fallback: increase difficulty and regenerate
       generateLesson(
         lesson.userPrompt,
-        lesson.difficulty + 1,
+        Math.min(6, lesson.difficulty + 1),
         lesson.targetSequence,
         lesson.lessonNodeKey
       );

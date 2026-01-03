@@ -17,6 +17,7 @@ export interface QuestNodeData extends Record<string, unknown> {
   setupGuidance?: string;
   evaluationGuidance?: string;
   difficultyGuidance?: string;
+  level?: "beginner" | "intermediate" | "advanced";
 }
 
 export type QuestNode = Node<QuestNodeData>;
@@ -52,6 +53,7 @@ export interface LessonExport {
   setupGuidance?: string;
   evaluationGuidance?: string;
   difficultyGuidance?: string;
+  level?: "beginner" | "intermediate" | "advanced";
   trackKey: string;
   requiresSkills: string[];
   awardsSkills: string[];

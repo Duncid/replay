@@ -37,6 +37,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { QuestGraph, useQuestGraphs } from "@/hooks/useQuestGraphs";
@@ -564,6 +571,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     useState<string>("");
   const [editingLessonKey, setEditingLessonKey] = useState<string>("");
   const [editingGoal, setEditingGoal] = useState<string>("");
+  const [editingLevel, setEditingLevel] = useState<"beginner" | "intermediate" | "advanced" | "">("");
   const [editingSetupGuidance, setEditingSetupGuidance] = useState<string>("");
   const [editingEvaluationGuidance, setEditingEvaluationGuidance] =
     useState<string>("");
@@ -647,6 +655,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           // Initialize lesson-specific fields
           setEditingLessonKey(node.data.lessonKey || "");
           setEditingGoal(node.data.goal || "");
+          setEditingLevel((node.data.level as "beginner" | "intermediate" | "advanced") || "beginner");
           setEditingSetupGuidance(node.data.setupGuidance || "");
           setEditingEvaluationGuidance(node.data.evaluationGuidance || "");
           setEditingDifficultyGuidance(node.data.difficultyGuidance || "");
@@ -663,6 +672,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingUnlockGuidance("");
           setEditingLessonKey("");
           setEditingGoal("");
+          setEditingLevel("");
           setEditingSetupGuidance("");
           setEditingEvaluationGuidance("");
           setEditingDifficultyGuidance("");
@@ -902,6 +912,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         if (node.data.type === "lesson") {
           updatedData.lessonKey = editingLessonKey.trim();
           updatedData.goal = editingGoal || undefined;
+          updatedData.level = editingLevel || "beginner";
           updatedData.setupGuidance = editingSetupGuidance || undefined;
           updatedData.evaluationGuidance =
             editingEvaluationGuidance || undefined;
@@ -940,6 +951,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     editingUnlockGuidance,
     editingLessonKey,
     editingGoal,
+    editingLevel,
     editingSetupGuidance,
     editingEvaluationGuidance,
     editingDifficultyGuidance,
@@ -2297,6 +2309,24 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                           placeholder="e.g., Lock steady quarter notes to the metronome"
                           autoResize
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="level">Level</Label>
+                        <Select
+                          value={editingLevel}
+                          onValueChange={(value) =>
+                            setEditingLevel(value as "beginner" | "intermediate" | "advanced")
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="beginner">Beginner</SelectItem>
+                            <SelectItem value="intermediate">Intermediate</SelectItem>
+                            <SelectItem value="advanced">Advanced</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="setupGuidance">Setup Guidance</Label>
