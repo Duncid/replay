@@ -36,6 +36,9 @@ export interface StartCurriculumLessonParams {
   localUserId?: string | null;
   debug?: boolean;
   difficulty?: number;
+  sequenceHistory?: NoteSequence[];
+  lessonRunId?: string;
+  regenerate?: boolean;
 }
 
 export interface StartFreeFormLessonParams {
@@ -54,6 +57,8 @@ export interface RegenerateCurriculumLessonParams {
   localUserId?: string | null;
   debug?: boolean;
   difficulty?: number;
+  lessonRunId: string;
+  sequenceHistory?: NoteSequence[];
 }
 
 export interface RegenerateFreeFormLessonParams {
@@ -106,6 +111,9 @@ export async function startCurriculumLesson(
       localUserId: params.localUserId,
       debug: params.debug || false,
       difficulty: params.difficulty,
+      sequenceHistory: params.sequenceHistory,
+      lessonRunId: params.lessonRunId,
+      regenerate: params.regenerate,
     },
   });
 
@@ -168,11 +176,10 @@ export async function regenerateCurriculumLesson(
       localUserId: params.localUserId,
       debug: params.debug || false,
       difficulty: params.difficulty,
-      suggestionHint: params.setupOverrides
-        ? {
-            setup: params.setupOverrides,
-          }
-        : undefined,
+      lessonRunId: params.lessonRunId,
+      regenerate: true,
+      setupOverrides: params.setupOverrides,
+      sequenceHistory: params.sequenceHistory,
     },
   });
 

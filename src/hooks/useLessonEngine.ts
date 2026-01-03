@@ -20,6 +20,11 @@ import {
   fetchSkillStatus,
   fetchSkillTitle,
 } from "@/services/lessonService";
+import {
+  getSequenceHistory,
+  addSequenceToHistory,
+  clearSequenceHistory,
+} from "@/utils/lessonSequenceHistory";
 
 // Types for debug and evaluation state
 export type DebugState =
@@ -141,8 +146,9 @@ export function useLessonEngine(
         }
 
         // Update the lesson with the new data
+        const newSequence = lessonStartData.demoSequence || lesson.targetSequence;
         state.updateLesson({
-          targetSequence: lessonStartData.demoSequence || lesson.targetSequence,
+          targetSequence: newSequence,
           instruction: lessonStartData.instruction,
           lessonRunId: lessonStartData.lessonRunId,
           trackKey: lessonStartData.lessonBrief.trackKey,
@@ -150,6 +156,11 @@ export function useLessonEngine(
           awardedSkills: lessonStartData.lessonBrief.awardedSkills || [],
           difficulty: lessonStartData.difficulty ?? lesson.difficulty,
         });
+
+        // Store the new sequence in history
+        if (newSequence && newSequence.notes.length > 0) {
+          addSequenceToHistory(lesson.lessonNodeKey, newSequence);
+        }
 
         // Update skill unlock status if there are awarded skills
         if (lessonStartData.lessonBrief.awardedSkills && lessonStartData.lessonBrief.awardedSkills.length > 0) {
@@ -170,7 +181,7 @@ export function useLessonEngine(
         state.hasEvaluatedRef.current = false;
 
         // Play the new example
-        setTimeout(() => callbacks.onPlaySequence(lessonStartData.demoSequence || lesson.targetSequence), 500);
+        setTimeout(() => callbacks.onPlaySequence(newSequence), 500);
       } catch (err) {
         console.error("Failed to regenerate lesson:", err);
         toast({
@@ -199,22 +210,34 @@ export function useLessonEngine(
     ) => {
       markUserAction();
       const actionToken = state.userActionTokenRef.current;
-      // Clear debug state first, then set loading to ensure spinner shows
-      state.setDebugState(null);
       state.setLessonState((prev) => ({ ...prev, lastComment: null }));
 
       try {
+        // Get sequence history for this lesson
+        const sequenceHistory = getSequenceHistory(lessonNodeKey);
+
         // CURRICULUM LESSON: Use lesson-start
+        // Call mutateAsync first - it sets isPending immediately, making isLoading true
+        // The render logic will show loading spinner when isLoading is true (even if debugState is still set)
+        // Then clear debugState after mutation starts to ensure clean transition
         const lessonStartData = await mutations.startCurriculumLesson.mutateAsync({
           lessonKey: lessonNodeKey,
           language: options.language,
           localUserId: options.localUserId,
           debug: false,
           difficulty: difficulty,
+          sequenceHistory,
         });
 
         // Check if user performed a new action (React Query handles request cancellation)
-        if (state.userActionTokenRef.current !== actionToken) return;
+        if (state.userActionTokenRef.current !== actionToken) {
+          state.setDebugState(null);
+          return;
+        }
+        
+        // Clear debugState now that mutation is in progress and isLoading is true
+        // This ensures smooth transition from debug card to loading spinner
+        state.setDebugState(null);
 
         // Type guard for debug mode response
         if ("prompt" in lessonStartData) {
@@ -230,6 +253,11 @@ export function useLessonEngine(
         const trackTitle = lessonBrief.trackTitle;
         const awardedSkills = lessonBrief.awardedSkills || [];
         const lessonDifficulty = lessonStartData.difficulty ?? difficulty;
+
+        // Store the new sequence in history
+        if (targetSequence && targetSequence.notes.length > 0) {
+          addSequenceToHistory(lessonNodeKey, targetSequence);
+        }
 
         // Apply metronome settings from the response
         if (metronomeSettings) {
@@ -311,7 +339,8 @@ export function useLessonEngine(
       const { lesson } = state.lessonState;
       const actionToken = state.userActionTokenRef.current;
       state.setLessonState((prev) => ({ ...prev, isEvaluating: true }));
-      state.setDebugState(null);
+      // Don't clear debugState yet - keep it until showEvaluationScreen is ready
+      // This prevents brief flash of LessonEvaluation screen
       state.setEvaluationState(null);
 
       try {
@@ -416,9 +445,11 @@ export function useLessonEngine(
             awardedSkillsWithTitles,
           });
 
-          // Show evaluation screen instead of immediately returning to practice
+          // Show evaluation screen - set this BEFORE clearing debugState to prevent flash
           console.log("executeEvaluation: Setting showEvaluationScreen to true");
           state.setShowEvaluationScreen(true);
+          // Now safe to clear debugState since showEvaluationScreen will take precedence in render
+          state.setDebugState(null);
           console.log("executeEvaluation: Evaluation complete, screen should show");
         } else {
           throw new Error("Lesson run ID is required for evaluation");

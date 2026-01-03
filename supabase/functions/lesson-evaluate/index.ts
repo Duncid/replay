@@ -326,10 +326,14 @@ DIAGNOSIS TAGS (use these exactly):
 - velocity_good, velocity_weak, velocity_strong
 
 YOUR AVAILABLE ACTIONS:
-- RETRY_SAME: Have them try again with the same setup and difficulty
-- MAKE_EASIER: Reduce difficulty by 1 (or adjust setup: slower BPM, fewer bars) if at difficulty 1
-- MAKE_HARDER: Increase difficulty by 1 (or adjust setup: faster BPM, more bars) if at difficulty 6 (maximum)
+- RETRY_SAME: Have them try again with the SAME setup, difficulty, and sequence. NO lesson regeneration. The student will practice the exact same sequence again. This does NOT trigger a lesson-start call.
+- MAKE_EASIER: Reduce difficulty by 1 (or adjust setup: slower BPM, fewer bars) if at difficulty 1. This will trigger a NEW sequence generation via lesson-start with the new difficulty.
+- MAKE_HARDER: Increase difficulty by 1 (or adjust setup: faster BPM, more bars) if at difficulty 6 (maximum). This will trigger a NEW sequence generation via lesson-start with the new difficulty.
 - EXIT_TO_MAIN_TEACHER: End this lesson, return to lesson selection
+
+IMPORTANT:
+- RETRY_SAME = Keep practicing the current sequence (no lesson-start call)
+- MAKE_EASIER/MAKE_HARDER = Frontend will call lesson-start to regenerate lesson with new difficulty
 
 GUARDRAILS:
 ${
