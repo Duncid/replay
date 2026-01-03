@@ -49,11 +49,14 @@ export function LessonDebugCard({
               {suggestion.trackTitle}
             </Badge>
           )}
-          <CardTitle className="text-lg">{suggestion.label}</CardTitle>
-          <CardDescription>{suggestion.why}</CardDescription>
+          <CardTitle className="text-lg">LessonStart (Debug)</CardTitle>
+          <CardDescription>
+            {suggestion.label}
+            <br />
+            {suggestion.why}
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
-
           {/* Actions */}
           <div className="flex gap-2">
             <Button

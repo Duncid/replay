@@ -34,7 +34,7 @@ export function PracticePlanDebugCard({
     <div className="w-full max-w-3xl mx-auto space-y-6">
       <Card className="border-amber-500/30 bg-amber-500/5">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Practice Plan DEBUG CARD</CardTitle>
+          <CardTitle className="text-lg">LessonSelection (Debug)</CardTitle>
           <CardDescription>
             Review the LLM prompt and activity data before proceeding
           </CardDescription>
@@ -97,10 +97,7 @@ export function PracticePlanDebugCard({
                   Debug
                 </Button>
               </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-[600px] sm:max-w-[600px]"
-              >
+              <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
                 <SheetHeader>
                   <SheetTitle>LLM Prompt Preview</SheetTitle>
                 </SheetHeader>

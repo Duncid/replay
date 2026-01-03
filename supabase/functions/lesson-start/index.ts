@@ -346,30 +346,6 @@ For an intermediate level lesson, difficulty 1 means 4 to 8 notes, mostly single
 For an advanced level lesson, difficulty 1 means 6 to 12 notes, simple chords, up to moderate tempo. Difficulty 6 means up to 24 notes, complex chords, advanced rhythms.
 
 ${
-  regenerate
-    ? `CURRENT SETUP:
-- BPM: ${setup.bpm}
-- Meter: ${setup.meter}
-- Feel: ${setup.feel}
-- Bars: ${setup.bars}
-- Count-in Bars: ${setup.countInBars}
-`
-    : (recentRuns || []).length > 0
-    ? `PAST SETUP HISTORY (from recent sessions, for context only):
-${JSON.stringify(
-  (recentRuns || [])
-    .map((run) => run.setup || {})
-    .filter((s: Record<string, unknown>) => Object.keys(s).length > 0),
-  null,
-  2
-)}
-
-Note: Use this past setup history as context. DETERMINE the appropriate initial setup based on student history, lesson level, difficulty guidance, and lesson requirements.
-`
-    : ""
-}
-
-${
   recentRunsSummary.length > 0
     ? regenerate
       ? `THIS STUDENT'S RECENT ATTEMPTS AT THIS LESSON (last ${
