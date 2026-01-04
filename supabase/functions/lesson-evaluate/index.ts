@@ -378,21 +378,14 @@ ${awardedSkills
 
 LESSON ACQUISITION:
 - Mark a lesson as "acquired" by setting markLessonAcquired: true
-- You MUST set markLessonAcquired: true when ALL of the following are true:
-  * The evaluation is "pass" (80%+ accuracy on all criteria)
-  * The diagnosis includes positive indicators showing competency:
-    - pitch_correct (correct notes played)
-    - timing_good (good timing accuracy)
-    - rhythm_correct (correct rhythm pattern)
-    - notes_complete (all required notes played)
-  * The student has demonstrated solid competency in the lesson
-- This is especially important at difficulty 3 or higher, but you should also mark lessons as acquired at lower difficulties if the student shows mastery (all positive diagnosis tags)
+- You MUST set markLessonAcquired: true if:
+  - the difficulty 3 or higher
+  - AND the evaluation is "pass"
 - This is separate from skill unlocking - lesson acquisition tracks completion for prerequisite purposes
-- Acquired lessons unlock dependent lessons that require them as prerequisites
 
 COACHING STYLE:
 - Be encouraging but honest
-- Keep feedback brief (2-3 sentences max)
+- Keep feedback brief (2 sentences max)
 - Focus on what they did well AND what to improve
 - If suggesting MAKE_EASIER, frame it positively ("Let's build up to this")
 - If suggesting EXIT, make it feel like progress, not failure`;
@@ -461,15 +454,11 @@ COACHING STYLE:
               },
               markLessonAcquired: {
                 type: "boolean",
-                description: "Set to true when evaluation is 'pass' AND diagnosis includes positive indicators (pitch_correct, timing_good, rhythm_correct, notes_complete) showing the student has demonstrated competency. This is especially important at difficulty 3+, but also applies at lower difficulties if mastery is shown. This is separate from skill unlocking.",
+                description:
+                  "Set to true when evaluation is 'pass' AND diagnosis includes positive indicators (pitch_correct, timing_good, rhythm_correct, notes_complete) showing the student has demonstrated competency. This is especially important at difficulty 3+, but also applies at lower difficulties if mastery is shown. This is separate from skill unlocking.",
               },
             },
-            required: [
-              "evaluation",
-              "diagnosis",
-              "feedbackText",
-              "nextAction",
-            ],
+            required: ["evaluation", "diagnosis", "feedbackText", "nextAction"],
           },
         },
       },
@@ -627,9 +616,17 @@ COACHING STYLE:
             );
 
           if (acquisitionError) {
-            console.error("Error marking lesson as acquired:", acquisitionError);
+            console.error(
+              "Error marking lesson as acquired:",
+              acquisitionError
+            );
           } else {
-            console.log("Lesson marked as acquired:", lessonKey, "for user:", localUserId);
+            console.log(
+              "Lesson marked as acquired:",
+              lessonKey,
+              "for user:",
+              localUserId
+            );
           }
         }
       } else {
