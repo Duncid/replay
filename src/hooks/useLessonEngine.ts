@@ -386,22 +386,7 @@ export function useLessonEngine(
               description: evaluationOutput.diagnosis?.join(", ") || evaluationOutput.feedbackText,
             });
 
-            // Only show coach action toast in debug mode (actions are visible in UI buttons)
-            if (options.debugMode) {
-              toast({
-                title: `🎯 Coach: ${evaluationOutput.nextAction}`,
-                description: evaluationOutput.setupDelta
-                  ? `Setup: ${JSON.stringify(evaluationOutput.setupDelta)}`
-                  : undefined,
-              });
-            }
-
-            if (evaluationOutput.awardedSkills && evaluationOutput.awardedSkills.length > 0) {
-              toast({
-                title: `🏆 Skills Awarded`,
-                description: evaluationOutput.awardedSkills.join(", "),
-              });
-            }
+            // Celebratory toasts are shown after we fetch skill titles (below)
           }
 
           // Update skill unlock status if skills were awarded
@@ -426,6 +411,21 @@ export function useLessonEngine(
             if (awardedSkillsWithTitles.length > 0) {
               skillUnlockStatus = awardedSkillsWithTitles[0];
             }
+            
+            // Celebratory toast for skill unlocks
+            const skillNames = awardedSkillsWithTitles.map(s => s.title).join(", ");
+            toast({
+              title: `🎉 Congrats! You unlocked`,
+              description: skillNames,
+            });
+          }
+
+          // Celebratory toast for lesson acquisition
+          if (evaluationOutput.markLessonAcquired) {
+            toast({
+              title: `🎓 Congrats! You completed`,
+              description: state.lessonState.lesson.lessonNodeKey || "this lesson",
+            });
           }
 
           // Determine evaluation result based on evaluation
