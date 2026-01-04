@@ -396,7 +396,7 @@ export const Metronome = ({
   const { numerator, denominator } = parseTimeSignature(timeSignature);
   const normalizedBeatUnit = normalizeBeatUnitForSignature(beatUnit, timeSignature);
   const beatsPerBar = getBeatsPerBar(timeSignature, normalizedBeatUnit);
-  const feelConfig = feelConfigMap[feel];
+  const feelConfig = feelConfigMap[feel] ?? feelConfigMap.straight_beats;
   const subdivision = advancedSubdivision ?? feelConfig.subdivision;
   const isSwingFeel = feelConfig.subdivision === 2 && (feelConfig.swingAmount ?? 0) > 0;
   const swingAmount = subdivision === 2 ? (advancedSwing ?? feelConfig.swingAmount ?? 0) : 0;
