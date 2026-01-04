@@ -356,7 +356,7 @@ function transformToRuntime(
     data: Record<string, unknown>;
   }>;
   edges: Array<{
-    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "lesson_requires_lesson";
+    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill";
     fromKey: string;
     toKey: string;
   }>;
@@ -372,7 +372,7 @@ function transformToRuntime(
   }> = [];
   
   const edges: Array<{
-    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "lesson_requires_lesson";
+    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill";
     fromKey: string;
     toKey: string;
   }> = [];
