@@ -215,10 +215,6 @@ serve(async (req) => {
     const trackRequiresEdges = edges.filter(
       (e) => e.edge_type === "track_requires_skill"
     );
-    const lessonRequiresLessonEdges = edges.filter(
-      (e) => e.edge_type === "lesson_requires_lesson"
-    );
-
     // 2. Fetch user activity data (filtered by localUserId if provided)
     let runsQuery = supabase
       .from("lesson_runs")
@@ -318,14 +314,15 @@ serve(async (req) => {
           .filter((e) => e.source_key === current)
           .map((e) => e.target_key);
 
-        // Get THIS lesson's required prerequisite lessons
-        const lessonRequiredLessons = lessonRequiresLessonEdges
-          .filter((e) => e.source_key === current)
-          .map((e) => e.target_key);
+        // Get THIS lesson's required prerequisite lessons (previous lessons in chain)
+        // A lesson requires the lessons that have lesson_next pointing TO it
+        const lessonRequiredLessons = lessonNextEdges
+          .filter((e) => e.target_key === current)
+          .map((e) => e.source_key);
 
         // Lesson is accessible if:
         // 1. All required skills are unlocked, AND
-        // 2. All required prerequisite lessons are acquired
+        // 2. All prerequisite lessons (previous lessons in chain) are acquired
         const skillsMet =
           lessonRequiredSkills.length === 0 ||
           lessonRequiredSkills.every((sk) => unlockedSkills.has(sk));
