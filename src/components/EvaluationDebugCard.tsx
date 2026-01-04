@@ -58,10 +58,6 @@ export function EvaluationDebugCard({
           {/* Summary Info */}
           <div className="space-y-2">
             <div className="text-sm">
-              <span className="font-semibold">Evaluation Type:</span>{" "}
-              {evaluationType === "structured" ? "Structured Lesson" : "Free Practice"}
-            </div>
-            <div className="text-sm">
               <span className="font-semibold">User Recording:</span>{" "}
               {userSequence.notes.length} notes
             </div>
@@ -75,22 +71,13 @@ export function EvaluationDebugCard({
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
-            {onCancel && (
-              <Button variant="outline" size="sm" onClick={onCancel}>
-                Cancel
-              </Button>
-            )}
-
             <Sheet open={requestSheetOpen} onOpenChange={setRequestSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm">
-                  Debug Request
+                  Debug
                 </Button>
               </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-[600px] sm:max-w-[600px]"
-              >
+              <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
                 <SheetHeader>
                   <SheetTitle>LLM Evaluation Request</SheetTitle>
                 </SheetHeader>
@@ -120,7 +107,9 @@ export function EvaluationDebugCard({
                     <div className="space-y-4">
                       {evaluationOutput && (
                         <div>
-                          <h4 className="font-semibold mb-2">Evaluation Output</h4>
+                          <h4 className="font-semibold mb-2">
+                            Evaluation Output
+                          </h4>
                           <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
                             {JSON.stringify(evaluationOutput, null, 2)}
                           </pre>
@@ -141,7 +130,7 @@ export function EvaluationDebugCard({
             )}
 
             <Button onClick={onProceed} size="sm" className="ml-auto">
-              GO
+              Send
             </Button>
           </div>
         </CardContent>

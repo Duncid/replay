@@ -79,7 +79,7 @@ export function PracticePlanDebugCard({
             </Sheet>
 
             <Button onClick={onProceed} size="sm" className="ml-auto">
-              GO
+              Send
             </Button>
           </div>
         </CardContent>

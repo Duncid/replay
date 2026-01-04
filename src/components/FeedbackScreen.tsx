@@ -7,8 +7,6 @@ import {
   CheckCircle,
   LogOut,
   RotateCcw,
-  TrendingDown,
-  TrendingUp,
   Unlock,
   XCircle,
 } from "lucide-react";
@@ -187,30 +185,20 @@ export function FeedbackScreen({
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col gap-2 mt-4">
+        <div className="flex gap-2 mt-4">
           {/* Primary action: Return to Practice */}
           <Button onClick={onReturnToPractice} className="w-full gap-2">
             <RotateCcw className="w-4 h-4" />
-            {t("evaluation.returnToPractice", "Return to Practice")}
+            {t("evaluation.returnToPractice", "Keep practing")}
           </Button>
 
           {/* Secondary action: Adjust difficulty */}
           {isPassing ? (
-            <Button
-              variant="outline"
-              onClick={onMakeHarder}
-              className="w-full gap-2"
-            >
-              <TrendingUp className="w-4 h-4" />
+            <Button variant="outline" onClick={onMakeHarder}>
               {t("evaluation.tryHarder", "Try Harder")}
             </Button>
           ) : (
-            <Button
-              variant="outline"
-              onClick={onMakeEasier}
-              className="w-full gap-2"
-            >
-              <TrendingDown className="w-4 h-4" />
+            <Button variant="outline" onClick={onMakeEasier}>
               {t("evaluation.lowerDifficulty", "Lower Difficulty")}
             </Button>
           )}
