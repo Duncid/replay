@@ -249,7 +249,6 @@ LESSON BRIEF:
 - Key: ${lessonKey}
 - Title: ${lessonTitle}
 - Goal: ${lessonGoal}
-${evaluationGuidance ? `- Evaluation Guidance: ${evaluationGuidance}` : ""}
 ${
   awardedSkills.length > 0
     ? `- Skills that can be awarded: ${awardedSkills.join(", ")}`
@@ -314,10 +313,19 @@ GRADING CRITERIA:
 3. RHYTHM: Was the rhythm pattern correct?
 4. COMPLETENESS: Did they play all required notes?
 
-EVALUATION LEVELS:
+EVALUATION:
+Evaluation criteria should depend on the nature of the lesson.
+Pitch is always important. Sometimes timing and rhythm are more critical (e.g., rhythmic exercises).
+As a generic example:
 - "pass": 80%+ accuracy on all criteria, good timing
 - "close": 50-80% accuracy, minor timing issues, almost there
 - "fail": <50% accuracy, significant errors, needs more practice
+
+${
+  evaluationGuidance
+    ? `LESSON SPECIFIC EVALUATION GUIDANCE: ${evaluationGuidance}`
+    : ""
+}
 
 DIAGNOSIS TAGS (use these exactly):
 - pitch_correct, pitch_wrong, pitch_partial
