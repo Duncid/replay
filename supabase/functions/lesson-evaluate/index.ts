@@ -377,8 +377,16 @@ ${awardedSkills
 }
 
 LESSON ACQUISITION:
-- You can mark a lesson as "acquired" by setting markLessonAcquired: true
-- Consider a lesson acquired when the student demonstrates competency (typically passing at difficulty level 3 or higher)
+- Mark a lesson as "acquired" by setting markLessonAcquired: true
+- You MUST set markLessonAcquired: true when ALL of the following are true:
+  * The evaluation is "pass" (80%+ accuracy on all criteria)
+  * The diagnosis includes positive indicators showing competency:
+    - pitch_correct (correct notes played)
+    - timing_good (good timing accuracy)
+    - rhythm_correct (correct rhythm pattern)
+    - notes_complete (all required notes played)
+  * The student has demonstrated solid competency in the lesson
+- This is especially important at difficulty 3 or higher, but you should also mark lessons as acquired at lower difficulties if the student shows mastery (all positive diagnosis tags)
 - This is separate from skill unlocking - lesson acquisition tracks completion for prerequisite purposes
 - Acquired lessons unlock dependent lessons that require them as prerequisites
 
@@ -453,7 +461,7 @@ COACHING STYLE:
               },
               markLessonAcquired: {
                 type: "boolean",
-                description: "Whether to mark this lesson as acquired for prerequisite purposes. Consider marking acquired if user passed at difficulty 3+. This is separate from skill unlocking.",
+                description: "Set to true when evaluation is 'pass' AND diagnosis includes positive indicators (pitch_correct, timing_good, rhythm_correct, notes_complete) showing the student has demonstrated competency. This is especially important at difficulty 3+, but also applies at lower difficulties if mastery is shown. This is separate from skill unlocking.",
               },
             },
             required: [
