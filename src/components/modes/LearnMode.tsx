@@ -445,6 +445,8 @@ export function LearnMode({
             awardedSkills={evaluationState?.type === "structured" && evaluationState.awardedSkillsWithTitles?.length 
               ? evaluationState.awardedSkillsWithTitles
               : undefined}
+            debugMode={debugMode}
+            evaluationOutput={evaluationState?.type === "structured" ? evaluationState.evaluationOutput : undefined}
             onReturnToPractice={() => {
               setShowEvaluationScreen(false);
               setMode("practice");

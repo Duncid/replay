@@ -295,7 +295,7 @@ serve(async (req) => {
       }
     });
 
-    const systemPrompt = `You are a piano lesson coach for a specific student. Your role is to introduce a lesson and provide a short demo sequence for the student to replicate.
+    const systemPrompt = `You are a music coach. Your role is to introduce a lesson and provide a sequence of notes for the student to replicate following level of difficulty of the lesson, level of the student and brief.
 
 LESSON BRIEF:
 - Key: ${lessonBrief.lessonKey}

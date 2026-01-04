@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { EvaluationOutput } from "@/types/learningSession";
 import {
   AlertCircle,
   CheckCircle,
@@ -24,6 +25,8 @@ interface FeedbackScreenProps {
   onMakeEasier: () => void;
   onMakeHarder: () => void;
   onFinishLesson: () => void;
+  debugMode?: boolean;
+  evaluationOutput?: EvaluationOutput;
 }
 
 export function FeedbackScreen({
@@ -34,6 +37,8 @@ export function FeedbackScreen({
   onMakeEasier,
   onMakeHarder,
   onFinishLesson,
+  debugMode = false,
+  evaluationOutput,
 }: FeedbackScreenProps) {
   const { t } = useTranslation();
 
@@ -70,6 +75,12 @@ export function FeedbackScreen({
   const Icon = config.icon;
   const isPassing = evaluation === "pass";
 
+  // Debug information
+  const skillAwarded = awardedSkills && awardedSkills.length > 0;
+  const lessonAcquired = evaluationOutput?.markLessonAcquired ?? false;
+  const diagnosis = evaluationOutput?.diagnosis ?? [];
+  const evaluationExplanation = evaluationOutput?.feedbackText ?? feedbackText;
+
   return (
     <Card className="w-full max-w-2xl mx-auto border-border/50 backdrop-blur-sm bg-transparent border-0">
       <CardContent className="pt-6 space-y-4">
@@ -89,6 +100,69 @@ export function FeedbackScreen({
         <p className="text-center text-base text-muted-foreground">
           {feedbackText}
         </p>
+
+        {/* Debug Information */}
+        {debugMode && evaluationOutput && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 space-y-3">
+            <div className="font-medium text-sm text-amber-600 dark:text-amber-400 mb-2">
+              Debug Information
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-semibold">Skill Awarded:</span>{" "}
+                <span
+                  className={
+                    skillAwarded
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-600 dark:text-gray-400"
+                  }
+                >
+                  {skillAwarded ? "Yes" : "No"}
+                </span>
+                {skillAwarded && awardedSkills && (
+                  <span className="ml-2 text-muted-foreground">
+                    ({awardedSkills.map((s) => s.title).join(", ")})
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <span className="font-semibold">Lesson Acquired:</span>{" "}
+                <span
+                  className={
+                    lessonAcquired
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-600 dark:text-gray-400"
+                  }
+                >
+                  {lessonAcquired ? "Yes" : "No"}
+                </span>
+              </div>
+
+              <div>
+                <span className="font-semibold">Evaluation:</span>{" "}
+                <span className="capitalize">{evaluation}</span>
+              </div>
+
+              {diagnosis.length > 0 && (
+                <div>
+                  <span className="font-semibold">Diagnosis:</span>{" "}
+                  <span className="text-muted-foreground">
+                    {diagnosis.join(", ")}
+                  </span>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-amber-500/20">
+                <div className="font-semibold mb-1">Coach Evaluation:</div>
+                <div className="text-muted-foreground italic">
+                  {evaluationExplanation}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Awarded Skills */}
         {awardedSkills && awardedSkills.length > 0 && (
