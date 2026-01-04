@@ -56,6 +56,7 @@ export interface LessonExport {
   level?: "beginner" | "intermediate" | "advanced";
   trackKey: string;
   requiresSkills: string[];
+  requiresLessons?: string[];
   awardsSkills: string[];
   nextLessons?: string[];
   _debug?: {

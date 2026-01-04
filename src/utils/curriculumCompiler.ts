@@ -127,6 +127,9 @@ export function compileCurriculum(questData: QuestData): CompilationResult {
   // Build track→skill requirement map (track-required → skill-required)
   const trackRequiredSkills = new Map<string, Set<string>>(); // trackKey -> Set<skillKey>
 
+  // Build lesson→lesson prerequisite map (lesson-required → lesson-prerequisite)
+  const lessonRequiredLessons = new Map<string, Set<string>>(); // lessonId -> Set<lessonKey>
+
   // Process edges to infer relationships
   for (const edge of edges) {
     const sourceNode = nodeById.get(edge.source);
@@ -220,6 +223,20 @@ export function compileCurriculum(questData: QuestData): CompilationResult {
         trackRequiredSkills.set(trackKey, new Set());
       }
       trackRequiredSkills.get(trackKey)!.add(skillKey);
+    }
+
+    // Lesson → Lesson prerequisite: lesson-required → lesson-prerequisite
+    if (
+      sourceNode.data.type === "lesson" &&
+      targetNode.data.type === "lesson" &&
+      sourceHandle === "lesson-required" &&
+      targetHandle === "lesson-prerequisite"
+    ) {
+      const prerequisiteLessonKey = targetNode.data.lessonKey!;
+      if (!lessonRequiredLessons.has(sourceNode.id)) {
+        lessonRequiredLessons.set(sourceNode.id, new Set());
+      }
+      lessonRequiredLessons.get(sourceNode.id)!.add(prerequisiteLessonKey);
     }
   }
 
@@ -336,6 +353,9 @@ export function compileCurriculum(questData: QuestData): CompilationResult {
       const requiresSkills = Array.from(
         lessonRequiredSkills.get(node.id) || []
       ).sort();
+      const requiresLessons = lessonRequiredLessons.has(node.id)
+        ? Array.from(lessonRequiredLessons.get(node.id)!).sort()
+        : undefined;
       const awardsSkills = Array.from(
         lessonAwardedSkills.get(node.id) || []
       ).sort();
@@ -353,6 +373,7 @@ export function compileCurriculum(questData: QuestData): CompilationResult {
         level: node.data.level,
         trackKey,
         requiresSkills,
+        requiresLessons,
         awardsSkills,
         nextLessons,
         _debug: {

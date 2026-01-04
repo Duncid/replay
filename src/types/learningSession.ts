@@ -163,6 +163,7 @@ export interface EvaluationOutput {
   setupDelta?: Partial<LessonRunSetup>;
   awardedSkills?: string[];
   exitHint?: string;
+  markLessonAcquired?: boolean;
 }
 
 // Lesson state for the state machine

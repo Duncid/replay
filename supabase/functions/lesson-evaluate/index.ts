@@ -36,6 +36,7 @@ interface EvaluationOutput {
   setupDelta?: Record<string, unknown>;
   awardedSkills?: string[];
   exitHint?: string;
+  markLessonAcquired?: boolean;
 }
 
 interface LessonBrief {
@@ -375,6 +376,12 @@ ${awardedSkills
     : ""
 }
 
+LESSON ACQUISITION:
+- You can mark a lesson as "acquired" by setting markLessonAcquired: true
+- Consider a lesson acquired when the student demonstrates competency (typically passing at difficulty level 3 or higher)
+- This is separate from skill unlocking - lesson acquisition tracks completion for prerequisite purposes
+- Acquired lessons unlock dependent lessons that require them as prerequisites
+
 COACHING STYLE:
 - Be encouraging but honest
 - Keep feedback brief (2-3 sentences max)
@@ -443,6 +450,10 @@ COACHING STYLE:
               awardSkills: {
                 type: "boolean",
                 description: `Whether to award the lesson's skills. ONLY set to true if ${SKILL_UNLOCK_CONSECUTIVE_PASSES}+ consecutive passes at difficulty ${SKILL_UNLOCK_MIN_DIFFICULTY} (maximum) will be achieved.`,
+              },
+              markLessonAcquired: {
+                type: "boolean",
+                description: "Whether to mark this lesson as acquired for prerequisite purposes. Consider marking acquired if user passed at difficulty 3+. This is separate from skill unlocking.",
               },
             },
             required: [
@@ -545,6 +556,7 @@ COACHING STYLE:
           setupDelta: parsed.setupDelta,
           exitHint: parsed.exitHint,
           awardedSkills: [],
+          markLessonAcquired: parsed.markLessonAcquired || false,
         };
 
         // Handle skill awarding
@@ -592,6 +604,26 @@ COACHING STYLE:
             }
           }
         }
+
+        // Handle lesson acquisition
+        if (parsed.markLessonAcquired === true && localUserId) {
+          const { error: acquisitionError } = await supabase
+            .from("user_lesson_acquisition")
+            .upsert(
+              {
+                local_user_id: localUserId,
+                lesson_key: lessonKey,
+                acquired_at: new Date().toISOString(),
+              },
+              { onConflict: "local_user_id,lesson_key" }
+            );
+
+          if (acquisitionError) {
+            console.error("Error marking lesson as acquired:", acquisitionError);
+          } else {
+            console.log("Lesson marked as acquired:", lessonKey, "for user:", localUserId);
+          }
+        }
       } else {
         throw new Error("No tool call in response");
       }
@@ -604,6 +636,7 @@ COACHING STYLE:
         feedbackText: "Nice try! Let's give it another shot.",
         nextAction: "RETRY_SAME",
         awardedSkills: [],
+        markLessonAcquired: false,
       };
     }
 
