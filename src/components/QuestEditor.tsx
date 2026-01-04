@@ -330,6 +330,13 @@ function LessonNode({
         id="lesson-required"
         style={{ backgroundColor: "#059669" }}
       />
+      {/* Target handle for receiving lesson prerequisites */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="lesson-prerequisite"
+        style={{ backgroundColor: "#f97316", left: "75%" }}
+      />
       <span className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
         Prev
       </span>
@@ -339,8 +346,11 @@ function LessonNode({
       <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
         Unlocking
       </span>
-      <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Is requiring
+      <span className="absolute top-[-28px] left-[25%] -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+        Requires
+      </span>
+      <span className="absolute top-[-28px] left-[75%] -translate-x-1/2 text-xs text-orange-500 pointer-events-none whitespace-nowrap">
+        Prereq
       </span>
     </QuestNodeBase>
   );
@@ -1013,30 +1023,38 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         return { valid: true };
       }
 
-      // Lesson → Lesson (using lesson-out → lesson-in)
+      // Lesson → Lesson (using lesson-out → lesson-in OR lesson-required → lesson-prerequisite)
       if (source.data.type === "lesson" && target.data.type === "lesson") {
-        // Check if source already has lesson-out connection
-        const sourceOutgoing = edges.filter(
-          (e) => e.source === source.id && e.sourceHandle === "lesson-out"
-        ).length;
-        if (sourceOutgoing >= 1) {
-          return {
-            valid: false,
-            reason:
-              "Lesson can only have one outgoing connection to another lesson",
-          };
+        // lesson-out → lesson-in (next lesson)
+        if (sourceHandle === "lesson-out" && targetHandle === "lesson-in") {
+          // Check if source already has lesson-out connection
+          const sourceOutgoing = edges.filter(
+            (e) => e.source === source.id && e.sourceHandle === "lesson-out"
+          ).length;
+          if (sourceOutgoing >= 1) {
+            return {
+              valid: false,
+              reason:
+                "Lesson can only have one outgoing connection to another lesson",
+            };
+          }
+          // Check if target already has incoming connection
+          const targetIncoming = edges.filter(
+            (e) => e.target === target.id && e.targetHandle === "lesson-in"
+          ).length;
+          if (targetIncoming >= 1) {
+            return {
+              valid: false,
+              reason: "Lesson can only have one incoming connection",
+            };
+          }
+          return { valid: true };
         }
-        // Check if target already has incoming connection
-        const targetIncoming = edges.filter(
-          (e) => e.target === target.id && e.targetHandle === "lesson-in"
-        ).length;
-        if (targetIncoming >= 1) {
-          return {
-            valid: false,
-            reason: "Lesson can only have one incoming connection",
-          };
+        // lesson-required → lesson-prerequisite (prerequisite lesson)
+        if (sourceHandle === "lesson-required" && targetHandle === "lesson-prerequisite") {
+          return { valid: true };
         }
-        return { valid: true };
+        return { valid: false, reason: "Invalid lesson-to-lesson connection" };
       }
 
       // Lesson → Skill (using lesson-unlockable/required → skill-unlockable/required)
@@ -1148,13 +1166,16 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         sourceNode.data.type === "lesson" &&
         targetNode.data.type === "lesson"
       ) {
-        if (sourceHandle !== "lesson-out" || targetHandle !== "lesson-in") {
-          return {
-            valid: false,
-            reason: "Lesson must connect to Lesson using correct handles",
-          };
+        if (sourceHandle === "lesson-out" && targetHandle === "lesson-in") {
+          return { valid: true };
         }
-        return { valid: true };
+        if (sourceHandle === "lesson-required" && targetHandle === "lesson-prerequisite") {
+          return { valid: true };
+        }
+        return {
+          valid: false,
+          reason: "Lesson must connect to Lesson using correct handles (Next→Prev or Requires→Prereq)",
+        };
       }
 
       // Lesson → Skill

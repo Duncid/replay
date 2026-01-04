@@ -342,6 +342,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_lesson_acquisition: {
+        Row: {
+          acquired_at: string
+          created_at: string
+          id: string
+          lesson_key: string
+          local_user_id: string | null
+        }
+        Insert: {
+          acquired_at?: string
+          created_at?: string
+          id?: string
+          lesson_key: string
+          local_user_id?: string | null
+        }
+        Update: {
+          acquired_at?: string
+          created_at?: string
+          id?: string
+          lesson_key?: string
+          local_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_lesson_acquisition_local_user_id_fkey"
+            columns: ["local_user_id"]
+            isOneToOne: false
+            referencedRelation: "local_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_skill_state: {
         Row: {
           created_at: string

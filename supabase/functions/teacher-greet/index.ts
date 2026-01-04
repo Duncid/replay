@@ -215,6 +215,9 @@ serve(async (req) => {
     const trackRequiresEdges = edges.filter(
       (e) => e.edge_type === "track_requires_skill"
     );
+    const lessonRequiresLessonEdges = edges.filter(
+      (e) => e.edge_type === "lesson_requires_lesson"
+    );
 
     // 2. Fetch user activity data (filtered by localUserId if provided)
     let runsQuery = supabase
@@ -259,6 +262,29 @@ serve(async (req) => {
         .map((s) => s.skill_key)
     );
 
+    // Fetch acquired lessons
+    let acquiredQuery = supabase
+      .from("user_lesson_acquisition")
+      .select("lesson_key");
+
+    if (localUserId) {
+      acquiredQuery = acquiredQuery.eq("local_user_id", localUserId);
+    }
+
+    const { data: acquiredLessons, error: acquiredError } = await acquiredQuery;
+
+    if (acquiredError) {
+      console.error("Error fetching acquired lessons:", acquiredError);
+    }
+
+    const acquiredLessonKeys = new Set(
+      (acquiredLessons || []).map((a) => a.lesson_key)
+    );
+
+    console.log(
+      `[teacher-greet] Acquired lessons for user ${localUserId || "all"}: ${acquiredLessonKeys.size}`
+    );
+
     // 3. Compute accessible lessons per track
     const accessibleLessons: Map<string, Set<string>> = new Map();
     const nextLessonAfter: Map<string, string> = new Map();
@@ -292,12 +318,23 @@ serve(async (req) => {
           .filter((e) => e.source_key === current)
           .map((e) => e.target_key);
 
+        // Get THIS lesson's required prerequisite lessons
+        const lessonRequiredLessons = lessonRequiresLessonEdges
+          .filter((e) => e.source_key === current)
+          .map((e) => e.target_key);
+
         // Lesson is accessible if:
-        // 1. It has no requirements, OR
-        // 2. All its requirements are unlocked
-        const lessonRequirementsMet =
+        // 1. All required skills are unlocked, AND
+        // 2. All required prerequisite lessons are acquired
+        const skillsMet =
           lessonRequiredSkills.length === 0 ||
           lessonRequiredSkills.every((sk) => unlockedSkills.has(sk));
+
+        const lessonsMet =
+          lessonRequiredLessons.length === 0 ||
+          lessonRequiredLessons.every((lk) => acquiredLessonKeys.has(lk));
+
+        const lessonRequirementsMet = skillsMet && lessonsMet;
 
         if (lessonRequirementsMet) {
           accessible.add(current);
