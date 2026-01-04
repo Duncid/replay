@@ -185,11 +185,7 @@ export function FeedbackScreen({
 
         {/* Action Buttons */}
         <div className="flex justify-between gap-2 mt-4">
-          <Button
-            variant="ghost"
-            onClick={onFinishLesson}
-            className="w-full gap-2 text-muted-foreground"
-          >
+          <Button variant="ghost" onClick={onFinishLesson}>
             {t("evaluation.finishLesson", "Leave")}
           </Button>
 
