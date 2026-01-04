@@ -330,13 +330,6 @@ function LessonNode({
         id="lesson-required"
         style={{ backgroundColor: "#059669" }}
       />
-      {/* Target handle for receiving lesson prerequisites */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="lesson-prerequisite"
-        style={{ backgroundColor: "#f97316", left: "75%" }}
-      />
       <span className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
         Prev
       </span>
@@ -346,11 +339,8 @@ function LessonNode({
       <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
         Unlocking
       </span>
-      <span className="absolute top-[-28px] left-[25%] -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+      <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
         Requires
-      </span>
-      <span className="absolute top-[-28px] left-[75%] -translate-x-1/2 text-xs text-orange-500 pointer-events-none whitespace-nowrap">
-        Prereq
       </span>
     </QuestNodeBase>
   );

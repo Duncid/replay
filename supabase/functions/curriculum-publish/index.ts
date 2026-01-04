@@ -440,7 +440,7 @@ function transformToRuntime(
     const targetNode = editorNodeMap.get(edge.target);
     if (!sourceNode || !targetNode) continue;
 
-    let edgeType: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "lesson_requires_lesson" | null = null;
+    let edgeType: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | null = null;
 
     // track-out → lesson-in → track_starts_with
     if (
@@ -477,15 +477,6 @@ function transformToRuntime(
       edge.targetHandle === "skill-unlockable"
     ) {
       edgeType = "lesson_awards_skill";
-    }
-    // lesson-required → lesson-prerequisite → lesson_requires_lesson
-    else if (
-      sourceNode.data.type === "lesson" &&
-      targetNode.data.type === "lesson" &&
-      edge.sourceHandle === "lesson-required" &&
-      edge.targetHandle === "lesson-prerequisite"
-    ) {
-      edgeType = "lesson_requires_lesson";
     }
 
     if (edgeType) {
