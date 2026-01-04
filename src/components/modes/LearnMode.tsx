@@ -13,6 +13,7 @@ import {
   useStartCurriculumLesson,
   useTeacherGreeting,
 } from "@/hooks/useLessonQueries";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LessonFeelPreset,
   LessonMetronomeSettings,
@@ -119,6 +120,7 @@ export function LearnMode({
   // Hooks
   const { toast } = useToast();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   // Fetch teacher greeting when user clicks Start
   const handleStartTeacherGreet = useCallback(() => {
@@ -284,7 +286,9 @@ export function LearnMode({
     setEvaluationResult(null);
     onClearRecording();
     setShouldFetchGreeting(false);
-  }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode, setShouldFetchGreeting]);
+    // Invalidate teacher greeting cache to force fresh suggestions on next Start
+    queryClient.invalidateQueries({ queryKey: ["teacherGreeting"] });
+  }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode, setShouldFetchGreeting, queryClient]);
 
   // When a suggestion is clicked, fetch the debug prompt first (only in debug mode)
   const handleSelectActivity = useCallback(
