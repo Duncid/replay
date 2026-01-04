@@ -12,11 +12,10 @@ import {
   TeacherGreetingResponse,
   TeacherSuggestion,
 } from "@/types/learningSession";
-import { Music } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PracticePlanDebugCard } from "./PracticePlanDebugCard";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { PracticePlanDebugCard } from "./PracticePlanDebugCard";
 
 export interface TeacherDebugData {
   debug: true;
@@ -133,13 +132,9 @@ export function TeacherWelcome({
               className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
               onClick={() => onSelectActivity(suggestion)}
             >
-              <CardHeader className="pb-2">
+              <CardHeader>
                 {suggestion.trackTitle && (
-                  <Badge
-                    variant="secondary"
-                    className="flex items-center gap-1 text-xs w-fit"
-                  >
-                    <Music className="h-3 w-3" />
+                  <Badge className="flex items-center gap-1 text-xs w-fit">
                     {suggestion.trackTitle}
                   </Badge>
                 )}
@@ -150,11 +145,6 @@ export function TeacherWelcome({
                   {suggestion.why}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-0">
-                <Button className="w-full" size="sm">
-                  {t("learnMode.startLesson", "Start Lesson")}
-                </Button>
-              </CardContent>
             </Card>
           ))}
         </div>
@@ -165,7 +155,9 @@ export function TeacherWelcome({
   // Loading state for initial greeting fetch (after Start is clicked)
   if (isLoading) {
     return (
-      <LoadingSpinner message={t("learnMode.loadingTeacher", "Preparing your lesson...")} />
+      <LoadingSpinner
+        message={t("learnMode.loadingTeacher", "Preparing your lesson...")}
+      />
     );
   }
 
