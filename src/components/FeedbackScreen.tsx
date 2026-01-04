@@ -2,13 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { EvaluationOutput } from "@/types/learningSession";
-import {
-  AlertCircle,
-  CheckCircle,
-  RotateCcw,
-  Unlock,
-  XCircle,
-} from "lucide-react";
+import { AlertCircle, CheckCircle, Unlock, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SkillToUnlock } from "./LessonCard";
 
@@ -191,8 +185,7 @@ export function FeedbackScreen({
 
           <div className="flex gap-2">
             {/* Primary action: Return to Practice */}
-            <Button onClick={onReturnToPractice} className="w-full gap-2">
-              <RotateCcw className="w-4 h-4" />
+            <Button onClick={onReturnToPractice}>
               {t("evaluation.returnToPractice", "Keep practing")}
             </Button>
 
