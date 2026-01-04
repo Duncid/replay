@@ -212,6 +212,9 @@ serve(async (req) => {
     const lessonAwardsEdges = edges.filter(
       (e) => e.edge_type === "lesson_awards_skill"
     );
+    const trackRequiresEdges = edges.filter(
+      (e) => e.edge_type === "track_requires_skill"
+    );
 
     // 2. Fetch user activity data (filtered by localUserId if provided)
     let runsQuery = supabase
@@ -263,7 +266,20 @@ serve(async (req) => {
     for (const track of tracks) {
       const accessible = new Set<string>();
       const visited = new Set<string>();
-      const activeRequiredSkills = new Set<string>();
+
+      // Check track-level requirements
+      const trackRequiredSkills = trackRequiresEdges
+        .filter((e) => e.source_key === track.key)
+        .map((e) => e.target_key);
+      const trackRequirementsMet =
+        trackRequiredSkills.length === 0 ||
+        trackRequiredSkills.every((sk) => unlockedSkills.has(sk));
+
+      // If track has requirements and they're not met, skip this track
+      if (trackRequiredSkills.length > 0 && !trackRequirementsMet) {
+        accessibleLessons.set(track.key, accessible);
+        continue;
+      }
 
       let current = track.startLesson;
       while (current && !visited.has(current)) {
@@ -271,20 +287,19 @@ serve(async (req) => {
         const lesson = lessons.get(current);
         if (!lesson) break;
 
-        // Add required skills for this lesson
-        const requiredEdges = lessonRequiresEdges.filter(
-          (e) => e.source_key === current
-        );
-        for (const edge of requiredEdges) {
-          activeRequiredSkills.add(edge.target_key);
-        }
+        // Get THIS lesson's required skills (not accumulated)
+        const lessonRequiredSkills = lessonRequiresEdges
+          .filter((e) => e.source_key === current)
+          .map((e) => e.target_key);
 
-        // Check if all required skills are unlocked
-        const allRequirementsMet = [...activeRequiredSkills].every((sk) =>
-          unlockedSkills.has(sk)
-        );
+        // Lesson is accessible if:
+        // 1. It has no requirements, OR
+        // 2. All its requirements are unlocked
+        const lessonRequirementsMet =
+          lessonRequiredSkills.length === 0 ||
+          lessonRequiredSkills.every((sk) => unlockedSkills.has(sk));
 
-        if (allRequirementsMet) {
+        if (lessonRequirementsMet) {
           accessible.add(current);
         }
 
@@ -326,10 +341,16 @@ serve(async (req) => {
       }
     }
 
-    // 4. Build candidate activities
-    const candidates: CandidateActivity[] = [];
+    // 4. Calculate signals and prepare practice history
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const timeSinceLastPracticeHours =
+      lessonRuns.length > 0
+        ? Math.round(
+            (now.getTime() - new Date(lessonRuns[0].started_at).getTime()) /
+              (1000 * 60 * 60)
+          )
+        : null;
 
     // Group runs by lesson
     const runsByLesson: Map<string, LessonRun[]> = new Map();
@@ -341,118 +362,36 @@ serve(async (req) => {
       runsByLesson.get(key)!.push(run);
     }
 
-    // Continue: last practiced lessons
-    if (lessonRuns.length > 0) {
-      const lastPracticedKey = lessonRuns[0].lesson_node_key;
-      const lesson = lessons.get(lastPracticedKey);
-      if (lesson) {
-        const runs = runsByLesson.get(lastPracticedKey) || [];
-        const recentEvals = runs.slice(0, 3).map((r) => r.evaluation || "none");
-        const attemptsLast7Days = runs.filter(
-          (r) => new Date(r.started_at) >= sevenDaysAgo
-        ).length;
+    // Build comprehensive practice history for LLM
+    const practiceHistory = availableLessons.map((lesson) => {
+      const runs = runsByLesson.get(lesson.lessonKey) || [];
+      const recentRuns = runs.slice(0, 5);
+      const attemptsLast7Days = runs.filter(
+        (r) => new Date(r.started_at) >= sevenDaysAgo
+      ).length;
+      const lastRun = runs[0];
 
-        candidates.push({
-          lessonKey: lastPracticedKey,
-          title: lesson.title,
-          goal: lesson.goal,
-          category: "continue",
-          lastPracticed: lessonRuns[0].started_at,
-          lastEvaluations: recentEvals,
-          lastDifficulty: lessonRuns[0].difficulty,
-          attemptsLast7Days,
-        });
-      }
-    }
+      return {
+        lessonKey: lesson.lessonKey,
+        title: lesson.title,
+        trackTitle: lesson.trackTitle,
+        lastPracticed: lastRun?.started_at || null,
+        lastEvaluation: lastRun?.evaluation || null,
+        lastDifficulty: lastRun?.difficulty || null,
+        attemptsTotal: runs.length,
+        attemptsLast7Days,
+        recentEvaluations: recentRuns.map((r) => r.evaluation || "none"),
+      };
+    });
 
-    // Progress: next lesson after recently passed
-    const passedLessons = lessonRuns.filter((r) => r.evaluation === "pass");
-    if (passedLessons.length > 0) {
-      const lastPassedKey = passedLessons[0].lesson_node_key;
-      const nextKey = nextLessonAfter.get(lastPassedKey);
-      if (nextKey && lessons.has(nextKey)) {
-        const lesson = lessons.get(nextKey)!;
-        // Check if accessible
-        let isAccessible = false;
-        for (const [, accessible] of accessibleLessons) {
-          if (accessible.has(nextKey)) {
-            isAccessible = true;
-            break;
-          }
-        }
-        if (isAccessible && !candidates.some((c) => c.lessonKey === nextKey)) {
-          candidates.push({
-            lessonKey: nextKey,
-            title: lesson.title,
-            goal: lesson.goal,
-            category: "progress",
-          });
-        }
-      }
-    }
+    const lessonRunsSummary = lessonRuns.slice(0, 20).map((r) => ({
+      lessonKey: r.lesson_node_key,
+      startedAt: r.started_at,
+      evaluation: r.evaluation,
+      difficulty: r.difficulty,
+    }));
 
-    // Balance: accessible lesson from less-practiced track
-    const practiceCountByTrack: Map<string, number> = new Map();
-    for (const track of tracks) {
-      let count = 0;
-      const accessible = accessibleLessons.get(track.key) || new Set();
-      for (const lessonKey of accessible) {
-        count += (runsByLesson.get(lessonKey) || []).length;
-      }
-      practiceCountByTrack.set(track.key, count);
-    }
-
-    const sortedTracks = [...tracks].sort(
-      (a, b) =>
-        (practiceCountByTrack.get(a.key) || 0) -
-        (practiceCountByTrack.get(b.key) || 0)
-    );
-
-    for (const track of sortedTracks) {
-      const accessible = accessibleLessons.get(track.key) || new Set();
-      for (const lessonKey of accessible) {
-        if (!candidates.some((c) => c.lessonKey === lessonKey)) {
-          const lesson = lessons.get(lessonKey)!;
-          candidates.push({
-            lessonKey,
-            title: lesson.title,
-            goal: lesson.goal,
-            category: "balance",
-            trackKey: track.key,
-          });
-          break;
-        }
-      }
-      if (candidates.length >= 4) break;
-    }
-
-    // If no candidates found, add the first accessible lesson from any track
-    if (candidates.length === 0) {
-      for (const track of tracks) {
-        if (track.startLesson && lessons.has(track.startLesson)) {
-          const lesson = lessons.get(track.startLesson)!;
-          candidates.push({
-            lessonKey: track.startLesson,
-            title: lesson.title,
-            goal: lesson.goal,
-            category: "progress",
-            trackKey: track.key,
-          });
-          break;
-        }
-      }
-    }
-
-    // 5. Calculate signals
-    const timeSinceLastPracticeHours =
-      lessonRuns.length > 0
-        ? Math.round(
-            (now.getTime() - new Date(lessonRuns[0].started_at).getTime()) /
-              (1000 * 60 * 60)
-          )
-        : null;
-
-    // 6. Build LLM prompt
+    // 5. Build LLM prompt
     const systemPrompt = `You are the Teacher agent for an app teaching music through piano.
 
 Your job when the user opens Learning mode:
@@ -463,23 +402,17 @@ Your job when the user opens Learning mode:
 
 Important rules:
 - The user can choose; you are advising, not forcing.
-- Use the provided available lessons and candidate activities. Do not invent lessons or skills not present.
+- Use ONLY the provided available lessons. Do not invent lessons or skills not present.
 - If the user hasn't practiced in a long time, recommend an easier re-entry choice.
 - Balance: avoid always recommending the same track; include variety when appropriate.
+- Consider the user's practice history: what they've practiced, how they performed, and what makes sense next.
 - IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include lesson keys (like "A1.4" or "B2.1") in the label. Example: "Eighth notes practice" NOT "A1.4: Eighth notes practice".
-- REQUIRED: The "trackTitle" field MUST match one of the track titles from the curriculum. Each lesson belongs to exactly one track.
+- REQUIRED: The "trackTitle" field MUST match one of the track titles from the available lessons. Each lesson belongs to exactly one track.
 - REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities. Focus on their progress, recent practice, and what makes sense for them today.
 
 Return ONLY valid JSON following the schema provided.`;
 
-    const lessonRunsSummary = lessonRuns.slice(0, 10).map((r) => ({
-      lessonKey: r.lesson_node_key,
-      startedAt: r.started_at,
-      evaluation: r.evaluation,
-      difficulty: r.difficulty,
-    }));
-
-    // Build lesson-to-track mapping for candidates
+    // Build lesson-to-track mapping for validation
     const lessonToTrackMap: Map<
       string,
       { trackKey: string; trackTitle: string }
@@ -510,16 +443,6 @@ Return ONLY valid JSON following the schema provided.`;
       }
     }
 
-    // Enrich candidates with track info for LLM
-    const candidatesWithTrack = candidates.map((c) => {
-      const trackInfo = lessonToTrackMap.get(c.lessonKey);
-      return {
-        ...c,
-        trackKey: trackInfo?.trackKey || c.trackKey,
-        trackTitle: trackInfo?.trackTitle || null,
-      };
-    });
-
     const userPrompt = `CONTEXT (today):
 - locale: ${language}
 - now: ${now.toISOString()}
@@ -528,22 +451,21 @@ Return ONLY valid JSON following the schema provided.`;
 AVAILABLE LESSONS (requirements fulfilled - user can access these):
 ${JSON.stringify(availableLessons, null, 2)}
 
-CANDIDATE ACTIVITIES (precomputed, do NOT invent others):
-Note: Each candidate includes its trackTitle. Use this exact trackTitle in your suggestions.
-${JSON.stringify(candidatesWithTrack, null, 2)}
+PRACTICE HISTORY (for each available lesson):
+${JSON.stringify(practiceHistory, null, 2)}
 
-RECENT ACTIVITY:
-- lastLessonRuns: ${JSON.stringify(lessonRunsSummary)}
+RECENT ACTIVITY (chronological list of recent lesson runs):
+${JSON.stringify(lessonRunsSummary, null, 2)}
 
 OUTPUT JSON SCHEMA:
 {
   "greeting": "string",
   "suggestions": [
     {
-      "lessonKey": "string",
+      "lessonKey": "string (must be from AVAILABLE LESSONS)",
       "label": "string (short activity name, NO lesson keys like A1.4)",
       "why": "string",
-      "trackTitle": "string (REQUIRED: must match the trackTitle from the candidate)"
+      "trackTitle": "string (REQUIRED: must match the trackTitle from AVAILABLE LESSONS)"
     }
   ],
   "notes": "string (REQUIRED: Brief explanation to the user about why you picked these lessons)"
@@ -563,7 +485,7 @@ OUTPUT JSON SCHEMA:
             availableLessonsCount: availableLessons.length,
             availableLessons: availableLessons,
           },
-          candidates,
+          practiceHistory,
           signals: {
             timeSinceLastPracticeHours,
             recentRunsCount: lessonRuns.length,
@@ -599,20 +521,24 @@ OUTPUT JSON SCHEMA:
       }
     );
 
-    // Build fallback response from candidates (used if LLM fails)
-    const buildFallbackResponse = (): TeacherResponse => ({
-      greeting:
-        language === "fr"
-          ? "Bonjour ! Prêt à pratiquer ?"
-          : "Hello! Ready to practice?",
-      suggestions: candidatesWithTrack.slice(0, 3).map((c) => ({
-        lessonKey: c.lessonKey,
-        label: c.title,
-        why: c.goal,
-        trackTitle: c.trackTitle || "",
-      })),
-      notes: null,
-    });
+    // Build fallback response from available lessons (used if LLM fails)
+    const buildFallbackResponse = (): TeacherResponse => {
+      // Pick first few available lessons as fallback
+      const fallbackLessons = availableLessons.slice(0, 3);
+      return {
+        greeting:
+          language === "fr"
+            ? "Bonjour ! Prêt à pratiquer ?"
+            : "Hello! Ready to practice?",
+        suggestions: fallbackLessons.map((lesson) => ({
+          lessonKey: lesson.lessonKey,
+          label: lesson.title,
+          why: lesson.goal,
+          trackTitle: lesson.trackTitle,
+        })),
+        notes: null,
+      };
+    };
 
     let teacherResponse: TeacherResponse;
 
@@ -640,17 +566,22 @@ OUTPUT JSON SCHEMA:
       }
     }
 
-    // Validate suggestions - just ensure lessonKey exists
+    // Validate suggestions - ensure lessonKey exists in available lessons
+    const availableLessonKeys = new Set(
+      availableLessons.map((l) => l.lessonKey)
+    );
     const validatedSuggestions = teacherResponse.suggestions
-      .filter((s) => lessons.has(s.lessonKey))
+      .filter((s) => availableLessonKeys.has(s.lessonKey))
       .map((s) => {
         // Use LLM-provided trackTitle, fallback to our mapping if missing
-        const trackInfo = lessonToTrackMap.get(s.lessonKey);
+        const lesson = availableLessons.find(
+          (l) => l.lessonKey === s.lessonKey
+        );
         return {
           lessonKey: s.lessonKey,
           label: s.label,
           why: s.why,
-          trackTitle: s.trackTitle || trackInfo?.trackTitle || "",
+          trackTitle: s.trackTitle || lesson?.trackTitle || "",
         };
       });
 
