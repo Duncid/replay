@@ -5,7 +5,6 @@ import { EvaluationOutput } from "@/types/learningSession";
 import {
   AlertCircle,
   CheckCircle,
-  LogOut,
   RotateCcw,
   Unlock,
   XCircle,
@@ -185,33 +184,33 @@ export function FeedbackScreen({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 mt-4">
-          {/* Primary action: Return to Practice */}
-          <Button onClick={onReturnToPractice} className="w-full gap-2">
-            <RotateCcw className="w-4 h-4" />
-            {t("evaluation.returnToPractice", "Keep practing")}
-          </Button>
-
-          {/* Secondary action: Adjust difficulty */}
-          {isPassing ? (
-            <Button variant="outline" onClick={onMakeHarder}>
-              {t("evaluation.tryHarder", "Try Harder")}
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={onMakeEasier}>
-              {t("evaluation.lowerDifficulty", "Lower Difficulty")}
-            </Button>
-          )}
-
-          {/* Tertiary action: Finish */}
+        <div className="flex justify-between gap-2 mt-4">
           <Button
             variant="ghost"
             onClick={onFinishLesson}
             className="w-full gap-2 text-muted-foreground"
           >
-            <LogOut className="w-4 h-4" />
-            {t("evaluation.finishLesson", "Finish Lesson")}
+            {t("evaluation.finishLesson", "Leave")}
           </Button>
+
+          <div className="flex gap-2">
+            {/* Primary action: Return to Practice */}
+            <Button onClick={onReturnToPractice} className="w-full gap-2">
+              <RotateCcw className="w-4 h-4" />
+              {t("evaluation.returnToPractice", "Keep practing")}
+            </Button>
+
+            {/* Secondary action: Adjust difficulty */}
+            {isPassing ? (
+              <Button variant="outline" onClick={onMakeHarder}>
+                {t("evaluation.tryHarder", "Try Harder")}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={onMakeEasier}>
+                {t("evaluation.lowerDifficulty", "Lower Difficulty")}
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
