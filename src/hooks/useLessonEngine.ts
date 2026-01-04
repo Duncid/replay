@@ -131,6 +131,7 @@ export function useLessonEngine(
         // CURRICULUM LESSON: Use lesson-start with setup overrides
         const lessonStartData = await mutations.regenerateCurriculumLesson.mutateAsync({
           lessonKey: lesson.lessonNodeKey,
+          lessonRunId: lesson.lessonRunId,
           language: options.language,
           localUserId: options.localUserId,
           setupOverrides: {
