@@ -252,10 +252,11 @@ export function FreePracticeMode({
     hasEvaluatedRef.current = false;
     previousRecordingRef.current = null;
     onClearRecording();
+    setMetronomeIsPlaying(false);
     if (onLeave) {
       onLeave();
     }
-  }, [onClearRecording, onLeave]);
+  }, [onClearRecording, onLeave, setMetronomeIsPlaying]);
 
   // Render input phase
   if (!targetSequence) {

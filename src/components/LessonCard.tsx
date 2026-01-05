@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Play, X, CheckCircle } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import {
+  ArrowBigRightDashIcon,
+  ArrowLeft,
+  AudioLines,
+  Loader2,
+  Play,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export interface SkillToUnlock {
   skillKey: string;
@@ -43,110 +48,100 @@ export function LessonCard({
 }: LessonCardProps) {
   const { t } = useTranslation();
 
-  // Context display - varies by mode
-  const getContext = () => {
-    if (mode === "evaluation") {
-      // Evaluation mode: show status
-      if (isEvaluating) {
-        return (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">{t("learnMode.evaluating", "Evaluating...")}</span>
-          </div>
-        );
-      }
-      if (isRecording) {
-        return (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">{t("learnMode.playing", "Playing...")}</span>
-          </div>
-        );
-      }
-      return (
-        <p className="text-muted-foreground/60 text-sm text-center">
-          {t("learnMode.waitingForUser", "Waiting for you to play...")}
-        </p>
-      );
-    }
-    // Practice mode: no comment display (moved to EvaluationScreen)
-    return null;
-  };
-
   return (
-    <Card className="w-full max-w-2xl mx-auto border-border/50 backdrop-blur-sm bg-transparent border-0 relative">
-      {/* Top right X button to leave lesson */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onLeave}
-        disabled={isLoading || isEvaluating}
-        className={cn(
-          "absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-foreground",
-          "z-10"
-        )}
-        aria-label={t("learnMode.leaveButton")}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-      <CardContent className="pt-6 space-y-4 border-0">
-        {/* Track title */}
-        {trackTitle && (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <span className="text-lg">🎵</span>
-            <span>{trackTitle}</span>
-          </div>
-        )}
-
-        {/* Exercise description */}
-        <p className="text-center text-base">{instruction}</p>
-
-        {/* Context - teacher comment (practice) or status (evaluation) */}
-        <div className="min-h-[2.5rem] flex items-center justify-center">
-          {getContext()}
-        </div>
-
-        {/* Actions - different based on mode */}
-        <div className="flex justify-center gap-3 pt-2">
+    <div
+      className={cn(
+        "w-full max-w-2xl min-h-[360px] mx-auto rounded-3xl px-6 pt-6 pb-6 relative transition-all duration-300 ease-in-out",
+        mode === "evaluation" ? "bg-accent" : "bg-transparent"
+      )}
+    >
+      <div className="space-y-8 h-full justify-center">
+        <div className="flex items-center">
           {mode === "practice" ? (
-            // Practice mode actions: Play, Evaluate
-            <>
+            /* Practice mode: Leave button */
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLeave}
+              disabled={isLoading || isEvaluating}
+              aria-label={t("learnMode.leaveButton")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Leave
+            </Button>
+          ) : (
+            /* Evaluation mode: Back button */
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onEvaluate}
+              disabled={isLoading || isEvaluating}
+            >
+              <ArrowLeft />
+              {t("learnMode.backToPractice", "Back")}
+            </Button>
+          )}
+        </div>
+        {mode === "practice" ? (
+          /* Practice Mode */
+          <>
+            {/* Exercise description */}
+            <p className="text-center text-base">{instruction}</p>
+            {/* Practice buttons */}
+            <div className="flex gap-2 items-center justify-center">
               <Button
-                variant="outline"
                 onClick={onPlay}
+                variant="outline"
                 disabled={isLoading || isEvaluating}
-                className="gap-2"
+                size="play"
               >
-                <Play className="w-4 h-4" />
-                {t("learnMode.playButton")}
+                <Play fill="currentColor" stroke="none" />
               </Button>
               <Button
                 onClick={onEvaluate}
                 disabled={isLoading || isEvaluating}
-                className="gap-2"
+                size="play"
               >
-                <CheckCircle className="w-4 h-4" />
-                {t("learnMode.evaluateButton", "Evaluate")}
+                <ArrowBigRightDashIcon
+                  fill="currentColor"
+                  stroke="currentColor"
+                />
               </Button>
-            </>
-          ) : (
-            // Evaluation mode actions: Back to Practice
-            <Button
-              variant="outline"
-              onClick={onEvaluate}
-              disabled={isLoading || isEvaluating}
-              className="gap-2"
-            >
-              <X className="w-4 h-4" />
-              {t("learnMode.backToPractice", "Back to Practice")}
-            </Button>
-          )}
-        </div>
-      </CardContent>
+            </div>
+          </>
+        ) : (
+          /* Evaluation Mode */
+          <>
+            {/* Evaluation status */}
+            <div className="min-h-[2.5rem] flex flex-col gap-4 items-center justify-center text-amber-900">
+              <AudioLines className="w-12 h-12" />
+              {isEvaluating ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-base">
+                    {t("learnMode.evaluating", "Evaluating...")}
+                  </span>
+                </div>
+              ) : isRecording ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-base">
+                    {t("learnMode.playing", "Playing...")}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-base text-center">
+                  {t("learnMode.waitingForUser", "Waiting for you to play...")}
+                </p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
       {/* Debug bar - shows difficulty and skill info when debug mode is active */}
       {debugMode && (
-        <div className="border-t border-border/50 px-4 py-2 bg-muted/30">
-          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+        <div className="rounded-lg mt-12 px-4 py-2 bg-amber-500">
+          <div className="flex items-center justify-center gap-4 text-xs text-amber-950">
             {typeof difficulty === "number" && (
               <span>Difficulty: {difficulty}</span>
             )}
@@ -156,12 +151,12 @@ export function LessonCard({
                 {skillToUnlock.title && ` (${skillToUnlock.title})`}
               </span>
             )}
-            {typeof difficulty !== "number" && !skillToUnlock && (
-              <span className="text-muted-foreground/50">No debug info available</span>
-            )}
+            {typeof difficulty !== "number" &&
+              !skillToUnlock &&
+              "No debug info available"}
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

@@ -64,7 +64,7 @@
     "generateErrorDescription": "Please try again",
     "evaluationFallback": "Couldn't evaluate - try again!",
     "listening": "Listening...",
-    "waitingForUser": "Play on the keyboard below",
+    "waitingForUser": "We're listening!",
     "playButton": "Play",
     "nextButton": "Next",
     "leaveButton": "Leave"

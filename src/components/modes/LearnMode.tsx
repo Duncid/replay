@@ -286,9 +286,10 @@ export function LearnMode({
     setEvaluationResult(null);
     onClearRecording();
     setShouldFetchGreeting(false);
+    setMetronomeIsPlaying(false);
     // Invalidate teacher greeting cache to force fresh suggestions on next Start
     queryClient.invalidateQueries({ queryKey: ["teacherGreeting"] });
-  }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode, setShouldFetchGreeting, queryClient]);
+  }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode, setShouldFetchGreeting, queryClient, setMetronomeIsPlaying]);
 
   // When a suggestion is clicked, fetch the debug prompt first (only in debug mode)
   const handleSelectActivity = useCallback(
