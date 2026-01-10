@@ -30,6 +30,7 @@
   "menus": {
     "insert": "Insert",
     "uploadAbc": "Upload ABC",
+    "uploadMusicXml": "Upload MusicXML",
     "writeAbc": "Write ABC",
     "whistleImport": "Whistle (mic)",
     "writeNoteSequence": "Write NoteSequence",
