@@ -757,22 +757,48 @@ const Index = () => {
           const arrayBuffer = await file.arrayBuffer();
           const zip = await JSZip.loadAsync(arrayBuffer);
 
-          // Find the main XML file (exclude META-INF folder)
-          const xmlFiles = Object.keys(zip.files).filter(
-            (name) =>
-              name.endsWith(".xml") &&
-              !name.startsWith("META-INF/") &&
-              !zip.files[name].dir
-          );
+          const containerFile = zip.files["META-INF/container.xml"];
+          let mainXmlPath: string | null = null;
 
-          if (xmlFiles.length === 0) {
-            throw new Error("No XML file found in MXL archive");
+          if (containerFile) {
+            try {
+              const containerText = await containerFile.async("string");
+              const containerDoc = new DOMParser().parseFromString(containerText, "application/xml");
+              if (containerDoc.getElementsByTagName("parsererror").length === 0) {
+                const rootFile =
+                  containerDoc.getElementsByTagName("rootfile")[0] ??
+                  containerDoc.getElementsByTagNameNS("*", "rootfile")[0];
+                const fullPath = rootFile?.getAttribute("full-path");
+                if (fullPath) {
+                  mainXmlPath = fullPath;
+                }
+              }
+            } catch (error) {
+              console.warn("Failed to parse MXL container.xml", error);
+            }
           }
 
-          // Prefer XML files in the root directory, or use the first one
-          const rootXmlFiles = xmlFiles.filter((name) => !name.includes("/"));
-          const mainXmlFile = rootXmlFiles.length > 0 ? rootXmlFiles[0] : xmlFiles[0];
-          const xmlFile = zip.files[mainXmlFile];
+          if (!mainXmlPath || !zip.files[mainXmlPath]) {
+            // Find the main MusicXML file (exclude META-INF folder)
+            const xmlFiles = Object.keys(zip.files).filter(
+              (name) =>
+                (name.endsWith(".xml") || name.endsWith(".musicxml")) &&
+                !name.startsWith("META-INF/") &&
+                !zip.files[name].dir
+            );
+
+            if (xmlFiles.length === 0) {
+              throw new Error("No XML file found in MXL archive");
+            }
+
+            // Prefer MusicXML files in the root directory, or use the first one
+            const rootXmlFiles = xmlFiles.filter((name) => !name.includes("/"));
+            const rootMusicXmlFiles = rootXmlFiles.filter((name) => name.endsWith(".musicxml"));
+            const preferredRoot = rootMusicXmlFiles[0] ?? rootXmlFiles[0];
+            mainXmlPath = preferredRoot ?? xmlFiles[0];
+          }
+
+          const xmlFile = zip.files[mainXmlPath];
 
           if (!xmlFile) {
             throw new Error("Could not extract XML from MXL archive");
