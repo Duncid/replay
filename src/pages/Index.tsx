@@ -870,6 +870,131 @@ const Index = () => {
     }
   }, [metronomeBpm, activeMode, toast]);
 
+  const handleUploadMidi = useCallback(async () => {
+    const normalizeVelocity = (value?: number) => {
+      if (typeof value !== "number" || Number.isNaN(value)) return 0.8;
+      const normalized = value > 1 ? value / 127 : value;
+      return Math.min(1, Math.max(0, normalized));
+    };
+
+    const normalizeSequence = (sequence: NoteSequence): NoteSequence => {
+      const [numerator, denominator] = metronomeTimeSignature
+        .split("/")
+        .map(Number);
+      const notes = (sequence.notes ?? []).map((note) => ({
+        ...note,
+        velocity: normalizeVelocity(note.velocity),
+      }));
+      const minStartTime = notes.length
+        ? Math.min(...notes.map((note) => note.startTime))
+        : 0;
+
+      if (minStartTime > 0) {
+        notes.forEach((note) => {
+          note.startTime -= minStartTime;
+          note.endTime -= minStartTime;
+        });
+      }
+
+      const totalTime =
+        sequence.totalTime && sequence.totalTime > 0
+          ? sequence.totalTime - (minStartTime > 0 ? minStartTime : 0)
+          : notes.reduce((max, note) => Math.max(max, note.endTime), 0);
+
+      return {
+        ...sequence,
+        notes,
+        totalTime,
+        tempos: sequence.tempos?.length
+          ? sequence.tempos
+          : [{ time: 0, qpm: metronomeBpm }],
+        timeSignatures: sequence.timeSignatures?.length
+          ? sequence.timeSignatures
+          : [{ time: 0, numerator, denominator }],
+      };
+    };
+
+    const processMidiFile = async (file: File) => {
+      if (!window.mm) {
+        toast({
+          title: "MIDI import unavailable",
+          description:
+            "Magenta is still loading. Please wait a moment and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const midiData = new Uint8Array(arrayBuffer);
+      const sequence = window.mm.midiToSequenceProto(midiData) as NoteSequence;
+      const normalized = normalizeSequence(sequence);
+
+      if (normalized.notes.length === 0) {
+        toast({
+          title: "Invalid MIDI file",
+          description: "The file contains no valid notes.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (activeMode === "play") {
+        playModeRef.current?.addEntry(normalized, false);
+        toast({ title: "MIDI file uploaded and added" });
+      }
+    };
+
+    try {
+      if ("showOpenFilePicker" in window) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fileHandles = await (window as any).showOpenFilePicker({
+          types: [
+            {
+              description: "MIDI files",
+              accept: {
+                "audio/midi": [".mid", ".midi"],
+                "audio/mid": [".mid", ".midi"],
+                "application/octet-stream": [".mid", ".midi"],
+              },
+            },
+          ],
+          multiple: false,
+        });
+
+        if (!fileHandles || fileHandles.length === 0) return;
+
+        const file = await fileHandles[0].getFile();
+        await processMidiFile(file);
+      } else {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".mid,.midi,audio/midi,audio/mid,application/octet-stream";
+        input.style.display = "none";
+        document.body.appendChild(input);
+
+        input.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          document.body.removeChild(input);
+          if (!file) return;
+          await processMidiFile(file);
+        };
+
+        input.click();
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("MIDI upload error:", error);
+        toast({
+          title: "Error importing MIDI",
+          description:
+            error instanceof Error ? error.message : "Failed to read file",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [activeMode, metronomeBpm, metronomeTimeSignature, toast]);
+
   // Play mode hook
   const playMode = PlayMode({
     bpm: metronomeBpm,
@@ -1635,6 +1760,10 @@ const Index = () => {
                         <DropdownMenuItem onClick={handleUploadMusicXml}>
                           <Upload className="h-4 w-4 mr-2" />
                           {t("menus.uploadMusicXml")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleUploadMidi}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {t("menus.uploadMidi")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => setPartitionDialogOpen(true)}
