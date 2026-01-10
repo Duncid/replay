@@ -93,6 +93,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import JSZip from "jszip";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -745,50 +746,115 @@ const Index = () => {
   }, [metronomeBpm, activeMode, toast]);
 
   const handleUploadMusicXml = useCallback(async () => {
+    const processXmlFile = async (file: File) => {
+      try {
+        let xmlText: string;
+        const fileName = file.name.toLowerCase();
+
+        // Check if it's an MXL file (compressed MusicXML)
+        if (fileName.endsWith(".mxl")) {
+          // MXL files are ZIP archives - extract the XML
+          const arrayBuffer = await file.arrayBuffer();
+          const zip = await JSZip.loadAsync(arrayBuffer);
+
+          // Find the main XML file (exclude META-INF folder)
+          const xmlFiles = Object.keys(zip.files).filter(
+            (name) =>
+              name.endsWith(".xml") &&
+              !name.startsWith("META-INF/") &&
+              !zip.files[name].dir
+          );
+
+          if (xmlFiles.length === 0) {
+            throw new Error("No XML file found in MXL archive");
+          }
+
+          // Prefer XML files in the root directory, or use the first one
+          const rootXmlFiles = xmlFiles.filter((name) => !name.includes("/"));
+          const mainXmlFile = rootXmlFiles.length > 0 ? rootXmlFiles[0] : xmlFiles[0];
+          const xmlFile = zip.files[mainXmlFile];
+
+          if (!xmlFile) {
+            throw new Error("Could not extract XML from MXL archive");
+          }
+
+          xmlText = await xmlFile.async("string");
+        } else {
+          // Regular XML/MusicXML file
+          xmlText = await file.text();
+        }
+
+        const sequence = musicXmlToNoteSequence(xmlText, {
+          defaultQpm: metronomeBpm,
+          defaultVelocity: 0.8,
+        });
+
+        if (sequence.notes.length === 0) {
+          toast({
+            title: "Invalid MusicXML file",
+            description:
+              "The file contains no valid notes. Please check the MusicXML content.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (activeMode === "play") {
+          playModeRef.current?.addEntry(sequence, false);
+          toast({ title: "MusicXML file uploaded and added" });
+        }
+      } catch (error) {
+        console.error("MusicXML upload error:", error);
+        toast({
+          title: "Error importing MusicXML",
+          description:
+            error instanceof Error ? error.message : "Failed to read file",
+          variant: "destructive",
+        });
+      }
+    };
+
     try {
-      if (!("showOpenFilePicker" in window)) {
-        toast({
-          title: "File picker not supported",
-          description:
-            "Your browser doesn't support the File System Access API. Please use another browser.",
-          variant: "destructive",
+      // Use File System Access API if available (modern browsers)
+      if ("showOpenFilePicker" in window) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fileHandles = await (window as any).showOpenFilePicker({
+          types: [
+            {
+              description: "MusicXML files",
+              accept: {
+                "application/vnd.recordare.musicxml+xml": [".mxl"],
+                "application/vnd.recordare.musicxml": [".mxl"],
+                "application/zip": [".mxl"],
+                "application/xml": [".xml", ".musicxml"],
+                "text/xml": [".xml", ".musicxml"],
+              },
+            },
+          ],
+          multiple: false,
         });
-        return;
-      }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fileHandles = await (window as any).showOpenFilePicker({
-        types: [
-          {
-            description: "MusicXML files",
-            accept: { "application/xml": [".musicxml", ".xml"] },
-          },
-        ],
-        multiple: false,
-      });
+        if (!fileHandles || fileHandles.length === 0) return;
 
-      if (!fileHandles || fileHandles.length === 0) return;
+        const file = await fileHandles[0].getFile();
+        await processXmlFile(file);
+      } else {
+        // Fallback: Use traditional file input for browsers without File System Access API
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".mxl,.xml,.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml";
+        input.style.display = "none";
+        document.body.appendChild(input);
 
-      const file = await fileHandles[0].getFile();
-      const text = await file.text();
-      const sequence = musicXmlToNoteSequence(text, {
-        defaultQpm: metronomeBpm,
-        defaultVelocity: 0.8,
-      });
+        input.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          document.body.removeChild(input);
 
-      if (sequence.notes.length === 0) {
-        toast({
-          title: "Invalid MusicXML file",
-          description:
-            "The file contains no valid notes. Please check the MusicXML content.",
-          variant: "destructive",
-        });
-        return;
-      }
+          if (!file) return;
+          await processXmlFile(file);
+        };
 
-      if (activeMode === "play") {
-        playModeRef.current?.addEntry(sequence, false);
-        toast({ title: "MusicXML file uploaded and added" });
+        input.click();
       }
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -800,6 +866,7 @@ const Index = () => {
           variant: "destructive",
         });
       }
+      // AbortError means user cancelled - no need to show error
     }
   }, [metronomeBpm, activeMode, toast]);
 

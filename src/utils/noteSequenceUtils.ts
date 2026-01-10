@@ -480,14 +480,65 @@ export function musicXmlToNoteSequence(
     const tieActive = new Map<string, NoteEvent>();
 
     const measures = getDirectChildren(part, "measure");
-    measures.forEach((measure) => {
+
+    // Read divisions from first measure BEFORE processing notes
+    if (measures.length > 0) {
+      const firstMeasure = measures[0];
+      const firstAttributes = getFirstChild(firstMeasure, "attributes");
+      if (firstAttributes) {
+        const divisionsEl = getFirstChild(firstAttributes, "divisions");
+        if (divisionsEl?.textContent) {
+          const parsed = Number(divisionsEl.textContent.trim());
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            divisions = Math.max(1, Math.floor(parsed));
+          }
+        }
+      }
+
+      // If divisions not found, try to infer from note durations
+      if (divisions === 1) {
+        const firstNotes = getDirectChildren(firstMeasure, "note");
+        const durations: number[] = [];
+        for (const note of firstNotes.slice(0, 10)) {
+          // Check first 10 notes
+          const durationEl = getFirstChild(note, "duration");
+          if (durationEl?.textContent) {
+            const durationDiv = Number(durationEl.textContent.trim());
+            if (!Number.isNaN(durationDiv) && durationDiv > 1) {
+              durations.push(durationDiv);
+            }
+          }
+        }
+        if (durations.length > 0) {
+          // Try common divisions values
+          for (const commonDiv of [480, 96, 24, 12, 8, 4, 2]) {
+            if (durations.some((d) => d % commonDiv === 0)) {
+              divisions = commonDiv;
+              console.warn(
+                `[MusicXML] Divisions not specified in part ${partId}, inferred as ${divisions} from note durations`
+              );
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    measures.forEach((measure, measureIndex) => {
       const attributes = getFirstChild(measure, "attributes");
       if (attributes) {
         const divisionsEl = getFirstChild(attributes, "divisions");
         if (divisionsEl?.textContent) {
           const parsed = Number(divisionsEl.textContent.trim());
           if (!Number.isNaN(parsed) && parsed > 0) {
-            divisions = Math.max(1, Math.floor(parsed));
+            const newDivisions = Math.max(1, Math.floor(parsed));
+            if (measureIndex > 0 && newDivisions !== divisions) {
+              console.warn(
+                `[MusicXML] Divisions changed from ${divisions} to ${newDivisions} ` +
+                  `at measure ${measureIndex + 1} in part ${partId}. Timing may be inaccurate.`
+              );
+            }
+            divisions = newDivisions;
           }
         }
 
@@ -520,9 +571,19 @@ export function musicXmlToNoteSequence(
       const measureNotes = getDirectChildren(measure, "note");
       measureNotes.forEach((note) => {
         const durationEl = getFirstChild(note, "duration");
-        if (!durationEl?.textContent) return;
+        if (!durationEl?.textContent) {
+          console.warn(
+            `[MusicXML] Note missing duration element in part ${partId}, measure ${measureIndex + 1}, skipping`
+          );
+          return;
+        }
         const durationDiv = Number(durationEl.textContent.trim());
-        if (Number.isNaN(durationDiv)) return;
+        if (Number.isNaN(durationDiv) || durationDiv <= 0) {
+          console.warn(
+            `[MusicXML] Invalid duration "${durationEl.textContent}" in part ${partId}, measure ${measureIndex + 1}, skipping`
+          );
+          return;
+        }
 
         const durationBeats = durationDiv / divisions;
         const isRest = getFirstChild(note, "rest") !== null;
@@ -547,10 +608,39 @@ export function musicXmlToNoteSequence(
         }
 
         const pitchEl = getFirstChild(note, "pitch");
+        if (!pitchEl) {
+          console.warn(
+            `[MusicXML] Note without pitch element (possibly malformed) in part ${partId}, measure ${measureIndex + 1}, skipping`
+          );
+          return;
+        }
+
         const step = getTextContent(getFirstChild(pitchEl, "step"));
-        const octave = Number(getTextContent(getFirstChild(pitchEl, "octave")) || "4");
-        const alter = Number(getTextContent(getFirstChild(pitchEl, "alter")) || "0");
-        if (!step || Number.isNaN(octave) || Number.isNaN(alter)) return;
+        const octaveText = getTextContent(getFirstChild(pitchEl, "octave"));
+        const alterText = getTextContent(getFirstChild(pitchEl, "alter"));
+
+        if (!step) {
+          console.warn(
+            `[MusicXML] Note missing pitch step in part ${partId}, measure ${measureIndex + 1}, skipping`
+          );
+          return;
+        }
+
+        const octave = octaveText ? Number(octaveText) : 4;
+        let alter = alterText ? Number(alterText) : 0;
+
+        if (Number.isNaN(octave)) {
+          console.warn(
+            `[MusicXML] Invalid octave "${octaveText}" for note with step="${step}" in part ${partId}, measure ${measureIndex + 1}, skipping`
+          );
+          return;
+        }
+        if (alterText && Number.isNaN(alter)) {
+          console.warn(
+            `[MusicXML] Invalid alter "${alterText}" for note with step="${step}", octave="${octave}" in part ${partId}, measure ${measureIndex + 1}, using 0`
+          );
+          alter = 0; // Continue with alter = 0
+        }
 
         const pitch = midiPitch(step, octave, alter);
         const velocity = currentVelocityByPart.get(partId) ?? defaultVelocity;
