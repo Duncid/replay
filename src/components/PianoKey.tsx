@@ -66,12 +66,12 @@ export const PianoKey = ({
       // Sustained state - BLUE for testing
       return isBlack
         ? "bg-blue-500 shadow-lg shadow-blue-500/50"
-        : "bg-blue-500/30";
+        : "bg-blue-500 shadow-lg shadow-blue-500/50";
     } else {
       // Fresh press - RED for testing
       return isBlack
         ? "bg-red-500 shadow-lg shadow-red-500/50"
-        : "bg-red-500/30";
+        : "bg-red-500 shadow-lg shadow-red-500/50";
     }
   };
 
