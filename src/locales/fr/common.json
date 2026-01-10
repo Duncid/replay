@@ -31,6 +31,7 @@
   "menus": {
     "insert": "Insérer",
     "uploadAbc": "Importer un fichier ABC",
+    "uploadMusicXml": "Importer un fichier MusicXML",
     "writeAbc": "Écrire en ABC",
     "whistleImport": "Siffler (micro)",
     "writeNoteSequence": "Écrire une NoteSequence",

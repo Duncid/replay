@@ -2,6 +2,33 @@ import { NoteSequence, Note, DEFAULT_QPM } from "@/types/noteSequence";
 
 // MIDI note number constants
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const STEP_TO_SEMITONE: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+};
+
+interface TempoEvent {
+  timeBeats: number;
+  qpm: number;
+}
+
+interface TimeSignatureEvent {
+  timeBeats: number;
+  numerator: number;
+  denominator: number;
+}
+
+interface NoteEvent {
+  pitch: number;
+  startBeats: number;
+  endBeats: number;
+  velocity: number;
+}
 
 /**
  * Convert note name (e.g., "C4", "F#5") to MIDI pitch number
@@ -328,6 +355,305 @@ export function abcToNoteSequence(abc: string, qpm: number = DEFAULT_QPM): NoteS
   
   sequence.totalTime = currentTime;
   return sequence;
+}
+
+function midiPitch(step: string, octave: number, alter: number = 0): number {
+  const base = STEP_TO_SEMITONE[step.toUpperCase()];
+  return (octave + 1) * 12 + base + alter;
+}
+
+function normalizeVelocity(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function beatsToSecondsWithTempoMap(beat: number, tempoEvents: TempoEvent[]): number {
+  const sorted = tempoEvents.length > 0 ? [...tempoEvents].sort((a, b) => a.timeBeats - b.timeBeats) : [
+    { timeBeats: 0, qpm: DEFAULT_QPM },
+  ];
+
+  if (beat <= sorted[0].timeBeats) {
+    return (beat - sorted[0].timeBeats) * 60 / sorted[0].qpm;
+  }
+
+  let seconds = 0;
+  for (let i = 0; i < sorted.length; i += 1) {
+    const start = sorted[i].timeBeats;
+    const end = i + 1 < sorted.length ? sorted[i + 1].timeBeats : beat;
+    if (beat <= start) {
+      break;
+    }
+    const segmentEnd = Math.min(beat, end);
+    if (segmentEnd > start) {
+      seconds += (segmentEnd - start) * 60 / sorted[i].qpm;
+    }
+    if (beat <= end) {
+      break;
+    }
+  }
+
+  return seconds;
+}
+
+function getDirectChildren(element: Element, tagName: string): Element[] {
+  return Array.from(element.children).filter((child) => child.localName === tagName);
+}
+
+function getFirstChild(element: Element | null, tagName: string): Element | null {
+  if (!element) return null;
+  return getDirectChildren(element, tagName)[0] ?? null;
+}
+
+function getTextContent(element: Element | null): string {
+  return element?.textContent?.trim() ?? "";
+}
+
+function parseTempoFromDirection(direction: Element): number | null {
+  const sound = getFirstChild(direction, "sound");
+  if (sound?.getAttribute("tempo")) {
+    const tempo = Number(sound.getAttribute("tempo"));
+    if (!Number.isNaN(tempo)) {
+      return tempo;
+    }
+  }
+
+  const directionType = getFirstChild(direction, "direction-type");
+  const metronome = getFirstChild(directionType, "metronome");
+  const perMinute = getFirstChild(metronome, "per-minute");
+  if (perMinute?.textContent) {
+    const tempo = Number(perMinute.textContent.trim());
+    if (!Number.isNaN(tempo)) {
+      return tempo;
+    }
+  }
+
+  return null;
+}
+
+function parseDynamicsFromDirection(direction: Element): number | null {
+  const directionType = getFirstChild(direction, "direction-type");
+  const dynamics = getFirstChild(directionType, "dynamics");
+  if (!dynamics) return null;
+
+  const child = Array.from(dynamics.children)[0];
+  if (!child) return null;
+
+  const tag = child.localName.toLowerCase();
+  const mapping: Record<string, number> = {
+    ppp: 0.25,
+    pp: 0.35,
+    p: 0.45,
+    mp: 0.55,
+    mf: 0.65,
+    f: 0.78,
+    ff: 0.9,
+    fff: 1,
+  };
+
+  return mapping[tag] ?? null;
+}
+
+export function musicXmlToNoteSequence(
+  xmlText: string,
+  options: { defaultQpm?: number; defaultVelocity?: number; mergeTies?: boolean } = {}
+): NoteSequence {
+  const { defaultQpm = DEFAULT_QPM, defaultVelocity = 0.8, mergeTies = true } = options;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length > 0) {
+    throw new Error("Invalid MusicXML file");
+  }
+
+  const tempoEvents: TempoEvent[] = [{ timeBeats: 0, qpm: defaultQpm }];
+  const timeSignatures: TimeSignatureEvent[] = [];
+  const notes: NoteEvent[] = [];
+  const currentVelocityByPart = new Map<string, number>();
+
+  const parts = Array.from(doc.getElementsByTagNameNS("*", "part"));
+  parts.forEach((part) => {
+    const partId = part.getAttribute("id") ?? "P1";
+    if (!currentVelocityByPart.has(partId)) {
+      currentVelocityByPart.set(partId, defaultVelocity);
+    }
+
+    let timeBeats = 0;
+    let divisions = 1;
+    const tieActive = new Map<string, NoteEvent>();
+
+    const measures = getDirectChildren(part, "measure");
+    measures.forEach((measure) => {
+      const attributes = getFirstChild(measure, "attributes");
+      if (attributes) {
+        const divisionsEl = getFirstChild(attributes, "divisions");
+        if (divisionsEl?.textContent) {
+          const parsed = Number(divisionsEl.textContent.trim());
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            divisions = Math.max(1, Math.floor(parsed));
+          }
+        }
+
+        const time = getFirstChild(attributes, "time");
+        const beatsEl = getFirstChild(time, "beats");
+        const beatTypeEl = getFirstChild(time, "beat-type");
+        if (beatsEl?.textContent && beatTypeEl?.textContent) {
+          const numerator = Number(beatsEl.textContent.trim());
+          const denominator = Number(beatTypeEl.textContent.trim());
+          if (!Number.isNaN(numerator) && !Number.isNaN(denominator)) {
+            timeSignatures.push({ timeBeats, numerator, denominator });
+          }
+        }
+      }
+
+      const directions = getDirectChildren(measure, "direction");
+      directions.forEach((direction) => {
+        const tempo = parseTempoFromDirection(direction);
+        if (tempo !== null) {
+          tempoEvents.push({ timeBeats, qpm: tempo });
+        }
+
+        const dynamics = parseDynamicsFromDirection(direction);
+        if (dynamics !== null) {
+          currentVelocityByPart.set(partId, normalizeVelocity(dynamics));
+        }
+      });
+
+      let chordStartBeats: number | null = null;
+      const measureNotes = getDirectChildren(measure, "note");
+      measureNotes.forEach((note) => {
+        const durationEl = getFirstChild(note, "duration");
+        if (!durationEl?.textContent) return;
+        const durationDiv = Number(durationEl.textContent.trim());
+        if (Number.isNaN(durationDiv)) return;
+
+        const durationBeats = durationDiv / divisions;
+        const isRest = getFirstChild(note, "rest") !== null;
+        const isChord = getFirstChild(note, "chord") !== null;
+        const voice = getTextContent(getFirstChild(note, "voice")) || "1";
+        const staff = getTextContent(getFirstChild(note, "staff")) || "1";
+
+        if (!isChord) {
+          chordStartBeats = timeBeats;
+        }
+
+        const startBeats = chordStartBeats ?? timeBeats;
+        const endBeats = startBeats + durationBeats;
+
+        const ties = getDirectChildren(note, "tie");
+        const tieStarts = ties.some((tie) => tie.getAttribute("type") === "start");
+        const tieStops = ties.some((tie) => tie.getAttribute("type") === "stop");
+
+        if (isRest) {
+          timeBeats += durationBeats;
+          return;
+        }
+
+        const pitchEl = getFirstChild(note, "pitch");
+        const step = getTextContent(getFirstChild(pitchEl, "step"));
+        const octave = Number(getTextContent(getFirstChild(pitchEl, "octave")) || "4");
+        const alter = Number(getTextContent(getFirstChild(pitchEl, "alter")) || "0");
+        if (!step || Number.isNaN(octave) || Number.isNaN(alter)) return;
+
+        const pitch = midiPitch(step, octave, alter);
+        const velocity = currentVelocityByPart.get(partId) ?? defaultVelocity;
+        const key = `${pitch}|${voice}|${staff}|${partId}`;
+
+        if (mergeTies && (tieStarts || tieStops)) {
+          if (tieStarts && !tieStops) {
+            tieActive.set(key, {
+              pitch,
+              startBeats,
+              endBeats,
+              velocity,
+            });
+          } else if (tieStops && tieActive.has(key)) {
+            const active = tieActive.get(key)!;
+            active.endBeats = endBeats;
+            if (!tieStarts) {
+              notes.push(active);
+              tieActive.delete(key);
+            }
+          } else {
+            notes.push({ pitch, startBeats, endBeats, velocity });
+          }
+        } else {
+          notes.push({ pitch, startBeats, endBeats, velocity });
+        }
+
+        if (!isChord) {
+          timeBeats += durationBeats;
+        }
+      });
+
+    });
+
+    if (mergeTies && tieActive.size > 0) {
+      tieActive.forEach((active) => notes.push(active));
+      tieActive.clear();
+    }
+  });
+
+  const sortedTempoEvents = tempoEvents
+    .sort((a, b) => a.timeBeats - b.timeBeats)
+    .reduce<TempoEvent[]>((acc, event) => {
+      const last = acc[acc.length - 1];
+      if (last && Math.abs(last.timeBeats - event.timeBeats) < 1e-9) {
+        acc[acc.length - 1] = event;
+      } else {
+        acc.push(event);
+      }
+      return acc;
+    }, []);
+
+  const sortedTimeSigs = timeSignatures
+    .sort((a, b) => a.timeBeats - b.timeBeats)
+    .reduce<TimeSignatureEvent[]>((acc, event) => {
+      const last = acc[acc.length - 1];
+      if (last && Math.abs(last.timeBeats - event.timeBeats) < 1e-9) {
+        acc[acc.length - 1] = event;
+      } else {
+        acc.push(event);
+      }
+      return acc;
+    }, []);
+
+  const outNotes = notes.map((note) => {
+    const startTime = beatsToSecondsWithTempoMap(note.startBeats, sortedTempoEvents);
+    const endTime = beatsToSecondsWithTempoMap(note.endBeats, sortedTempoEvents);
+    const safeEnd = endTime <= startTime ? startTime + 0.01 : endTime;
+
+    return {
+      pitch: note.pitch,
+      startTime: Number(startTime.toFixed(6)),
+      endTime: Number(safeEnd.toFixed(6)),
+      velocity: Number(normalizeVelocity(note.velocity).toFixed(3)),
+    };
+  });
+
+  outNotes.sort((a, b) => {
+    if (a.startTime === b.startTime) {
+      return a.pitch - b.pitch;
+    }
+    return a.startTime - b.startTime;
+  });
+
+  const totalTime = outNotes.reduce((max, note) => Math.max(max, note.endTime), 0);
+
+  return {
+    notes: outNotes,
+    totalTime: Number(totalTime.toFixed(6)),
+    tempos: sortedTempoEvents.length
+      ? sortedTempoEvents.map((event) => ({
+        time: Number(beatsToSecondsWithTempoMap(event.timeBeats, sortedTempoEvents).toFixed(6)),
+        qpm: event.qpm,
+      }))
+      : [{ time: 0, qpm: defaultQpm }],
+    timeSignatures: sortedTimeSigs.length
+      ? sortedTimeSigs.map((event) => ({
+        time: Number(beatsToSecondsWithTempoMap(event.timeBeats, sortedTempoEvents).toFixed(6)),
+        numerator: event.numerator,
+        denominator: event.denominator,
+      }))
+      : [{ time: 0, numerator: 4, denominator: 4 }],
+  };
 }
 
 function abcNoteToPitch(accidental: string, noteLetter: string, octaveMarkers: string): number {

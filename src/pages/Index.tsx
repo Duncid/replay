@@ -75,6 +75,7 @@ import {
   abcToNoteSequence,
   midiToFrequency,
   midiToNoteName,
+  musicXmlToNoteSequence,
   noteSequenceToAbc,
 } from "@/utils/noteSequenceUtils";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
@@ -740,6 +741,65 @@ const Index = () => {
         });
       }
       // AbortError means user cancelled - no need to show error
+    }
+  }, [metronomeBpm, activeMode, toast]);
+
+  const handleUploadMusicXml = useCallback(async () => {
+    try {
+      if (!("showOpenFilePicker" in window)) {
+        toast({
+          title: "File picker not supported",
+          description:
+            "Your browser doesn't support the File System Access API. Please use another browser.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fileHandles = await (window as any).showOpenFilePicker({
+        types: [
+          {
+            description: "MusicXML files",
+            accept: { "application/xml": [".musicxml", ".xml"] },
+          },
+        ],
+        multiple: false,
+      });
+
+      if (!fileHandles || fileHandles.length === 0) return;
+
+      const file = await fileHandles[0].getFile();
+      const text = await file.text();
+      const sequence = musicXmlToNoteSequence(text, {
+        defaultQpm: metronomeBpm,
+        defaultVelocity: 0.8,
+      });
+
+      if (sequence.notes.length === 0) {
+        toast({
+          title: "Invalid MusicXML file",
+          description:
+            "The file contains no valid notes. Please check the MusicXML content.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (activeMode === "play") {
+        playModeRef.current?.addEntry(sequence, false);
+        toast({ title: "MusicXML file uploaded and added" });
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("MusicXML upload error:", error);
+        toast({
+          title: "Error importing MusicXML",
+          description:
+            error instanceof Error ? error.message : "Failed to read file",
+          variant: "destructive",
+        });
+      }
     }
   }, [metronomeBpm, activeMode, toast]);
 
@@ -1504,6 +1564,10 @@ const Index = () => {
                         <DropdownMenuItem onClick={handleUploadAbc}>
                           <Upload className="h-4 w-4 mr-2" />
                           {t("menus.uploadAbc")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleUploadMusicXml}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {t("menus.uploadMusicXml")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => setPartitionDialogOpen(true)}
