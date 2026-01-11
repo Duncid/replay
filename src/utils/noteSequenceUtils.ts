@@ -347,7 +347,18 @@ async function loadMusic21Runtime(): Promise<Music21Runtime> {
         /* @vite-ignore */
         `${PYODIDE_BASE_URL}pyodide.js`
       );
-      const pyodide = await pyodideModule.loadPyodide({
+      const loadPyodide =
+        typeof pyodideModule.loadPyodide === "function"
+          ? pyodideModule.loadPyodide
+          : typeof pyodideModule.default?.loadPyodide === "function"
+            ? pyodideModule.default.loadPyodide
+            : null;
+
+      if (!loadPyodide) {
+        throw new Error("Pyodide runtime could not be loaded.");
+      }
+
+      const pyodide = await loadPyodide({
         indexURL: PYODIDE_BASE_URL,
       });
       await pyodide.loadPackage("micropip");
