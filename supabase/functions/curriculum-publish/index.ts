@@ -97,9 +97,9 @@ function validateNodeKeys(nodes: QuestNode[]): { errors: ValidationError[]; warn
         errors.push({ type: "missing_key", message: `Track node ${node.id} missing trackKey`, nodeId: node.id });
         continue;
       }
-      // Validate track key convention: single letter (A, B, ...)
-      if (!/^[A-Z]$/.test(key)) {
-        warnings.push({ type: "key_convention", message: `Track key "${key}" doesn't match convention (should be single letter A-Z)`, nodeId: node.id });
+      // Validate track key convention: alphanumeric with underscores (e.g., Intro, Jazz_Basics, A)
+      if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) {
+        warnings.push({ type: "key_convention", message: `Track key "${key}" doesn't match convention (should start with letter, alphanumeric/underscores only)`, nodeId: node.id });
       }
     } else if (node.data.type === "lesson") {
       key = node.data.lessonKey;
@@ -186,16 +186,17 @@ function validateEdges(
       }
     }
 
-    // Validate skill edges only connect lessons to skills
+    // Validate skill edges: lessons, tunes, or tracks can connect to skills
+    const validSkillConnectors = ["lesson", "tune", "track"];
     if (
-      (sourceNode.data.type === "lesson" && targetNode.data.type === "skill") ||
-      (sourceNode.data.type === "skill" && targetNode.data.type === "lesson")
+      (validSkillConnectors.includes(sourceNode.data.type) && targetNode.data.type === "skill") ||
+      (sourceNode.data.type === "skill" && validSkillConnectors.includes(targetNode.data.type))
     ) {
-      // Valid
+      // Valid skill edge
     } else if (sourceNode.data.type === "skill" || targetNode.data.type === "skill") {
       warnings.push({
         type: "invalid_skill_edge",
-        message: `Edge ${edge.id} connects skill to non-lesson node`,
+        message: `Edge ${edge.id} connects skill to unsupported node type`,
         edgeId: edge.id,
       });
     }
@@ -229,18 +230,20 @@ function validateGraphStructure(
     const sourceNode = nodeIdMap.get(edge.source);
     const targetNode = nodeIdMap.get(edge.target);
     
-    // Track -> Lesson (track start lessons)
+    // Track -> Lesson OR Tune (track start items)
     if (
       sourceNode?.data.type === "track" &&
-      targetNode?.data.type === "lesson" &&
+      (targetNode?.data.type === "lesson" || targetNode?.data.type === "tune") &&
       edge.sourceHandle === "track-out" &&
-      edge.targetHandle === "lesson-in"
+      (edge.targetHandle === "lesson-in" || edge.targetHandle === "tune-in")
     ) {
       if (!trackStartLessons.has(edge.source)) {
         trackStartLessons.set(edge.source, []);
       }
       trackStartLessons.get(edge.source)!.push(edge.target);
-      lessonsWithIncomingEdges.add(edge.target);
+      if (targetNode?.data.type === "lesson") {
+        lessonsWithIncomingEdges.add(edge.target);
+      }
     }
     
     // Lesson -> Lesson (lesson chain)
@@ -253,11 +256,11 @@ function validateGraphStructure(
       lessonsWithIncomingEdges.add(edge.target);
     }
     
-    // Lesson -> Skill (skill unlocked by)
+    // Lesson OR Tune -> Skill (skill unlocked by)
     if (
-      sourceNode?.data.type === "lesson" &&
+      (sourceNode?.data.type === "lesson" || sourceNode?.data.type === "tune") &&
       targetNode?.data.type === "skill" &&
-      edge.sourceHandle === "lesson-unlockable" &&
+      (edge.sourceHandle === "lesson-unlockable" || edge.sourceHandle === "tune-unlockable") &&
       edge.targetHandle === "skill-unlockable"
     ) {
       skillsWithUnlockedBy.add(edge.target);
@@ -271,7 +274,7 @@ function validateGraphStructure(
       if (startLessons.length === 0) {
         warnings.push({
           type: "track_no_start",
-          message: `Track "${node.data.trackKey || node.id}" has no start lessons`,
+          message: `Track "${node.data.trackKey || node.id}" has no start lessons or tunes`,
           nodeId: node.id,
         });
       }
@@ -297,7 +300,7 @@ function validateGraphStructure(
       if (!skillsWithUnlockedBy.has(node.id)) {
         warnings.push({
           type: "orphan_skill",
-          message: `Skill "${node.data.skillKey || node.id}" is not unlocked by any lesson`,
+          message: `Skill "${node.data.skillKey || node.id}" is not unlocked by any lesson or tune`,
           nodeId: node.id,
         });
       }
@@ -369,7 +372,7 @@ function transformToRuntime(
     data: Record<string, unknown>;
   }>;
   edges: Array<{
-    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill";
+    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill" | "track_requires_skill";
     fromKey: string;
     toKey: string;
   }>;
@@ -385,7 +388,7 @@ function transformToRuntime(
   }> = [];
   
   const edges: Array<{
-    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill";
+    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill" | "track_requires_skill";
     fromKey: string;
     toKey: string;
   }> = [];
@@ -459,7 +462,7 @@ function transformToRuntime(
     const targetNode = editorNodeMap.get(edge.target);
     if (!sourceNode || !targetNode) continue;
 
-    let edgeType: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill" | null = null;
+    let edgeType: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill" | "track_requires_skill" | null = null;
 
     // track-out → lesson-in OR tune-in → track_starts_with
     if (
@@ -523,6 +526,15 @@ function transformToRuntime(
       edge.targetHandle === "skill-unlockable"
     ) {
       edgeType = "tune_awards_skill";
+    }
+    // track-required → skill-required → track_requires_skill
+    else if (
+      sourceNode.data.type === "track" &&
+      targetNode.data.type === "skill" &&
+      edge.sourceHandle === "track-required" &&
+      edge.targetHandle === "skill-required"
+    ) {
+      edgeType = "track_requires_skill";
     }
 
     if (edgeType) {
