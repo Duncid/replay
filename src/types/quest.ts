@@ -1,6 +1,6 @@
 import { Edge, Node } from "@xyflow/react";
 
-export type QuestNodeType = "track" | "lesson" | "skill";
+export type QuestNodeType = "track" | "lesson" | "skill" | "tune";
 
 export type QuestEdgeType = "requirement" | "unlockable" | "default";
 
@@ -18,6 +18,9 @@ export interface QuestNodeData extends Record<string, unknown> {
   evaluationGuidance?: string;
   difficultyGuidance?: string;
   level?: "beginner" | "intermediate" | "advanced";
+  // Tune-specific fields
+  tuneKey?: string;
+  musicRef?: string;
 }
 
 export type QuestNode = Node<QuestNodeData>;
@@ -79,8 +82,25 @@ export interface SkillExport {
   };
 }
 
+export interface TuneExport {
+  tuneKey: string;
+  title: string;
+  description?: string;
+  musicRef: string;
+  trackKey?: string;
+  requiresSkills: string[];
+  awardsSkills: string[];
+  previousItem?: { type: "lesson" | "tune"; key: string };
+  nextItem?: { type: "lesson" | "tune"; key: string };
+  _debug?: {
+    nodeId: string;
+    position?: { x: number; y: number };
+  };
+}
+
 export interface CurriculumExport {
   tracks: TrackExport[];
   lessons: LessonExport[];
   skills: SkillExport[];
+  tunes: TuneExport[];
 }
