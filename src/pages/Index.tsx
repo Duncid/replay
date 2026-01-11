@@ -810,7 +810,7 @@ const Index = () => {
           xmlText = await file.text();
         }
 
-        const sequence = musicXmlToNoteSequence(xmlText, {
+        const sequence = await musicXmlToNoteSequence(xmlText, {
           defaultQpm: metronomeBpm,
           defaultVelocity: 0.8,
         });

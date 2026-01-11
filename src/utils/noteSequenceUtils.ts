@@ -2,33 +2,6 @@ import { NoteSequence, Note, DEFAULT_QPM } from "@/types/noteSequence";
 
 // MIDI note number constants
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const STEP_TO_SEMITONE: Record<string, number> = {
-  C: 0,
-  D: 2,
-  E: 4,
-  F: 5,
-  G: 7,
-  A: 9,
-  B: 11,
-};
-
-interface TempoEvent {
-  timeBeats: number;
-  qpm: number;
-}
-
-interface TimeSignatureEvent {
-  timeBeats: number;
-  numerator: number;
-  denominator: number;
-}
-
-interface NoteEvent {
-  pitch: number;
-  startBeats: number;
-  endBeats: number;
-  velocity: number;
-}
 
 /**
  * Convert note name (e.g., "C4", "F#5") to MIDI pitch number
@@ -357,391 +330,118 @@ export function abcToNoteSequence(abc: string, qpm: number = DEFAULT_QPM): NoteS
   return sequence;
 }
 
-function midiPitch(step: string, octave: number, alter: number = 0): number {
-  const base = STEP_TO_SEMITONE[step.toUpperCase()];
-  return (octave + 1) * 12 + base + alter;
-}
+type Music21Runtime = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pyodide: any;
+};
 
-function normalizeVelocity(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
+let music21RuntimePromise: Promise<Music21Runtime> | null = null;
 
-function beatsToSecondsWithTempoMap(beat: number, tempoEvents: TempoEvent[]): number {
-  const sorted = tempoEvents.length > 0 ? [...tempoEvents].sort((a, b) => a.timeBeats - b.timeBeats) : [
-    { timeBeats: 0, qpm: DEFAULT_QPM },
-  ];
+const PYODIDE_VERSION = "v0.25.1";
+const PYODIDE_BASE_URL = `https://cdn.jsdelivr.net/pyodide/${PYODIDE_VERSION}/full/`;
 
-  if (beat <= sorted[0].timeBeats) {
-    return (beat - sorted[0].timeBeats) * 60 / sorted[0].qpm;
+async function loadMusic21Runtime(): Promise<Music21Runtime> {
+  if (!music21RuntimePromise) {
+    music21RuntimePromise = (async () => {
+      const pyodideModule = await import(
+        /* @vite-ignore */
+        `${PYODIDE_BASE_URL}pyodide.mjs`
+      );
+      const loadPyodide =
+        typeof pyodideModule.loadPyodide === "function"
+          ? pyodideModule.loadPyodide
+          : typeof pyodideModule.default?.loadPyodide === "function"
+            ? pyodideModule.default.loadPyodide
+            : typeof globalThis.loadPyodide === "function"
+              ? globalThis.loadPyodide
+              : null;
+
+      if (!loadPyodide) {
+        throw new Error("Pyodide runtime could not be loaded.");
+      }
+
+      const pyodide = await loadPyodide({
+        indexURL: PYODIDE_BASE_URL,
+      });
+      await pyodide.loadPackage("micropip");
+      await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("music21")
+      `);
+      return { pyodide };
+    })();
   }
 
-  let seconds = 0;
-  for (let i = 0; i < sorted.length; i += 1) {
-    const start = sorted[i].timeBeats;
-    const end = i + 1 < sorted.length ? sorted[i + 1].timeBeats : beat;
-    if (beat <= start) {
-      break;
-    }
-    const segmentEnd = Math.min(beat, end);
-    if (segmentEnd > start) {
-      seconds += (segmentEnd - start) * 60 / sorted[i].qpm;
-    }
-    if (beat <= end) {
-      break;
-    }
-  }
-
-  return seconds;
+  return music21RuntimePromise;
 }
 
-function getDirectChildren(element: Element, tagName: string): Element[] {
-  return Array.from(element.children).filter((child) => child.localName === tagName);
-}
-
-function getFirstChild(element: Element | null, tagName: string): Element | null {
-  if (!element) return null;
-  return getDirectChildren(element, tagName)[0] ?? null;
-}
-
-function getTextContent(element: Element | null): string {
-  return element?.textContent?.trim() ?? "";
-}
-
-function parseTempoFromDirection(direction: Element): number | null {
-  const sound = getFirstChild(direction, "sound");
-  if (sound?.getAttribute("tempo")) {
-    const tempo = Number(sound.getAttribute("tempo"));
-    if (!Number.isNaN(tempo)) {
-      return tempo;
-    }
-  }
-
-  const directionType = getFirstChild(direction, "direction-type");
-  const metronome = getFirstChild(directionType, "metronome");
-  const perMinute = getFirstChild(metronome, "per-minute");
-  if (perMinute?.textContent) {
-    const tempo = Number(perMinute.textContent.trim());
-    if (!Number.isNaN(tempo)) {
-      return tempo;
-    }
-  }
-
-  return null;
-}
-
-function parseDynamicsFromDirection(direction: Element): number | null {
-  const directionType = getFirstChild(direction, "direction-type");
-  const dynamics = getFirstChild(directionType, "dynamics");
-  if (!dynamics) return null;
-
-  const child = Array.from(dynamics.children)[0];
-  if (!child) return null;
-
-  const tag = child.localName.toLowerCase();
-  const mapping: Record<string, number> = {
-    ppp: 0.25,
-    pp: 0.35,
-    p: 0.45,
-    mp: 0.55,
-    mf: 0.65,
-    f: 0.78,
-    ff: 0.9,
-    fff: 1,
-  };
-
-  return mapping[tag] ?? null;
-}
-
-export function musicXmlToNoteSequence(
+export async function musicXmlToNoteSequence(
   xmlText: string,
   options: { defaultQpm?: number; defaultVelocity?: number; mergeTies?: boolean } = {}
-): NoteSequence {
+): Promise<NoteSequence> {
   const { defaultQpm = DEFAULT_QPM, defaultVelocity = 0.8, mergeTies = true } = options;
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "application/xml");
-  if (doc.getElementsByTagName("parsererror").length > 0) {
-    throw new Error("Invalid MusicXML file");
+  const { pyodide } = await loadMusic21Runtime();
+
+  if (!window.mm?.midiToSequenceProto) {
+    throw new Error("Magenta MIDI conversion is unavailable.");
   }
 
-  const tempoEvents: TempoEvent[] = [{ timeBeats: 0, qpm: defaultQpm }];
-  const timeSignatures: TimeSignatureEvent[] = [];
-  const notes: NoteEvent[] = [];
-  const currentVelocityByPart = new Map<string, number>();
+  pyodide.globals.set("xml_text", xmlText);
+  pyodide.globals.set("merge_ties", mergeTies);
 
-  const parts = Array.from(doc.getElementsByTagNameNS("*", "part"));
-  parts.forEach((part) => {
-    const partId = part.getAttribute("id") ?? "P1";
-    if (!currentVelocityByPart.has(partId)) {
-      currentVelocityByPart.set(partId, defaultVelocity);
-    }
+  const midiBase64 = await pyodide.runPythonAsync(`
+import base64
+from music21 import converter, midi
 
-    let timeBeats = 0;
-    let divisions = 1;
-    const tieActive = new Map<string, NoteEvent>();
+score = converter.parse(xml_text)
+if merge_ties:
+    score = score.stripTies()
 
-    const measures = getDirectChildren(part, "measure");
+midi_file = midi.translate.streamToMidiFile(score)
+midi_bytes = midi_file.writestr()
+base64.b64encode(midi_bytes).decode("utf-8")
+  `);
 
-    // Read divisions from first measure BEFORE processing notes
-    if (measures.length > 0) {
-      const firstMeasure = measures[0];
-      const firstAttributes = getFirstChild(firstMeasure, "attributes");
-      if (firstAttributes) {
-        const divisionsEl = getFirstChild(firstAttributes, "divisions");
-        if (divisionsEl?.textContent) {
-          const parsed = Number(divisionsEl.textContent.trim());
-          if (!Number.isNaN(parsed) && parsed > 0) {
-            divisions = Math.max(1, Math.floor(parsed));
-          }
-        }
-      }
+  const binaryString = atob(midiBase64 as string);
+  const midiData = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i += 1) {
+    midiData[i] = binaryString.charCodeAt(i);
+  }
 
-      // If divisions not found, try to infer from note durations
-      if (divisions === 1) {
-        const firstNotes = getDirectChildren(firstMeasure, "note");
-        const durations: number[] = [];
-        for (const note of firstNotes.slice(0, 10)) {
-          // Check first 10 notes
-          const durationEl = getFirstChild(note, "duration");
-          if (durationEl?.textContent) {
-            const durationDiv = Number(durationEl.textContent.trim());
-            if (!Number.isNaN(durationDiv) && durationDiv > 1) {
-              durations.push(durationDiv);
-            }
-          }
-        }
-        if (durations.length > 0) {
-          // Try common divisions values
-          for (const commonDiv of [480, 96, 24, 12, 8, 4, 2]) {
-            if (durations.some((d) => d % commonDiv === 0)) {
-              divisions = commonDiv;
-              console.warn(
-                `[MusicXML] Divisions not specified in part ${partId}, inferred as ${divisions} from note durations`
-              );
-              break;
-            }
-          }
-        }
-      }
-    }
+  const sequence = window.mm.midiToSequenceProto(midiData) as NoteSequence;
 
-    measures.forEach((measure, measureIndex) => {
-      const attributes = getFirstChild(measure, "attributes");
-      if (attributes) {
-        const divisionsEl = getFirstChild(attributes, "divisions");
-        if (divisionsEl?.textContent) {
-          const parsed = Number(divisionsEl.textContent.trim());
-          if (!Number.isNaN(parsed) && parsed > 0) {
-            const newDivisions = Math.max(1, Math.floor(parsed));
-            if (measureIndex > 0 && newDivisions !== divisions) {
-              console.warn(
-                `[MusicXML] Divisions changed from ${divisions} to ${newDivisions} ` +
-                  `at measure ${measureIndex + 1} in part ${partId}. Timing may be inaccurate.`
-              );
-            }
-            divisions = newDivisions;
-          }
-        }
+  const normalizeVelocity = (value?: number) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return defaultVelocity;
+    const normalized = value > 1 ? value / 127 : value;
+    return Math.min(1, Math.max(0, normalized));
+  };
 
-        const time = getFirstChild(attributes, "time");
-        const beatsEl = getFirstChild(time, "beats");
-        const beatTypeEl = getFirstChild(time, "beat-type");
-        if (beatsEl?.textContent && beatTypeEl?.textContent) {
-          const numerator = Number(beatsEl.textContent.trim());
-          const denominator = Number(beatTypeEl.textContent.trim());
-          if (!Number.isNaN(numerator) && !Number.isNaN(denominator)) {
-            timeSignatures.push({ timeBeats, numerator, denominator });
-          }
-        }
-      }
-
-      const directions = getDirectChildren(measure, "direction");
-      directions.forEach((direction) => {
-        const tempo = parseTempoFromDirection(direction);
-        if (tempo !== null) {
-          tempoEvents.push({ timeBeats, qpm: tempo });
-        }
-
-        const dynamics = parseDynamicsFromDirection(direction);
-        if (dynamics !== null) {
-          currentVelocityByPart.set(partId, normalizeVelocity(dynamics));
-        }
-      });
-
-      let chordStartBeats: number | null = null;
-      const measureNotes = getDirectChildren(measure, "note");
-      measureNotes.forEach((note) => {
-        const durationEl = getFirstChild(note, "duration");
-        if (!durationEl?.textContent) {
-          console.warn(
-            `[MusicXML] Note missing duration element in part ${partId}, measure ${measureIndex + 1}, skipping`
-          );
-          return;
-        }
-        const durationDiv = Number(durationEl.textContent.trim());
-        if (Number.isNaN(durationDiv) || durationDiv <= 0) {
-          console.warn(
-            `[MusicXML] Invalid duration "${durationEl.textContent}" in part ${partId}, measure ${measureIndex + 1}, skipping`
-          );
-          return;
-        }
-
-        const durationBeats = durationDiv / divisions;
-        const isRest = getFirstChild(note, "rest") !== null;
-        const isChord = getFirstChild(note, "chord") !== null;
-        const voice = getTextContent(getFirstChild(note, "voice")) || "1";
-        const staff = getTextContent(getFirstChild(note, "staff")) || "1";
-
-        if (!isChord) {
-          chordStartBeats = timeBeats;
-        }
-
-        const startBeats = chordStartBeats ?? timeBeats;
-        const endBeats = startBeats + durationBeats;
-
-        const ties = getDirectChildren(note, "tie");
-        const tieStarts = ties.some((tie) => tie.getAttribute("type") === "start");
-        const tieStops = ties.some((tie) => tie.getAttribute("type") === "stop");
-
-        if (isRest) {
-          timeBeats += durationBeats;
-          return;
-        }
-
-        const pitchEl = getFirstChild(note, "pitch");
-        if (!pitchEl) {
-          console.warn(
-            `[MusicXML] Note without pitch element (possibly malformed) in part ${partId}, measure ${measureIndex + 1}, skipping`
-          );
-          return;
-        }
-
-        const step = getTextContent(getFirstChild(pitchEl, "step"));
-        const octaveText = getTextContent(getFirstChild(pitchEl, "octave"));
-        const alterText = getTextContent(getFirstChild(pitchEl, "alter"));
-
-        if (!step) {
-          console.warn(
-            `[MusicXML] Note missing pitch step in part ${partId}, measure ${measureIndex + 1}, skipping`
-          );
-          return;
-        }
-
-        const octave = octaveText ? Number(octaveText) : 4;
-        let alter = alterText ? Number(alterText) : 0;
-
-        if (Number.isNaN(octave)) {
-          console.warn(
-            `[MusicXML] Invalid octave "${octaveText}" for note with step="${step}" in part ${partId}, measure ${measureIndex + 1}, skipping`
-          );
-          return;
-        }
-        if (alterText && Number.isNaN(alter)) {
-          console.warn(
-            `[MusicXML] Invalid alter "${alterText}" for note with step="${step}", octave="${octave}" in part ${partId}, measure ${measureIndex + 1}, using 0`
-          );
-          alter = 0; // Continue with alter = 0
-        }
-
-        const pitch = midiPitch(step, octave, alter);
-        const velocity = currentVelocityByPart.get(partId) ?? defaultVelocity;
-        const key = `${pitch}|${voice}|${staff}|${partId}`;
-
-        if (mergeTies && (tieStarts || tieStops)) {
-          if (tieStarts && !tieStops) {
-            tieActive.set(key, {
-              pitch,
-              startBeats,
-              endBeats,
-              velocity,
-            });
-          } else if (tieStops && tieActive.has(key)) {
-            const active = tieActive.get(key)!;
-            active.endBeats = endBeats;
-            if (!tieStarts) {
-              notes.push(active);
-              tieActive.delete(key);
-            }
-          } else {
-            notes.push({ pitch, startBeats, endBeats, velocity });
-          }
-        } else {
-          notes.push({ pitch, startBeats, endBeats, velocity });
-        }
-
-        if (!isChord) {
-          timeBeats += durationBeats;
-        }
-      });
-
-    });
-
-    if (mergeTies && tieActive.size > 0) {
-      tieActive.forEach((active) => notes.push(active));
-      tieActive.clear();
-    }
-  });
-
-  const sortedTempoEvents = tempoEvents
-    .sort((a, b) => a.timeBeats - b.timeBeats)
-    .reduce<TempoEvent[]>((acc, event) => {
-      const last = acc[acc.length - 1];
-      if (last && Math.abs(last.timeBeats - event.timeBeats) < 1e-9) {
-        acc[acc.length - 1] = event;
-      } else {
-        acc.push(event);
-      }
-      return acc;
-    }, []);
-
-  const sortedTimeSigs = timeSignatures
-    .sort((a, b) => a.timeBeats - b.timeBeats)
-    .reduce<TimeSignatureEvent[]>((acc, event) => {
-      const last = acc[acc.length - 1];
-      if (last && Math.abs(last.timeBeats - event.timeBeats) < 1e-9) {
-        acc[acc.length - 1] = event;
-      } else {
-        acc.push(event);
-      }
-      return acc;
-    }, []);
-
-  const outNotes = notes.map((note) => {
-    const startTime = beatsToSecondsWithTempoMap(note.startBeats, sortedTempoEvents);
-    const endTime = beatsToSecondsWithTempoMap(note.endBeats, sortedTempoEvents);
+  const notes = (sequence.notes ?? []).map((note) => {
+    const startTime = Number(Number(note.startTime).toFixed(6));
+    const endTime = Number(Number(note.endTime).toFixed(6));
     const safeEnd = endTime <= startTime ? startTime + 0.01 : endTime;
+    const velocity = normalizeVelocity(note.velocity ?? defaultVelocity);
 
     return {
-      pitch: note.pitch,
-      startTime: Number(startTime.toFixed(6)),
+      ...note,
+      startTime,
       endTime: Number(safeEnd.toFixed(6)),
-      velocity: Number(normalizeVelocity(note.velocity).toFixed(3)),
+      velocity: Number(velocity.toFixed(3)),
     };
   });
 
-  outNotes.sort((a, b) => {
-    if (a.startTime === b.startTime) {
-      return a.pitch - b.pitch;
-    }
-    return a.startTime - b.startTime;
-  });
-
-  const totalTime = outNotes.reduce((max, note) => Math.max(max, note.endTime), 0);
+  const totalTime =
+    sequence.totalTime && sequence.totalTime > 0
+      ? sequence.totalTime
+      : notes.reduce((max, note) => Math.max(max, note.endTime), 0);
 
   return {
-    notes: outNotes,
-    totalTime: Number(totalTime.toFixed(6)),
-    tempos: sortedTempoEvents.length
-      ? sortedTempoEvents.map((event) => ({
-        time: Number(beatsToSecondsWithTempoMap(event.timeBeats, sortedTempoEvents).toFixed(6)),
-        qpm: event.qpm,
-      }))
-      : [{ time: 0, qpm: defaultQpm }],
-    timeSignatures: sortedTimeSigs.length
-      ? sortedTimeSigs.map((event) => ({
-        time: Number(beatsToSecondsWithTempoMap(event.timeBeats, sortedTempoEvents).toFixed(6)),
-        numerator: event.numerator,
-        denominator: event.denominator,
-      }))
+    ...sequence,
+    notes,
+    totalTime: Number(Number(totalTime).toFixed(6)),
+    tempos: sequence.tempos?.length ? sequence.tempos : [{ time: 0, qpm: defaultQpm }],
+    timeSignatures: sequence.timeSignatures?.length
+      ? sequence.timeSignatures
       : [{ time: 0, numerator: 4, denominator: 4 }],
   };
 }
