@@ -282,6 +282,7 @@ const Index = () => {
     STORAGE_KEYS.PLAY_HISTORY,
     []
   );
+  const [isMusicXmlImporting, setIsMusicXmlImporting] = useState(false);
 
   const { toast } = useToast();
   const magenta = useMagenta();
@@ -747,6 +748,7 @@ const Index = () => {
 
   const handleUploadMusicXml = useCallback(async () => {
     const processXmlFile = async (file: File) => {
+      setIsMusicXmlImporting(true);
       try {
         let xmlText: string;
         const fileName = file.name.toLowerCase();
@@ -837,6 +839,8 @@ const Index = () => {
             error instanceof Error ? error.message : "Failed to read file",
           variant: "destructive",
         });
+      } finally {
+        setIsMusicXmlImporting(false);
       }
     };
 
@@ -1040,6 +1044,8 @@ const Index = () => {
     onRequestVariations: (sequence) =>
       handleManualAiRequest(sequence, "magenta/music-vae", "create variations"),
     playingSequence,
+    isImporting: isMusicXmlImporting,
+    importLabel: "Importing MusicXML...",
   });
 
   // Assign to refs for use in handleRecordingComplete
@@ -1783,7 +1789,10 @@ const Index = () => {
                           <Upload className="h-4 w-4 mr-2" />
                           {t("menus.uploadAbc")}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleUploadMusicXml}>
+                        <DropdownMenuItem
+                          onClick={handleUploadMusicXml}
+                          disabled={isMusicXmlImporting}
+                        >
                           <Upload className="h-4 w-4 mr-2" />
                           {t("menus.uploadMusicXml")}
                         </DropdownMenuItem>
