@@ -3,6 +3,7 @@ import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import { beatsToSeconds } from "@/utils/noteSequenceUtils";
 import { TrackContainer } from "@/components/TrackContainer";
 import { TrackItem } from "@/components/TrackItem";
+import { TrackLoadingItem } from "@/components/TrackLoadingItem";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
 import {
     DndContext,
@@ -45,6 +46,8 @@ interface PlayModeProps {
     onRequestImprov?: (sequence: NoteSequence) => void;
     onRequestVariations?: (sequence: NoteSequence) => void;
     playingSequence?: NoteSequence | null;
+    isImporting?: boolean;
+    importLabel?: string;
 }
 
 function normalizeHistory(entries: PlayEntry[]): PlayEntry[] {
@@ -74,6 +77,8 @@ export function PlayMode({
     onRequestImprov,
     onRequestVariations,
     playingSequence,
+    isImporting = false,
+    importLabel = "Loading...",
 }: PlayModeProps) {
     const [history, setHistory] = useState<PlayEntry[]>(() => normalizeHistory(initialHistory));
 
@@ -317,7 +322,7 @@ export function PlayMode({
         return (
             <>
                 <TrackContainer
-                    scrollDependency={[history.length, liveNotes.length]}
+                    scrollDependency={[history.length, liveNotes.length, isImporting]}
                     autoScroll={!isPlayingAll && isRecording}
                 >
                     <DndContext
@@ -366,6 +371,12 @@ export function PlayMode({
                         <TrackItem
                             sequence={liveSequence}
                             isRecording={true}
+                        />
+                    )}
+                    {isImporting && (
+                        <TrackLoadingItem
+                            label={importLabel}
+                            message="Converting MusicXML to MIDI..."
                         />
                     )}
                 </TrackContainer>
