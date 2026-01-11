@@ -113,6 +113,17 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
   const handleKeyPress = useCallback((noteKey: string, frequency: number, velocity: number = 0.8) => {
     if (!allowInput || !isNotePlayable(noteKey)) return;
 
+    const existingTimer = keyActivationTimers.current.get(noteKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      keyActivationTimers.current.delete(noteKey);
+    }
+    setSustainedKeys((prev) => {
+      if (!prev.has(noteKey)) return prev;
+      const next = new Set(prev);
+      next.delete(noteKey);
+      return next;
+    });
     audio.startNote(noteKey, frequency);
     setUserPressedKeys((prev) => new Set([...prev, noteKey]));
 
