@@ -419,6 +419,7 @@ export function compileCurriculum(questData: QuestData): CompilationResult {
       tracks,
       lessons,
       skills,
+      tunes: [], // Tunes are handled separately, not by this legacy compiler
     },
     errors: [],
   };

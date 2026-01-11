@@ -196,6 +196,13 @@ const nodeVariations = {
     typeLabel: "Skill",
     defaultTitle: "Untitled Skill",
   },
+  tune: {
+    bg: "bg-purple-950",
+    ringSelected: "ring-2 ring-purple-300/50",
+    borderDefault: "border-purple-500",
+    typeLabel: "Tune",
+    defaultTitle: "Untitled Tune",
+  },
 } as const;
 
 // Base Node Component
@@ -208,7 +215,7 @@ function QuestNodeBase({
   infoText,
   children,
 }: {
-  variation: "track" | "lesson" | "skill";
+  variation: "track" | "lesson" | "skill" | "tune";
   id: string;
   data: { title: string; type: QuestNodeType };
   selected?: boolean;
@@ -388,6 +395,66 @@ function SkillNode({
   );
 }
 
+function TuneNode({
+  id,
+  data,
+  selected,
+  onEdit,
+}: {
+  id: string;
+  data: { title: string; type: QuestNodeType };
+  selected?: boolean;
+  onEdit: (nodeId: string) => void;
+}) {
+  return (
+    <QuestNodeBase
+      variation="tune"
+      id={id}
+      data={data}
+      selected={selected}
+      onEdit={onEdit}
+      infoText="Prev: 1 max | Next: 1 max | Requires/Unlocks skills"
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="tune-in"
+        style={{ backgroundColor: "#0284c7" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="tune-out"
+        style={{ backgroundColor: "#0284c7" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="tune-required"
+        style={{ backgroundColor: "#059669" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="tune-unlockable"
+        style={{ backgroundColor: "#059669" }}
+      />
+      <span className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Prev
+      </span>
+      <span className="absolute right-[-42px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
+        Next
+      </span>
+      <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+        Requires
+      </span>
+      <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
+        Unlocking
+      </span>
+    </QuestNodeBase>
+  );
+}
+
 // Custom Edge Component for styling
 function CustomEdge({
   id,
@@ -468,6 +535,9 @@ function QuestEditorFlow({
     skill: (props: NodeComponentProps) => (
       <SkillNode {...props} onEdit={onEditNode} />
     ),
+    tune: (props: NodeComponentProps) => (
+      <TuneNode {...props} onEdit={onEditNode} />
+    ),
   };
 
   return (
@@ -491,6 +561,7 @@ function QuestEditorFlow({
           if (nodeType === "track") return "rgb(219, 39, 119)"; // pink-500
           if (nodeType === "lesson") return "rgb(14, 165, 233)"; // sky-500
           if (nodeType === "skill") return "rgb(16, 185, 129)"; // emerald-500
+          if (nodeType === "tune") return "rgb(168, 85, 247)"; // purple-500
           return "hsl(var(--muted))";
         }}
       />
@@ -577,7 +648,9 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     useState<string>("");
   const [editingDifficultyGuidance, setEditingDifficultyGuidance] =
     useState<string>("");
-
+  // Tune-specific editing states
+  const [editingTuneKey, setEditingTuneKey] = useState<string>("");
+  const [editingMusicRef, setEditingMusicRef] = useState<string>("");
   // Track unsaved changes
   useEffect(() => {
     const currentData = JSON.stringify({ nodes, edges });
@@ -664,6 +737,22 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingTrackKey("");
           setEditingSkillKey("");
           setEditingUnlockGuidance("");
+        } else if (node.data.type === "tune") {
+          // Initialize tune-specific fields
+          setEditingTuneKey(node.data.tuneKey || "");
+          setEditingMusicRef(node.data.musicRef || "");
+          setEditingDescription(node.data.description || "");
+          // Clear other fields
+          setEditingOrder("");
+          setEditingTrackKey("");
+          setEditingSkillKey("");
+          setEditingUnlockGuidance("");
+          setEditingLessonKey("");
+          setEditingGoal("");
+          setEditingLevel("");
+          setEditingSetupGuidance("");
+          setEditingEvaluationGuidance("");
+          setEditingDifficultyGuidance("");
         } else {
           setEditingOrder("");
           setEditingDescription("");
@@ -676,6 +765,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingSetupGuidance("");
           setEditingEvaluationGuidance("");
           setEditingDifficultyGuidance("");
+          setEditingTuneKey("");
+          setEditingMusicRef("");
         }
       }
     },
@@ -760,6 +851,22 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           n.data.type === "track" &&
           n.id !== excludeNodeId &&
           n.data.trackKey === trackKey.trim()
+      );
+    },
+    [nodes]
+  );
+
+  // Helper function to check if a tuneKey is already in use
+  const isTuneKeyInUse = useCallback(
+    (tuneKey: string, excludeNodeId?: string): boolean => {
+      if (!tuneKey || tuneKey.trim() === "") {
+        return false;
+      }
+      return nodes.some(
+        (n) =>
+          n.data.type === "tune" &&
+          n.id !== excludeNodeId &&
+          n.data.tuneKey === tuneKey.trim()
       );
     },
     [nodes]
@@ -887,6 +994,46 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       }
     }
 
+    // Validate tune-specific fields
+    if (currentNode.data.type === "tune") {
+      const trimmedTuneKey = editingTuneKey.trim();
+      if (!trimmedTuneKey) {
+        toast({
+          title: "Invalid tune key",
+          description: "Tune key cannot be empty",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (trimmedTuneKey.includes(" ")) {
+        toast({
+          title: "Invalid tune key",
+          description: "Tune key cannot contain spaces",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isTuneKeyInUse(trimmedTuneKey, editingNodeId)) {
+        toast({
+          title: "Tune key already in use",
+          description: "This tune key is already assigned to another tune",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!editingMusicRef || editingMusicRef.trim() === "") {
+        toast({
+          title: "Music reference required",
+          description: "Music reference cannot be empty",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const updatedNodes = nodes.map((node) => {
       if (node.id === editingNodeId) {
         const updatedData = {
@@ -920,6 +1067,13 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             editingDifficultyGuidance || undefined;
         }
 
+        // Add tune-specific fields
+        if (node.data.type === "tune") {
+          updatedData.tuneKey = editingTuneKey.trim();
+          updatedData.musicRef = editingMusicRef.trim();
+          updatedData.description = editingDescription || undefined;
+        }
+
         return {
           ...node,
           data: updatedData,
@@ -941,6 +1095,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     setEditingSetupGuidance("");
     setEditingEvaluationGuidance("");
     setEditingDifficultyGuidance("");
+    setEditingTuneKey("");
+    setEditingMusicRef("");
   }, [
     editingNodeId,
     editingTitle,
@@ -955,6 +1111,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     editingSetupGuidance,
     editingEvaluationGuidance,
     editingDifficultyGuidance,
+    editingTuneKey,
+    editingMusicRef,
     nodes,
     edges,
     updateQuestData,
@@ -962,6 +1120,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     isTrackKeyInUse,
     isSkillKeyInUse,
     isLessonKeyInUse,
+    isTuneKeyInUse,
     toast,
   ]);
 
@@ -977,6 +1136,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     setEditingSetupGuidance("");
     setEditingEvaluationGuidance("");
     setEditingDifficultyGuidance("");
+    setEditingTuneKey("");
+    setEditingMusicRef("");
   }, []);
 
   // Save nodes and edges to localStorage whenever they change (including positions)
@@ -1081,6 +1242,121 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         return { valid: true };
       }
 
+      // Track → Tune (using track-out → tune-in)
+      if (source.data.type === "track" && target.data.type === "tune") {
+        const outgoingCount = edges.filter(
+          (e) => e.source === source.id && e.sourceHandle === "track-out"
+        ).length;
+        if (outgoingCount >= 1) {
+          return {
+            valid: false,
+            reason: "Track can only have one outgoing connection",
+          };
+        }
+        return { valid: true };
+      }
+
+      // Lesson → Tune (using lesson-out → tune-in)
+      if (source.data.type === "lesson" && target.data.type === "tune") {
+        if (sourceHandle === "lesson-out" && targetHandle === "tune-in") {
+          const sourceOutgoing = edges.filter(
+            (e) => e.source === source.id && e.sourceHandle === "lesson-out"
+          ).length;
+          if (sourceOutgoing >= 1) {
+            return {
+              valid: false,
+              reason: "Lesson can only have one outgoing connection",
+            };
+          }
+          const targetIncoming = edges.filter(
+            (e) => e.target === target.id && e.targetHandle === "tune-in"
+          ).length;
+          if (targetIncoming >= 1) {
+            return {
+              valid: false,
+              reason: "Tune can only have one incoming connection",
+            };
+          }
+          return { valid: true };
+        }
+        return { valid: false, reason: "Invalid lesson-to-tune connection" };
+      }
+
+      // Tune → Tune (using tune-out → tune-in)
+      if (source.data.type === "tune" && target.data.type === "tune") {
+        if (sourceHandle === "tune-out" && targetHandle === "tune-in") {
+          const sourceOutgoing = edges.filter(
+            (e) => e.source === source.id && e.sourceHandle === "tune-out"
+          ).length;
+          if (sourceOutgoing >= 1) {
+            return {
+              valid: false,
+              reason: "Tune can only have one outgoing connection",
+            };
+          }
+          const targetIncoming = edges.filter(
+            (e) => e.target === target.id && e.targetHandle === "tune-in"
+          ).length;
+          if (targetIncoming >= 1) {
+            return {
+              valid: false,
+              reason: "Tune can only have one incoming connection",
+            };
+          }
+          return { valid: true };
+        }
+        return { valid: false, reason: "Invalid tune-to-tune connection" };
+      }
+
+      // Tune → Lesson (using tune-out → lesson-in)
+      if (source.data.type === "tune" && target.data.type === "lesson") {
+        if (sourceHandle === "tune-out" && targetHandle === "lesson-in") {
+          const sourceOutgoing = edges.filter(
+            (e) => e.source === source.id && e.sourceHandle === "tune-out"
+          ).length;
+          if (sourceOutgoing >= 1) {
+            return {
+              valid: false,
+              reason: "Tune can only have one outgoing connection",
+            };
+          }
+          const targetIncoming = edges.filter(
+            (e) => e.target === target.id && e.targetHandle === "lesson-in"
+          ).length;
+          if (targetIncoming >= 1) {
+            return {
+              valid: false,
+              reason: "Lesson can only have one incoming connection",
+            };
+          }
+          return { valid: true };
+        }
+        return { valid: false, reason: "Invalid tune-to-lesson connection" };
+      }
+
+      // Tune → Skill (using tune-required/unlockable → skill-required/unlockable)
+      if (source.data.type === "tune" && target.data.type === "skill") {
+        // For unlockable, check if skill already has one "Unlocked by" connection
+        if (
+          sourceHandle === "tune-unlockable" &&
+          targetHandle === "skill-unlockable"
+        ) {
+          const existingUnlockable = edges.find(
+            (e) =>
+              e.target === target.id &&
+              e.targetHandle === "skill-unlockable" &&
+              e.data?.type === "unlockable"
+          );
+          if (existingUnlockable) {
+            return {
+              valid: false,
+              reason: "Skill can only receive one 'Unlocked by' connection",
+            };
+          }
+        }
+        return { valid: true };
+      }
+
       return { valid: false, reason: "Invalid connection type" };
     },
     [edges]
@@ -1093,15 +1369,16 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       targetHandle: string | null | undefined
     ): QuestEdgeType => {
       if (
-        sourceHandle === "lesson-unlockable" &&
+        (sourceHandle === "lesson-unlockable" || sourceHandle === "tune-unlockable") &&
         targetHandle === "skill-unlockable"
       ) {
         return "unlockable";
       }
-      // Lesson/Track "Is requiring" → Skill "Is required by"
+      // Lesson/Track/Tune "Is requiring" → Skill "Is required by"
       if (
         (sourceHandle === "lesson-required" ||
-          sourceHandle === "track-required") &&
+          sourceHandle === "track-required" ||
+          sourceHandle === "tune-required") &&
         targetHandle === "skill-required"
       ) {
         return "requirement";
@@ -1191,6 +1468,88 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           valid: false,
           reason:
             "Lesson must connect to Skill using matching handles (Unlocking → Unlocked by, or Is requiring → Is required by)",
+        };
+      }
+
+      // Track → Tune
+      if (
+        sourceNode.data.type === "track" &&
+        targetNode.data.type === "tune"
+      ) {
+        if (sourceHandle !== "track-out" || targetHandle !== "tune-in") {
+          return {
+            valid: false,
+            reason: "Track must connect to Tune using correct handles",
+          };
+        }
+        return { valid: true };
+      }
+
+      // Lesson → Tune
+      if (
+        sourceNode.data.type === "lesson" &&
+        targetNode.data.type === "tune"
+      ) {
+        if (sourceHandle === "lesson-out" && targetHandle === "tune-in") {
+          return { valid: true };
+        }
+        return {
+          valid: false,
+          reason: "Lesson must connect to Tune using lesson-out → tune-in",
+        };
+      }
+
+      // Tune → Tune
+      if (
+        sourceNode.data.type === "tune" &&
+        targetNode.data.type === "tune"
+      ) {
+        if (sourceHandle === "tune-out" && targetHandle === "tune-in") {
+          return { valid: true };
+        }
+        return {
+          valid: false,
+          reason: "Tune must connect to Tune using tune-out → tune-in",
+        };
+      }
+
+      // Tune → Lesson
+      if (
+        sourceNode.data.type === "tune" &&
+        targetNode.data.type === "lesson"
+      ) {
+        if (sourceHandle === "tune-out" && targetHandle === "lesson-in") {
+          return { valid: true };
+        }
+        return {
+          valid: false,
+          reason: "Tune must connect to Lesson using tune-out → lesson-in",
+        };
+      }
+
+      // Tune → Skill
+      if (
+        sourceNode.data.type === "tune" &&
+        targetNode.data.type === "skill"
+      ) {
+        // Tune "Unlocking" → Skill "Unlocked by"
+        if (
+          sourceHandle === "tune-unlockable" &&
+          targetHandle === "skill-unlockable"
+        ) {
+          return { valid: true };
+        }
+        // Tune "Is requiring" → Skill "Is required by"
+        if (
+          sourceHandle === "tune-required" &&
+          targetHandle === "skill-required"
+        ) {
+          return { valid: true };
+        }
+        return {
+          valid: false,
+          reason:
+            "Tune must connect to Skill using matching handles (Unlocking → Unlocked by, or Requires → Is required by)",
         };
       }
 
@@ -1901,6 +2260,9 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                     <DropdownMenuItem onClick={() => addNode("skill")}>
                       Skill
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => addNode("tune")}>
+                      Tune
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -2374,6 +2736,47 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                           value={editingDifficultyGuidance}
                           onChange={(e) =>
                             setEditingDifficultyGuidance(e.target.value)
+                          }
+                          rows={4}
+                          autoResize
+                        />
+                      </div>
+                    </>
+                  )}
+                {editingNodeId &&
+                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                    "tune" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="tuneKey">Tune Key</Label>
+                        <Input
+                          id="tuneKey"
+                          type="text"
+                          value={editingTuneKey}
+                          onChange={(e) => setEditingTuneKey(e.target.value)}
+                          placeholder="e.g., st-louis-blues"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="musicRef">Music Reference</Label>
+                        <Input
+                          id="musicRef"
+                          type="text"
+                          value={editingMusicRef}
+                          onChange={(e) => setEditingMusicRef(e.target.value)}
+                          placeholder="e.g., st-louis-blues"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Folder name in src/music/
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={editingDescription}
+                          onChange={(e) =>
+                            setEditingDescription(e.target.value)
                           }
                           rows={4}
                           autoResize

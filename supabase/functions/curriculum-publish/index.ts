@@ -10,7 +10,7 @@ const corsHeaders = {
 // Types matching QuestEditor
 interface QuestNodeData {
   title: string;
-  type: "track" | "lesson" | "skill";
+  type: "track" | "lesson" | "skill" | "tune";
   order?: number;
   description?: string;
   trackKey?: string;
@@ -21,6 +21,8 @@ interface QuestNodeData {
   setupGuidance?: string;
   evaluationGuidance?: string;
   difficultyGuidance?: string;
+  tuneKey?: string;
+  musicRef?: string;
 }
 
 interface QuestNode {
@@ -74,6 +76,7 @@ interface PublishResponse {
     tracks: number;
     lessons: number;
     skills: number;
+    tunes: number;
   };
   warnings?: string[];
   errors?: string[];
@@ -117,6 +120,16 @@ function validateNodeKeys(nodes: QuestNode[]): { errors: ValidationError[]; warn
       // Validate skill key convention: S_* prefix
       if (!key.startsWith("S_")) {
         warnings.push({ type: "key_convention", message: `Skill key "${key}" doesn't match convention (should start with S_)`, nodeId: node.id });
+      }
+    } else if (node.data.type === "tune") {
+      key = node.data.tuneKey;
+      if (!key || key.trim() === "") {
+        errors.push({ type: "missing_key", message: `Tune node ${node.id} missing tuneKey`, nodeId: node.id });
+        continue;
+      }
+      // Validate tune key convention: lowercase with dashes
+      if (!/^[a-z0-9-]+$/.test(key)) {
+        warnings.push({ type: "key_convention", message: `Tune key "${key}" doesn't match convention (should be lowercase with dashes)`, nodeId: node.id });
       }
     }
 
@@ -349,14 +362,14 @@ function transformToRuntime(
   questData: QuestData
 ): {
   nodes: Array<{
-    kind: "track" | "lesson" | "skill";
+    kind: "track" | "lesson" | "skill" | "tune";
     key: string;
     title: string;
     description: string | null;
     data: Record<string, unknown>;
   }>;
   edges: Array<{
-    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill";
+    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill";
     fromKey: string;
     toKey: string;
   }>;
@@ -364,7 +377,7 @@ function transformToRuntime(
   keyToNodeId: Map<string, string>; // runtime key -> editor nodeId
 } {
   const nodes: Array<{
-    kind: "track" | "lesson" | "skill";
+    kind: "track" | "lesson" | "skill" | "tune";
     key: string;
     title: string;
     description: string | null;
@@ -372,7 +385,7 @@ function transformToRuntime(
   }> = [];
   
   const edges: Array<{
-    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill";
+    type: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill";
     fromKey: string;
     toKey: string;
   }> = [];
@@ -392,6 +405,8 @@ function transformToRuntime(
       key = node.data.lessonKey;
     } else if (node.data.type === "skill" && node.data.skillKey) {
       key = node.data.skillKey;
+    } else if (node.data.type === "tune" && node.data.tuneKey) {
+      key = node.data.tuneKey;
     }
 
     if (key) {
@@ -418,6 +433,10 @@ function transformToRuntime(
       nodeData = {
         unlockGuidance: node.data.unlockGuidance || null,
       };
+    } else if (node.data.type === "tune") {
+      nodeData = {
+        musicRef: node.data.musicRef || null,
+      };
     }
     // Track data can be empty or future-proofed
 
@@ -440,25 +459,34 @@ function transformToRuntime(
     const targetNode = editorNodeMap.get(edge.target);
     if (!sourceNode || !targetNode) continue;
 
-    let edgeType: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | null = null;
+    let edgeType: "track_starts_with" | "lesson_next" | "lesson_requires_skill" | "lesson_awards_skill" | "tune_next" | "tune_requires_skill" | "tune_awards_skill" | null = null;
 
-    // track-out → lesson-in → track_starts_with
+    // track-out → lesson-in OR tune-in → track_starts_with
     if (
       sourceNode.data.type === "track" &&
-      targetNode.data.type === "lesson" &&
+      (targetNode.data.type === "lesson" || targetNode.data.type === "tune") &&
       edge.sourceHandle === "track-out" &&
-      edge.targetHandle === "lesson-in"
+      (edge.targetHandle === "lesson-in" || edge.targetHandle === "tune-in")
     ) {
       edgeType = "track_starts_with";
     }
-    // lesson-out → lesson-in → lesson_next
+    // lesson-out → lesson-in OR tune-in → lesson_next
     else if (
       sourceNode.data.type === "lesson" &&
-      targetNode.data.type === "lesson" &&
+      (targetNode.data.type === "lesson" || targetNode.data.type === "tune") &&
       edge.sourceHandle === "lesson-out" &&
-      edge.targetHandle === "lesson-in"
+      (edge.targetHandle === "lesson-in" || edge.targetHandle === "tune-in")
     ) {
       edgeType = "lesson_next";
+    }
+    // tune-out → tune-in OR lesson-in → tune_next
+    else if (
+      sourceNode.data.type === "tune" &&
+      (targetNode.data.type === "tune" || targetNode.data.type === "lesson") &&
+      edge.sourceHandle === "tune-out" &&
+      (edge.targetHandle === "tune-in" || edge.targetHandle === "lesson-in")
+    ) {
+      edgeType = "tune_next";
     }
     // lesson-required → skill-required → lesson_requires_skill
     else if (
@@ -477,6 +505,24 @@ function transformToRuntime(
       edge.targetHandle === "skill-unlockable"
     ) {
       edgeType = "lesson_awards_skill";
+    }
+    // tune-required → skill-required → tune_requires_skill
+    else if (
+      sourceNode.data.type === "tune" &&
+      targetNode.data.type === "skill" &&
+      edge.sourceHandle === "tune-required" &&
+      edge.targetHandle === "skill-required"
+    ) {
+      edgeType = "tune_requires_skill";
+    }
+    // tune-unlockable → skill-unlockable → tune_awards_skill
+    else if (
+      sourceNode.data.type === "tune" &&
+      targetNode.data.type === "skill" &&
+      edge.sourceHandle === "tune-unlockable" &&
+      edge.targetHandle === "skill-unlockable"
+    ) {
+      edgeType = "tune_awards_skill";
     }
 
     if (edgeType) {
@@ -579,26 +625,33 @@ serve(async (req) => {
         difficultyGuidance: (n.data as { difficultyGuidance?: string }).difficultyGuidance,
       })),
       skills: runtimeData.nodes.filter(n => n.kind === "skill").map(n => ({
-        skillKey: n.key,
-        title: n.title,
-        description: n.description,
-        unlockGuidance: (n.data as { unlockGuidance?: string }).unlockGuidance,
-      })),
-      edges: runtimeData.edges.map(e => ({
+      skillKey: n.key,
+      title: n.title,
+      description: n.description,
+      unlockGuidance: (n.data as { unlockGuidance?: string }).unlockGuidance,
+    })),
+    tunes: runtimeData.nodes.filter(n => n.kind === "tune").map(n => ({
+      tuneKey: n.key,
+      title: n.title,
+      description: n.description,
+      musicRef: (n.data as { musicRef?: string }).musicRef,
+    })),
+    edges: runtimeData.edges.map(e => ({
         source_key: e.fromKey,
         target_key: e.toKey,
         edge_type: e.type,
       })),
     };
 
-    // Counts
-    const counts = {
-      nodes: runtimeData.nodes.length,
-      edges: runtimeData.edges.length,
-      tracks: runtimeData.nodes.filter(n => n.kind === "track").length,
-      lessons: runtimeData.nodes.filter(n => n.kind === "lesson").length,
-      skills: runtimeData.nodes.filter(n => n.kind === "skill").length,
-    };
+  // Counts
+  const counts = {
+    nodes: runtimeData.nodes.length,
+    edges: runtimeData.edges.length,
+    tracks: runtimeData.nodes.filter(n => n.kind === "track").length,
+    lessons: runtimeData.nodes.filter(n => n.kind === "lesson").length,
+    skills: runtimeData.nodes.filter(n => n.kind === "skill").length,
+    tunes: runtimeData.nodes.filter(n => n.kind === "tune").length,
+  };
 
     // If dry run, return validation results
     if (mode === "dryRun") {
