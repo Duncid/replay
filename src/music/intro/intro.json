@@ -1,0 +1,32 @@
+{
+    "nuggets": [
+      {
+        "id": "N1",
+        "startTime": 0,
+        "endTime": 2.5,
+        "noteStartIndex": 0,
+        "noteEndIndex": 5,
+        "type": "open",
+        "label": "Phrase 1"
+      },
+      {
+        "id": "N2",
+        "startTime": 2.5,
+        "endTime": 4.5,
+        "noteStartIndex": 6,
+        "noteEndIndex": 10,
+        "type": "closed",
+        "label": "Answer"
+      },
+      {
+        "id": "N3",
+        "startTime": 4.5,
+        "endTime": 8,
+        "noteStartIndex": 11,
+        "noteEndIndex": 18,
+        "type": "closed",
+        "label": "Phrase 2"
+      }
+    ]
+  }
+  
