@@ -345,14 +345,16 @@ async function loadMusic21Runtime(): Promise<Music21Runtime> {
     music21RuntimePromise = (async () => {
       const pyodideModule = await import(
         /* @vite-ignore */
-        `${PYODIDE_BASE_URL}pyodide.js`
+        `${PYODIDE_BASE_URL}pyodide.mjs`
       );
       const loadPyodide =
         typeof pyodideModule.loadPyodide === "function"
           ? pyodideModule.loadPyodide
           : typeof pyodideModule.default?.loadPyodide === "function"
             ? pyodideModule.default.loadPyodide
-            : null;
+            : typeof globalThis.loadPyodide === "function"
+              ? globalThis.loadPyodide
+              : null;
 
       if (!loadPyodide) {
         throw new Error("Pyodide runtime could not be loaded.");
