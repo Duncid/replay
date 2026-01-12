@@ -87,6 +87,7 @@ export interface TuneExport {
   title: string;
   description?: string;
   musicRef: string;
+  level?: "beginner" | "intermediate" | "advanced";
   trackKey?: string;
   requiresSkills: string[];
   awardsSkills: string[];

@@ -6,6 +6,7 @@ import {
   LessonRunSetup,
   LessonBrief,
   LessonMachineState,
+  TeacherGreetingResponse,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
 
@@ -283,16 +284,7 @@ export async function evaluateFreeFormLesson(
  */
 export async function fetchTeacherGreeting(
   params: FetchTeacherGreetingParams
-): Promise<{
-  greeting: string;
-  suggestions: Array<{
-    lessonKey: string;
-    label: string;
-    why: string;
-    trackTitle: string;
-  }>;
-  notes?: string | null;
-}> {
+): Promise<TeacherGreetingResponse> {
   const { data, error } = await supabase.functions.invoke("teacher-greet", {
     body: {
       language: params.language,
@@ -304,7 +296,24 @@ export async function fetchTeacherGreeting(
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
 
-  return data;
+  // Transform backend response to match TeacherGreetingResponse type
+  // The backend now returns activityKey/activityType, but we need to ensure backwards compatibility
+  const suggestions = (data.suggestions || []).map((s: Record<string, unknown>) => ({
+    activityKey: (s.activityKey as string) || (s.lessonKey as string) || "",
+    activityType: (s.activityType as "lesson" | "tune") || "lesson",
+    label: s.label as string,
+    why: s.why as string,
+    trackTitle: s.trackTitle as string,
+    level: s.level as "beginner" | "intermediate" | "advanced" | undefined,
+    musicRef: s.musicRef as string | undefined,
+    lessonKey: (s.lessonKey as string) || (s.activityKey as string),
+  }));
+
+  return {
+    greeting: data.greeting,
+    suggestions,
+    notes: data.notes,
+  };
 }
 
 /**
