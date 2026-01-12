@@ -742,6 +742,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingTuneKey(node.data.tuneKey || "");
           setEditingMusicRef(node.data.musicRef || "");
           setEditingDescription(node.data.description || "");
+          setEditingLevel((node.data.level as "beginner" | "intermediate" | "advanced") || "");
           // Clear other fields
           setEditingOrder("");
           setEditingTrackKey("");
@@ -749,7 +750,6 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingUnlockGuidance("");
           setEditingLessonKey("");
           setEditingGoal("");
-          setEditingLevel("");
           setEditingSetupGuidance("");
           setEditingEvaluationGuidance("");
           setEditingDifficultyGuidance("");
@@ -1072,6 +1072,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           updatedData.tuneKey = editingTuneKey.trim();
           updatedData.musicRef = editingMusicRef.trim();
           updatedData.description = editingDescription || undefined;
+          updatedData.level = editingLevel || undefined;
         }
 
         return {
@@ -2769,6 +2770,24 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                         <p className="text-xs text-muted-foreground">
                           Folder name in src/music/
                         </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="level">Level</Label>
+                        <Select
+                          value={editingLevel}
+                          onValueChange={(value) =>
+                            setEditingLevel(value as "beginner" | "intermediate" | "advanced")
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="beginner">Beginner</SelectItem>
+                            <SelectItem value="intermediate">Intermediate</SelectItem>
+                            <SelectItem value="advanced">Advanced</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>

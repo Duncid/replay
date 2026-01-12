@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { PracticePlanDebugCard } from "./PracticePlanDebugCard";
+import { Music } from "lucide-react";
 
 export interface TeacherDebugData {
   debug: true;
@@ -128,16 +129,26 @@ export function TeacherWelcome({
         <div className="grid gap-4 md:grid-cols-2">
           {greeting.suggestions.map((suggestion) => (
             <Card
-              key={suggestion.lessonKey}
-              className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+              key={suggestion.activityKey}
+              className={`cursor-pointer transition-all hover:border-primary/50 hover:shadow-md ${
+                suggestion.activityType === "tune" ? "border-purple-500/30" : ""
+              }`}
               onClick={() => onSelectActivity(suggestion)}
             >
               <CardHeader>
-                {suggestion.trackTitle && (
-                  <Badge className="flex items-center gap-1 text-xs w-fit">
-                    {suggestion.trackTitle}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {suggestion.trackTitle && (
+                    <Badge className="flex items-center gap-1 text-xs w-fit">
+                      {suggestion.trackTitle}
+                    </Badge>
+                  )}
+                  {suggestion.activityType === "tune" && (
+                    <Badge variant="outline" className="text-purple-600 border-purple-400 flex items-center gap-1">
+                      <Music className="h-3 w-3" />
+                      Tune
+                    </Badge>
+                  )}
+                </div>
                 <CardTitle className="text-base leading-tight mt-2">
                   {suggestion.label}
                 </CardTitle>

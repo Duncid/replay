@@ -7,20 +7,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface Note {
-  pitch: number;
-  startTime: number;
-  endTime: number;
-  velocity?: number;
-}
-
 interface LessonNode {
   key: string;
   title: string;
   goal: string;
+  level?: "beginner" | "intermediate" | "advanced";
   setupGuidance?: string;
   evaluationGuidance?: string;
   difficultyGuidance?: string;
+}
+
+interface TuneNode {
+  key: string;
+  title: string;
+  description?: string;
+  musicRef: string;
+  level?: "beginner" | "intermediate" | "advanced";
 }
 
 interface SkillNode {
@@ -34,7 +36,8 @@ interface TrackNode {
   key: string;
   title: string;
   description?: string;
-  startLesson?: string;
+  startItem?: string;
+  startItemType?: "lesson" | "tune";
 }
 
 interface Edge {
@@ -61,23 +64,25 @@ interface SkillState {
   last_practiced_at: string | null;
 }
 
-interface CandidateActivity {
-  lessonKey: string;
+interface AvailableActivity {
+  activityKey: string;
+  activityType: "lesson" | "tune";
   title: string;
-  goal: string;
-  category: "continue" | "progress" | "balance" | "remediate";
-  trackKey?: string;
-  lastPracticed?: string | null;
-  lastEvaluations?: string[];
-  lastDifficulty?: number;
-  attemptsLast7Days?: number;
+  goal?: string;
+  description?: string;
+  trackKey: string;
+  trackTitle: string;
+  level?: string;
+  musicRef?: string;
 }
 
 interface TeacherSuggestion {
-  lessonKey: string;
+  activityKey: string;
+  activityType: "lesson" | "tune";
   label: string;
   why: string;
   trackTitle: string;
+  level?: string;
 }
 
 interface TeacherResponse {
@@ -134,13 +139,14 @@ serve(async (req) => {
       );
     }
 
-    // Snapshot schema: { tracks, lessons, skills, edges }
+    // Snapshot schema: { tracks, lessons, skills, tunes, edges }
     const snapshot = exportData.snapshot as {
       tracks: Array<{ trackKey: string; title: string; description?: string }>;
       lessons: Array<{
         lessonKey: string;
         title: string;
         goal?: string;
+        level?: string;
         setupGuidance?: string;
         evaluationGuidance?: string;
         difficultyGuidance?: string;
@@ -150,6 +156,13 @@ serve(async (req) => {
         title: string;
         description?: string;
         unlockGuidance?: string;
+      }>;
+      tunes?: Array<{
+        tuneKey: string;
+        title: string;
+        description?: string;
+        musicRef: string;
+        level?: string;
       }>;
       edges?: Array<{
         source_key: string;
@@ -165,28 +178,28 @@ serve(async (req) => {
       edge_type: e.edge_type,
     }));
 
-    const tracks: TrackNode[] = (snapshot.tracks || []).map((t) => {
-      const startEdge = edges.find(
-        (e) =>
-          e.source_key === t.trackKey && e.edge_type === "track_starts_with"
-      );
-      return {
-        key: t.trackKey,
-        title: t.title || t.trackKey,
-        description: t.description,
-        startLesson: startEdge?.target_key,
-      };
-    });
-
+    // Build maps for lessons and tunes
     const lessons: Map<string, LessonNode> = new Map();
     for (const l of snapshot.lessons || []) {
       lessons.set(l.lessonKey, {
         key: l.lessonKey,
         title: l.title || l.lessonKey,
         goal: l.goal || "",
+        level: l.level as "beginner" | "intermediate" | "advanced" | undefined,
         setupGuidance: l.setupGuidance,
         evaluationGuidance: l.evaluationGuidance,
         difficultyGuidance: l.difficultyGuidance,
+      });
+    }
+
+    const tunes: Map<string, TuneNode> = new Map();
+    for (const t of snapshot.tunes || []) {
+      tunes.set(t.tuneKey, {
+        key: t.tuneKey,
+        title: t.title || t.tuneKey,
+        description: t.description,
+        musicRef: t.musicRef,
+        level: t.level as "beginner" | "intermediate" | "advanced" | undefined,
       });
     }
 
@@ -200,21 +213,46 @@ serve(async (req) => {
       });
     }
 
+    // Build tracks with start items (could be lesson or tune)
+    const tracks: TrackNode[] = (snapshot.tracks || []).map((t) => {
+      const startEdge = edges.find(
+        (e) =>
+          e.source_key === t.trackKey && e.edge_type === "track_starts_with"
+      );
+      let startItemType: "lesson" | "tune" | undefined;
+      if (startEdge) {
+        if (lessons.has(startEdge.target_key)) {
+          startItemType = "lesson";
+        } else if (tunes.has(startEdge.target_key)) {
+          startItemType = "tune";
+        }
+      }
+      return {
+        key: t.trackKey,
+        title: t.title || t.trackKey,
+        description: t.description,
+        startItem: startEdge?.target_key,
+        startItemType,
+      };
+    });
+
     console.log(
-      `[teacher-greet] Curriculum loaded: ${tracks.length} tracks, ${lessons.size} lessons, ${skills.size} skills, ${edges.length} edges`
+      `[teacher-greet] Curriculum loaded: ${tracks.length} tracks, ${lessons.size} lessons, ${tunes.size} tunes, ${skills.size} skills, ${edges.length} edges`
     );
 
     // Build edge lookups
     const lessonNextEdges = edges.filter((e) => e.edge_type === "lesson_next");
+    const tuneNextEdges = edges.filter((e) => e.edge_type === "tune_next");
     const lessonRequiresEdges = edges.filter(
       (e) => e.edge_type === "lesson_requires_skill"
     );
-    const lessonAwardsEdges = edges.filter(
-      (e) => e.edge_type === "lesson_awards_skill"
+    const tuneRequiresEdges = edges.filter(
+      (e) => e.edge_type === "tune_requires_skill"
     );
     const trackRequiresEdges = edges.filter(
       (e) => e.edge_type === "track_requires_skill"
     );
+
     // 2. Fetch user activity data (filtered by localUserId if provided)
     let runsQuery = supabase
       .from("lesson_runs")
@@ -281,14 +319,40 @@ serve(async (req) => {
       `[teacher-greet] Acquired lessons for user ${localUserId || "all"}: ${acquiredLessonKeys.size}`
     );
 
-    // 3. Compute accessible lessons per track
-    const accessibleLessons: Map<string, Set<string>> = new Map();
-    const nextLessonAfter: Map<string, string> = new Map();
+    // 3. Compute accessible activities (lessons and tunes) per track
+    const availableActivities: AvailableActivity[] = [];
+
+    // Helper to check if item requirements are met
+    const checkRequirements = (
+      itemKey: string,
+      itemType: "lesson" | "tune"
+    ): boolean => {
+      const requiresEdges =
+        itemType === "lesson" ? lessonRequiresEdges : tuneRequiresEdges;
+      const requiredSkills = requiresEdges
+        .filter((e) => e.source_key === itemKey)
+        .map((e) => e.target_key);
+
+      // Check skill requirements
+      const skillsMet =
+        requiredSkills.length === 0 ||
+        requiredSkills.every((sk) => unlockedSkills.has(sk));
+
+      // For lessons, also check prerequisite lessons (previous lessons in chain)
+      if (itemType === "lesson") {
+        const lessonRequiredLessons = lessonNextEdges
+          .filter((e) => e.target_key === itemKey)
+          .map((e) => e.source_key);
+        const lessonsMet =
+          lessonRequiredLessons.length === 0 ||
+          lessonRequiredLessons.every((lk) => acquiredLessonKeys.has(lk));
+        return skillsMet && lessonsMet;
+      }
+
+      return skillsMet;
+    };
 
     for (const track of tracks) {
-      const accessible = new Set<string>();
-      const visited = new Set<string>();
-
       // Check track-level requirements
       const trackRequiredSkills = trackRequiresEdges
         .filter((e) => e.source_key === track.key)
@@ -299,78 +363,66 @@ serve(async (req) => {
 
       // If track has requirements and they're not met, skip this track
       if (trackRequiredSkills.length > 0 && !trackRequirementsMet) {
-        accessibleLessons.set(track.key, accessible);
         continue;
       }
 
-      let current = track.startLesson;
+      // Traverse the track's item chain (lessons and tunes interleaved)
+      const visited = new Set<string>();
+      let current = track.startItem;
+      let currentType = track.startItemType;
+
       while (current && !visited.has(current)) {
         visited.add(current);
-        const lesson = lessons.get(current);
-        if (!lesson) break;
 
-        // Get THIS lesson's required skills (not accumulated)
-        const lessonRequiredSkills = lessonRequiresEdges
-          .filter((e) => e.source_key === current)
-          .map((e) => e.target_key);
+        if (currentType === "lesson") {
+          const lesson = lessons.get(current);
+          if (lesson && checkRequirements(current, "lesson")) {
+            availableActivities.push({
+              activityKey: current,
+              activityType: "lesson",
+              title: lesson.title,
+              goal: lesson.goal,
+              trackKey: track.key,
+              trackTitle: track.title,
+              level: lesson.level,
+            });
+          }
 
-        // Get THIS lesson's required prerequisite lessons (previous lessons in chain)
-        // A lesson requires the lessons that have lesson_next pointing TO it
-        const lessonRequiredLessons = lessonNextEdges
-          .filter((e) => e.target_key === current)
-          .map((e) => e.source_key);
+          // Find next item (could be lesson or tune)
+          const nextEdge = lessonNextEdges.find(
+            (e) => e.source_key === current
+          );
+          if (nextEdge) {
+            current = nextEdge.target_key;
+            currentType = lessons.has(nextEdge.target_key) ? "lesson" : "tune";
+          } else {
+            current = undefined;
+          }
+        } else if (currentType === "tune") {
+          const tune = tunes.get(current);
+          if (tune && checkRequirements(current, "tune")) {
+            availableActivities.push({
+              activityKey: current,
+              activityType: "tune",
+              title: tune.title,
+              description: tune.description,
+              trackKey: track.key,
+              trackTitle: track.title,
+              level: tune.level,
+              musicRef: tune.musicRef,
+            });
+          }
 
-        // Lesson is accessible if:
-        // 1. All required skills are unlocked, AND
-        // 2. All prerequisite lessons (previous lessons in chain) are acquired
-        const skillsMet =
-          lessonRequiredSkills.length === 0 ||
-          lessonRequiredSkills.every((sk) => unlockedSkills.has(sk));
-
-        const lessonsMet =
-          lessonRequiredLessons.length === 0 ||
-          lessonRequiredLessons.every((lk) => acquiredLessonKeys.has(lk));
-
-        const lessonRequirementsMet = skillsMet && lessonsMet;
-
-        if (lessonRequirementsMet) {
-          accessible.add(current);
-        }
-
-        // Find next lesson
-        const nextEdge = lessonNextEdges.find((e) => e.source_key === current);
-        if (nextEdge) {
-          nextLessonAfter.set(current, nextEdge.target_key);
-        }
-        current = nextEdge?.target_key;
-      }
-
-      accessibleLessons.set(track.key, accessible);
-    }
-
-    // Build available lessons list (lessons where requirements are fulfilled)
-    const availableLessons: Array<{
-      lessonKey: string;
-      title: string;
-      goal: string;
-      trackKey: string;
-      trackTitle: string;
-    }> = [];
-
-    for (const [trackKey, accessibleLessonKeys] of accessibleLessons) {
-      const track = tracks.find((t) => t.key === trackKey);
-      const trackTitle = track?.title || trackKey;
-
-      for (const lessonKey of accessibleLessonKeys) {
-        const lesson = lessons.get(lessonKey);
-        if (lesson) {
-          availableLessons.push({
-            lessonKey,
-            title: lesson.title,
-            goal: lesson.goal,
-            trackKey,
-            trackTitle,
-          });
+          // Find next item (could be lesson or tune)
+          const nextEdge = tuneNextEdges.find((e) => e.source_key === current);
+          if (nextEdge) {
+            current = nextEdge.target_key;
+            currentType = lessons.has(nextEdge.target_key) ? "lesson" : "tune";
+          } else {
+            current = undefined;
+          }
+        } else {
+          break;
         }
       }
     }
@@ -397,26 +449,41 @@ serve(async (req) => {
     }
 
     // Build comprehensive practice history for LLM
-    const practiceHistory = availableLessons.map((lesson) => {
-      const runs = runsByLesson.get(lesson.lessonKey) || [];
-      const recentRuns = runs.slice(0, 5);
-      const attemptsLast7Days = runs.filter(
-        (r) => new Date(r.started_at) >= sevenDaysAgo
-      ).length;
-      const lastRun = runs[0];
+    const practiceHistory = availableActivities
+      .filter((a) => a.activityType === "lesson")
+      .map((activity) => {
+        const runs = runsByLesson.get(activity.activityKey) || [];
+        const recentRuns = runs.slice(0, 5);
+        const attemptsLast7Days = runs.filter(
+          (r) => new Date(r.started_at) >= sevenDaysAgo
+        ).length;
+        const lastRun = runs[0];
 
-      return {
-        lessonKey: lesson.lessonKey,
-        title: lesson.title,
-        trackTitle: lesson.trackTitle,
-        lastPracticed: lastRun?.started_at || null,
-        lastEvaluation: lastRun?.evaluation || null,
-        lastDifficulty: lastRun?.difficulty || null,
-        attemptsTotal: runs.length,
-        attemptsLast7Days,
-        recentEvaluations: recentRuns.map((r) => r.evaluation || "none"),
-      };
-    });
+        return {
+          activityKey: activity.activityKey,
+          activityType: activity.activityType,
+          title: activity.title,
+          trackTitle: activity.trackTitle,
+          lastPracticed: lastRun?.started_at || null,
+          lastEvaluation: lastRun?.evaluation || null,
+          lastDifficulty: lastRun?.difficulty || null,
+          attemptsTotal: runs.length,
+          attemptsLast7Days,
+          recentEvaluations: recentRuns.map((r) => r.evaluation || "none"),
+        };
+      });
+
+    // Add tunes to history (no lesson runs for tunes yet)
+    const tuneHistory = availableActivities
+      .filter((a) => a.activityType === "tune")
+      .map((activity) => ({
+        activityKey: activity.activityKey,
+        activityType: activity.activityType,
+        title: activity.title,
+        trackTitle: activity.trackTitle,
+        musicRef: activity.musicRef,
+        level: activity.level,
+      }));
 
     const lessonRunsSummary = lessonRuns.slice(0, 20).map((r) => ({
       lessonKey: r.lesson_node_key,
@@ -431,64 +498,47 @@ serve(async (req) => {
 Your job when the user opens Learning mode:
 1) Greet the user briefly, taking into account if you interacted with them on the day
 2) Look at their recent activity and performance.
-3) Propose 1 to 4 next activities (lesson choices) that the user can pick from.
+3) Propose 1 to 4 next activities (lessons or tunes) that the user can pick from.
 4) Keep it lightweight and motivating. No lecturing. No long explanations.
+
+IMPORTANT - Activity Types:
+- LESSONS: Structured learning exercises focused on specific skills (technique, theory, rhythm). These build foundational knowledge.
+- TUNES: Music pieces for practice. More rewarding and enjoyable, but require prerequisite skills. These provide motivation and real-world application.
+
+Balance recommendations:
+- New users should start with lessons to build foundational skills
+- Mix lessons and tunes to maintain engagement and motivation
+- Suggest tunes when the user has unlocked required skills
+- After challenging lessons, suggest a tune as a reward
+- Consider the user's level (beginner/intermediate/advanced) when recommending
+- Tunes are great for applying learned skills in a fun, musical context
 
 Important rules:
 - The user can choose; you are advising, not forcing.
-- Use ONLY the provided available lessons. Do not invent lessons or skills not present.
+- Use ONLY the provided available activities. Do not invent activities not present.
 - If the user hasn't practiced in a long time, recommend an easier re-entry choice.
 - Balance: avoid always recommending the same track; include variety when appropriate.
-- Consider the user's practice history: what they've practiced, how they performed, and what makes sense next.
-- IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include lesson keys (like "A1.4" or "B2.1") in the label. Example: "Eighth notes practice" NOT "A1.4: Eighth notes practice".
-- REQUIRED: The "trackTitle" field MUST match one of the track titles from the available lessons. Each lesson belongs to exactly one track.
-- REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities. Focus on their progress, recent practice, and what makes sense for them today.
+- IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include activity keys in the label.
+- REQUIRED: The "trackTitle" field MUST match one of the track titles from the available activities.
+- REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities.
 
 Return ONLY valid JSON following the schema provided.`;
-
-    // Build lesson-to-track mapping for validation
-    const lessonToTrackMap: Map<
-      string,
-      { trackKey: string; trackTitle: string }
-    > = new Map();
-    const trackStartsEdges = edges.filter(
-      (e) => e.edge_type === "track_starts_with"
-    );
-    const lessonNextEdgesLocal = edges.filter(
-      (e) => e.edge_type === "lesson_next"
-    );
-
-    const lessonNextMap: Map<string, string> = new Map();
-    for (const edge of lessonNextEdgesLocal) {
-      lessonNextMap.set(edge.source_key, edge.target_key);
-    }
-
-    for (const startEdge of trackStartsEdges) {
-      const trackKey = startEdge.source_key;
-      const track = tracks.find((t) => t.key === trackKey);
-      const trackTitle = track?.title || trackKey;
-      let currentLesson = startEdge.target_key;
-
-      lessonToTrackMap.set(currentLesson, { trackKey, trackTitle });
-
-      while (lessonNextMap.has(currentLesson)) {
-        currentLesson = lessonNextMap.get(currentLesson)!;
-        lessonToTrackMap.set(currentLesson, { trackKey, trackTitle });
-      }
-    }
 
     const userPrompt = `CONTEXT (today):
 - locale: ${language}
 - now: ${now.toISOString()}
 - timeSinceLastPracticeHours: ${timeSinceLastPracticeHours ?? "never practiced"}
 
-AVAILABLE LESSONS (requirements fulfilled - user can access these):
-${JSON.stringify(availableLessons, null, 2)}
+AVAILABLE ACTIVITIES (lessons and tunes the user can access):
+${JSON.stringify(availableActivities, null, 2)}
 
-PRACTICE HISTORY (for each available lesson):
+LESSON PRACTICE HISTORY:
 ${JSON.stringify(practiceHistory, null, 2)}
 
-RECENT ACTIVITY (chronological list of recent lesson runs):
+AVAILABLE TUNES:
+${JSON.stringify(tuneHistory, null, 2)}
+
+RECENT LESSON RUNS (chronological list):
 ${JSON.stringify(lessonRunsSummary, null, 2)}
 
 OUTPUT JSON SCHEMA:
@@ -496,13 +546,14 @@ OUTPUT JSON SCHEMA:
   "greeting": "string",
   "suggestions": [
     {
-      "lessonKey": "string (must be from AVAILABLE LESSONS)",
-      "label": "string (short activity name, NO lesson keys like A1.4)",
+      "activityKey": "string (must be from AVAILABLE ACTIVITIES)",
+      "activityType": "lesson" | "tune",
+      "label": "string (short activity name)",
       "why": "string",
-      "trackTitle": "string (REQUIRED: must match the trackTitle from AVAILABLE LESSONS)"
+      "trackTitle": "string (REQUIRED: must match the trackTitle from AVAILABLE ACTIVITIES)"
     }
   ],
-  "notes": "string (REQUIRED: Brief explanation to the user about why you picked these lessons)"
+  "notes": "string (REQUIRED: Brief explanation to the user about why you picked these activities)"
 }`;
 
     // If debug mode, return context without calling LLM
@@ -514,12 +565,14 @@ OUTPUT JSON SCHEMA:
           curriculum: {
             tracksCount: tracks.length,
             lessonsCount: lessons.size,
+            tunesCount: tunes.size,
             skillsCount: skills.size,
             edgesCount: edges.length,
-            availableLessonsCount: availableLessons.length,
-            availableLessons: availableLessons,
+            availableActivitiesCount: availableActivities.length,
+            availableActivities: availableActivities,
           },
           practiceHistory,
+          tuneHistory,
           signals: {
             timeSinceLastPracticeHours,
             recentRunsCount: lessonRuns.length,
@@ -531,7 +584,7 @@ OUTPUT JSON SCHEMA:
       );
     }
 
-    // 7. Call LLM
+    // 6. Call LLM
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -555,20 +608,22 @@ OUTPUT JSON SCHEMA:
       }
     );
 
-    // Build fallback response from available lessons (used if LLM fails)
+    // Build fallback response from available activities (used if LLM fails)
     const buildFallbackResponse = (): TeacherResponse => {
-      // Pick first few available lessons as fallback
-      const fallbackLessons = availableLessons.slice(0, 3);
+      // Prefer a mix of lessons and tunes
+      const fallbackActivities = availableActivities.slice(0, 3);
       return {
         greeting:
           language === "fr"
             ? "Bonjour ! Prêt à pratiquer ?"
             : "Hello! Ready to practice?",
-        suggestions: fallbackLessons.map((lesson) => ({
-          lessonKey: lesson.lessonKey,
-          label: lesson.title,
-          why: lesson.goal,
-          trackTitle: lesson.trackTitle,
+        suggestions: fallbackActivities.map((activity) => ({
+          activityKey: activity.activityKey,
+          activityType: activity.activityType,
+          label: activity.title,
+          why: activity.goal || activity.description || "Practice this activity",
+          trackTitle: activity.trackTitle,
+          level: activity.level,
         })),
         notes: null,
       };
@@ -579,9 +634,6 @@ OUTPUT JSON SCHEMA:
     if (!llmResponse.ok) {
       const errorText = await llmResponse.text();
       console.error("LLM error:", llmResponse.status, errorText);
-
-      // Use fallback response instead of returning error
-      // This way users can still practice even if LLM is unavailable
       console.log("Using fallback response due to LLM error");
       teacherResponse = buildFallbackResponse();
     } else {
@@ -600,22 +652,23 @@ OUTPUT JSON SCHEMA:
       }
     }
 
-    // Validate suggestions - ensure lessonKey exists in available lessons
-    const availableLessonKeys = new Set(
-      availableLessons.map((l) => l.lessonKey)
+    // Validate suggestions - ensure activityKey exists in available activities
+    const availableActivityKeys = new Map(
+      availableActivities.map((a) => [a.activityKey, a])
     );
     const validatedSuggestions = teacherResponse.suggestions
-      .filter((s) => availableLessonKeys.has(s.lessonKey))
+      .filter((s) => availableActivityKeys.has(s.activityKey))
       .map((s) => {
-        // Use LLM-provided trackTitle, fallback to our mapping if missing
-        const lesson = availableLessons.find(
-          (l) => l.lessonKey === s.lessonKey
-        );
+        const activity = availableActivityKeys.get(s.activityKey)!;
         return {
-          lessonKey: s.lessonKey,
+          activityKey: s.activityKey,
+          activityType: activity.activityType,
           label: s.label,
           why: s.why,
-          trackTitle: s.trackTitle || lesson?.trackTitle || "",
+          trackTitle: s.trackTitle || activity.trackTitle,
+          level: activity.level,
+          // For backwards compatibility, include lessonKey
+          lessonKey: s.activityKey,
         };
       });
 

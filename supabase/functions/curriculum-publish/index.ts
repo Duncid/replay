@@ -431,6 +431,7 @@ function transformToRuntime(
         setupGuidance: node.data.setupGuidance || null,
         evaluationGuidance: node.data.evaluationGuidance || null,
         difficultyGuidance: node.data.difficultyGuidance || null,
+        level: (node.data as { level?: string }).level || null,
       };
     } else if (node.data.type === "skill") {
       nodeData = {
@@ -439,6 +440,7 @@ function transformToRuntime(
     } else if (node.data.type === "tune") {
       nodeData = {
         musicRef: node.data.musicRef || null,
+        level: (node.data as { level?: string }).level || null,
       };
     }
     // Track data can be empty or future-proofed
@@ -647,6 +649,7 @@ serve(async (req) => {
       title: n.title,
       description: n.description,
       musicRef: (n.data as { musicRef?: string }).musicRef,
+      level: (n.data as { level?: string }).level,
     })),
     edges: runtimeData.edges.map(e => ({
         source_key: e.fromKey,

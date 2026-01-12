@@ -294,28 +294,34 @@ export function LearnMode({
   // When a suggestion is clicked, fetch the debug prompt first (only in debug mode)
   const handleSelectActivity = useCallback(
     async (suggestion: TeacherSuggestion) => {
+      // Handle tune selection (TODO: implement tune practice mode)
+      if (suggestion.activityType === "tune") {
+        toast({
+          title: "Tune Practice",
+          description: `Tune practice for "${suggestion.label}" coming soon!`,
+        });
+        return;
+      }
+
       // Build prompt from suggestion
       const lessonPrompt = `${suggestion.label}: ${suggestion.why}`;
+      const lessonKey = suggestion.activityKey || suggestion.lessonKey || "";
 
       // In debug mode, fetch debug prompt and show debug card
       if (debugMode) {
         setLoadingLessonDebug(true);
 
         try {
-          // For curriculum lessons, use lesson-start; for free-form, use piano-learn
-          // Since suggestions always have lessonKey, use lesson-start
-          // Use the mutation that's already declared at the top level
           const data = await startCurriculumLessonMutation.mutateAsync({
-            lessonKey: suggestion.lessonKey,
+            lessonKey,
             language,
             debug: true,
           });
 
-          // In debug mode, lesson-start returns { prompt, lessonBrief, setup }
           if ("prompt" in data && data.prompt) {
             setDebugState({
               type: "lesson",
-              suggestion,
+              suggestion: { ...suggestion, lessonKey },
               prompt: data.prompt,
             });
           } else {
@@ -333,7 +339,7 @@ export function LearnMode({
         }
       } else {
         // In normal mode, directly start the lesson
-        generateLesson(lessonPrompt, 1, undefined, suggestion.lessonKey);
+        generateLesson(lessonPrompt, 1, undefined, lessonKey);
       }
     },
     [debugMode, language, toast, generateLesson, startCurriculumLessonMutation]
@@ -345,7 +351,8 @@ export function LearnMode({
 
     const suggestion = debugState.suggestion;
     const prompt = `${suggestion.label}: ${suggestion.why}`;
-    generateLesson(prompt, 1, undefined, suggestion.lessonKey); // Lesson Coach will determine difficulty
+    const lessonKey = suggestion.activityKey || suggestion.lessonKey || "";
+    generateLesson(prompt, 1, undefined, lessonKey);
   }, [debugState, generateLesson]);
 
   const handleCancelLessonDebug = useCallback(() => {

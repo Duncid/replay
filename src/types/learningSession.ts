@@ -66,10 +66,15 @@ export interface EvaluationResponse {
 
 // Teacher greeting types
 export interface TeacherSuggestion {
-  lessonKey: string;
+  activityKey: string;
+  activityType: "lesson" | "tune";
   label: string;
   why: string;
   trackTitle: string;
+  level?: "beginner" | "intermediate" | "advanced";
+  musicRef?: string;
+  /** @deprecated Use activityKey instead */
+  lessonKey?: string;
 }
 
 export interface TeacherGreetingResponse {
