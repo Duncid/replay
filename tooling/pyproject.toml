@@ -1,0 +1,17 @@
+[project]
+name = "tune-pipeline"
+version = "0.1.0"
+description = "Local tune pipeline CLI"
+requires-python = ">=3.9"
+dependencies = [
+  "music21>=8.0",
+  "pretty_midi>=0.2.10",
+  "numpy>=1.23",
+  "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+ test = ["pytest>=7.0"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
