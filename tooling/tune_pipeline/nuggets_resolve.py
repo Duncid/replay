@@ -26,11 +26,31 @@ def _parse_location(location: Dict[str, Any]) -> LocationSpan:
             measure_end=int(end["measure"]),
             beat_end=float(end.get("beat", 1.0)),
         )
+    # Alternative keys
+    m_start = location.get("measureStart")
+    if m_start is None:
+        m_start = location.get("startMeasure")
+    
+    m_end = location.get("measureEnd")
+    if m_end is None:
+        m_end = location.get("endMeasure")
+        
+    b_start = location.get("beatStart")
+    if b_start is None:
+        b_start = location.get("startBeat")
+
+    b_end = location.get("beatEnd")
+    if b_end is None:
+        b_end = location.get("endBeat")
+
+    if m_start is None or m_end is None:
+         raise KeyError("Missing start/end measure in location")
+
     return LocationSpan(
-        measure_start=int(location["measureStart"]),
-        beat_start=float(location.get("beatStart", 1.0)),
-        measure_end=int(location["measureEnd"]),
-        beat_end=float(location.get("beatEnd", 1.0)),
+        measure_start=int(m_start),
+        beat_start=float(b_start if b_start is not None else 1.0),
+        measure_end=int(m_end),
+        beat_end=float(b_end if b_end is not None else 1.0),
     )
 
 
@@ -96,6 +116,11 @@ def resolve_nuggets(
             if match is not None and _event_in_span(match, span)
         ]
         if not matched_indices:
+            print(f"Debug: Nugget {nugget_id} Span: {span}")
+            print(f"Debug: Total score matches: {len(score_matches)}")
+            if score_matches:
+                print(f"Debug: First matches: {[m for m in score_matches[:5] if m]}")
+                print(f"Debug: Sample match structure: measure={score_matches[0].measure}, beat={score_matches[0].beat}")
             raise ValueError(f"No matched notes for nugget {nugget_id}")
         full_range = _range_from_notes(full_notes, min(matched_indices), max(matched_indices))
         nugget_entry = {

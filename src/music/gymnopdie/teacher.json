@@ -1,0 +1,2543 @@
+{
+    "schemaVersion": "nuggets-teacher.v1",
+    "pipelineSettings": {
+        "instrument": "piano",
+        "expectsTwoStaves": true,
+        "staffToHandDefault": {
+            "1": "RH",
+            "2": "LH"
+        },
+        "handSplitPolicy": {
+            "mode": "byStaff",
+            "crossStaffHandling": "discourage"
+        },
+        "alignmentPolicy": {
+            "noteMatching": "strict",
+            "fallbackIfLowConfidence": "pitchSplit"
+        },
+        "nuggetSlicingPolicy": {
+            "preferMeasureBoundaries": true,
+            "targetDurationSeconds": [
+                2.0,
+                6.0
+            ],
+            "targetNotesPerNugget": [
+                4,
+                12
+            ],
+            "maxDurationSeconds": 8.0
+        }
+    },
+    "motifs": [
+        {
+            "id": "M1",
+            "label": "LH long-bass + sustained chord bed",
+            "importance": 0.95,
+            "description": "Left hand sustains a low bass (often dotted-half) with a mid/high chord (often half) after a quarter rest; aim for calm, even resonance.",
+            "occursIn": [
+                "N1",
+                "N2",
+                "N3",
+                "N4",
+                "N5",
+                "N6",
+                "N7",
+                "N8",
+                "N9",
+                "N10",
+                "N11",
+                "N12",
+                "N13",
+                "N14",
+                "N15",
+                "N16",
+                "N17",
+                "N18",
+                "N19",
+                "N20",
+                "N21",
+                "N22",
+                "N23",
+                "N24",
+                "N25",
+                "N26",
+                "N27",
+                "N28",
+                "N29",
+                "N30",
+                "N31",
+                "N32",
+                "N33",
+                "N34",
+                "N35",
+                "N36",
+                "N37",
+                "N38",
+                "N39"
+            ]
+        },
+        {
+            "id": "M2",
+            "label": "RH lyrical 3-note contour",
+            "importance": 0.85,
+            "description": "Right hand often moves in simple stepwise/neighbor motion across each bar; shape as one long phrase, not separate notes.",
+            "occursIn": [
+                "N3",
+                "N4",
+                "N5",
+                "N6",
+                "N7",
+                "N8",
+                "N9",
+                "N10",
+                "N11",
+                "N12",
+                "N13",
+                "N14",
+                "N15",
+                "N16",
+                "N17",
+                "N18",
+                "N19",
+                "N20",
+                "N22",
+                "N23",
+                "N24",
+                "N25",
+                "N26",
+                "N27",
+                "N28",
+                "N29",
+                "N30",
+                "N31",
+                "N32",
+                "N33",
+                "N34",
+                "N35",
+                "N36",
+                "N37",
+                "N38",
+                "N39"
+            ]
+        },
+        {
+            "id": "M3",
+            "label": "RH tie/sustain across bars",
+            "importance": 0.8,
+            "description": "Melody note ties (or long holds) across measures; keep pulse steady while the hand stays relaxed and the sound stays alive.",
+            "occursIn": [
+                "N5",
+                "N6",
+                "N10",
+                "N11",
+                "N13",
+                "N15",
+                "N16",
+                "N24",
+                "N25",
+                "N26",
+                "N29",
+                "N30",
+                "N32",
+                "N33",
+                "N35"
+            ]
+        },
+        {
+            "id": "M4",
+            "label": "Color notes (C natural / F natural) section",
+            "importance": 0.7,
+            "description": "Accidentals (notably C-natural and F-natural) change the color; confirm fingering and ear-training for the altered scale degrees.",
+            "occursIn": [
+                "N11",
+                "N12",
+                "N13",
+                "N14",
+                "N15",
+                "N16",
+                "N31",
+                "N32",
+                "N33",
+                "N34",
+                "N36",
+                "N37",
+                "N38",
+                "N39"
+            ]
+        },
+        {
+            "id": "M5",
+            "label": "Ritard + final soft landing",
+            "importance": 0.6,
+            "description": "End-game control: slow down (rit.) without losing tone, and place the final chord with full calm resonance.",
+            "occursIn": [
+                "N39"
+            ]
+        }
+    ],
+    "nuggets": [
+        {
+            "id": "N1",
+            "label": "Intro harmony bed (m.1–2)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 1,
+                "startBeat": 1,
+                "endMeasure": 2,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "LH",
+                "supportedModes": [
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.98,
+            "difficulty": {
+                "level": 1,
+                "reasons": [
+                    "quiet control",
+                    "long-tone balance"
+                ]
+            },
+            "dependsOn": [
+                "M1"
+            ],
+            "teacherHints": {
+                "goal": "Make the LH bass and upper chord bloom gently with no bumps in the pulse.",
+                "counting": "Count 1-2-3; keep beat 1 calm even though the chord enters after the rest.",
+                "commonMistakes": [
+                    "entering the chord late/early",
+                    "bass too loud",
+                    "releasing too soon"
+                ],
+                "whatToListenFor": [
+                    "steady calm pulse",
+                    "rounded bass with no thump",
+                    "chord speaks softly and stays"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N2",
+            "label": "Intro repeat/settle (m.3–4)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 3,
+                "startBeat": 1,
+                "endMeasure": 4,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "LH",
+                "supportedModes": [
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.9,
+            "difficulty": {
+                "level": 1,
+                "reasons": [
+                    "consistency",
+                    "quiet endurance"
+                ]
+            },
+            "dependsOn": [
+                "N1"
+            ],
+            "teacherHints": {
+                "goal": "Repeat the intro with identical tone and timing.",
+                "counting": "Same 1-2-3; aim for the same breath between beats 1 and 2.",
+                "commonMistakes": [
+                    "second time louder",
+                    "tempo sag",
+                    "pedal blur if used"
+                ],
+                "whatToListenFor": [
+                    "same color as N1",
+                    "no rushing into the chord"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N3",
+            "label": "Melody enters + crescendo (m.5–6)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 5,
+                "startBeat": 1,
+                "endMeasure": 6,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.97,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "balance melody over LH",
+                    "crescendo control"
+                ]
+            },
+            "dependsOn": [
+                "M1",
+                "M2",
+                "N1"
+            ],
+            "teacherHints": {
+                "goal": "Bring out RH line (F#–A–G–F#–C#) while LH stays like a cushion.",
+                "counting": "Each measure: 1 (rest/chord setup) 2-3 (sustain). Keep RH aligned to beats.",
+                "commonMistakes": [
+                    "LH chord louder than melody",
+                    "crescendo turns into accent",
+                    "RH too percussive"
+                ],
+                "whatToListenFor": [
+                    "melody singing",
+                    "LH soft and stable",
+                    "smooth crescendo across both bars"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                },
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N4",
+            "label": "Peak then relax to A (m.7–8)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 7,
+                "startBeat": 1,
+                "endMeasure": 8,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.9,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "diminuendo control",
+                    "phrase end timing"
+                ]
+            },
+            "dependsOn": [
+                "N3"
+            ],
+            "teacherHints": {
+                "goal": "Let the phrase land on the long A without slowing down early.",
+                "counting": "Keep 1-2-3 steady; A in m.8 is held—don’t let the tempo droop.",
+                "commonMistakes": [
+                    "ritard too soon",
+                    "RH A gets weak",
+                    "LH changes audible"
+                ],
+                "whatToListenFor": [
+                    "gentle taper",
+                    "A stays present",
+                    "LH remains even"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N5",
+            "label": "Long tied F# begins (m.9–10)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 9,
+                "startBeat": 1,
+                "endMeasure": 10,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.88,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "tie sustain",
+                    "dynamic contrast"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "N4"
+            ],
+            "teacherHints": {
+                "goal": "Hold the RH F# calmly while the harmony shifts underneath.",
+                "counting": "Count 1-2-3 in both bars; RH stays relaxed—no re-strike on the tie.",
+                "commonMistakes": [
+                    "replaying tied note",
+                    "tempo drifting",
+                    "LH chord bumps"
+                ],
+                "whatToListenFor": [
+                    "continuous RH tone",
+                    "smooth harmony change",
+                    "steady pulse"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                },
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N6",
+            "label": "Tie continues, settle (m.11–12)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 11,
+                "startBeat": 1,
+                "endMeasure": 12,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.82,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "sustained tone",
+                    "even LH timing"
+                ]
+            },
+            "dependsOn": [
+                "N5"
+            ],
+            "teacherHints": {
+                "goal": "Keep the held RH note alive through two more harmonies, ending cleanly.",
+                "counting": "Quiet metronome in your head: 1-2-3, 1-2-3.",
+                "commonMistakes": [
+                    "letting sound die",
+                    "LH chord late after rest",
+                    "uneven releases"
+                ],
+                "whatToListenFor": [
+                    "no sudden changes in volume",
+                    "clean harmony edges"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N7",
+            "label": "Theme returns (m.13–14)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 13,
+                "startBeat": 1,
+                "endMeasure": 14,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.8,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "repeat consistency",
+                    "crescendo shape"
+                ]
+            },
+            "dependsOn": [
+                "N3"
+            ],
+            "teacherHints": {
+                "goal": "Play like a second stanza: same melody shape, slightly more confident tone.",
+                "counting": "Keep the same bar-length breathing as before.",
+                "commonMistakes": [
+                    "different articulation from first time",
+                    "LH louder due to familiarity"
+                ],
+                "whatToListenFor": [
+                    "matching phrasing to N3",
+                    "balanced hands"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N8",
+            "label": "Theme cadence again (m.15–16)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 15,
+                "startBeat": 1,
+                "endMeasure": 16,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.78,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "diminuendo",
+                    "landing on long A"
+                ]
+            },
+            "dependsOn": [
+                "N4",
+                "N7"
+            ],
+            "teacherHints": {
+                "goal": "Mirror N4’s landing but keep it flowing forward into the next section.",
+                "counting": "Don’t slow down on m.16—just soften.",
+                "commonMistakes": [
+                    "extra rubato",
+                    "LH ‘clunks’ on entry"
+                ],
+                "whatToListenFor": [
+                    "smooth taper",
+                    "stable tempo"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N9",
+            "label": "New bass color (m.17–18)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 17,
+                "startBeat": 1,
+                "endMeasure": 18,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.76,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "register shift",
+                    "tone control in RH"
+                ]
+            },
+            "dependsOn": [
+                "M1",
+                "M2"
+            ],
+            "teacherHints": {
+                "goal": "Keep RH singing while LH bass changes (F#2, then very low B1).",
+                "counting": "Same 1-2-3. Keep the rhythm steady even with the deep bass.",
+                "commonMistakes": [
+                    "bass thump on B1",
+                    "RH loses legato"
+                ],
+                "whatToListenFor": [
+                    "deep but gentle bass",
+                    "RH line remains centered"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N10",
+            "label": "E pedal begins, tied melody (m.19–20)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 19,
+                "startBeat": 1,
+                "endMeasure": 20,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.8,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "tie sustain",
+                    "crescendo over long note"
+                ]
+            },
+            "dependsOn": [
+                "M3"
+            ],
+            "teacherHints": {
+                "goal": "Let the RH E (held) float while harmony shifts (E–G–B then E–B–D–G).",
+                "counting": "Count through the tie; avoid re-articulating.",
+                "commonMistakes": [
+                    "re-strike the tie",
+                    "LH chord arrives unevenly after rest"
+                ],
+                "whatToListenFor": [
+                    "continuous RH sound",
+                    "clear harmony change without bumps"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N11",
+            "label": "Color change: F natural chord + C natural (m.21–22)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 21,
+                "startBeat": 1,
+                "endMeasure": 22,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.85,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "accidentals (C natural/F natural)",
+                    "crescendo phrasing"
+                ]
+            },
+            "dependsOn": [
+                "M4",
+                "N10"
+            ],
+            "teacherHints": {
+                "goal": "Hear the new color (F natural in LH harmony; C natural in RH) and keep the crescendo smooth.",
+                "counting": "1-2-3; place each RH note exactly on the beat.",
+                "commonMistakes": [
+                    "playing C# instead of C natural",
+                    "over-accenting the crescendo"
+                ],
+                "whatToListenFor": [
+                    "noticeably ‘different’ harmony color",
+                    "RH line stays vocal"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N12",
+            "label": "Answering line (m.23–24)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 23,
+                "startBeat": 1,
+                "endMeasure": 24,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.78,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "natural notes awareness",
+                    "shape over two bars"
+                ]
+            },
+            "dependsOn": [
+                "N11"
+            ],
+            "teacherHints": {
+                "goal": "Keep the RH line connected as it descends; keep LH changes silent and even.",
+                "counting": "Steady 1-2-3; no rushing the second bar.",
+                "commonMistakes": [
+                    "C natural missed",
+                    "LH chord speaks too loudly"
+                ],
+                "whatToListenFor": [
+                    "smooth stepwise contour",
+                    "consistent accompaniment bed"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N13",
+            "label": "Tied D over shifting harmony (m.25–26)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 25,
+                "startBeat": 1,
+                "endMeasure": 26,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.74,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "tie sustain",
+                    "quiet release timing"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "M4",
+                "N12"
+            ],
+            "teacherHints": {
+                "goal": "Hold RH D smoothly while the harmony shifts under it; keep it calm, not static.",
+                "counting": "Count through the tie; release exactly at the phrase boundary.",
+                "commonMistakes": [
+                    "re-strike the D",
+                    "release too early",
+                    "LH entry uneven"
+                ],
+                "whatToListenFor": [
+                    "one unbroken melodic thread",
+                    "gentle harmonic motion underneath"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N14",
+            "label": "Upward line with naturals (m.27–28)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 27,
+                "startBeat": 1,
+                "endMeasure": 28,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.72,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "accidentals",
+                    "melody projection"
+                ]
+            },
+            "dependsOn": [
+                "M4",
+                "N13"
+            ],
+            "teacherHints": {
+                "goal": "Project the rising RH line clearly while keeping LH extremely soft.",
+                "counting": "Each RH note on a beat; no extra accents.",
+                "commonMistakes": [
+                    "F# instead of F natural",
+                    "C# instead of C natural"
+                ],
+                "whatToListenFor": [
+                    "clean intonation of color notes",
+                    "steady crescendo then release"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N15",
+            "label": "Return to mp then soften, tie returns (m.29–30)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 29,
+                "startBeat": 1,
+                "endMeasure": 30,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.7,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "diminuendo",
+                    "tie awareness"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "N14"
+            ],
+            "teacherHints": {
+                "goal": "Let the phrase relax without losing the beat; keep the RH line legato.",
+                "counting": "Stay strict with 1-2-3 while dynamics taper.",
+                "commonMistakes": [
+                    "tempo slows with diminuendo",
+                    "LH chord bumps on entry"
+                ],
+                "whatToListenFor": [
+                    "smooth decrescendo",
+                    "stillness without dragging"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N16",
+            "label": "Tie resolves, reset into new phrase (m.31–32)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 31,
+                "startBeat": 1,
+                "endMeasure": 32,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.68,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "tie release",
+                    "new phrase start"
+                ]
+            },
+            "dependsOn": [
+                "N15"
+            ],
+            "teacherHints": {
+                "goal": "Release the tie cleanly, then re-enter the line with a gentle lift.",
+                "counting": "Count the release on the barline; don’t clip the sound early.",
+                "commonMistakes": [
+                    "late/early release",
+                    "new entry too loud"
+                ],
+                "whatToListenFor": [
+                    "clean transition",
+                    "phrase breath without breaking tempo"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N17",
+            "label": "Brighten then drop to B1 (m.33–34)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 33,
+                "startBeat": 1,
+                "endMeasure": 34,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.66,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "dynamic swell",
+                    "deep bass control"
+                ]
+            },
+            "dependsOn": [
+                "M2",
+                "N16"
+            ],
+            "teacherHints": {
+                "goal": "Support the RH with a controlled swell while keeping the deep bass gentle.",
+                "counting": "Keep strict 1-2-3; deep bass should not pull the tempo.",
+                "commonMistakes": [
+                    "B1 too loud",
+                    "RH loses singing tone"
+                ],
+                "whatToListenFor": [
+                    "warm swell, not harsh",
+                    "bass felt more than heard"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N18",
+            "label": "A-major color, then shift (m.35–36)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 35,
+                "startBeat": 1,
+                "endMeasure": 36,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.64,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "hand balance",
+                    "diminuendo into texture change"
+                ]
+            },
+            "dependsOn": [
+                "N17"
+            ],
+            "teacherHints": {
+                "goal": "Keep RH line clear while LH harmony becomes brighter; then taper into the next texture.",
+                "counting": "Feel two-bar arc: bar 1 up, bar 2 down.",
+                "commonMistakes": [
+                    "LH chord too bright/loud",
+                    "rushing toward bar 37"
+                ],
+                "whatToListenFor": [
+                    "controlled color",
+                    "smooth handoff into the next nugget"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N19",
+            "label": "Texture shift: inner voices appear (m.37–38)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 37,
+                "startBeat": 1,
+                "endMeasure": 38,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.72,
+            "difficulty": {
+                "level": 4,
+                "reasons": [
+                    "multiple voices in RH staff",
+                    "voicing within chords",
+                    "soft control"
+                ]
+            },
+            "dependsOn": [
+                "M1",
+                "M2"
+            ],
+            "teacherHints": {
+                "goal": "Voice the top melody while the added inner notes stay extremely soft.",
+                "counting": "Keep bar-length steady; avoid ‘waiting’ for the added chord tones.",
+                "commonMistakes": [
+                    "inner voices too loud",
+                    "melody disappears",
+                    "hands tense"
+                ],
+                "whatToListenFor": [
+                    "melody line on top",
+                    "inner notes as haze",
+                    "no harsh attacks"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N20",
+            "label": "Cadential chords + reset to rests (m.39–40)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 39,
+                "startBeat": 1,
+                "endMeasure": 40,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.6,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "clean chord placement",
+                    "transition to RH rest"
+                ]
+            },
+            "dependsOn": [
+                "N19"
+            ],
+            "teacherHints": {
+                "goal": "Place the chord cleanly, then let the texture disappear into the next silent RH bars.",
+                "counting": "Count through the silence; the pulse continues even when RH rests.",
+                "commonMistakes": [
+                    "cutting off too early",
+                    "losing tempo in the rest"
+                ],
+                "whatToListenFor": [
+                    "a calm ‘fade out’",
+                    "LH remains steady"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N21",
+            "label": "RH rests again: accompaniment only (m.41–42)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 41,
+                "startBeat": 1,
+                "endMeasure": 42,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "LH",
+                "supportedModes": [
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.62,
+            "difficulty": {
+                "level": 1,
+                "reasons": [
+                    "steady timing in silence"
+                ]
+            },
+            "dependsOn": [
+                "M1",
+                "N20"
+            ],
+            "teacherHints": {
+                "goal": "Keep the same sound world while RH is silent—no tempo drift.",
+                "counting": "Count 1-2-3 with conviction; imagine the melody above.",
+                "commonMistakes": [
+                    "speeding up without melody",
+                    "LH entry after rest inconsistent"
+                ],
+                "whatToListenFor": [
+                    "identical pulse to earlier sections",
+                    "soft, steady resonance"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N22",
+            "label": "Melody re-enters with crescendo (m.43–44)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 43,
+                "startBeat": 1,
+                "endMeasure": 44,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.7,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "restart after rests",
+                    "crescendo shape"
+                ]
+            },
+            "dependsOn": [
+                "N21",
+                "M2"
+            ],
+            "teacherHints": {
+                "goal": "Restart the singing line smoothly (no ‘jump scare’ entrance).",
+                "counting": "Enter RH exactly on beat 2 of m.44 (after the initial rest-bar feel).",
+                "commonMistakes": [
+                    "RH entrance too loud",
+                    "LH chord late/early"
+                ],
+                "whatToListenFor": [
+                    "same phrasing as earlier theme entries"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N23",
+            "label": "Peak then soften (m.45–46)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 45,
+                "startBeat": 1,
+                "endMeasure": 46,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.68,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "diminuendo",
+                    "clean 3-note line"
+                ]
+            },
+            "dependsOn": [
+                "N22"
+            ],
+            "teacherHints": {
+                "goal": "Let the phrase taper naturally; keep the RH line connected.",
+                "counting": "Two-bar phrase: breathe only at the end.",
+                "commonMistakes": [
+                    "diminuendo causes slowdown",
+                    "LH chord too present"
+                ],
+                "whatToListenFor": [
+                    "melody stays on top",
+                    "LH remains a soft bed"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N24",
+            "label": "Tie on A, then long F# tie starts again (m.47–48)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 47,
+                "startBeat": 1,
+                "endMeasure": 48,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.7,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "tie management",
+                    "dynamic contrast"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "N23"
+            ],
+            "teacherHints": {
+                "goal": "Hold the long notes without re-attacks; keep the accompaniment perfectly even.",
+                "counting": "Count through the held notes; feel the harmony change under a stable melody.",
+                "commonMistakes": [
+                    "re-striking the tie",
+                    "LH entry inconsistent"
+                ],
+                "whatToListenFor": [
+                    "continuous melodic thread",
+                    "smooth harmony changes"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N25",
+            "label": "F# tie continues (m.49–50)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 49,
+                "startBeat": 1,
+                "endMeasure": 50,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.62,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "tie sustain",
+                    "quiet endurance"
+                ]
+            },
+            "dependsOn": [
+                "N24"
+            ],
+            "teacherHints": {
+                "goal": "Maintain tone and tempo through repeated harmonic cycles under the tie.",
+                "counting": "Metronome-in-head: 1-2-3, 1-2-3; nothing changes in pulse.",
+                "commonMistakes": [
+                    "tone fades completely",
+                    "tempo drifts"
+                ],
+                "whatToListenFor": [
+                    "stillness with motion",
+                    "evenness in LH timing"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N26",
+            "label": "Tie resolves; restart theme (m.51–52)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 51,
+                "startBeat": 1,
+                "endMeasure": 52,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.64,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "release timing",
+                    "restart after sustain"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "N25"
+            ],
+            "teacherHints": {
+                "goal": "End the sustain cleanly and restart the melodic gesture without a bump.",
+                "counting": "Release exactly on time; the next bar’s beat 1 should feel the same pulse.",
+                "commonMistakes": [
+                    "late release",
+                    "new entry too loud"
+                ],
+                "whatToListenFor": [
+                    "seamless transition back to motion"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N27",
+            "label": "Soft descent (m.53–54)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 53,
+                "startBeat": 1,
+                "endMeasure": 54,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.6,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "diminuendo",
+                    "phrase continuity"
+                ]
+            },
+            "dependsOn": [
+                "N26"
+            ],
+            "teacherHints": {
+                "goal": "Soften while keeping the line connected (B–C#–D then A held).",
+                "counting": "Don’t shorten the held tone; keep counting through it.",
+                "commonMistakes": [
+                    "losing tone on the held note",
+                    "tempo slows"
+                ],
+                "whatToListenFor": [
+                    "gentle taper",
+                    "stable accompaniment"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N28",
+            "label": "F2 color and return (m.55–56)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 55,
+                "startBeat": 1,
+                "endMeasure": 56,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.58,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "bass change",
+                    "maintaining pp control"
+                ]
+            },
+            "dependsOn": [
+                "N27"
+            ],
+            "teacherHints": {
+                "goal": "Keep the atmosphere; the bass changes should feel like a slow wave, not an event.",
+                "counting": "Count steady; treat deep bass as part of the same pulse.",
+                "commonMistakes": [
+                    "bass too loud",
+                    "RH tone flattens"
+                ],
+                "whatToListenFor": [
+                    "rounded bass",
+                    "melody stays present but soft"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "LH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N29",
+            "label": "E tie returns (m.57–58)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 57,
+                "startBeat": 1,
+                "endMeasure": 58,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.62,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "tie sustain",
+                    "quiet control"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "N28"
+            ],
+            "teacherHints": {
+                "goal": "Hold the tied E calmly while LH harmony remains stable and soft.",
+                "counting": "Count through the tie; no re-attack.",
+                "commonMistakes": [
+                    "re-strike",
+                    "tempo drift"
+                ],
+                "whatToListenFor": [
+                    "one continuous line",
+                    "LH remains even"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N30",
+            "label": "Tie continues + F natural harmony (m.59–60)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 59,
+                "startBeat": 1,
+                "endMeasure": 60,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.6,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "tie sustain",
+                    "F natural color"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "M4",
+                "N29"
+            ],
+            "teacherHints": {
+                "goal": "Keep the held E while the harmony turns darker (F natural in LH).",
+                "counting": "Stay strict with 1-2-3; no slowing during the color change.",
+                "commonMistakes": [
+                    "missing the natural accidental color",
+                    "LH becomes heavy"
+                ],
+                "whatToListenFor": [
+                    "noticeable color shift",
+                    "stillness in rhythm"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N31",
+            "label": "C natural section returns (m.61–62)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 61,
+                "startBeat": 1,
+                "endMeasure": 62,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.7,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "accidentals",
+                    "crescendo shaping"
+                ]
+            },
+            "dependsOn": [
+                "M4",
+                "N30"
+            ],
+            "teacherHints": {
+                "goal": "Re-establish the colorful rising line with clean C naturals.",
+                "counting": "Each RH note is a beat; no rushing the second bar.",
+                "commonMistakes": [
+                    "C# instead of C natural",
+                    "crescendo becomes accents"
+                ],
+                "whatToListenFor": [
+                    "clean altered scale degree",
+                    "smooth two-bar arc"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N32",
+            "label": "Diminuendo into tie on D (m.63–64)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 63,
+                "startBeat": 1,
+                "endMeasure": 64,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.62,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "diminuendo",
+                    "tie start"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "M4",
+                "N31"
+            ],
+            "teacherHints": {
+                "goal": "Taper the line and begin the tied D without changing tempo.",
+                "counting": "Keep counting through the tie start on m.64.",
+                "commonMistakes": [
+                    "slowing down",
+                    "tie attacked harshly"
+                ],
+                "whatToListenFor": [
+                    "soft landing into the tie",
+                    "LH stays even"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N33",
+            "label": "Tie resolves, line rises (m.65–66)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 65,
+                "startBeat": 1,
+                "endMeasure": 66,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.6,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "tie release",
+                    "natural notes awareness"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "M4",
+                "N32"
+            ],
+            "teacherHints": {
+                "goal": "Release the tie cleanly and shape the new rising gesture without overplaying.",
+                "counting": "Release on time; keep beat 1 calm in the next bar.",
+                "commonMistakes": [
+                    "late release",
+                    "F# instead of F natural"
+                ],
+                "whatToListenFor": [
+                    "clean transition",
+                    "consistent color notes"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps other": 3,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N34",
+            "label": "A–C natural–D gesture (m.67–68)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 67,
+                "startBeat": 1,
+                "endMeasure": 68,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.58,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "C natural",
+                    "diminuendo control"
+                ]
+            },
+            "dependsOn": [
+                "M4",
+                "N33"
+            ],
+            "teacherHints": {
+                "goal": "Make the C natural unmistakable, then taper without dragging.",
+                "counting": "Two-bar phrase: keep it moving, just softer.",
+                "commonMistakes": [
+                    "C# by habit",
+                    "slowing with diminuendo"
+                ],
+                "whatToListenFor": [
+                    "clear color, stable pulse"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N35",
+            "label": "Tie on D again (m.69–70)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 69,
+                "startBeat": 1,
+                "endMeasure": 70,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.56,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "tie sustain",
+                    "quiet consistency"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "N34"
+            ],
+            "teacherHints": {
+                "goal": "Hold the tied D without re-articulation and keep the accompaniment smooth.",
+                "counting": "Count through the tie; aim for identical timing on LH entries.",
+                "commonMistakes": [
+                    "re-strike tie",
+                    "LH entries uneven"
+                ],
+                "whatToListenFor": [
+                    "calm continuity",
+                    "no ‘steps’ in volume"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        40,
+                        48,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N36",
+            "label": "G then F natural long tone (m.71–72)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 71,
+                "startBeat": 1,
+                "endMeasure": 72,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.55,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "F natural",
+                    "crescendo placement"
+                ]
+            },
+            "dependsOn": [
+                "M4",
+                "N35"
+            ],
+            "teacherHints": {
+                "goal": "Sustain the long tones and confirm F natural color in both hands.",
+                "counting": "Stay steady; don’t ‘park’ on the long note.",
+                "commonMistakes": [
+                    "F# instead of F natural",
+                    "tempo slows on sustain"
+                ],
+                "whatToListenFor": [
+                    "distinct timbre change",
+                    "steady pulse under sustain"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        36,
+                        44,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N37",
+            "label": "B–C natural–F natural gesture (m.73–74)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 73,
+                "startBeat": 1,
+                "endMeasure": 74,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.6,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "multiple naturals",
+                    "diminuendo control"
+                ]
+            },
+            "dependsOn": [
+                "M4",
+                "N36"
+            ],
+            "teacherHints": {
+                "goal": "Place every accidental correctly while tapering; keep the melody clear.",
+                "counting": "Each RH note on the beat; the softening should not change timing.",
+                "commonMistakes": [
+                    "missing C natural",
+                    "missing F natural",
+                    "over-accenting accidentals"
+                ],
+                "whatToListenFor": [
+                    "clean pitch color",
+                    "consistent softness"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        34,
+                        40,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        34,
+                        40,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N38",
+            "label": "Final approach with inner texture (m.75–76)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 75,
+                "startBeat": 1,
+                "endMeasure": 76,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "RH",
+                    "LH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.62,
+            "difficulty": {
+                "level": 4,
+                "reasons": [
+                    "multiple voices",
+                    "soft voicing",
+                    "pre-ritard steadiness"
+                ]
+            },
+            "dependsOn": [
+                "N19",
+                "N37"
+            ],
+            "teacherHints": {
+                "goal": "Keep the top line while inner tones remain whisper-soft; prepare the slowing without doing it yet.",
+                "counting": "Keep strict 1-2-3; save the ritard for the next nugget.",
+                "commonMistakes": [
+                    "inner voices too loud",
+                    "early ritard",
+                    "tense hands"
+                ],
+                "whatToListenFor": [
+                    "melody clearly above",
+                    "inner haze",
+                    "still steady tempo"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        34,
+                        40,
+                        54
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        34,
+                        40,
+                        54
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N39",
+            "label": "Ritard + final chords (m.77–78)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 77,
+                "startBeat": 1,
+                "endMeasure": 78,
+                "endBeat": 3
+            },
+            "staffFocus": {
+                "primary": "Both",
+                "supportedModes": [
+                    "HandsTogether",
+                    "RH",
+                    "LH"
+                ]
+            },
+            "priority": 0.8,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "tempo control (rit.)",
+                    "final chord balance",
+                    "clean cutoff"
+                ]
+            },
+            "dependsOn": [
+                "M5",
+                "N38"
+            ],
+            "teacherHints": {
+                "goal": "Slow down naturally (as marked) and place the final D-minor sonority with complete calm.",
+                "counting": "Count longer beats as you slow: 1…2…3… then final bar 1…2…3… with a relaxed release.",
+                "commonMistakes": [
+                    "ritard too sudden",
+                    "final chord too loud",
+                    "cutting off abruptly"
+                ],
+                "whatToListenFor": [
+                    "smooth deceleration",
+                    "full but soft resonance",
+                    "peaceful final release"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        46,
+                        40,
+                        34
+                    ]
+                }
+            ]
+        }
+    ],
+    "teachingOrder": [
+        "N1",
+        "N2",
+        "N3",
+        "N4",
+        "N5",
+        "N6",
+        "N7",
+        "N8",
+        "N9",
+        "N10",
+        "N11",
+        "N12",
+        "N13",
+        "N14",
+        "N15",
+        "N16",
+        "N17",
+        "N18",
+        "N19",
+        "N20",
+        "N21",
+        "N22",
+        "N23",
+        "N24",
+        "N25",
+        "N26",
+        "N27",
+        "N28",
+        "N29",
+        "N30",
+        "N31",
+        "N32",
+        "N33",
+        "N34",
+        "N35",
+        "N36",
+        "N37",
+        "N38",
+        "N39"
+    ]
+}

@@ -56,6 +56,32 @@ def align_notes(
     if mode == "pitchSplit":
         notes_map = _pitch_split(notes)
     else:
+        # Estimate global shift (Audio-Score alignment)
+        valid_deltas = []
+        # Check a sample of notes to find potential global offset
+        sample_size = min(len(notes), 20)
+        search_window = min(len(score_events), 100)
+        for i in range(sample_size):
+            n = notes[i]
+            for j in range(search_window):
+                e = score_events[j]
+                if n["pitch"] == e.pitch:
+                    valid_deltas.append(n["startTime"] - e.onset_seconds)
+        
+        global_shift = 0.0
+        if valid_deltas:
+            # Simple clustering: find most common delta range
+            valid_deltas.sort()
+            # We expect a dense cluster. Take median of the dense cluster?
+            # heuristic: median of the whole set might be okay if outlier count is low.
+            # But let's take the median of values within +/- 1s of the median?
+            median_delta = valid_deltas[len(valid_deltas)//2]
+            cluster = [d for d in valid_deltas if abs(d - median_delta) < 2.0]
+            if cluster:
+                global_shift = sum(cluster) / len(cluster)
+        
+        print(f"Debug: Detected global shift: {global_shift:.3f}s")
+        
         starts = [note["startTime"] for note in notes]
         for idx, note in enumerate(notes):
             candidates = [ev for ev in score_events if ev.pitch == note["pitch"]]
@@ -64,7 +90,9 @@ def align_notes(
             best = None
             best_delta = None
             for ev in candidates:
-                delta = abs(ev.onset_seconds - note["startTime"])
+                # Apply shift to score event time to match performance time
+                aligned_onset = ev.onset_seconds + global_shift
+                delta = abs(aligned_onset - note["startTime"])
                 if delta <= tolerance and (best_delta is None or delta < best_delta):
                     best = ev
                     best_delta = delta

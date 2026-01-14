@@ -32,10 +32,11 @@ def _pick_part(score, expects_two_staves: bool):
 
 def _tempo_mark_boundaries(score) -> List[tuple[float, float]]:
     boundaries = []
-    for offset, mark in score.metronomeMarkBoundaries():
+    # metronomeMarkBoundaries returns (start, end, mark)
+    for start, _, mark in score.metronomeMarkBoundaries():
         if isinstance(mark, tempo.MetronomeMark):
             bpm = mark.number or DEFAULT_BPM
-            boundaries.append((float(offset), float(bpm)))
+            boundaries.append((float(start), float(bpm)))
     return boundaries
 
 
@@ -63,9 +64,10 @@ def parse_score_events(
 ) -> List[ScoreEvent]:
     score = converter.parse(musicxml_path)
     part = _pick_part(score, pipeline_settings.get("expectsTwoStaves", False))
-    tempo_map = _tempo_mark_boundaries(score)
-    if not tempo_map and midi_tempos:
+    if midi_tempos:
         tempo_map = midi_tempos
+    else:
+        tempo_map = _tempo_mark_boundaries(score)
 
     events: List[ScoreEvent] = []
     for measure in part.getElementsByClass("Measure"):

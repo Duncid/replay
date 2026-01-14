@@ -34,7 +34,7 @@ def midi_to_note_sequence(midi_path: str, pipeline_settings: Dict[str, Any]) -> 
 
 def midi_tempo_map(midi_path: str) -> List[tuple[float, float]]:
     midi = pretty_midi.PrettyMIDI(midi_path)
-    tempi, times = midi.get_tempo_changes()
+    times, tempi = midi.get_tempo_changes()
     if len(tempi) == 0:
         return []
     quarter_offsets = [0.0]
