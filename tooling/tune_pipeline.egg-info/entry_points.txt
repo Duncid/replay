@@ -1,0 +1,2 @@
+[console_scripts]
+tune-pipeline = tune_pipeline.cli:main
