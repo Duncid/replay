@@ -1,0 +1,932 @@
+{
+    "schemaVersion": "nuggets-teacher.v1",
+    "pipelineSettings": {
+        "instrument": "piano",
+        "expectsTwoStaves": false,
+        "staffToHandDefault": {
+            "1": "RH",
+            "2": "LH"
+        },
+        "handSplitPolicy": {
+            "mode": "unknownOrSingleStaff",
+            "crossStaffHandling": "ignore"
+        },
+        "alignmentPolicy": {
+            "noteMatching": "strict",
+            "fallbackIfLowConfidence": "noHandSplit"
+        },
+        "nuggetSlicingPolicy": {
+            "preferMeasureBoundaries": true,
+            "targetDurationSeconds": [
+                2.0,
+                6.0
+            ],
+            "targetNotesPerNugget": [
+                4,
+                12
+            ],
+            "maxDurationSeconds": 8.0
+        }
+    },
+    "motifs": [
+        {
+            "id": "M1",
+            "label": "Pickup triple-eighths on one pitch",
+            "importance": 0.7,
+            "description": "Three repeated eighth notes (often same pitch) as a pickup or tag; focus on evenness and swing feel if desired.",
+            "occursIn": [
+                "N1",
+                "N4",
+                "N10"
+            ]
+        },
+        {
+            "id": "M2",
+            "label": "Chromatic approach tone (C–C#–D / similar)",
+            "importance": 0.85,
+            "description": "Chromatic neighbor/approach into a target note (often up to D), common in blues melody.",
+            "occursIn": [
+                "N2",
+                "N6",
+                "N12"
+            ]
+        },
+        {
+            "id": "M3",
+            "label": "Long tied sustain after short pickup",
+            "importance": 0.75,
+            "description": "Short pickup into a long held tone (tie across beats or measures); control tone and release.",
+            "occursIn": [
+                "N1",
+                "N5",
+                "N7",
+                "N11",
+                "N13"
+            ]
+        },
+        {
+            "id": "M4",
+            "label": "Blues call-and-response phrase shape",
+            "importance": 0.65,
+            "description": "Question-like pickup phrase answered by a longer held or descending line; phrasing and breath points.",
+            "occursIn": [
+                "N4",
+                "N5",
+                "N8",
+                "N9"
+            ]
+        },
+        {
+            "id": "M5",
+            "label": "G major ↔ G6 color (A#→B figure)",
+            "importance": 0.6,
+            "description": "A# (sharped A) leading to B over G/G6; a signature color in the C section.",
+            "occursIn": [
+                "N14"
+            ]
+        }
+    ],
+    "nuggets": [
+        {
+            "id": "N1",
+            "label": "Intro pickup + held D",
+            "type": "closed",
+            "location": {
+                "startMeasure": 1,
+                "startBeat": 1,
+                "endMeasure": 2,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.9,
+            "difficulty": {
+                "level": 1,
+                "reasons": [
+                    "pickup timing",
+                    "sustained tone control"
+                ]
+            },
+            "dependsOn": [
+                "M1",
+                "M3"
+            ],
+            "teacherHints": {
+                "goal": "Make the three pickup eighths even and land confidently on the long held D.",
+                "counting": "Count 1-&-2 (three eighths) then hold through beat 4 in the next bar.",
+                "commonMistakes": [
+                    "rushing the pickup",
+                    "letting the sustain sag in volume"
+                ],
+                "whatToListenFor": [
+                    "clean attack on each eighth",
+                    "steady, centered tone on the long note"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        96
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N2",
+            "label": "Chromatic climb into D (Cm → D7 feel)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 3,
+                "startBeat": 1,
+                "endMeasure": 5,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.85,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "chromaticism",
+                    "accidentals"
+                ]
+            },
+            "dependsOn": [
+                "M2"
+            ],
+            "teacherHints": {
+                "goal": "Shape the chromatic approach (C–C#–D) clearly, then settle into the held A.",
+                "counting": "Eighth-rest, then three eighths, then an eighth to D; hold the dotted quarter at the end.",
+                "commonMistakes": [
+                    "missing the C# or A# accidental",
+                    "making all notes the same volume (no phrase shape)"
+                ],
+                "whatToListenFor": [
+                    "smooth chromatic connection",
+                    "a clear arrival on D",
+                    "stable intonation/center on the held tone"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        72,
+                        90,
+                        108
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        84
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N3",
+            "label": "Turnaround tones (Gm → A7 → D → D7 fermata)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 6,
+                "startBeat": 1,
+                "endMeasure": 9,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.65,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "phrase pacing",
+                    "long notes and fermata control"
+                ]
+            },
+            "dependsOn": [
+                "M3"
+            ],
+            "teacherHints": {
+                "goal": "Keep time through long notes and make the fermata feel intentional, not accidental.",
+                "counting": "Hold each half-note for 4 beats; at the fermata, count an extra 1–2 before moving on.",
+                "commonMistakes": [
+                    "losing the pulse during holds",
+                    "cutting the fermata too short"
+                ],
+                "whatToListenFor": [
+                    "steady internal beat",
+                    "clean transitions between sustained notes"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        56,
+                        72,
+                        88
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": false,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        80
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N4",
+            "label": "A1: opening lyric pickup → long G (repeat start)",
+            "type": "open",
+            "location": {
+                "startMeasure": 10,
+                "startBeat": 1,
+                "endMeasure": 10,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.9,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "pickup-to-sustain",
+                    "lyric syllable alignment"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "M4"
+            ],
+            "teacherHints": {
+                "goal": "Deliver the pickup (B–D–B–G) clearly and land the long G with a relaxed hand.",
+                "counting": "Four eighths across beats 1–2, then hold the half-note through beat 4.",
+                "commonMistakes": [
+                    "smearing the pickup",
+                    "tensing on the held note"
+                ],
+                "whatToListenFor": [
+                    "clean articulation on the pickup",
+                    "a warm, even sustain"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        84
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N5",
+            "label": "A1: answer phrase (C section color + long G)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 11,
+                "startBeat": 1,
+                "endMeasure": 13,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.8,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "accidentals",
+                    "mixed rhythms (rests + eighths + dotted quarter)"
+                ]
+            },
+            "dependsOn": [
+                "M2",
+                "M3",
+                "M4"
+            ],
+            "teacherHints": {
+                "goal": "Connect the rising line to the Bb color note, then resolve smoothly into the long tied G.",
+                "counting": "Start with an eighth rest, then steady eighths; feel the dotted-quarter as 1-&-2.",
+                "commonMistakes": [
+                    "forgetting D# and Bb accidentals",
+                    "rushing into the dotted-quarter"
+                ],
+                "whatToListenFor": [
+                    "clear chromatic/blue-note color",
+                    "a convincing resolution into the sustained G"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 5,
+                    "tempoQpm": [
+                        56,
+                        72,
+                        88,
+                        104
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        80
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N6",
+            "label": "A1 alt: C pickup → long A (parallel to N4)",
+            "type": "open",
+            "location": {
+                "startMeasure": 14,
+                "startBeat": 1,
+                "endMeasure": 14,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.75,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "pickup-to-sustain"
+                ]
+            },
+            "dependsOn": [
+                "M3"
+            ],
+            "teacherHints": {
+                "goal": "Mirror the A-section pickup shape but land on A with good tone and breath.",
+                "counting": "Four eighths then hold.",
+                "commonMistakes": [
+                    "inconsistent pickup articulation compared to N4"
+                ],
+                "whatToListenFor": [
+                    "same groove and shape as the earlier phrase"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        96
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N7",
+            "label": "A1 alt: continuation → long G + rest",
+            "type": "closed",
+            "location": {
+                "startMeasure": 15,
+                "startBeat": 1,
+                "endMeasure": 17,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.7,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "phrase shaping",
+                    "holds and rests"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "M4"
+            ],
+            "teacherHints": {
+                "goal": "Sing the line toward Bb, then relax into the long G and observe the rest cleanly.",
+                "counting": "Treat the dotted-quarter as 3 counts; count rests out loud.",
+                "commonMistakes": [
+                    "not fully resting (starting early)",
+                    "dropping volume too quickly on the long note"
+                ],
+                "whatToListenFor": [
+                    "clear end of phrase",
+                    "silence that feels intentional"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        56,
+                        72,
+                        88
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N8",
+            "label": "D7 verse hook: F#–A pickup → long D",
+            "type": "open",
+            "location": {
+                "startMeasure": 18,
+                "startBeat": 1,
+                "endMeasure": 18,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.75,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "pickup clarity",
+                    "register shift to low D"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "M4"
+            ],
+            "teacherHints": {
+                "goal": "Make the pickup crisp and aim for a resonant low D without thumping.",
+                "counting": "Four eighths then a long half-note sustain.",
+                "commonMistakes": [
+                    "heavy landing on low D",
+                    "uneven eighths"
+                ],
+                "whatToListenFor": [
+                    "light pickup",
+                    "round tone on the low note"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N9",
+            "label": "D+7 color + resolution to long G",
+            "type": "closed",
+            "location": {
+                "startMeasure": 19,
+                "startBeat": 1,
+                "endMeasure": 21,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.65,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "Bb accidentals",
+                    "dotted-quarter phrasing"
+                ]
+            },
+            "dependsOn": [
+                "M4"
+            ],
+            "teacherHints": {
+                "goal": "Lean into the Bb color notes, then let the long G feel like a release.",
+                "counting": "Count the dotted-quarter as 1-2-3; keep the last eighth light.",
+                "commonMistakes": [
+                    "over-accenting every Bb",
+                    "clipping the long note"
+                ],
+                "whatToListenFor": [
+                    "blue-note color without harshness",
+                    "relaxed cadence"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        56,
+                        72,
+                        90
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N10",
+            "label": "A2: repeat A pickup phrase (feel-in tomorrow)",
+            "type": "open",
+            "location": {
+                "startMeasure": 22,
+                "startBeat": 1,
+                "endMeasure": 22,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.7,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "pickup timing",
+                    "tie awareness"
+                ]
+            },
+            "dependsOn": [
+                "N4",
+                "M1",
+                "M3"
+            ],
+            "teacherHints": {
+                "goal": "Copy the A1 pickup feel exactly; keep the tied note seamless.",
+                "counting": "Four eighths then hold; make the tie invisible.",
+                "commonMistakes": [
+                    "re-attacking the tied note",
+                    "changing the groove from A1"
+                ],
+                "whatToListenFor": [
+                    "same phrasing as earlier A",
+                    "no bump at the tie"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        72,
+                        88,
+                        104
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N11",
+            "label": "A2: answer phrase + long G (parallel to N5)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 23,
+                "startBeat": 1,
+                "endMeasure": 25,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.6,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "accidentals",
+                    "rests into line"
+                ]
+            },
+            "dependsOn": [
+                "N5",
+                "M2",
+                "M3"
+            ],
+            "teacherHints": {
+                "goal": "Start cleanly after the rest and keep the line singing into the sustained G.",
+                "counting": "Count the opening rest; enter exactly on the '&' if you subdivide.",
+                "commonMistakes": [
+                    "late entry after the rest",
+                    "missing Bb"
+                ],
+                "whatToListenFor": [
+                    "confident entry",
+                    "smooth resolve"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        76,
+                        92
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N12",
+            "label": "Bridge repeat: D7 pickup → long D (parallel to N8) + tag",
+            "type": "closed",
+            "location": {
+                "startMeasure": 30,
+                "startBeat": 1,
+                "endMeasure": 33,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.55,
+            "difficulty": {
+                "level": 3,
+                "reasons": [
+                    "phrase stamina across several measures",
+                    "pickup after rests"
+                ]
+            },
+            "dependsOn": [
+                "N8",
+                "N9"
+            ],
+            "teacherHints": {
+                "goal": "Hold the long D with confidence, then deliver the short spoken-style tag cleanly.",
+                "counting": "Keep counting through the fermata-like space; then place the final eighths evenly.",
+                "commonMistakes": [
+                    "losing tempo during long holds",
+                    "tag notes sounding rushed"
+                ],
+                "whatToListenFor": [
+                    "steady time across the whole segment",
+                    "clear articulation on the final tag"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        56,
+                        72,
+                        88
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N13",
+            "label": "B section: minor color (Gm/Cm/D7 loop) cadence to long Gm",
+            "type": "closed",
+            "location": {
+                "startMeasure": 34,
+                "startBeat": 1,
+                "endMeasure": 41,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.5,
+            "difficulty": {
+                "level": 4,
+                "reasons": [
+                    "longer form segment",
+                    "multiple accidentals (C#, A#)",
+                    "phrase transitions"
+                ]
+            },
+            "dependsOn": [
+                "M2",
+                "M4"
+            ],
+            "teacherHints": {
+                "goal": "Keep the B-section darker in color, and make the cadence feel like a clear arrival before the next pickup.",
+                "counting": "Chunk into 2-bar ideas; mark where rests happen so entries are confident.",
+                "commonMistakes": [
+                    "treating every measure the same (no contrast)",
+                    "missing C# or A# in the chromatic cells"
+                ],
+                "whatToListenFor": [
+                    "noticeably darker/minor mood",
+                    "clean cadence into the long G"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": false,
+                    "reps": 3,
+                    "tempoQpm": [
+                        56,
+                        68,
+                        80
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": false,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        76
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N14",
+            "label": "C section + ending tag (G/G6 color → C → D7 → final G)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 50,
+                "startBeat": 1,
+                "endMeasure": 61,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.45,
+            "difficulty": {
+                "level": 5,
+                "reasons": [
+                    "longest segment",
+                    "chromatic color tone (A#→B) over G6",
+                    "multiple phrase joins and cadences"
+                ]
+            },
+            "dependsOn": [
+                "M5",
+                "N4",
+                "N5",
+                "N13"
+            ],
+            "teacherHints": {
+                "goal": "Bring out the G6 color (A#→B), keep the groove steady through the longer form, and finish with a confident final cadence.",
+                "counting": "Count in 2-bar groups; for the ending, count ties carefully so the last long G doesn’t get re-attacked.",
+                "commonMistakes": [
+                    "forgetting A# accidentals in the G6 color",
+                    "dragging tempo through sustained notes",
+                    "re-attacking tied notes"
+                ],
+                "whatToListenFor": [
+                    "distinctive G6 color",
+                    "clear phrase boundaries",
+                    "a final cadence that feels settled"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": false,
+                    "reps": 3,
+                    "tempoQpm": [
+                        56,
+                        72,
+                        88
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": false,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        80
+                    ]
+                }
+            ]
+        }
+    ],
+    "teachingOrder": [
+        "N1",
+        "N2",
+        "N3",
+        "N4",
+        "N5",
+        "N6",
+        "N7",
+        "N8",
+        "N9",
+        "N10",
+        "N11",
+        "N12",
+        "N13",
+        "N14"
+    ]
+}

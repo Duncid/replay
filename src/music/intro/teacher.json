@@ -1,0 +1,343 @@
+{
+    "schemaVersion": "nuggets-teacher.v1",
+    "pipelineSettings": {
+        "instrument": "piano",
+        "expectsTwoStaves": false,
+        "staffToHandDefault": {
+            "1": "RH",
+            "2": "LH"
+        },
+        "handSplitPolicy": {
+            "mode": "unknownOrSingleStaff",
+            "crossStaffHandling": "ignore"
+        },
+        "alignmentPolicy": {
+            "noteMatching": "strict",
+            "fallbackIfLowConfidence": "noHandSplit"
+        },
+        "nuggetSlicingPolicy": {
+            "preferMeasureBoundaries": true,
+            "targetDurationSeconds": [
+                2.0,
+                6.0
+            ],
+            "targetNotesPerNugget": [
+                4,
+                12
+            ],
+            "maxDurationSeconds": 8.0
+        },
+        "metadata": {
+            "sourceNoteSequenceFile": "intro.ns.json :contentReference[oaicite:0]{index=0}",
+            "assumedTempoQpm": 120,
+            "assumedTimeSignature": "4/4",
+            "assumedMeasuresFromTotalTime": 4,
+            "notesAreMonophonic": true
+        }
+    },
+    "motifs": [
+        {
+            "id": "M1",
+            "label": "Chromatic lift to G",
+            "importance": 0.9,
+            "description": "Stepwise chromatic approach (F–F#–G) that creates forward motion and tension-release.",
+            "occursIn": [
+                "N1",
+                "N3"
+            ]
+        },
+        {
+            "id": "M2",
+            "label": "Call-and-response contour",
+            "importance": 0.75,
+            "description": "Ascending gesture answered by a descending return, like a short question then reply.",
+            "occursIn": [
+                "N1",
+                "N2"
+            ]
+        },
+        {
+            "id": "M3",
+            "label": "C-minor/blues color tones",
+            "importance": 0.7,
+            "description": "Frequent use of C, Eb, F, G, Bb (minor/blues palette) for a soulful sound.",
+            "occursIn": [
+                "N1",
+                "N2",
+                "N3",
+                "N4"
+            ]
+        }
+    ],
+    "nuggets": [
+        {
+            "id": "N1",
+            "label": "Opening climb (sets the vibe)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 1,
+                "startBeat": 1,
+                "endMeasure": 1,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.95,
+            "difficulty": {
+                "level": 1,
+                "reasons": [
+                    "stepwise motion",
+                    "short rhythmic values near the end of the measure"
+                ]
+            },
+            "dependsOn": [
+                "M1",
+                "M3"
+            ],
+            "teacherHints": {
+                "goal": "Play a smooth, even climb and make the chromatic F–F#–G feel like a single gesture.",
+                "counting": "Count 1 (C), 2 (Eb), then subdivide beat 3 into two quick notes (F then F#) before landing G on beat 4.",
+                "commonMistakes": [
+                    "Rushing the two quick notes (F–F#)",
+                    "Accenting F# too hard instead of aiming for the G"
+                ],
+                "whatToListenFor": [
+                    "Even tone on the climb",
+                    "A clear arrival on G (beat 4) without a harsh accent"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100,
+                        120
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N2",
+            "label": "Answer back down to C",
+            "type": "closed",
+            "location": {
+                "startMeasure": 2,
+                "startBeat": 1,
+                "endMeasure": 2,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.85,
+            "difficulty": {
+                "level": 1,
+                "reasons": [
+                    "descending control",
+                    "clean landings on longer notes"
+                ]
+            },
+            "dependsOn": [
+                "M2",
+                "M3",
+                "N1"
+            ],
+            "teacherHints": {
+                "goal": "Make the descent feel like a calm reply, with stable timing on the longer notes.",
+                "counting": "Hold the longer notes on beats 1–2, then keep the beat steady through the quicker steps back down.",
+                "commonMistakes": [
+                    "Letting the tempo sag on the longer tones",
+                    "Clipping note lengths so the line sounds choppy"
+                ],
+                "whatToListenFor": [
+                    "A connected, vocal-style line",
+                    "Consistent pulse even when note lengths change"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100,
+                        120
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N3",
+            "label": "Repeat the climb (lock in consistency)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 3,
+                "startBeat": 1,
+                "endMeasure": 3,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.7,
+            "difficulty": {
+                "level": 1,
+                "reasons": [
+                    "repeat accuracy",
+                    "matching articulation to the first time"
+                ]
+            },
+            "dependsOn": [
+                "M1",
+                "M3",
+                "N1"
+            ],
+            "teacherHints": {
+                "goal": "Play the repeat like a copy-paste of N1: same timing, same smoothness, same dynamic shape.",
+                "counting": "Use the same count as N1; aim for identical placement of the quick chromatic notes.",
+                "commonMistakes": [
+                    "Changing the timing on the quick notes compared to N1",
+                    "Getting louder just because it's a repeat"
+                ],
+                "whatToListenFor": [
+                    "Two versions that sound intentionally the same",
+                    "A relaxed hand during the chromatic motion"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        70,
+                        90,
+                        110,
+                        120
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 2,
+                    "tempoQpm": [
+                        70,
+                        90,
+                        110
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "N4",
+            "label": "Climax and cadence (Bb up to C then fall)",
+            "type": "closed",
+            "location": {
+                "startMeasure": 4,
+                "startBeat": 1,
+                "endMeasure": 4,
+                "endBeat": 4
+            },
+            "staffFocus": {
+                "primary": "Unknown",
+                "supportedModes": [
+                    "RH",
+                    "HandsTogether"
+                ]
+            },
+            "priority": 0.8,
+            "difficulty": {
+                "level": 2,
+                "reasons": [
+                    "register change and peak note",
+                    "shaping the phrase ending"
+                ]
+            },
+            "dependsOn": [
+                "M3",
+                "N2"
+            ],
+            "teacherHints": {
+                "goal": "Shape the high point (C) as the climax, then let the line relax downward without rushing.",
+                "counting": "Keep steady quarters: Bb (beat 1), C (beat 2), then step down evenly through the last beats.",
+                "commonMistakes": [
+                    "Hitting the peak note too hard and losing the singing tone",
+                    "Speeding up on the way down"
+                ],
+                "whatToListenFor": [
+                    "A clear musical peak on C",
+                    "A controlled, gentle release through the final notes"
+                ]
+            },
+            "practicePlan": [
+                {
+                    "mode": "RH",
+                    "loop": true,
+                    "reps": 4,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100,
+                        120
+                    ]
+                },
+                {
+                    "mode": "HandsTogether",
+                    "loop": true,
+                    "reps": 3,
+                    "tempoQpm": [
+                        60,
+                        80,
+                        100,
+                        120
+                    ]
+                }
+            ]
+        }
+    ],
+    "teachingOrder": [
+        "N1",
+        "N2",
+        "N3",
+        "N4"
+    ]
+}

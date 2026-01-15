@@ -10,6 +10,7 @@ from music21 import converter, instrument, stream
 from tune_pipeline.io import read_json, write_json
 from tune_pipeline.midi_to_ns import midi_to_note_sequence
 from tune_pipeline.mxl_unpack import unpack_mxl
+from tune_pipeline.nuggets_extract import extract_nuggets
 from tune_pipeline.validate_teacher import validate_teacher
 from tune_pipeline.xml_split_hands import HandSplitResult, split_by_staff
 from tune_pipeline.xml_to_midi import write_midi
@@ -118,6 +119,58 @@ def _process_track(output_dir: Path, base_name: str, suffix: str, part: stream.P
     write_json(output_dir / ns_name, ns_data)
 
 
+    # 6. Nugget Extraction
+    if teacher and "nuggets" in teacher:
+        extract_nuggets(score, combined_part, output_dir, teacher["nuggets"], note_sequences)
+
+    summary = {
+        "base": base_name,
+        "tracks": tracks,
+        "split": split_info,
+    }
+    return summary
+
+
+def _create_skeleton_score(metadata: Dict[str, Any]) -> stream.Score:
+    """Creates a minimal score with time/tempo info for nugget extraction."""
+    from music21 import meter, tempo, note
+    
+    score = stream.Score()
+    part = stream.Part()
+    score.insert(0, part)
+    
+    # Tempo
+    qpm = metadata.get("assumedTempoQpm", 120)
+    part.insert(0, tempo.MetronomeMark(number=qpm))
+    
+    # Time Signature
+    ts_str = metadata.get("assumedTimeSignature", "4/4")
+    ts = meter.TimeSignature(ts_str)
+    part.insert(0, ts)
+    
+    # Measures
+    # We need enough measures to cover the nuggets.
+    # explicit measure count or calculate?
+    num_measures = metadata.get("assumedMeasuresFromTotalTime", 100)
+    
+    # Create empty measures
+    # This is needed because _measure_offset uses part.measure(n)
+    for m_num in range(1, num_measures + 1):
+        m = stream.Measure(number=m_num)
+        # music21 requires measures to have offsets.
+        # If we append to part, music21 handles it if we are careful.
+        # Or faster: just construct stream with offsets?
+        # Standard way:
+        part.append(m)
+        
+    # Force makeMeasures or similar? 
+    # part.append automatically handles offsets if they are measures?
+    # No, usually need to ensure valid offsets. 
+    # But for just looking up by number, 'part.measure(n)' search should work 
+    # IF they are in the stream.
+    
+    return score
+
 def build_tune(tune_folder: Path) -> Dict[str, object]:
     # 1. Inspection
     if not tune_folder.exists():
@@ -127,67 +180,117 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     if not teacher_path.exists():
         raise PipelineError(f"Missing file: {teacher_path.name}")
     
-    tune_mxl = tune_folder / "tune.mxl"
-    if not tune_mxl.exists():
-         raise PipelineError(f"Missing file: {tune_mxl.name}")
-
     teacher = read_json(teacher_path)
-    # Validate teacher has pipelineSettings (and other basic checks)
     validate_teacher(teacher)
-    
+
     # 2. Output Setup
     output_dir = tune_folder / "output"
     output_dir.mkdir(exist_ok=True)
-
-    # 3. Unpack
-    tune_xml = output_dir / "tune.xml"
-    # Always unpack to ensure freshness? Or only if missing? 
-    # User said "Unpack form tune.mxl", implying we should do it.
-    unpack_mxl(tune_mxl, tune_xml)
-    base_name = tune_xml.stem
-
-    # 4. Parse & Split
-    score = converter.parse(str(tune_xml))
-    raw_piano_parts = _get_piano_parts(score)
     
-    if not raw_piano_parts:
-        # Fallback to first part if no piano detected
-        raw_piano_parts = [score.parts[0]]
-
-    # Combined Part (Always needed for 'full')
-    combined_part = _combine_parts(raw_piano_parts)
+    # Check inputs
+    tune_mxl = tune_folder / "tune.mxl"
+    tune_ns_candidates = list(tune_folder.glob("*.ns.json"))
     
-    # Determine tracks to process
-    # List of (suffix, part)
-    # suffix="" means full/combined
-    parts_to_process = [("", combined_part)]
-    
-    settings = teacher.get("pipelineSettings", {})
-    hand_policy = settings.get("handSplitPolicy", {})
-    mode = hand_policy.get("mode", "none")
-    split_info = "not requested"
-
-    if mode == "byStaff":
-        staff_to_hand = settings.get("staffToHandDefault", {"1": "RH", "2": "LH"})
-        # Always use algorithmic split on the combined part
-        # This ensures consistent behavior regardless of whether source XML had 1 or 2 parts,
-        # relying on _combine_parts to have correctly tagged staff numbers.
-        split_result = split_by_staff(score, combined_part, staff_to_hand)
+    # Priority: MXL -> NS
+    if tune_mxl.exists():
+        # --- MXL/XML PATH ---
         
-        if split_result.rh_score and split_result.lh_score:
-            # Extract parts from the scores returned by split_result
-            parts_to_process.append(("rh", split_result.rh_score.parts[0]))
-            parts_to_process.append(("lh", split_result.lh_score.parts[0]))
-            split_info = split_result.reason
-        else:
-            split_info = f"Split failed: {split_result.reason}"
+        # 3. Unpack
+        tune_xml = output_dir / "tune.xml"
+        unpack_mxl(tune_mxl, tune_xml)
+        base_name = tune_xml.stem
 
-    # 5. Process Output (MIDI -> NS)
-    note_sequences: Dict[str, Dict[str, object]] = {}
-    tracks: Dict[str, Dict[str, object]] = {}
-    
-    for suffix, part in parts_to_process:
-        _process_track(output_dir, base_name, suffix, part, note_sequences, tracks)
+        # 4. Parse & Split
+        score = converter.parse(str(tune_xml))
+        raw_piano_parts = _get_piano_parts(score)
+        
+        if not raw_piano_parts:
+            # Fallback to first part if no piano detected
+            raw_piano_parts = [score.parts[0]]
+
+        # Combined Part (Always needed for 'full')
+        combined_part = _combine_parts(raw_piano_parts)
+        
+        # Determine tracks to process
+        parts_to_process = [("", combined_part)]
+        
+        settings = teacher.get("pipelineSettings", {})
+        hand_policy = settings.get("handSplitPolicy", {})
+        mode = hand_policy.get("mode", "none")
+        split_info = "not requested"
+
+        if mode == "byStaff":
+            staff_to_hand = settings.get("staffToHandDefault", {"1": "RH", "2": "LH"})
+            # Always use algorithmic split on the combined part
+            split_result = split_by_staff(score, combined_part, staff_to_hand)
+            
+            if split_result.rh_score and split_result.lh_score:
+                # Extract parts from the scores returned by split_result
+                parts_to_process.append(("rh", split_result.rh_score.parts[0]))
+                parts_to_process.append(("lh", split_result.lh_score.parts[0]))
+                split_info = split_result.reason
+            else:
+                split_info = f"Split failed: {split_result.reason}"
+
+        # 5. Process Output (MIDI -> NS)
+        note_sequences: Dict[str, Dict[str, object]] = {}
+        tracks: Dict[str, Dict[str, object]] = {}
+        
+        for suffix, part in parts_to_process:
+            _process_track(output_dir, base_name, suffix, part, note_sequences, tracks)
+            
+        combined_part_for_nuggets = combined_part
+
+    elif tune_ns_candidates:
+        # --- NS PATH ---
+        print("XML missing, falling back to NS input...")
+        
+        # Identify source NS
+        # Prefer 'tune.ns.json', then '{folder}.ns.json', then first found
+        src_ns_path = tune_folder / "tune.ns.json"
+        if not src_ns_path.exists():
+            # Try folder name
+            folder_ns = tune_folder / f"{tune_folder.name}.ns.json"
+            if folder_ns.exists():
+                src_ns_path = folder_ns
+            else:
+                src_ns_path = tune_ns_candidates[0]
+        
+        base_name = src_ns_path.stem.replace(".ns", "") 
+        # base_name e.g. "intro" if file is "intro.ns.json"
+        
+        # Copy to output
+        output_ns_path = output_dir / "tune.ns.json"
+        source_ns_data = read_json(src_ns_path)
+        write_json(output_ns_path, source_ns_data)
+        
+        note_sequences = {"full": source_ns_data}
+        tracks = {
+            "full": {
+                "notesCount": len(source_ns_data.get("notes", [])),
+                "noteSequenceFile": "tune.ns.json",
+            }
+        }
+        split_info = "not applicable (NS source)"
+        
+        # Build Skeleton Score
+        settings = teacher.get("pipelineSettings", {})
+        metadata = settings.get("metadata", {})
+        
+        if not metadata:
+             # Should we error or try defaults?
+             # For now, warn?
+             print("Warning: No metadata in teacher.json for skeleton score.")
+             
+        score = _create_skeleton_score(metadata)
+        combined_part_for_nuggets = score.parts[0]
+        
+    else:
+         raise PipelineError(f"Missing input file: expected tune.mxl or *.ns.json in {tune_folder}")
+
+    # 6. Nugget Extraction
+    if teacher and "nuggets" in teacher:
+        extract_nuggets(score, combined_part_for_nuggets, output_dir, teacher["nuggets"], note_sequences)
 
     summary = {
         "base": base_name,
