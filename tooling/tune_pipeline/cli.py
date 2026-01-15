@@ -119,16 +119,7 @@ def _process_track(output_dir: Path, base_name: str, suffix: str, part: stream.P
     write_json(output_dir / ns_name, ns_data)
 
 
-    # 6. Nugget Extraction
-    if teacher and "nuggets" in teacher:
-        extract_nuggets(score, combined_part, output_dir, teacher["nuggets"], note_sequences)
 
-    summary = {
-        "base": base_name,
-        "tracks": tracks,
-        "split": split_info,
-    }
-    return summary
 
 
 def _create_skeleton_score(metadata: Dict[str, Any]) -> stream.Score:
