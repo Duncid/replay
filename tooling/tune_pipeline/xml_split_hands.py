@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional, Tuple
 
@@ -26,7 +27,7 @@ def _collect_staff_numbers(part: stream.Part) -> Tuple[Dict[int, int], int]:
 
 
 def _filter_part_by_staff(part: stream.Part, staff: int) -> stream.Part:
-    new_part = part.deepcopy()
+    new_part = copy.deepcopy(part)
     for element in list(new_part.recurse().notesAndRests):
         staff_num = getattr(element, "staffNumber", None)
         if staff_num is None:
