@@ -1,0 +1,19 @@
+{
+  "notes": [
+    {
+      "pitch": 73,
+      "startTime": 0.5555510000000012,
+      "endTime": 1.6666620000000023,
+      "velocity": 45.0
+    },
+    {
+      "pitch": 71,
+      "startTime": 1.6666620000000023,
+      "endTime": 2.7777730000000034,
+      "velocity": 45.0
+    }
+  ],
+  "totalTime": 2.5,
+  "tempos": [],
+  "timeSignatures": []
+}

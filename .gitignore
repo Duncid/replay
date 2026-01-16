@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python tooling artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+/.pytest_cache/
+tooling/venv/
