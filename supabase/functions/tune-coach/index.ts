@@ -86,74 +86,6 @@ interface PracticePlanItem {
   motifs: string[];
 }
 
-interface NoteEvent {
-  startTime: number;
-  endTime: number;
-  pitch: number;
-  velocity: number;
-}
-
-interface NoteSequence {
-  notes: NoteEvent[];
-  totalTime: number;
-  tempos?: Array<{ qpm: number; time: number }>;
-  timeSignatures?: Array<{ numerator: number; denominator: number; time: number }>;
-}
-
-// Helper to convert measure/beat locations to time boundaries
-function getMeasureTimes(
-  location: TuneNugget["location"],
-  tempoQpm: number = 120,
-  beatsPerMeasure: number = 4
-): { startTime: number; endTime: number } {
-  const secondsPerBeat = 60 / tempoQpm;
-  
-  let startMeasure: number;
-  let endMeasure: number;
-  
-  if (location.measures) {
-    startMeasure = location.measures[0];
-    endMeasure = location.measures[1];
-  } else {
-    startMeasure = location.startMeasure ?? 1;
-    endMeasure = location.endMeasure ?? startMeasure;
-  }
-  
-  const startBeat = (startMeasure - 1) * beatsPerMeasure + (location.startBeat ?? 1) - 1;
-  const endBeat = (endMeasure) * beatsPerMeasure; // End of the last measure
-  
-  return {
-    startTime: startBeat * secondsPerBeat,
-    endTime: endBeat * secondsPerBeat
-  };
-}
-
-// Helper to slice a note sequence to a time range
-function sliceNoteSequence(
-  fullSequence: NoteSequence,
-  startTime: number,
-  endTime: number
-): NoteSequence {
-  if (!fullSequence?.notes?.length) {
-    return { notes: [], totalTime: 0 };
-  }
-  
-  const slicedNotes = fullSequence.notes
-    .filter((n) => n.startTime >= startTime && n.startTime < endTime)
-    .map((n) => ({
-      ...n,
-      startTime: n.startTime - startTime,
-      endTime: n.endTime - startTime
-    }));
-  
-  return {
-    notes: slicedNotes,
-    totalTime: endTime - startTime,
-    tempos: fullSequence.tempos,
-    timeSignatures: fullSequence.timeSignatures
-  };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -395,36 +327,16 @@ Return a practice plan with 3-5 nuggets and an encouraging message.`;
       encouragement: string;
     };
 
-    // Get full note sequence and tempo info for runtime slicing
-    const fullNoteSequence = tuneAsset.note_sequence as NoteSequence | null;
-    const tempoQpm = fullNoteSequence?.tempos?.[0]?.qpm || 120;
-    const beatsPerMeasure = fullNoteSequence?.timeSignatures?.[0]?.numerator || 4;
-    
-    console.log(`[tune-coach] Full sequence has ${fullNoteSequence?.notes?.length || 0} notes, tempo: ${tempoQpm} qpm`);
-
-    // Enrich practice plan with full nugget data and sliced note sequences
+    // Enrich practice plan with full nugget data
     const enrichedPlan = planResult.practicePlan.map((item) => {
       const nugget = nuggets.find((n) => n.id === item.nuggetId);
-      if (!nugget) return null;
-      
-      // Check if nugget already has a valid note sequence
-      let noteSequence = nugget.noteSequence as NoteSequence | undefined;
-      const hasValidSequence = noteSequence?.notes && noteSequence.notes.length > 0;
-      
-      // If no valid sequence, slice from full tune sequence
-      if (!hasValidSequence && fullNoteSequence?.notes?.length) {
-        const times = getMeasureTimes(nugget.location, tempoQpm, beatsPerMeasure);
-        noteSequence = sliceNoteSequence(fullNoteSequence, times.startTime, times.endTime);
-        console.log(`[tune-coach] Sliced ${item.nuggetId}: ${noteSequence.notes.length} notes (${times.startTime.toFixed(2)}s - ${times.endTime.toFixed(2)}s)`);
-      }
-      
       return {
         nuggetId: item.nuggetId,
-        nugget: { ...nugget, noteSequence },
+        nugget: nugget || null,
         instruction: item.instruction,
         motifs: item.motifs,
       };
-    }).filter((item) => item !== null);
+    }).filter((item) => item.nugget !== null);
 
     return new Response(
       JSON.stringify({
