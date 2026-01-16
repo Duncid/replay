@@ -55,12 +55,51 @@ import {
   QuestNode,
   QuestNodeType,
 } from "@/types/quest";
-import musicManifest from "@/music/manifest.json";
+
+// Auto-discover all teacher.json files at build time
+const teacherModules = import.meta.glob<{ default: { title?: string } }>(
+  '/src/music/*/teacher.json',
+  { eager: true }
+);
+
+// Extract tune list from discovered files
+const availableTunes = Object.entries(teacherModules).map(([path, module]) => {
+  const match = path.match(/\/music\/([^/]+)\/teacher\.json$/);
+  const key = match ? match[1] : '';
+  const title = module.default?.title || key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return { key, label: title };
+}).filter(t => t.key);
 
 // Type for tune asset bundle sent to publish endpoint
 interface TuneAssetBundle {
-  briefing?: object;
-  nuggets?: object[];
+  briefing?: {
+    schemaVersion?: string;
+    title?: string;
+    pipelineSettings?: Record<string, unknown>;
+    motifs?: Array<{
+      id: string;
+      label: string;
+      importance: number;
+      description: string;
+      occursIn: string[];
+    }>;
+    teachingOrder?: string[];
+  };
+  nuggets?: Array<{
+    id: string;
+    label: string;
+    type?: string;
+    location?: Record<string, unknown>;
+    staffFocus?: Record<string, unknown>;
+    priority?: number;
+    difficulty?: Record<string, unknown>;
+    dependsOn?: string[];
+    teacherHints?: Record<string, unknown>;
+    practicePlan?: Array<Record<string, unknown>>;
+    noteSequence?: object | null;
+    leftHandSequence?: object | null;
+    rightHandSequence?: object | null;
+  }>;
   noteSequence: object;
   leftHandSequence?: object;
   rightHandSequence?: object;
@@ -1860,18 +1899,13 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       const musicRef = node.data.musicRef!;
       const tuneKey = node.data.tuneKey!;
       
-      // Find the manifest entry to get the actual NS filename
-      const manifestEntry = musicManifest.tunes.find((t) => t.key === musicRef);
-      const nsFileName = manifestEntry?.nsFile || `${musicRef}.ns`;
-      const nsBaseName = nsFileName.replace(/\.ns$/, "");
-      
       try {
-        // Dynamically import tune files using manifest-specified filenames
+        // Load main files from output/ subfolder with .ns.json extension
         const [teacherModule, noteSequenceModule, leftHandModule, rightHandModule] = await Promise.all([
-          import(`@/music/${musicRef}/teacher.json`).catch(() => null),
-          import(`@/music/${musicRef}/${nsFileName}`).catch(() => null),
-          import(`@/music/${musicRef}/${nsBaseName}.lh.ns`).catch(() => null),
-          import(`@/music/${musicRef}/${nsBaseName}.rh.ns`).catch(() => null),
+          import(`/src/music/${musicRef}/teacher.json`).catch(() => null),
+          import(`/src/music/${musicRef}/output/tune.ns.json`).catch(() => null),
+          import(`/src/music/${musicRef}/output/tune.lh.ns.json`).catch(() => null),
+          import(`/src/music/${musicRef}/output/tune.rh.ns.json`).catch(() => null),
         ]);
         
         // Get the default export or the module itself
@@ -1880,22 +1914,52 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         const leftHand = leftHandModule?.default || leftHandModule;
         const rightHand = rightHandModule?.default || rightHandModule;
         
+        // Load nugget note sequences from output/nuggets/
+        let enrichedNuggets: TuneAssetBundle['nuggets'] = undefined;
+        if (teacher?.nuggets && Array.isArray(teacher.nuggets)) {
+          enrichedNuggets = await Promise.all(
+            teacher.nuggets.map(async (nugget: { id: string; [key: string]: unknown }) => {
+              const nuggetId = nugget.id;
+              
+              const [nuggetNs, nuggetLh, nuggetRh] = await Promise.all([
+                import(`/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`).catch(() => null),
+                import(`/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`).catch(() => null),
+                import(`/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`).catch(() => null),
+              ]);
+              
+              return {
+                ...nugget,
+                noteSequence: nuggetNs?.default || nuggetNs || null,
+                leftHandSequence: nuggetLh?.default || nuggetLh || null,
+                rightHandSequence: nuggetRh?.default || nuggetRh || null,
+              } as NonNullable<TuneAssetBundle['nuggets']>[number];
+            })
+          );
+        }
+        
         if (noteSequence) {
           tuneAssets[tuneKey] = {
-            briefing: teacher?.briefing,
-            nuggets: teacher?.nuggets,
+            // Store the full teacher structure
+            briefing: teacher ? {
+              schemaVersion: teacher.schemaVersion,
+              title: teacher.title,
+              pipelineSettings: teacher.pipelineSettings,
+              motifs: teacher.motifs,
+              teachingOrder: teacher.teachingOrder,
+            } : undefined,
+            nuggets: enrichedNuggets,
             noteSequence,
             leftHandSequence: leftHand || undefined,
             rightHandSequence: rightHand || undefined,
           };
           console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
-            hasBriefing: !!teacher?.briefing,
-            hasNuggets: !!teacher?.nuggets,
+            hasBriefing: !!teacher,
+            nuggetCount: enrichedNuggets?.length || 0,
             hasLeftHand: !!leftHand,
             hasRightHand: !!rightHand,
           });
         } else {
-          console.warn(`[QuestEditor] No note sequence found for tune ${musicRef} (tried ${nsFileName})`);
+          console.warn(`[QuestEditor] No note sequence found for tune ${musicRef}`);
         }
       } catch (error) {
         console.warn(`[QuestEditor] Failed to load assets for tune ${musicRef}:`, error);
@@ -2841,7 +2905,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                             <SelectValue placeholder="Select a tune folder..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {musicManifest.tunes.map((tune) => (
+                            {availableTunes.map((tune) => (
                               <SelectItem key={tune.key} value={tune.key}>
                                 {tune.label}
                               </SelectItem>
