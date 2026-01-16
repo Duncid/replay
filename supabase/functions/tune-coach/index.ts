@@ -18,19 +18,50 @@ interface TuneMotif {
 interface TuneNugget {
   id: string;
   label: string;
-  location: { measures: [number, number]; startBeat?: number; endBeat?: number };
-  staffFocus: string;
+  location: { 
+    measures?: [number, number]; 
+    startMeasure?: number;
+    endMeasure?: number;
+    startBeat?: number; 
+    endBeat?: number;
+  };
+  staffFocus: string | { primary?: string };
   priority: number;
-  difficulty: number;
+  difficulty: number | { level?: number };
   dependsOn: string[];
   teacherHints: {
     goal: string;
     counting?: string;
-    commonMistakes?: string;
-    whatToListenFor?: string;
+    commonMistakes?: string | string[];
+    whatToListenFor?: string | string[];
   };
-  practicePlan?: { tempoStart: number; tempoTarget: number; reps: number };
+  practicePlan?: unknown;
   noteSequence?: unknown;
+}
+
+// Helper to extract measure range from nugget location
+function getMeasureRange(n: TuneNugget): string {
+  if (n.location.measures) {
+    return `${n.location.measures[0]}-${n.location.measures[1]}`;
+  }
+  if (n.location.startMeasure !== undefined) {
+    return `${n.location.startMeasure}-${n.location.endMeasure || n.location.startMeasure}`;
+  }
+  return "unknown";
+}
+
+// Helper to extract difficulty level
+function getDifficulty(n: TuneNugget): number {
+  if (typeof n.difficulty === "number") return n.difficulty;
+  if (typeof n.difficulty === "object" && n.difficulty?.level !== undefined) return n.difficulty.level;
+  return 1;
+}
+
+// Helper to extract staff focus
+function getStaffFocus(n: TuneNugget): string {
+  if (typeof n.staffFocus === "string") return n.staffFocus;
+  if (typeof n.staffFocus === "object" && n.staffFocus?.primary) return n.staffFocus.primary;
+  return "both";
 }
 
 interface TuneBriefing {
@@ -156,8 +187,11 @@ AVAILABLE NUGGETS:
 ${nuggets.map((n) => {
   const state = statesMap.get(n.id);
   const motifLabels = n.dependsOn?.join(", ") || "none";
-  return `- ${n.id} "${n.label}" (measures ${n.location.measures[0]}-${n.location.measures[1]})
-    Difficulty: ${n.difficulty}, Staff: ${n.staffFocus}, Motifs: [${motifLabels}]
+  const measureRange = getMeasureRange(n);
+  const difficulty = getDifficulty(n);
+  const staffFocus = getStaffFocus(n);
+  return `- ${n.id} "${n.label}" (measures ${measureRange})
+    Difficulty: ${difficulty}, Staff: ${staffFocus}, Motifs: [${motifLabels}]
     Goal: ${n.teacherHints?.goal || "Practice this section"}
     Practice history: ${state ? `${state.attempt_count} attempts, ${state.pass_count} passes, streak: ${state.current_streak}` : "Never practiced"}`;
 }).join("\n")}
