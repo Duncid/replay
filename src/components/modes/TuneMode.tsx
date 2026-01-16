@@ -45,14 +45,40 @@ export function TuneMode({
   // Track if we've processed the current recording
   const lastProcessedRecording = useRef<INoteSequence | null>(null);
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
+  const preEvalTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track when we're about to evaluate (show "Evaluating..." in UI)
+  const [isAboutToEvaluate, setIsAboutToEvaluate] = useState(false);
 
   // Auto-evaluate when recording stops (silence detected)
   useEffect(() => {
+    // Reset when recording starts
+    if (isRecording) {
+      setIsAboutToEvaluate(false);
+      if (preEvalTimer.current) {
+        clearTimeout(preEvalTimer.current);
+        preEvalTimer.current = null;
+      }
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current);
+        silenceTimer.current = null;
+      }
+      return;
+    }
+    
     if (!isRecording && currentRecording && currentRecording !== lastProcessedRecording.current) {
       // Recording just stopped, start silence timer
       if (silenceTimer.current) {
         clearTimeout(silenceTimer.current);
       }
+      if (preEvalTimer.current) {
+        clearTimeout(preEvalTimer.current);
+      }
+      
+      // Show "Evaluating..." after 0.5s of silence (1s before actual evaluation)
+      preEvalTimer.current = setTimeout(() => {
+        setIsAboutToEvaluate(true);
+      }, 500);
       
       silenceTimer.current = setTimeout(() => {
         if (state.phase === "practicing" && currentNugget && currentRecording.notes && currentRecording.notes.length > 0) {
@@ -65,6 +91,9 @@ export function TuneMode({
     return () => {
       if (silenceTimer.current) {
         clearTimeout(silenceTimer.current);
+      }
+      if (preEvalTimer.current) {
+        clearTimeout(preEvalTimer.current);
       }
     };
   }, [isRecording, currentRecording, state.phase, currentNugget]);
@@ -218,6 +247,18 @@ export function TuneMode({
   };
 
   const handlePlaySample = useCallback(() => {
+    // Reset recording state when playing sample
+    lastProcessedRecording.current = null;
+    setIsAboutToEvaluate(false);
+    if (preEvalTimer.current) {
+      clearTimeout(preEvalTimer.current);
+      preEvalTimer.current = null;
+    }
+    if (silenceTimer.current) {
+      clearTimeout(silenceTimer.current);
+      silenceTimer.current = null;
+    }
+    
     if (currentNugget?.nugget?.noteSequence) {
       onPlaySample(currentNugget.nugget.noteSequence as INoteSequence);
     }
@@ -314,7 +355,7 @@ export function TuneMode({
         onSwitchNugget={handleSwitchNugget}
         onLeave={onLeave}
         isPlaying={isPlayingSample}
-        isRecording={isRecording}
+        isEvaluating={isAboutToEvaluate}
       />
     );
   }

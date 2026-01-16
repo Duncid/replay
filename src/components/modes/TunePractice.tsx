@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Play, SkipForward, Music } from "lucide-react";
+import { ArrowLeft, Play, SkipForward, Music, Loader2 } from "lucide-react";
 import type { PracticePlanItem } from "@/types/tunePractice";
 
 interface TunePracticeProps {
@@ -15,7 +15,7 @@ interface TunePracticeProps {
   onSwitchNugget: () => void;
   onLeave: () => void;
   isPlaying?: boolean;
-  isRecording?: boolean;
+  isEvaluating?: boolean;
 }
 
 export function TunePractice({
@@ -28,7 +28,7 @@ export function TunePractice({
   onSwitchNugget,
   onLeave,
   isPlaying = false,
-  isRecording = false,
+  isEvaluating = false,
 }: TunePracticeProps) {
   return (
     <div className="flex flex-col h-full">
@@ -88,11 +88,11 @@ export function TunePractice({
           </CardContent>
         </Card>
 
-        {/* Recording Status */}
-        {isRecording && (
-          <div className="flex items-center gap-2 text-destructive animate-pulse">
-            <div className="h-3 w-3 rounded-full bg-destructive" />
-            <span className="text-sm font-medium">Recording...</span>
+        {/* Evaluating Status - shown only when about to evaluate */}
+        {isEvaluating && (
+          <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm font-medium">Evaluating...</span>
           </div>
         )}
 
