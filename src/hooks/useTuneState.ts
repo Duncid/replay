@@ -39,12 +39,21 @@ export function useTuneState(tuneKey: string) {
     }));
   }, []);
 
-  const setEvaluation = useCallback((evaluation: TuneEvaluationResponse) => {
+  // Update evaluation inline - NO phase change (continuous experience)
+  const updateEvaluation = useCallback((evaluation: TuneEvaluationResponse) => {
     setState((prev) => ({
       ...prev,
       lastEvaluation: evaluation,
       currentStreak: evaluation.currentStreak,
-      phase: "feedback",
+      // Stay in practicing phase - no transition
+    }));
+  }, []);
+
+  // Clear last evaluation (e.g., after showing inline feedback)
+  const clearEvaluation = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      lastEvaluation: null,
     }));
   }, []);
 
@@ -52,24 +61,19 @@ export function useTuneState(tuneKey: string) {
     setState((prev) => {
       const nextIndex = prev.currentIndex + 1;
       if (nextIndex >= prev.practicePlan.length) {
-        // End of practice plan
-        return { ...prev, phase: "coaching" };
+        // Wrap around to first nugget for continuous practice
+        return {
+          ...prev,
+          currentIndex: 0,
+          lastEvaluation: null,
+        };
       }
       return {
         ...prev,
         currentIndex: nextIndex,
         lastEvaluation: null,
-        phase: "practicing",
       };
     });
-  }, []);
-
-  const retryCurrentNugget = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      lastEvaluation: null,
-      phase: "practicing",
-    }));
   }, []);
 
   const setError = useCallback((error: string | null) => {
@@ -87,9 +91,9 @@ export function useTuneState(tuneKey: string) {
     currentNugget,
     setPhase,
     setPracticePlan,
-    setEvaluation,
+    updateEvaluation,
+    clearEvaluation,
     nextNugget,
-    retryCurrentNugget,
     setError,
     reset,
   };

@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { useTuneState } from "@/hooks/useTuneState";
 import { useStartTunePractice, useEvaluateTuneAttempt } from "@/hooks/useTuneQueries";
 import { TunePractice } from "./TunePractice";
-import { TuneFeedback } from "./TuneFeedback";
 import { TuneDebugCard } from "@/components/TuneDebugCard";
 import { TuneEvaluationDebugCard } from "@/components/TuneEvaluationDebugCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -33,7 +32,7 @@ export function TuneMode({
   currentRecording,
   isRecording = false,
 }: TuneModeProps) {
-  const { state, currentNugget, setPhase, setPracticePlan, setEvaluation, nextNugget, retryCurrentNugget, setError } = useTuneState(tuneKey);
+  const { state, currentNugget, setPhase, setPracticePlan, updateEvaluation, clearEvaluation, nextNugget, setError } = useTuneState(tuneKey);
   
   const startPractice = useStartTunePractice();
   const evaluateAttempt = useEvaluateTuneAttempt();
@@ -47,14 +46,15 @@ export function TuneMode({
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
   const preEvalTimer = useRef<NodeJS.Timeout | null>(null);
   
-  // Track when we're about to evaluate (show "Evaluating..." in UI)
-  const [isAboutToEvaluate, setIsAboutToEvaluate] = useState(false);
+  // Track evaluation state for inline indicator
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   // Auto-evaluate when recording stops (silence detected)
   useEffect(() => {
     // Reset when recording starts
     if (isRecording) {
-      setIsAboutToEvaluate(false);
+      setIsEvaluating(false);
+      clearEvaluation(); // Clear previous evaluation when user starts playing
       if (preEvalTimer.current) {
         clearTimeout(preEvalTimer.current);
         preEvalTimer.current = null;
@@ -75,9 +75,9 @@ export function TuneMode({
         clearTimeout(preEvalTimer.current);
       }
       
-      // Show "Evaluating..." after 0.5s of silence (1s before actual evaluation)
+      // Show "Evaluating..." after 0.5s of silence
       preEvalTimer.current = setTimeout(() => {
-        setIsAboutToEvaluate(true);
+        setIsEvaluating(true);
       }, 500);
       
       silenceTimer.current = setTimeout(() => {
@@ -179,7 +179,8 @@ export function TuneMode({
   const handleEvaluate = async (recording: INoteSequence) => {
     if (!currentNugget) return;
 
-    setPhase("evaluating");
+    // Don't change phase - stay on practice screen
+    setIsEvaluating(true);
 
     try {
       if (debugMode) {
@@ -192,6 +193,7 @@ export function TuneMode({
           debug: true,
         });
 
+        setIsEvaluating(false);
         setEvalDebugData({
           tuneKey,
           nuggetId: currentNugget.nuggetId,
@@ -210,15 +212,28 @@ export function TuneMode({
           debug: false,
         });
 
-        setEvaluation(response);
+        setIsEvaluating(false);
+        
+        // Update evaluation inline - no phase change
+        updateEvaluation(response);
 
-        if (debugMode) {
-          toast.info(`Evaluation: ${response.evaluation} (streak: ${response.currentStreak})`);
+        // Show toast feedback based on evaluation
+        if (response.evaluation === 'pass') {
+          toast.success(response.feedbackText, { duration: 3000 });
+        } else if (response.evaluation === 'close') {
+          toast(response.feedbackText, { duration: 3000 });
+        } else {
+          toast(response.feedbackText, { duration: 3000 });
+        }
+        
+        // Suggest moving to next nugget if streak threshold reached
+        if (response.suggestNewNugget && state.currentIndex < state.practicePlan.length - 1) {
+          toast.info("Nice streak! Try the next section when you're ready.", { duration: 4000 });
         }
       }
     } catch (error) {
       console.error("Error evaluating attempt:", error);
-      setPhase("practicing");
+      setIsEvaluating(false);
       toast.error("Failed to evaluate performance");
     }
   };
@@ -227,6 +242,7 @@ export function TuneMode({
     if (!currentNugget || !lastProcessedRecording.current) return;
 
     setEvalDebugData(null);
+    setIsEvaluating(true);
 
     try {
       const response = await evaluateAttempt.mutateAsync({
@@ -238,10 +254,18 @@ export function TuneMode({
         debug: false,
       });
 
-      setEvaluation(response);
+      setIsEvaluating(false);
+      updateEvaluation(response);
+      
+      // Show toast feedback
+      if (response.evaluation === 'pass') {
+        toast.success(response.feedbackText, { duration: 3000 });
+      } else {
+        toast(response.feedbackText, { duration: 3000 });
+      }
     } catch (error) {
       console.error("Error evaluating attempt:", error);
-      setPhase("practicing");
+      setIsEvaluating(false);
       toast.error("Failed to evaluate performance");
     }
   };
@@ -249,7 +273,7 @@ export function TuneMode({
   const handlePlaySample = useCallback(() => {
     // Reset recording state when playing sample
     lastProcessedRecording.current = null;
-    setIsAboutToEvaluate(false);
+    setIsEvaluating(false);
     if (preEvalTimer.current) {
       clearTimeout(preEvalTimer.current);
       preEvalTimer.current = null;
@@ -267,16 +291,7 @@ export function TuneMode({
   const handleSwitchNugget = useCallback(() => {
     nextNugget();
     lastProcessedRecording.current = null;
-  }, [nextNugget]);
-
-  const handleRetry = useCallback(() => {
-    retryCurrentNugget();
-    lastProcessedRecording.current = null;
-  }, [retryCurrentNugget]);
-
-  const handleNextNugget = useCallback(() => {
-    nextNugget();
-    lastProcessedRecording.current = null;
+    setIsEvaluating(false);
   }, [nextNugget]);
 
   // Render based on phase
@@ -309,7 +324,7 @@ export function TuneMode({
         onProceed={proceedFromEvalDebug}
         onCancel={() => {
           setEvalDebugData(null);
-          setPhase("practicing");
+          setIsEvaluating(false);
         }}
       />
     );
@@ -324,25 +339,7 @@ export function TuneMode({
     );
   }
 
-  if (state.phase === "evaluating") {
-    return <LoadingSpinner message="Evaluating your performance..." />;
-  }
-
-  // Feedback phase
-  if (state.phase === "feedback" && state.lastEvaluation && currentNugget) {
-    return (
-      <TuneFeedback
-        evaluation={state.lastEvaluation}
-        currentNugget={currentNugget}
-        hasMoreNuggets={state.currentIndex < state.practicePlan.length - 1}
-        onRetry={handleRetry}
-        onNextNugget={handleNextNugget}
-        onLeave={onLeave}
-      />
-    );
-  }
-
-  // Practice phase
+  // Practice phase - THE MAIN CONTINUOUS SCREEN
   if (state.phase === "practicing" && currentNugget) {
     return (
       <TunePractice
@@ -351,11 +348,12 @@ export function TuneMode({
         currentIndex={state.currentIndex}
         totalNuggets={state.practicePlan.length}
         currentStreak={state.currentStreak}
+        lastEvaluation={state.lastEvaluation}
         onPlaySample={handlePlaySample}
         onSwitchNugget={handleSwitchNugget}
         onLeave={onLeave}
         isPlaying={isPlayingSample}
-        isEvaluating={isAboutToEvaluate}
+        isEvaluating={isEvaluating}
       />
     );
   }
