@@ -78,6 +78,10 @@ serve(async (req) => {
 
     const targetSequence = nugget.noteSequence;
     const teacherHints = nugget.teacherHints || {};
+    
+    // Extract tune-level evaluation guidance from briefing
+    const briefing = (tuneAsset.briefing || {}) as Record<string, unknown>;
+    const evaluationGuidance = briefing.evaluationGuidance as string | null;
 
     // 2. Fetch current nugget state
     let nuggetStateQuery = supabase
@@ -101,7 +105,10 @@ serve(async (req) => {
 STUDENT CONTEXT:
 ${localUserId ? `- Student ID: ${localUserId}` : "- Anonymous student"}
 - Language preference: ${language}
-
+${evaluationGuidance ? `
+TUNE-LEVEL EVALUATION GUIDANCE:
+${evaluationGuidance}
+` : ""}
 NUGGET BEING PRACTICED:
 - ID: ${nuggetId}
 - Label: ${nugget.label}

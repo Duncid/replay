@@ -450,6 +450,7 @@ function transformToRuntime(
       nodeData = {
         musicRef: node.data.musicRef || null,
         level: (node.data as { level?: string }).level || null,
+        evaluationGuidance: node.data.evaluationGuidance || null,
       };
     }
     // Track data can be empty or future-proofed
@@ -659,6 +660,7 @@ serve(async (req) => {
       description: n.description,
       musicRef: (n.data as { musicRef?: string }).musicRef,
       level: (n.data as { level?: string }).level,
+      evaluationGuidance: (n.data as { evaluationGuidance?: string }).evaluationGuidance,
     })),
     edges: runtimeData.edges.map(e => ({
         source_key: e.fromKey,
@@ -827,17 +829,34 @@ serve(async (req) => {
     console.log("[curriculum-publish] Inserted export snapshot");
 
     // 5. Insert tune assets if provided
+    // Merge evaluationGuidance from curriculum nodes into briefing
+    const tuneNodes = runtimeData.nodes.filter(n => n.kind === "tune");
+    const tuneEvalGuidanceMap = new Map<string, string | null>();
+    for (const tuneNode of tuneNodes) {
+      const evalGuidance = (tuneNode.data as { evaluationGuidance?: string }).evaluationGuidance || null;
+      tuneEvalGuidanceMap.set(tuneNode.key, evalGuidance);
+    }
+
     let tuneAssetsInserted = 0;
     if (tuneAssets && Object.keys(tuneAssets).length > 0) {
-      const tuneAssetRows = Object.entries(tuneAssets).map(([tuneKey, assets]) => ({
-        version_id: versionId,
-        tune_key: tuneKey,
-        briefing: assets.briefing || null,
-        note_sequence: assets.noteSequence,
-        left_hand_sequence: assets.leftHandSequence || null,
-        right_hand_sequence: assets.rightHandSequence || null,
-        nuggets: assets.nuggets || null,
-      }));
+      const tuneAssetRows = Object.entries(tuneAssets).map(([tuneKey, assets]) => {
+        // Merge evaluationGuidance into briefing
+        const evaluationGuidance = tuneEvalGuidanceMap.get(tuneKey) || null;
+        const briefing = {
+          ...(assets.briefing || {}),
+          ...(evaluationGuidance ? { evaluationGuidance } : {}),
+        };
+        
+        return {
+          version_id: versionId,
+          tune_key: tuneKey,
+          briefing: Object.keys(briefing).length > 0 ? briefing : null,
+          note_sequence: assets.noteSequence,
+          left_hand_sequence: assets.leftHandSequence || null,
+          right_hand_sequence: assets.rightHandSequence || null,
+          nuggets: assets.nuggets || null,
+        };
+      });
 
       const { error: tuneAssetsError } = await supabase
         .from("tune_assets")
