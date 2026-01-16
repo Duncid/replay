@@ -1,0 +1,57 @@
+{
+  "briefing": {
+    "style": "Blues",
+    "keySignature": "G major",
+    "timeSignature": "4/4",
+    "tempo": 82,
+    "difficulty": "intermediate",
+    "teachingNotes": "Classic 12-bar blues composition by W.C. Handy. Focus on the call-and-response pattern in the A section and the syncopated rhythms throughout."
+  },
+  "nuggets": [
+    {
+      "id": "N1",
+      "startTime": 0,
+      "endTime": 2.6614583333333335,
+      "noteStartIndex": 0,
+      "noteEndIndex": 4,
+      "type": "closed",
+      "label": "Intro"
+    },
+    {
+      "id": "N2",
+      "startTime": 3,
+      "endTime": 7.836458333333334,
+      "noteStartIndex": 5,
+      "noteEndIndex": 10,
+      "type": "closed",
+      "label": "Answer 1"
+    },
+    {
+      "id": "N3",
+      "startTime": 8,
+      "endTime": 10.661458333333334,
+      "noteStartIndex": 11,
+      "noteEndIndex": 16,
+      "type": "closed",
+      "label": "Hook 1"
+    },
+    {
+      "id": "N4",
+      "startTime": 11,
+      "endTime": 13.698958333333334,
+      "noteStartIndex": 17,
+      "noteEndIndex": 22,
+      "type": "open",
+      "label": "Variation 1a"
+    },
+    {
+      "id": "N5",
+      "startTime": 13.75,
+      "endTime": 18.686458333333334,
+      "noteStartIndex": 23,
+      "noteEndIndex": 29,
+      "type": "closed",
+      "label": "Variation 1b"
+    }
+  ]
+}
