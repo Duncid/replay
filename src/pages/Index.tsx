@@ -1128,6 +1128,9 @@ const Index = () => {
     metronomeStartTime: activeMode === "learn" && learnModeType === "free-practice" ? metronomeStartTime ?? undefined : undefined,
   });
 
+  // Track tune mode state for recording logic (separate from learnMode to avoid circular reference)
+  const [isInTuneMode, setIsInTuneMode] = useState(false);
+  
   // Learn mode hook (curriculum lessons)
   const learnMode = LearnMode({
     isPlaying: appState === "ai_playing",
@@ -1160,6 +1163,11 @@ const Index = () => {
     setMetronomeSoundType: (soundType: LessonMetronomeSoundType) =>
       setMetronomeSoundType(soundType as MetronomeSoundType),
   });
+  
+  // Sync tune mode state from LearnMode
+  useEffect(() => {
+    setIsInTuneMode(learnMode.isInTuneMode);
+  }, [learnMode.isInTuneMode]);
 
   // Free practice mode props (used in JSX)
   const freePracticeModeProps = {
@@ -1216,11 +1224,14 @@ const Index = () => {
       if (activeMode === "play") {
         recordingManager.addNoteStart(noteKey, velocity);
       } else if (activeMode === "learn") {
-        if (learnModeType === "curriculum" &&
-          learnMode.lesson.phase === "your_turn" &&
-          learnMode.lessonMode === "evaluation") {
-          // Only record in evaluation mode for curriculum
-          learnRecordingManager.addNoteStart(noteKey, velocity);
+        if (learnModeType === "curriculum") {
+          // TuneMode: Always record when a tune is active
+          if (isInTuneMode) {
+            learnRecordingManager.addNoteStart(noteKey, velocity);
+          } else if (learnMode.lesson.phase === "your_turn" && learnMode.lessonMode === "evaluation") {
+            // Lesson mode: Only record in evaluation mode
+            learnRecordingManager.addNoteStart(noteKey, velocity);
+          }
         } else if (learnModeType === "free-practice") {
           // Always record for free practice
           freePracticeRecordingManager.addNoteStart(noteKey, velocity);
@@ -1237,6 +1248,7 @@ const Index = () => {
       learnRecordingManager,
       freePracticeRecordingManager,
       learnModeType,
+      isInTuneMode,
       stopAiPlayback,
     ]
   );
@@ -1246,11 +1258,14 @@ const Index = () => {
       if (activeMode === "play") {
         recordingManager.addNoteEnd(noteKey);
       } else if (activeMode === "learn") {
-        if (learnModeType === "curriculum" &&
-          learnMode.lesson.phase === "your_turn" &&
-          learnMode.lessonMode === "evaluation") {
-          // Only record in evaluation mode for curriculum
-          learnRecordingManager.addNoteEnd(noteKey);
+        if (learnModeType === "curriculum") {
+          // TuneMode: Always record when a tune is active
+          if (isInTuneMode) {
+            learnRecordingManager.addNoteEnd(noteKey);
+          } else if (learnMode.lesson.phase === "your_turn" && learnMode.lessonMode === "evaluation") {
+            // Lesson mode: Only record in evaluation mode
+            learnRecordingManager.addNoteEnd(noteKey);
+          }
         } else if (learnModeType === "free-practice") {
           // Always record for free practice
           freePracticeRecordingManager.addNoteEnd(noteKey);
@@ -1265,6 +1280,7 @@ const Index = () => {
       learnMode.lesson.phase,
       learnMode.lessonMode,
       learnModeType,
+      isInTuneMode,
     ]
   );
 

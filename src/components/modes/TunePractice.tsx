@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Play, SkipForward, Music, Loader2, Check, X, Minus } from "lucide-react";
+import { ArrowLeft, Play, SkipForward, Music, Loader2, Check, X, Minus, Send } from "lucide-react";
 import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ interface TunePracticeProps {
   onLeave: () => void;
   isPlaying?: boolean;
   isEvaluating?: boolean;
+  isRecording?: boolean;
 }
 
 // Inline evaluation badge that fades after display
@@ -64,6 +65,7 @@ export function TunePractice({
   onLeave,
   isPlaying = false,
   isEvaluating = false,
+  isRecording = false,
 }: TunePracticeProps) {
   return (
     <div className="flex flex-col h-full">
@@ -81,11 +83,17 @@ export function TunePractice({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-0.5">
           {currentStreak > 0 && (
-            <Badge variant="default" className="text-sm animate-in fade-in duration-300">
-              🔥 {currentStreak}
-            </Badge>
+            Array.from({ length: Math.min(currentStreak, 5) }).map((_, i) => (
+              <span 
+                key={i} 
+                className="text-xl animate-in fade-in zoom-in duration-300" 
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                🔥
+              </span>
+            ))
           )}
         </div>
       </div>
@@ -123,12 +131,17 @@ export function TunePractice({
           </CardContent>
         </Card>
 
-        {/* Inline Status Area - Evaluation result or loading indicator */}
+        {/* Inline Status Area - Playing, Sending, or Evaluation result */}
         <div className="h-10 flex items-center justify-center">
-          {isEvaluating ? (
+          {isRecording && !isEvaluating ? (
+            <div className="flex items-center gap-2 text-primary">
+              <Music className="h-4 w-4 animate-pulse" />
+              <span className="text-sm font-medium">Playing</span>
+            </div>
+          ) : isEvaluating ? (
             <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm font-medium">Evaluating...</span>
+              <Send className="h-4 w-4" />
+              <span className="text-sm font-medium">Sending</span>
             </div>
           ) : lastEvaluation ? (
             <EvaluationBadge evaluation={lastEvaluation} />

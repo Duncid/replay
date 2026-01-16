@@ -553,6 +553,6 @@ export function LearnMode({
     markUserAction();
   }, [markUserAction]);
 
-  // Expose lesson mode to parent so it can control recording
-  return { lesson, render, handleUserAction, lessonMode };
+  // Expose lesson mode and tune mode state to parent so it can control recording
+  return { lesson, render, handleUserAction, lessonMode, isInTuneMode: activeTuneKey !== null };
 }
