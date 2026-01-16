@@ -1,0 +1,7 @@
+{
+  "tunes": [
+    { "key": "intro", "label": "Intro", "nsFile": "intro.ns" },
+    { "key": "st-louis-blues", "label": "St. Louis Blues", "nsFile": "st-louis-blues.ns" },
+    { "key": "gymnopdie", "label": "Gymnopédie No. 1", "nsFile": "gymnopdie-no1.ns" }
+  ]
+}

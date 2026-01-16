@@ -55,6 +55,16 @@ import {
   QuestNode,
   QuestNodeType,
 } from "@/types/quest";
+import musicManifest from "@/music/manifest.json";
+
+// Type for tune asset bundle sent to publish endpoint
+interface TuneAssetBundle {
+  briefing?: object;
+  nuggets?: object[];
+  noteSequence: object;
+  leftHandSequence?: object;
+  rightHandSequence?: object;
+}
 import {
   exportGraphToSchema,
   importCurriculumToGraph,
@@ -1837,12 +1847,74 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [showPublishDialog, currentGraph, validationResult, isValidating, runValidation]);
 
+  // Helper function to bundle tune assets for publishing
+  const bundleTuneAssets = useCallback(async (): Promise<Record<string, TuneAssetBundle>> => {
+    const tuneAssets: Record<string, TuneAssetBundle> = {};
+    
+    // Find all tune nodes with musicRef
+    const tuneNodes = nodes.filter(
+      (n) => n.data.type === "tune" && n.data.musicRef && n.data.tuneKey
+    );
+    
+    for (const node of tuneNodes) {
+      const musicRef = node.data.musicRef!;
+      const tuneKey = node.data.tuneKey!;
+      
+      // Find the manifest entry to get the actual NS filename
+      const manifestEntry = musicManifest.tunes.find((t) => t.key === musicRef);
+      const nsFileName = manifestEntry?.nsFile || `${musicRef}.ns`;
+      const nsBaseName = nsFileName.replace(/\.ns$/, "");
+      
+      try {
+        // Dynamically import tune files using manifest-specified filenames
+        const [teacherModule, noteSequenceModule, leftHandModule, rightHandModule] = await Promise.all([
+          import(`@/music/${musicRef}/teacher.json`).catch(() => null),
+          import(`@/music/${musicRef}/${nsFileName}`).catch(() => null),
+          import(`@/music/${musicRef}/${nsBaseName}.lh.ns`).catch(() => null),
+          import(`@/music/${musicRef}/${nsBaseName}.rh.ns`).catch(() => null),
+        ]);
+        
+        // Get the default export or the module itself
+        const teacher = teacherModule?.default || teacherModule;
+        const noteSequence = noteSequenceModule?.default || noteSequenceModule;
+        const leftHand = leftHandModule?.default || leftHandModule;
+        const rightHand = rightHandModule?.default || rightHandModule;
+        
+        if (noteSequence) {
+          tuneAssets[tuneKey] = {
+            briefing: teacher?.briefing,
+            nuggets: teacher?.nuggets,
+            noteSequence,
+            leftHandSequence: leftHand || undefined,
+            rightHandSequence: rightHand || undefined,
+          };
+          console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
+            hasBriefing: !!teacher?.briefing,
+            hasNuggets: !!teacher?.nuggets,
+            hasLeftHand: !!leftHand,
+            hasRightHand: !!rightHand,
+          });
+        } else {
+          console.warn(`[QuestEditor] No note sequence found for tune ${musicRef} (tried ${nsFileName})`);
+        }
+      } catch (error) {
+        console.warn(`[QuestEditor] Failed to load assets for tune ${musicRef}:`, error);
+      }
+    }
+    
+    return tuneAssets;
+  }, [nodes]);
+
   const confirmPublish = useCallback(async () => {
     if (!currentGraph) return;
 
     setIsPublishing(true);
 
     try {
+      // Bundle tune assets before publishing
+      const tuneAssets = await bundleTuneAssets();
+      console.log(`[QuestEditor] Publishing with ${Object.keys(tuneAssets).length} tune assets`);
+
       const { data, error } = await supabase.functions.invoke(
         "curriculum-publish",
         {
@@ -1850,6 +1922,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             questGraphId: currentGraph.id,
             publishTitle: publishDialogTitle.trim() || undefined,
             mode: "publish",
+            tuneAssets,
           },
         }
       );
@@ -1943,7 +2016,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     } finally {
       setIsPublishing(false);
     }
-  }, [currentGraph, publishDialogTitle, toast]);
+  }, [currentGraph, publishDialogTitle, toast, bundleTuneAssets]);
 
   const hasValidationErrors = validationResult?.errors && validationResult.errors.length > 0;
   const canPublish = validationResult?.validated && !hasValidationErrors && !publishResult?.success;
@@ -2760,15 +2833,23 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="musicRef">Music Reference</Label>
-                        <Input
-                          id="musicRef"
-                          type="text"
+                        <Select
                           value={editingMusicRef}
-                          onChange={(e) => setEditingMusicRef(e.target.value)}
-                          placeholder="e.g., st-louis-blues"
-                        />
+                          onValueChange={setEditingMusicRef}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a tune folder..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {musicManifest.tunes.map((tune) => (
+                              <SelectItem key={tune.key} value={tune.key}>
+                                {tune.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <p className="text-xs text-muted-foreground">
-                          Folder name in src/music/
+                          Select a folder from src/music/
                         </p>
                       </div>
                       <div className="space-y-2">

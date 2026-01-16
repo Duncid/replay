@@ -342,6 +342,50 @@ export type Database = {
         }
         Relationships: []
       }
+      tune_assets: {
+        Row: {
+          briefing: Json | null
+          created_at: string | null
+          id: string
+          left_hand_sequence: Json | null
+          note_sequence: Json
+          nuggets: Json | null
+          right_hand_sequence: Json | null
+          tune_key: string
+          version_id: string
+        }
+        Insert: {
+          briefing?: Json | null
+          created_at?: string | null
+          id?: string
+          left_hand_sequence?: Json | null
+          note_sequence: Json
+          nuggets?: Json | null
+          right_hand_sequence?: Json | null
+          tune_key: string
+          version_id: string
+        }
+        Update: {
+          briefing?: Json | null
+          created_at?: string | null
+          id?: string
+          left_hand_sequence?: Json | null
+          note_sequence?: Json
+          nuggets?: Json | null
+          right_hand_sequence?: Json | null
+          tune_key?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tune_assets_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_lesson_acquisition: {
         Row: {
           acquired_at: string

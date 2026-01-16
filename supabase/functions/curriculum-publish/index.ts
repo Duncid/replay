@@ -60,10 +60,19 @@ interface ValidationWarning {
   edgeId?: string;
 }
 
+interface TuneAssetBundle {
+  briefing?: Record<string, unknown>;
+  nuggets?: Array<Record<string, unknown>>;
+  noteSequence: Record<string, unknown>;
+  leftHandSequence?: Record<string, unknown>;
+  rightHandSequence?: Record<string, unknown>;
+}
+
 interface PublishRequest {
   questGraphId: string;
   publishTitle?: string;
   mode: "publish" | "dryRun";
+  tuneAssets?: Record<string, TuneAssetBundle>;
 }
 
 interface PublishResponse {
@@ -554,7 +563,7 @@ serve(async (req) => {
 
   try {
     const requestBody: PublishRequest = await req.json();
-    const { questGraphId, publishTitle, mode } = requestBody;
+    const { questGraphId, publishTitle, mode, tuneAssets } = requestBody;
 
     if (!questGraphId || typeof questGraphId !== "string") {
       return new Response(
@@ -817,7 +826,37 @@ serve(async (req) => {
 
     console.log("[curriculum-publish] Inserted export snapshot");
 
-    // 5. Update version status to published
+    // 5. Insert tune assets if provided
+    let tuneAssetsInserted = 0;
+    if (tuneAssets && Object.keys(tuneAssets).length > 0) {
+      const tuneAssetRows = Object.entries(tuneAssets).map(([tuneKey, assets]) => ({
+        version_id: versionId,
+        tune_key: tuneKey,
+        briefing: assets.briefing || null,
+        note_sequence: assets.noteSequence,
+        left_hand_sequence: assets.leftHandSequence || null,
+        right_hand_sequence: assets.rightHandSequence || null,
+        nuggets: assets.nuggets || null,
+      }));
+
+      const { error: tuneAssetsError } = await supabase
+        .from("tune_assets")
+        .upsert(tuneAssetRows, { onConflict: "version_id,tune_key" });
+
+      if (tuneAssetsError) {
+        console.error("[curriculum-publish] Failed to insert tune assets:", tuneAssetsError);
+        // Non-fatal: log warning but continue
+        allWarnings.push({
+          type: "tune_assets_failed",
+          message: `Failed to insert tune assets: ${tuneAssetsError.message}`,
+        });
+      } else {
+        tuneAssetsInserted = tuneAssetRows.length;
+        console.log("[curriculum-publish] Inserted tune assets:", tuneAssetsInserted);
+      }
+    }
+
+    // 6. Update version status to published
     const publishedAt = new Date().toISOString();
     const { error: updateError } = await supabase
       .from("curriculum_versions")
@@ -840,7 +879,10 @@ serve(async (req) => {
         versionId,
         versionNumber: nextVersionNumber,
         publishedAt,
-        counts,
+        counts: {
+          ...counts,
+          tuneAssets: tuneAssetsInserted,
+        },
         warnings: allWarnings.map(w => w.message),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
