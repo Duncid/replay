@@ -179,6 +179,23 @@ export function TuneMode({
   const handleEvaluate = async (recording: INoteSequence) => {
     if (!currentNugget) return;
 
+    // Trim recording to max 2x the target note count (keep LAST notes - most recent attempt)
+    const targetNoteCount = (currentNugget.nugget.noteSequence as INoteSequence)?.notes?.length || 8;
+    const maxNotes = targetNoteCount * 2;
+    
+    let trimmedRecording = recording;
+    if (recording.notes && recording.notes.length > maxNotes) {
+      const trimmedNotes = recording.notes.slice(-maxNotes); // Keep LAST notes
+      trimmedRecording = {
+        ...recording,
+        notes: trimmedNotes,
+        totalTime: trimmedNotes.length > 0 
+          ? Math.max(...trimmedNotes.map(n => n.endTime || 0)) 
+          : 0,
+      };
+      console.log(`[TuneMode] Trimmed recording from ${recording.notes.length} to ${trimmedNotes.length} notes (target: ${targetNoteCount})`);
+    }
+
     // Don't change phase - stay on practice screen
     setIsEvaluating(true);
 
@@ -187,7 +204,7 @@ export function TuneMode({
         const debugResponse = await evaluateAttempt.mutateAsync({
           tuneKey,
           nuggetId: currentNugget.nuggetId,
-          userSequence: recording,
+          userSequence: trimmedRecording,
           localUserId,
           language,
           debug: true,
@@ -198,7 +215,7 @@ export function TuneMode({
           tuneKey,
           nuggetId: currentNugget.nuggetId,
           targetSequence: currentNugget.nugget.noteSequence,
-          userSequence: recording,
+          userSequence: trimmedRecording,
           prompt: (debugResponse as any).prompt,
           request: (debugResponse as any).request,
         });
@@ -206,7 +223,7 @@ export function TuneMode({
         const response = await evaluateAttempt.mutateAsync({
           tuneKey,
           nuggetId: currentNugget.nuggetId,
-          userSequence: recording,
+          userSequence: trimmedRecording,
           localUserId,
           language,
           debug: false,

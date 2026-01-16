@@ -122,11 +122,18 @@ CURRENT PROGRESS:
 - Current streak: ${currentStreak}
 - Streak threshold for moving on: ${STREAK_THRESHOLD_FOR_NEW_NUGGET}
 
-TARGET SEQUENCE:
+TARGET SEQUENCE (${(targetSequence as any)?.notes?.length || 0} notes):
 ${JSON.stringify(targetSequence, null, 2)}
 
-USER'S RECORDED SEQUENCE:
+USER'S RECORDED SEQUENCE (${(userSequence as any)?.notes?.length || 0} notes):
 ${JSON.stringify(userSequence, null, 2)}
+
+FOCUS ON LAST NOTES:
+The recording may contain notes from earlier attempts or warm-up playing.
+Focus on the LAST notes of their recording - this is their most recent attempt.
+If the target has N notes and the recording has M notes (where M > N), look at the final ~N notes.
+Try to find where the target sequence best matches within the recording, prioritizing the end.
+Evaluate based on the best matching section, not the entire recording.
 
 EVALUATION CRITERIA:
 1. PITCH ACCURACY: Did they play the correct notes?
