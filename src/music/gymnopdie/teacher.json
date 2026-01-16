@@ -1,5 +1,6 @@
 {
     "schemaVersion": "nuggets-teacher.v1",
+    "title": "Gymnopédie No. 1",
     "pipelineSettings": {
         "instrument": "piano",
         "expectsTwoStaves": true,
