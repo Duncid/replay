@@ -386,6 +386,87 @@ export type Database = {
           },
         ]
       }
+      tune_nugget_state: {
+        Row: {
+          attempt_count: number | null
+          best_streak: number | null
+          created_at: string | null
+          current_streak: number | null
+          id: string
+          last_practiced_at: string | null
+          local_user_id: string | null
+          nugget_id: string
+          pass_count: number | null
+          tune_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          best_streak?: number | null
+          created_at?: string | null
+          current_streak?: number | null
+          id?: string
+          last_practiced_at?: string | null
+          local_user_id?: string | null
+          nugget_id: string
+          pass_count?: number | null
+          tune_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          best_streak?: number | null
+          created_at?: string | null
+          current_streak?: number | null
+          id?: string
+          last_practiced_at?: string | null
+          local_user_id?: string | null
+          nugget_id?: string
+          pass_count?: number | null
+          tune_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tune_practice_runs: {
+        Row: {
+          ai_feedback: string | null
+          created_at: string | null
+          ended_at: string | null
+          evaluation: string | null
+          id: string
+          local_user_id: string | null
+          nugget_id: string
+          started_at: string | null
+          tune_key: string
+          user_recording: Json | null
+        }
+        Insert: {
+          ai_feedback?: string | null
+          created_at?: string | null
+          ended_at?: string | null
+          evaluation?: string | null
+          id?: string
+          local_user_id?: string | null
+          nugget_id: string
+          started_at?: string | null
+          tune_key: string
+          user_recording?: Json | null
+        }
+        Update: {
+          ai_feedback?: string | null
+          created_at?: string | null
+          ended_at?: string | null
+          evaluation?: string | null
+          id?: string
+          local_user_id?: string | null
+          nugget_id?: string
+          started_at?: string | null
+          tune_key?: string
+          user_recording?: Json | null
+        }
+        Relationships: []
+      }
       user_lesson_acquisition: {
         Row: {
           acquired_at: string
