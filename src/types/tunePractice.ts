@@ -80,7 +80,7 @@ export interface TuneEvaluationResponse {
 }
 
 export interface TunePracticeState {
-  phase: 'loading' | 'coaching' | 'practicing' | 'evaluating' | 'feedback';
+  phase: 'loading' | 'coaching' | 'practicing';  // Simplified: no evaluating/feedback phases
   tuneKey: string;
   tuneTitle: string;
   practicePlan: PracticePlanItem[];

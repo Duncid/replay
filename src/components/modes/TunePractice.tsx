@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Play, SkipForward, Music, Loader2 } from "lucide-react";
-import type { PracticePlanItem } from "@/types/tunePractice";
+import { ArrowLeft, Play, SkipForward, Music, Loader2, Check, X, Minus } from "lucide-react";
+import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
+import { cn } from "@/lib/utils";
 
 interface TunePracticeProps {
   tuneTitle: string;
@@ -11,11 +12,44 @@ interface TunePracticeProps {
   currentIndex: number;
   totalNuggets: number;
   currentStreak: number;
+  lastEvaluation?: TuneEvaluationResponse | null;
   onPlaySample: () => void;
   onSwitchNugget: () => void;
   onLeave: () => void;
   isPlaying?: boolean;
   isEvaluating?: boolean;
+}
+
+// Inline evaluation badge that fades after display
+function EvaluationBadge({ evaluation }: { evaluation: TuneEvaluationResponse }) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    setVisible(true);
+    const timer = setTimeout(() => setVisible(false), 3000);
+    return () => clearTimeout(timer);
+  }, [evaluation]);
+
+  if (!visible) return null;
+
+  const config = {
+    pass: { icon: Check, className: "bg-green-500/20 text-green-600 border-green-500/30" },
+    close: { icon: Minus, className: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30" },
+    fail: { icon: X, className: "bg-red-500/20 text-red-600 border-red-500/30" },
+  };
+
+  const { icon: Icon, className } = config[evaluation.evaluation];
+
+  return (
+    <div className={cn(
+      "flex items-center gap-2 px-3 py-2 rounded-lg border transition-opacity duration-500",
+      className,
+      !visible && "opacity-0"
+    )}>
+      <Icon className="h-4 w-4" />
+      <span className="text-sm font-medium capitalize">{evaluation.evaluation}</span>
+    </div>
+  );
 }
 
 export function TunePractice({
@@ -24,6 +58,7 @@ export function TunePractice({
   currentIndex,
   totalNuggets,
   currentStreak,
+  lastEvaluation,
   onPlaySample,
   onSwitchNugget,
   onLeave,
@@ -48,7 +83,7 @@ export function TunePractice({
 
         <div className="flex items-center gap-2">
           {currentStreak > 0 && (
-            <Badge variant="default" className="text-sm">
+            <Badge variant="default" className="text-sm animate-in fade-in duration-300">
               🔥 {currentStreak}
             </Badge>
           )}
@@ -88,13 +123,17 @@ export function TunePractice({
           </CardContent>
         </Card>
 
-        {/* Evaluating Status - shown only when about to evaluate */}
-        {isEvaluating && (
-          <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm font-medium">Evaluating...</span>
-          </div>
-        )}
+        {/* Inline Status Area - Evaluation result or loading indicator */}
+        <div className="h-10 flex items-center justify-center">
+          {isEvaluating ? (
+            <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-medium">Evaluating...</span>
+            </div>
+          ) : lastEvaluation ? (
+            <EvaluationBadge evaluation={lastEvaluation} />
+          ) : null}
+        </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3">
