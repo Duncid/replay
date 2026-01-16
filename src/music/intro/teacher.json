@@ -1,5 +1,6 @@
 {
     "schemaVersion": "nuggets-teacher.v1",
+    "title": "Intro",
     "pipelineSettings": {
         "instrument": "piano",
         "expectsTwoStaves": false,

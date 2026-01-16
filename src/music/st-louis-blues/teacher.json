@@ -1,5 +1,6 @@
 {
     "schemaVersion": "nuggets-teacher.v1",
+    "title": "St. Louis Blues",
     "pipelineSettings": {
         "instrument": "piano",
         "expectsTwoStaves": false,
