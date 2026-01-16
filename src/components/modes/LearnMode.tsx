@@ -6,6 +6,7 @@ import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { LessonPractice } from "@/components/modes/LessonPractice";
 import { LessonEvaluation } from "@/components/modes/LessonEvaluation";
+import { TuneMode } from "@/components/modes/TuneMode";
 import { useToast } from "@/hooks/use-toast";
 import {
   useEvaluateStructuredLesson,
@@ -112,6 +113,9 @@ export function LearnMode({
   const [debugState, setDebugState] = useState<DebugState>(null);
   const [evaluationState, setEvaluationState] = useState<EvaluationState>(null);
   const [showEvaluationScreen, setShowEvaluationScreen] = useState(false);
+  
+  // Tune practice state
+  const [activeTuneKey, setActiveTuneKey] = useState<string | null>(null);
   
   // Refs
   const hasEvaluatedRef = useRef(false);
@@ -287,6 +291,7 @@ export function LearnMode({
     onClearRecording();
     setShouldFetchGreeting(false);
     setMetronomeIsPlaying(false);
+    setActiveTuneKey(null); // Reset tune mode
     // Invalidate teacher greeting cache to force fresh suggestions on next Start
     queryClient.invalidateQueries({ queryKey: ["teacherGreeting"] });
   }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode, setShouldFetchGreeting, queryClient, setMetronomeIsPlaying]);
@@ -294,12 +299,18 @@ export function LearnMode({
   // When a suggestion is clicked, fetch the debug prompt first (only in debug mode)
   const handleSelectActivity = useCallback(
     async (suggestion: TeacherSuggestion) => {
-      // Handle tune selection (TODO: implement tune practice mode)
+      // Handle tune selection - start TuneMode
       if (suggestion.activityType === "tune") {
-        toast({
-          title: "Tune Practice",
-          description: `Tune practice for "${suggestion.label}" coming soon!`,
-        });
+        const tuneKey = suggestion.activityKey || "";
+        if (tuneKey) {
+          setActiveTuneKey(tuneKey);
+        } else {
+          toast({
+            title: "Error",
+            description: "Tune key not found",
+            variant: "destructive",
+          });
+        }
         return;
       }
 
@@ -388,6 +399,25 @@ export function LearnMode({
   }, [onClearRecording, setLessonState, setMode]);
 
   const render = () => {
+    // ============================================
+    // TUNE PRACTICE MODE (activeTuneKey is set)
+    // ============================================
+    if (activeTuneKey) {
+      return (
+        <TuneMode
+          tuneKey={activeTuneKey}
+          localUserId={localUserId}
+          language={language}
+          debugMode={debugMode}
+          onLeave={handleLeave}
+          onPlaySample={onPlaySequence}
+          isPlayingSample={isPlaying}
+          currentRecording={userRecording}
+          isRecording={isRecording}
+        />
+      );
+    }
+
     // ============================================
     // LESSON SELECTION (lesson.phase === "welcome")
     // ============================================
