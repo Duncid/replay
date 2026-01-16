@@ -354,6 +354,7 @@ export function TuneMode({
         onLeave={onLeave}
         isPlaying={isPlayingSample}
         isEvaluating={isEvaluating}
+        isRecording={isRecording}
       />
     );
   }
