@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: tune-pipeline
-Version: 0.1.0
-Summary: Local tune pipeline CLI
-Requires-Python: >=3.10
-Requires-Dist: music21>=9.1.0
-Requires-Dist: pretty_midi>=0.2.10
-Requires-Dist: pydantic>=2.6.0
