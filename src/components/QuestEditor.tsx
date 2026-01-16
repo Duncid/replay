@@ -792,6 +792,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingMusicRef(node.data.musicRef || "");
           setEditingDescription(node.data.description || "");
           setEditingLevel((node.data.level as "beginner" | "intermediate" | "advanced") || "");
+          setEditingEvaluationGuidance(node.data.evaluationGuidance || "");
           // Clear other fields
           setEditingOrder("");
           setEditingTrackKey("");
@@ -800,7 +801,6 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingLessonKey("");
           setEditingGoal("");
           setEditingSetupGuidance("");
-          setEditingEvaluationGuidance("");
           setEditingDifficultyGuidance("");
         } else {
           setEditingOrder("");
@@ -1122,6 +1122,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           updatedData.musicRef = editingMusicRef.trim();
           updatedData.description = editingDescription || undefined;
           updatedData.level = editingLevel || undefined;
+          updatedData.evaluationGuidance = editingEvaluationGuidance || undefined;
         }
 
         return {
@@ -2945,6 +2946,24 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                           rows={4}
                           autoResize
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="evaluationGuidance">
+                          Evaluation Guidance
+                        </Label>
+                        <Textarea
+                          id="evaluationGuidance"
+                          value={editingEvaluationGuidance}
+                          onChange={(e) =>
+                            setEditingEvaluationGuidance(e.target.value)
+                          }
+                          rows={4}
+                          autoResize
+                          placeholder="Guide the AI on what to focus on when evaluating performances..."
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Optional: Helps the AI understand tune-specific evaluation criteria
+                        </p>
                       </div>
                     </>
                   )}
