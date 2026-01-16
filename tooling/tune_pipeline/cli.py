@@ -122,9 +122,9 @@ def _process_track(output_dir: Path, base_name: str, suffix: str, part: stream.P
 
 
 
-def _create_skeleton_score(metadata: Dict[str, Any]) -> stream.Score:
+def _create_skeleton_score(metadata: Dict[str, object]) -> stream.Score:
     """Creates a minimal score with time/tempo info for nugget extraction."""
-    from music21 import meter, tempo, note
+    from music21 import meter, tempo, note as m21note
     
     score = stream.Score()
     part = stream.Part()
@@ -139,26 +139,23 @@ def _create_skeleton_score(metadata: Dict[str, Any]) -> stream.Score:
     ts = meter.TimeSignature(ts_str)
     part.insert(0, ts)
     
-    # Measures
-    # We need enough measures to cover the nuggets.
-    # explicit measure count or calculate?
+    # Calculate measure duration in quarter lengths
+    ts_parts = ts_str.split("/")
+    beats_per_measure = int(ts_parts[0])
+    beat_type = int(ts_parts[1])
+    measure_duration = beats_per_measure * (4 / beat_type)
+    
+    # Measures - we need enough to cover the nuggets
     num_measures = metadata.get("assumedMeasuresFromTotalTime", 100)
     
-    # Create empty measures
-    # This is needed because _measure_offset uses part.measure(n)
+    # Create measures with proper duration (filled with rests)
+    # This ensures music21 calculates correct offsets for each measure
     for m_num in range(1, num_measures + 1):
         m = stream.Measure(number=m_num)
-        # music21 requires measures to have offsets.
-        # If we append to part, music21 handles it if we are careful.
-        # Or faster: just construct stream with offsets?
-        # Standard way:
+        r = m21note.Rest()
+        r.quarterLength = measure_duration
+        m.append(r)
         part.append(m)
-        
-    # Force makeMeasures or similar? 
-    # part.append automatically handles offsets if they are measures?
-    # No, usually need to ensure valid offsets. 
-    # But for just looking up by number, 'part.measure(n)' search should work 
-    # IF they are in the stream.
     
     return score
 
