@@ -181,8 +181,9 @@ export function TuneMode({
   const handleEvaluate = async (recording: INoteSequence) => {
     if (!currentNugget) return;
 
-    // Trim recording to max 2x the target note count (keep LAST notes - most recent attempt)
-    const targetNoteCount = (currentNugget.nugget.noteSequence as INoteSequence)?.notes?.length || 8;
+    // Get the note sequence from either nugget or assembly
+    const targetSequence = (currentNugget.nugget?.noteSequence || currentNugget.assembly?.noteSequence) as INoteSequence | undefined;
+    const targetNoteCount = targetSequence?.notes?.length || 8;
     const maxNotes = targetNoteCount * 2;
     
     let trimmedRecording = recording;
@@ -205,7 +206,7 @@ export function TuneMode({
       if (debugMode) {
         const debugResponse = await evaluateAttempt.mutateAsync({
           tuneKey,
-          nuggetId: currentNugget.nuggetId,
+          nuggetId: currentNugget.itemId,
           userSequence: trimmedRecording,
           localUserId,
           language,
@@ -215,8 +216,8 @@ export function TuneMode({
         setIsEvaluating(false);
         setEvalDebugData({
           tuneKey,
-          nuggetId: currentNugget.nuggetId,
-          targetSequence: currentNugget.nugget.noteSequence,
+          nuggetId: currentNugget.itemId,
+          targetSequence,
           userSequence: trimmedRecording,
           prompt: (debugResponse as any).prompt,
           request: (debugResponse as any).request,
@@ -224,7 +225,7 @@ export function TuneMode({
       } else {
         const response = await evaluateAttempt.mutateAsync({
           tuneKey,
-          nuggetId: currentNugget.nuggetId,
+          nuggetId: currentNugget.itemId,
           userSequence: trimmedRecording,
           localUserId,
           language,
@@ -270,7 +271,7 @@ export function TuneMode({
     try {
       const response = await evaluateAttempt.mutateAsync({
         tuneKey,
-        nuggetId: currentNugget.nuggetId,
+        nuggetId: currentNugget.itemId,
         userSequence: lastProcessedRecording.current,
         localUserId,
         language,
@@ -310,8 +311,10 @@ export function TuneMode({
       silenceTimer.current = null;
     }
     
-    if (currentNugget?.nugget?.noteSequence) {
-      onPlaySample(currentNugget.nugget.noteSequence as INoteSequence);
+    // Get note sequence from either nugget or assembly
+    const noteSequence = currentNugget?.nugget?.noteSequence || currentNugget?.assembly?.noteSequence;
+    if (noteSequence) {
+      onPlaySample(noteSequence as INoteSequence);
     }
   }, [currentNugget, onPlaySample]);
 
@@ -332,13 +335,13 @@ export function TuneMode({
   }, [nextNugget, currentRecording, clearEvaluation]);
 
   useEffect(() => {
-    if (!currentNugget?.nuggetId) return;
-    const autoPlayKey = `${currentNugget.nuggetId}:${autoPlayTrigger}`;
+    if (!currentNugget?.itemId) return;
+    const autoPlayKey = `${currentNugget.itemId}:${autoPlayTrigger}`;
     if (lastAutoPlayKey.current === autoPlayKey) return;
     if (isPlayingSample || isRecording) return;
     lastAutoPlayKey.current = autoPlayKey;
     handlePlaySample();
-  }, [currentNugget?.nuggetId, autoPlayTrigger, isPlayingSample, isRecording, handlePlaySample]);
+  }, [currentNugget?.itemId, autoPlayTrigger, isPlayingSample, isRecording, handlePlaySample]);
 
   // Render based on phase
   if (state.error) {

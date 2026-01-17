@@ -10,65 +10,60 @@ const corsHeaders = {
 interface TuneMotif {
   id: string;
   label: string;
-  importance: string;
+  importance: number;
   description: string;
-  occurrences: string[];
 }
 
 interface TuneNugget {
   id: string;
   label: string;
   location: { 
-    measures?: [number, number]; 
     startMeasure?: number;
     endMeasure?: number;
     startBeat?: number; 
     endBeat?: number;
   };
-  staffFocus: string | { primary?: string };
-  priority: number;
-  difficulty: number | { level?: number };
   dependsOn: string[];
-  teacherHints: {
-    goal: string;
-    counting?: string;
-    commonMistakes?: string | string[];
-    whatToListenFor?: string | string[];
-  };
-  practicePlan?: unknown;
+  modes?: string[];
   noteSequence?: unknown;
+  leftHandSequence?: unknown;
+  rightHandSequence?: unknown;
+}
+
+interface TuneAssembly {
+  id: string;
+  tier: number;
+  label: string;
+  nuggetIds: string[];
+  difficulty?: { level: number };
+  modes?: string[];
+  noteSequence?: unknown;
+  leftHandSequence?: unknown;
+  rightHandSequence?: unknown;
+}
+
+interface TuneHints {
+  goal?: string;
+  counting?: string;
+  commonMistakes?: string[];
+  whatToListenFor?: string[];
 }
 
 // Helper to extract measure range from nugget location
 function getMeasureRange(n: TuneNugget): string {
-  if (n.location.measures) {
-    return `${n.location.measures[0]}-${n.location.measures[1]}`;
-  }
   if (n.location.startMeasure !== undefined) {
     return `${n.location.startMeasure}-${n.location.endMeasure || n.location.startMeasure}`;
   }
   return "unknown";
 }
 
-// Helper to extract difficulty level
-function getDifficulty(n: TuneNugget): number {
-  if (typeof n.difficulty === "number") return n.difficulty;
-  if (typeof n.difficulty === "object" && n.difficulty?.level !== undefined) return n.difficulty.level;
-  return 1;
-}
-
-// Helper to extract staff focus
-function getStaffFocus(n: TuneNugget): string {
-  if (typeof n.staffFocus === "string") return n.staffFocus;
-  if (typeof n.staffFocus === "object" && n.staffFocus?.primary) return n.staffFocus.primary;
-  return "both";
-}
-
 interface TuneBriefing {
   title: string;
-  schemaVersion: number;
+  schemaVersion: string;
   motifs: TuneMotif[];
+  tuneHints?: TuneHints;
   teachingOrder: string[];
+  assemblyOrder?: string[];
 }
 
 interface NuggetState {
@@ -81,7 +76,8 @@ interface NuggetState {
 }
 
 interface PracticePlanItem {
-  nuggetId: string;
+  itemId: string;
+  itemType: "nugget" | "assembly";
   instruction: string;
   motifs: string[];
 }
@@ -131,8 +127,10 @@ serve(async (req) => {
 
     const briefing = tuneAsset.briefing as TuneBriefing;
     const nuggets = (tuneAsset.nuggets || []) as TuneNugget[];
+    const assemblies = (tuneAsset.assemblies || []) as TuneAssembly[];
+    const tuneHints = briefing?.tuneHints;
 
-    console.log(`[tune-coach] Loaded tune: ${briefing.title}, ${nuggets.length} nuggets, ${briefing.motifs?.length || 0} motifs`);
+    console.log(`[tune-coach] Loaded tune: ${briefing.title}, ${nuggets.length} nuggets, ${assemblies.length} assemblies`);
 
     // 2. Fetch user's nugget states for this tune
     let nuggetStatesQuery = supabase
@@ -168,17 +166,37 @@ serve(async (req) => {
       };
     });
 
+    // Calculate overall proficiency metrics
+    const totalNuggets = nuggets.length;
+    const nuggetsWithStreak3Plus = practiceHistory.filter(h => h.currentStreak >= 3).length;
+    const nuggetsWithStreak2Plus = practiceHistory.filter(h => h.currentStreak >= 2).length;
+    const averageStreak = practiceHistory.reduce((sum, h) => sum + h.currentStreak, 0) / Math.max(totalNuggets, 1);
+    
+    const proficiencyLevel = nuggetsWithStreak3Plus >= totalNuggets * 0.7 ? "advanced" :
+                            nuggetsWithStreak2Plus >= totalNuggets * 0.5 ? "intermediate" : "beginner";
+
     // 4. Build LLM prompt
     const systemPrompt = `You are a piano practice coach. Your job is to create a personalized practice plan for a student working on "${briefing.title}".
 
 STUDENT CONTEXT:
 ${localUserId ? `- Student ID: ${localUserId}` : "- New student (no ID)"}
 - Language preference: ${language}
+- Proficiency level: ${proficiencyLevel}
+- Average nugget streak: ${averageStreak.toFixed(1)}
+- Nuggets mastered (streak 3+): ${nuggetsWithStreak3Plus}/${totalNuggets}
 
 TUNE OVERVIEW:
 - Title: ${briefing.title}
 - Total nuggets: ${nuggets.length}
-- Teaching order: ${briefing.teachingOrder?.join(", ") || "N1, N2, N3..."}
+- Total assemblies: ${assemblies.length}
+- Teaching order (nuggets): ${briefing.teachingOrder?.join(", ") || "N1, N2, N3..."}
+- Assembly order: ${briefing.assemblyOrder?.join(", ") || "A1, A2, B1..."}
+
+TUNE-LEVEL HINTS:
+- Goal: ${tuneHints?.goal || "Practice this piece with musicality"}
+- Counting: ${tuneHints?.counting || "Standard counting"}
+- Common Mistakes: ${tuneHints?.commonMistakes?.join("; ") || "None specified"}
+- What to Listen For: ${tuneHints?.whatToListenFor?.join("; ") || "None specified"}
 
 MOTIFS IN THIS TUNE:
 ${(briefing.motifs || []).map((m) => `- ${m.id} (${m.label}): ${m.description} [Importance: ${m.importance}]`).join("\n")}
@@ -188,41 +206,56 @@ ${nuggets.map((n) => {
   const state = statesMap.get(n.id);
   const motifLabels = n.dependsOn?.join(", ") || "none";
   const measureRange = getMeasureRange(n);
-  const difficulty = getDifficulty(n);
-  const staffFocus = getStaffFocus(n);
   return `- ${n.id} "${n.label}" (measures ${measureRange})
-    Difficulty: ${difficulty}, Staff: ${staffFocus}, Motifs: [${motifLabels}]
-    Goal: ${n.teacherHints?.goal || "Practice this section"}
+    Motifs: [${motifLabels}], Modes: ${n.modes?.join(", ") || "all"}
     Practice history: ${state ? `${state.attempt_count} attempts, ${state.pass_count} passes, streak: ${state.current_streak}` : "Never practiced"}`;
+}).join("\n")}
+
+AVAILABLE ASSEMBLIES (groupings of nuggets for progressive practice):
+${assemblies.map((a) => {
+  // Calculate average streak for nuggets in this assembly
+  const assemblyNuggetStreaks = a.nuggetIds.map(nId => statesMap.get(nId)?.current_streak || 0);
+  const avgAssemblyStreak = assemblyNuggetStreaks.reduce((sum, s) => sum + s, 0) / Math.max(assemblyNuggetStreaks.length, 1);
+  const allMastered = assemblyNuggetStreaks.every(s => s >= 3);
+  
+  return `- ${a.id} "${a.label}" (tier ${a.tier}, difficulty ${a.difficulty?.level || 1})
+    Groups: [${a.nuggetIds.join(", ")}]
+    Modes: ${a.modes?.join(", ") || "HandsTogether"}
+    Readiness: avg nugget streak ${avgAssemblyStreak.toFixed(1)}, ${allMastered ? "all nuggets mastered ✓" : "still building"}`;
 }).join("\n")}
 
 ## Practice Plan Guidelines
 
-Create a prioritized list of 3-5 nuggets for the student to practice.
+Create a prioritized list of 4-6 items mixing NUGGETS and ASSEMBLIES.
+
+**Progression Strategy:**
+
+1. **For beginners** (proficiency: beginner):
+   - Focus primarily on individual nuggets first
+   - After a student masters 2-3 sequential nuggets (streak 3+), introduce the tier-1 assembly that groups them
+   - Pattern: Nugget → Nugget → Assembly (grouping those nuggets)
+   
+2. **For intermediate** (proficiency: intermediate):
+   - Alternate between nuggets needing work and assemblies for reinforcement
+   - Use tier-1 and tier-2 assemblies to practice transitions
+   - Pattern: Nugget → Assembly → Nugget → Assembly
+   
+3. **For advanced** (proficiency: advanced):
+   - Focus primarily on assemblies, especially tier-2 and tier-3
+   - Only return to individual nuggets if specific weak spots remain
+   - Grow assembly size progressively: tier-1 → tier-2 → tier-3
+   - Pattern: Assembly → Assembly → (weak Nugget if any) → Assembly
 
 **Sequencing Rules:**
-1. PREFER nuggets that are adjacent in the tune (e.g., N1 then N2, or N3 then N4)
-   - This helps the student feel the musical flow between sections
-   - Sequential practice builds muscle memory for transitions
-
-2. AVOID placing nuggets with the same primary motif consecutively
-   - Check each nugget's dependsOn array for motif IDs (M1, M2, etc.)
-   - Variety in motifs keeps practice engaging and builds broader skills
-   - Example: If N1 depends on [M1, M3] and N3 also depends on [M1, M3], don't put them back-to-back
-
-3. Consider the student's history:
-   - Prioritize nuggets with low streak counts (need more practice)
-   - Include nuggets they haven't practiced yet
-   - Mix in mastered nuggets occasionally for confidence
-
-4. Follow the teachingOrder as a general guide, but adapt based on student needs
-
-5. For each nugget, provide a brief, encouraging instruction using the teacherHints
+1. PREFER sequential nuggets (e.g., N1 then N2) for musical flow
+2. AVOID consecutive items with the same primary motif for variety
+3. When suggesting an assembly, ensure its component nuggets have some practice history
+4. Follow teachingOrder for nuggets and assemblyOrder for assemblies as general guides
 
 RESPONSE:
-Return a practice plan with 3-5 nuggets and an encouraging message.`;
+Return a practice plan with 4-6 items (mix of nuggets and assemblies) and an encouraging message.`;
 
-    const userPrompt = `Create a practice plan for this student based on their history and the guidelines above.`;
+    const userPrompt = `Create a practice plan for this ${proficiencyLevel} student based on their history and the progression strategy above.`;
 
     const composedPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
 
@@ -231,7 +264,7 @@ Return a practice plan with 3-5 nuggets and an encouraging message.`;
         type: "function",
         function: {
           name: "submit_practice_plan",
-          description: "Submit the practice plan with prioritized nuggets",
+          description: "Submit the practice plan with prioritized items (nuggets and assemblies)",
           parameters: {
             type: "object",
             properties: {
@@ -240,13 +273,14 @@ Return a practice plan with 3-5 nuggets and an encouraging message.`;
                 items: {
                   type: "object",
                   properties: {
-                    nuggetId: { type: "string", description: "The nugget ID (e.g., N1, N2)" },
-                    instruction: { type: "string", description: "Brief instruction/goal for this nugget" },
-                    motifs: { type: "array", items: { type: "string" }, description: "Motif IDs this nugget teaches" },
+                    itemId: { type: "string", description: "The nugget or assembly ID (e.g., N1, A2, B1)" },
+                    itemType: { type: "string", enum: ["nugget", "assembly"], description: "Whether this is a nugget or assembly" },
+                    instruction: { type: "string", description: "Brief instruction/goal for this item" },
+                    motifs: { type: "array", items: { type: "string" }, description: "Motif IDs this item teaches" },
                   },
-                  required: ["nuggetId", "instruction", "motifs"],
+                  required: ["itemId", "itemType", "instruction", "motifs"],
                 },
-                description: "Ordered list of 3-5 nuggets to practice",
+                description: "Ordered list of 4-6 items (nuggets and/or assemblies) to practice",
               },
               encouragement: {
                 type: "string",
@@ -278,15 +312,24 @@ Return a practice plan with 3-5 nuggets and an encouraging message.`;
           tuneTitle: briefing.title,
           motifsCount: briefing.motifs?.length || 0,
           nuggetsCount: nuggets.length,
+          assembliesCount: assemblies.length,
+          proficiencyLevel,
           practiceHistory,
           nuggets: nuggets.map((n) => ({
             id: n.id,
             label: n.label,
             noteSequence: n.noteSequence,
-            teacherHints: n.teacherHints,
             dependsOn: n.dependsOn,
           })),
+          assemblies: assemblies.map((a) => ({
+            id: a.id,
+            tier: a.tier,
+            label: a.label,
+            nuggetIds: a.nuggetIds,
+            noteSequence: a.noteSequence,
+          })),
           motifsSummary: briefing.motifs || [],
+          tuneHints,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -327,16 +370,30 @@ Return a practice plan with 3-5 nuggets and an encouraging message.`;
       encouragement: string;
     };
 
-    // Enrich practice plan with full nugget data
+    // Enrich practice plan with full nugget/assembly data
     const enrichedPlan = planResult.practicePlan.map((item) => {
-      const nugget = nuggets.find((n) => n.id === item.nuggetId);
-      return {
-        nuggetId: item.nuggetId,
-        nugget: nugget || null,
-        instruction: item.instruction,
-        motifs: item.motifs,
-      };
-    }).filter((item) => item.nugget !== null);
+      if (item.itemType === "nugget") {
+        const nugget = nuggets.find((n) => n.id === item.itemId);
+        return {
+          itemId: item.itemId,
+          itemType: item.itemType,
+          nugget: nugget || null,
+          assembly: null,
+          instruction: item.instruction,
+          motifs: item.motifs,
+        };
+      } else {
+        const assembly = assemblies.find((a) => a.id === item.itemId);
+        return {
+          itemId: item.itemId,
+          itemType: item.itemType,
+          nugget: null,
+          assembly: assembly || null,
+          instruction: item.instruction,
+          motifs: item.motifs,
+        };
+      }
+    }).filter((item) => item.nugget !== null || item.assembly !== null);
 
     return new Response(
       JSON.stringify({
@@ -344,7 +401,9 @@ Return a practice plan with 3-5 nuggets and an encouraging message.`;
         encouragement: planResult.encouragement,
         tuneTitle: briefing.title,
         motifsSummary: briefing.motifs || [],
+        tuneHints,
         practiceHistory,
+        proficiencyLevel,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

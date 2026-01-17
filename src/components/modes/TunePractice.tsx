@@ -93,7 +93,9 @@ export function TunePractice({
 }: TunePracticeProps) {
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
-  const sampleSequence = currentNugget.nugget.noteSequence as NoteSequence | undefined;
+  
+  // Get sample sequence from either nugget or assembly
+  const sampleSequence = (currentNugget.nugget?.noteSequence || currentNugget.assembly?.noteSequence) as NoteSequence | undefined;
 
   useEffect(() => {
     if (!streakComplete) {

@@ -63,6 +63,7 @@ interface ValidationWarning {
 interface TuneAssetBundle {
   briefing?: Record<string, unknown>;
   nuggets?: Array<Record<string, unknown>>;
+  assemblies?: Array<Record<string, unknown>>;
   noteSequence: Record<string, unknown>;
   leftHandSequence?: Record<string, unknown>;
   rightHandSequence?: Record<string, unknown>;
@@ -855,6 +856,7 @@ serve(async (req) => {
           left_hand_sequence: assets.leftHandSequence || null,
           right_hand_sequence: assets.rightHandSequence || null,
           nuggets: assets.nuggets || null,
+          assemblies: assets.assemblies || null,
         };
       });
 
