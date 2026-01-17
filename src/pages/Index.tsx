@@ -1561,6 +1561,7 @@ const Index = () => {
             appState === "waiting_for_ai"
           }
           soundType={pianoSoundType}
+          hasColor={isInTuneMode}
           onNoteStart={handleNoteStart}
           onNoteEnd={handleNoteEnd}
         />

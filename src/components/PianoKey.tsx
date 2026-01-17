@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { getNoteColorForNoteName } from "@/constants/noteColors";
 
 interface PianoKeyProps {
   note: string;
@@ -7,6 +8,7 @@ interface PianoKeyProps {
   isActive: boolean;
   isSustained: boolean;
   isPlayable: boolean;
+  hasColor?: boolean;
   onPress: () => void;
   onRelease: () => void;
   disabled?: boolean;
@@ -19,6 +21,7 @@ export const PianoKey = ({
   isActive,
   isSustained,
   isPlayable,
+  hasColor = false,
   onPress,
   onRelease,
   disabled,
@@ -105,9 +108,14 @@ export const PianoKey = ({
     >
       <span
         className={cn(
-          "absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium opacity-30 pointer-events-none select-none",
-          isBlack ? "text-foreground" : "text-muted-foreground",
+          "absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium pointer-events-none select-none",
+          hasColor
+            ? "px-2 py-0.5 rounded-full text-white"
+            : "opacity-30",
+          hasColor && (isActive ? "opacity-0" : "opacity-100"),
+          !hasColor && (isBlack ? "text-foreground" : "text-muted-foreground"),
         )}
+        style={hasColor ? { backgroundColor: getNoteColorForNoteName(note) } : undefined}
       >
         {note}
       </span>

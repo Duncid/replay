@@ -134,6 +134,8 @@ export function TunePractice({
                   compact
                   noTitle
                   noControls
+                  hasColor
+                  scale={0.92}
                 />
               </div>
             ) : null}

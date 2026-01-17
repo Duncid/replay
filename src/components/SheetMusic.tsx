@@ -3,6 +3,8 @@ import abcjs from "abcjs";
 import { Button } from "@/components/ui/button";
 import { Play, MoreHorizontal, Copy } from "lucide-react";
 import { NoteSequence } from "@/types/noteSequence";
+import { getNoteColorForNoteName } from "@/constants/noteColors";
+import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
 import {
   DropdownMenu,
@@ -20,6 +22,8 @@ interface SheetMusicProps {
   compact?: boolean;
   noTitle?: boolean;
   noControls?: boolean;
+  hasColor?: boolean;
+  scale?: number;
 }
 
 export const SheetMusic = ({
@@ -30,11 +34,51 @@ export const SheetMusic = ({
   compact = false,
   noTitle = false,
   noControls = false,
+  hasColor = false,
+  scale,
 }: SheetMusicProps) => {
   const renderDivRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const containerWidth = sequence ? Math.max(48, sequence.totalTime * 48) : 48;
+  const renderScale = scale ?? 0.8;
+
+  const applyNoteColors = () => {
+    if (!hasColor || !renderDivRef.current || !sequence.notes?.length) return;
+
+    const notesByStartTime = new Map<number, typeof sequence.notes>();
+    sequence.notes.forEach((note) => {
+      const key = Math.round(note.startTime * 1000);
+      if (!notesByStartTime.has(key)) {
+        notesByStartTime.set(key, []);
+      }
+      notesByStartTime.get(key)!.push(note);
+    });
+
+    const sortedKeys = Array.from(notesByStartTime.keys()).sort((a, b) => a - b);
+    const noteColors: Array<string | undefined> = [];
+
+    sortedKeys.forEach((key) => {
+      const notes = notesByStartTime.get(key) ?? [];
+      notes.forEach((note) => {
+        const noteName = midiToNoteName(note.pitch);
+        noteColors.push(getNoteColorForNoteName(noteName));
+      });
+    });
+
+    const noteElements = renderDivRef.current.querySelectorAll<SVGElement>(".abcjs-note");
+    noteElements.forEach((element, index) => {
+      const color = noteColors[index];
+      if (!color) return;
+
+      element.setAttribute("fill", color);
+      element.setAttribute("stroke", color);
+      element.querySelectorAll<SVGElement>("path, ellipse, circle").forEach((child) => {
+        child.setAttribute("fill", color);
+        child.setAttribute("stroke", color);
+      });
+    });
+  };
 
   useEffect(() => {
     if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
@@ -45,11 +89,12 @@ export const SheetMusic = ({
     renderDivRef.current.innerHTML = "";
 
     const options = compact
-      ? { staffwidth: containerWidth, scale: 0.8, add_classes: true }
-      : { responsive: "resize" as const, staffwidth: 600, scale: 0.8, add_classes: true };
+      ? { staffwidth: containerWidth, scale: renderScale, add_classes: true }
+      : { responsive: "resize" as const, staffwidth: 600, scale: renderScale, add_classes: true };
 
     abcjs.renderAbc(renderDivRef.current, abc, options);
-  }, [sequence, label, isUserNotes, compact, noTitle]);
+    applyNoteColors();
+  }, [sequence, label, isUserNotes, compact, noTitle, renderScale, hasColor]);
 
   const handleCopySequence = async () => {
     try {
@@ -69,7 +114,7 @@ export const SheetMusic = ({
         <div 
           ref={renderDivRef} 
           style={{ width: containerWidth, minWidth: containerWidth, height: 64 }}
-          className="overflow-hidden [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground" 
+          className="overflow-hidden [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground [&_.abcjs-staff]:opacity-50 [&_.abcjs-staff_line]:opacity-50 [&_.abcjs-staff line]:opacity-50 [&_.abcjs-staff path]:opacity-50" 
         />
       );
     }
@@ -79,7 +124,7 @@ export const SheetMusic = ({
         <div className="flex items-center gap-2">
           <div
             ref={renderDivRef}
-            className="flex-1 overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground"
+            className="flex-1 overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground [&_.abcjs-staff]:opacity-50 [&_.abcjs-staff_line]:opacity-50 [&_.abcjs-staff line]:opacity-50 [&_.abcjs-staff path]:opacity-50"
           />
           <div className="flex items-center gap-1 shrink-0">
             {onReplay && (
@@ -136,7 +181,7 @@ export const SheetMusic = ({
       </div>
       <div
         ref={renderDivRef}
-        className="overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground"
+        className="overflow-x-auto [&_svg]:max-w-full [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground [&_.abcjs-staff]:opacity-50 [&_.abcjs-staff_line]:opacity-50 [&_.abcjs-staff line]:opacity-50 [&_.abcjs-staff path]:opacity-50"
       />
     </div>
   );

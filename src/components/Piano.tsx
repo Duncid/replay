@@ -22,6 +22,7 @@ interface PianoProps {
   soundType?: PianoSoundType;
   onNoteStart?: (noteKey: string, frequency: number, velocity: number) => void;
   onNoteEnd?: (noteKey: string, frequency: number) => void;
+  hasColor?: boolean;
 }
 
 export interface PianoHandle {
@@ -31,7 +32,8 @@ export interface PianoHandle {
   handleKeyRelease: (noteKey: string, frequency: number) => void;
 }
 
-const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, soundType = "classic", onNoteStart, onNoteEnd }, ref) => {
+const Piano = forwardRef<PianoHandle, PianoProps>(
+  ({ activeKeys, allowInput, soundType = "classic", onNoteStart, onNoteEnd, hasColor = false }, ref) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const [sustainedKeys, setSustainedKeys] = useState<Set<string>>(new Set());
   const pressedKeysRef = useRef<Set<string>>(new Set());
@@ -288,6 +290,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
                 isActive={isActive}
                 isSustained={isSustained}
                 isPlayable={isPlayable}
+                hasColor={hasColor}
                 onPress={() => handleKeyPress(noteKey, note.frequency)}
                 onRelease={() => handleKeyRelease(noteKey, note.frequency)}
                 disabled={!allowInput || !isPlayable}
@@ -313,6 +316,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
                 isActive={isActive}
                 isSustained={isSustained}
                 isPlayable={isPlayable}
+                hasColor={hasColor}
                 onPress={() => handleKeyPress(noteKey, note.frequency)}
                 onRelease={() => handleKeyRelease(noteKey, note.frequency)}
                 disabled={!allowInput || !isPlayable}
@@ -324,7 +328,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(({ activeKeys, allowInput, sou
       </div>
     </div>
   );
-});
+  }
+);
 
 Piano.displayName = "Piano";
 
