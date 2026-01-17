@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Play, SkipForward, Music, Loader2, Check, X, Minus, Send } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Play, ArrowRight, Music, Send, Check, X, Minus } from "lucide-react";
 import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +19,8 @@ interface TunePracticeProps {
   isEvaluating?: boolean;
   isRecording?: boolean;
 }
+
+const STREAK_THRESHOLD = 3;
 
 // Inline evaluation badge that fades after display
 function EvaluationBadge({ evaluation }: { evaluation: TuneEvaluationResponse }) {
@@ -53,11 +54,32 @@ function EvaluationBadge({ evaluation }: { evaluation: TuneEvaluationResponse })
   );
 }
 
+// Streak dots component
+function StreakDots({ currentStreak }: { currentStreak: number }) {
+  const streakComplete = currentStreak >= STREAK_THRESHOLD;
+  
+  return (
+    <div className="flex items-center gap-1.5">
+      {Array.from({ length: STREAK_THRESHOLD }).map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "w-3 h-3 rounded-full border-2 transition-colors duration-300",
+            i < currentStreak
+              ? "bg-primary border-primary"
+              : "bg-transparent border-muted-foreground/30"
+          )}
+        />
+      ))}
+      {streakComplete && (
+        <span className="text-lg ml-1 animate-in fade-in zoom-in">🔥</span>
+      )}
+    </div>
+  );
+}
+
 export function TunePractice({
-  tuneTitle,
   currentNugget,
-  currentIndex,
-  totalNuggets,
   currentStreak,
   lastEvaluation,
   onPlaySample,
@@ -67,6 +89,8 @@ export function TunePractice({
   isEvaluating = false,
   isRecording = false,
 }: TunePracticeProps) {
+  const streakComplete = currentStreak >= STREAK_THRESHOLD;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -76,58 +100,14 @@ export function TunePractice({
           Leave
         </Button>
         
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-foreground">{tuneTitle}</h2>
-          <p className="text-sm text-muted-foreground">
-            Section {currentIndex + 1} of {totalNuggets}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-0.5">
-          {currentStreak > 0 && (
-            Array.from({ length: Math.min(currentStreak, 5) }).map((_, i) => (
-              <span 
-                key={i} 
-                className="text-xl animate-in fade-in zoom-in duration-300" 
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                🔥
-              </span>
-            ))
-          )}
-        </div>
+        <StreakDots currentStreak={currentStreak} />
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
         <Card className="w-full max-w-md">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl">{currentNugget.nugget.label}</CardTitle>
-              <Badge variant="outline">{currentNugget.nuggetId}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-6">
             <p className="text-foreground">{currentNugget.instruction}</p>
-            
-            {currentNugget.nugget.teacherHints?.goal && (
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Goal: </span>
-                  {currentNugget.nugget.teacherHints.goal}
-                </p>
-              </div>
-            )}
-
-            {currentNugget.motifs.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {currentNugget.motifs.map((motif) => (
-                  <Badge key={motif} variant="secondary" className="text-xs">
-                    {motif}
-                  </Badge>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -165,27 +145,22 @@ export function TunePractice({
             ) : (
               <>
                 <Play className="h-5 w-5" />
-                Play Sample
+                Play
               </>
             )}
           </Button>
 
-          {totalNuggets > 1 && (
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={onSwitchNugget}
-              className="gap-2"
-            >
-              <SkipForward className="h-5 w-5" />
-              Next Section
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={onSwitchNugget}
+            isPulsating={streakComplete}
+            className="gap-2"
+          >
+            Next
+            <ArrowRight className="h-5 w-5" />
+          </Button>
         </div>
-
-        <p className="text-sm text-muted-foreground text-center max-w-sm">
-          Play the section on your piano. Recording will stop automatically when you pause.
-        </p>
       </div>
     </div>
   );
