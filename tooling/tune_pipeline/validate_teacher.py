@@ -8,8 +8,9 @@ class TeacherValidationError(ValueError):
 
 
 def validate_teacher(payload: Dict[str, Any]) -> None:
-    if payload.get("schemaVersion") != "nuggets-teacher.v1":
-        raise TeacherValidationError("schemaVersion must be 'nuggets-teacher.v1'")
+    valid_schemas = ["nuggets-teacher.v1", "teacher.v2"]
+    if payload.get("schemaVersion") not in valid_schemas:
+        raise TeacherValidationError(f"schemaVersion must be one of {valid_schemas}")
     if "pipelineSettings" not in payload:
         raise TeacherValidationError("Missing pipelineSettings")
     nuggets = payload.get("nuggets")

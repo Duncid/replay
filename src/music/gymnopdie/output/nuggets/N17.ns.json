@@ -1,25 +1,79 @@
 {
   "notes": [
     {
+      "pitch": 57,
+      "startTime": 1.1111020000000025,
+      "endTime": 3.3333240000000046,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 60,
+      "startTime": 1.1111020000000025,
+      "endTime": 3.3333240000000046,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 64,
+      "startTime": 1.1111020000000025,
+      "endTime": 3.3333240000000046,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 72,
+      "startTime": 1.1111020000000025,
+      "endTime": 2.2222130000000107,
+      "velocity": 63.0
+    },
+    {
       "pitch": 74,
-      "startTime": 0.8888840000000044,
-      "endTime": 1.9999950000000055,
-      "velocity": 45.0
+      "startTime": 2.2222130000000107,
+      "endTime": 3.3333240000000046,
+      "velocity": 63.0
     },
     {
       "pitch": 38,
-      "startTime": 1.9999950000000055,
-      "endTime": 5.333328000000002,
-      "velocity": 63.0
+      "startTime": 3.3333240000000046,
+      "endTime": 6.666657000000015,
+      "velocity": 81.0
     },
     {
-      "pitch": 69,
-      "startTime": 1.9999950000000055,
-      "endTime": 5.333328000000002,
-      "velocity": 63.0
+      "pitch": 76,
+      "startTime": 3.3333240000000046,
+      "endTime": 4.444435000000013,
+      "velocity": 81.0
+    },
+    {
+      "pitch": 50,
+      "startTime": 4.444435000000013,
+      "endTime": 6.666657000000015,
+      "velocity": 81.0
+    },
+    {
+      "pitch": 55,
+      "startTime": 4.444435000000013,
+      "endTime": 6.666657000000015,
+      "velocity": 81.0
+    },
+    {
+      "pitch": 59,
+      "startTime": 4.444435000000013,
+      "endTime": 6.666657000000015,
+      "velocity": 81.0
+    },
+    {
+      "pitch": 64,
+      "startTime": 4.444435000000013,
+      "endTime": 6.666657000000015,
+      "velocity": 81.0
+    },
+    {
+      "pitch": 74,
+      "startTime": 4.444435000000013,
+      "endTime": 5.555546000000007,
+      "velocity": 81.0
     }
   ],
-  "totalTime": 2.5,
+  "totalTime": 5.5,
   "tempos": [],
   "timeSignatures": []
 }

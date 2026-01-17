@@ -1,31 +1,31 @@
 {
   "notes": [
     {
-      "pitch": 43,
-      "startTime": 0.3333300000000037,
-      "endTime": 3.666663,
+      "pitch": 40,
+      "startTime": 1.499994000000008,
+      "endTime": 4.833327000000004,
+      "velocity": 45.0
+    },
+    {
+      "pitch": 55,
+      "startTime": 2.611105000000002,
+      "endTime": 4.833327000000004,
       "velocity": 45.0
     },
     {
       "pitch": 59,
-      "startTime": 1.4444410000000047,
-      "endTime": 3.666663,
+      "startTime": 2.611105000000002,
+      "endTime": 4.833327000000004,
       "velocity": 45.0
     },
     {
-      "pitch": 62,
-      "startTime": 1.4444410000000047,
-      "endTime": 3.666663,
-      "velocity": 45.0
-    },
-    {
-      "pitch": 66,
-      "startTime": 1.4444410000000047,
-      "endTime": 3.666663,
+      "pitch": 40,
+      "startTime": 4.833327000000004,
+      "endTime": 8.166660000000007,
       "velocity": 45.0
     }
   ],
-  "totalTime": 2.5,
+  "totalTime": 5.5,
   "tempos": [],
   "timeSignatures": []
 }

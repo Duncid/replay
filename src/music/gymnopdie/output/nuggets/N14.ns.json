@@ -1,37 +1,79 @@
 {
   "notes": [
     {
-      "pitch": 43,
-      "startTime": 0.999996000000003,
-      "endTime": 4.333329000000006,
-      "velocity": 45.0
+      "pitch": 57,
+      "startTime": 0.6111040000000116,
+      "endTime": 2.8333259999999996,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 60,
+      "startTime": 0.6111040000000116,
+      "endTime": 2.8333259999999996,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 64,
+      "startTime": 0.6111040000000116,
+      "endTime": 2.8333259999999996,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 71,
+      "startTime": 0.6111040000000116,
+      "endTime": 1.7222150000000056,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 72,
+      "startTime": 1.7222150000000056,
+      "endTime": 2.8333259999999996,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 38,
+      "startTime": 2.8333259999999996,
+      "endTime": 6.16665900000001,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 76,
+      "startTime": 2.8333259999999996,
+      "endTime": 3.9444370000000077,
+      "velocity": 63.0
+    },
+    {
+      "pitch": 55,
+      "startTime": 3.9444370000000077,
+      "endTime": 6.16665900000001,
+      "velocity": 63.0
     },
     {
       "pitch": 59,
-      "startTime": 2.111107000000004,
-      "endTime": 4.333329000000006,
-      "velocity": 45.0
+      "startTime": 3.9444370000000077,
+      "endTime": 6.16665900000001,
+      "velocity": 63.0
     },
     {
-      "pitch": 62,
-      "startTime": 2.111107000000004,
-      "endTime": 4.333329000000006,
-      "velocity": 45.0
+      "pitch": 64,
+      "startTime": 3.9444370000000077,
+      "endTime": 6.16665900000001,
+      "velocity": 63.0
     },
     {
-      "pitch": 66,
-      "startTime": 2.111107000000004,
-      "endTime": 4.333329000000006,
-      "velocity": 45.0
+      "pitch": 74,
+      "startTime": 3.9444370000000077,
+      "endTime": 5.055548000000002,
+      "velocity": 63.0
     },
     {
-      "pitch": 78,
-      "startTime": 2.111107000000004,
-      "endTime": 3.222218000000005,
-      "velocity": 45.0
+      "pitch": 71,
+      "startTime": 5.055548000000002,
+      "endTime": 6.16665900000001,
+      "velocity": 63.0
     }
   ],
-  "totalTime": 2.5,
+  "totalTime": 5.5,
   "tempos": [],
   "timeSignatures": []
 }

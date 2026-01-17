@@ -152,3 +152,113 @@ def extract_nuggets(
             
             with open(nuggets_dir / filename, 'w') as f:
                 json.dump(extracted_ns, f, indent=2)
+
+
+def extract_assemblies(
+    score: stream.Score,
+    combined_part: stream.Part,
+    output_dir: Path,
+    assemblies: List[Dict[str, Any]],
+    nuggets: List[Dict[str, Any]],
+    note_sequences: Dict[str, Dict[str, Any]]
+) -> None:
+    """Extract assemblies by combining nugget ranges.
+    
+    For each assembly, find the start of the first nugget and end of the last nugget,
+    then extract notes from that range.
+    """
+    boundaries = _tempo_boundaries(score)
+    
+    # Create assemblies directory
+    assemblies_dir = output_dir / "assemblies"
+    assemblies_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Build nugget lookup by id
+    nugget_by_id: Dict[str, Dict[str, Any]] = {n["id"]: n for n in nuggets if "id" in n}
+    
+    for assembly in assemblies:
+        if "id" not in assembly or "nuggetIds" not in assembly:
+            continue
+            
+        assembly_id = str(assembly["id"])
+        nugget_ids = assembly["nuggetIds"]
+        
+        if not nugget_ids:
+            print(f"Skipping assembly {assembly_id}: no nuggetIds")
+            continue
+        
+        # Collect locations from referenced nuggets
+        locations = []
+        for nid in nugget_ids:
+            nugget = nugget_by_id.get(nid)
+            if not nugget or "location" not in nugget:
+                print(f"Warning: nugget {nid} not found for assembly {assembly_id}")
+                continue
+            locations.append((nid, nugget["location"]))
+        
+        if not locations:
+            print(f"Skipping assembly {assembly_id}: no valid nugget locations")
+            continue
+        
+        # Find start of first nugget and end of last nugget
+        # Sort by (startMeasure, startBeat) to find first and last
+        def get_start(loc: Dict[str, Any]) -> Tuple[int, float]:
+            start_m = loc.get("startMeasure") or loc.get("start", {}).get("measure", 1)
+            start_b = loc.get("startBeat", 1) if "startBeat" in loc else loc.get("start", {}).get("beat", 1)
+            return (int(start_m), float(start_b))
+        
+        def get_end(loc: Dict[str, Any]) -> Tuple[int, float]:
+            end_m = loc.get("endMeasure") or loc.get("end", {}).get("measure", 1)
+            end_b = loc.get("endBeat", 1) if "endBeat" in loc else loc.get("end", {}).get("beat", 1)
+            return (int(end_m), float(end_b))
+        
+        # Sort locations by start position
+        sorted_locs = sorted(locations, key=lambda x: get_start(x[1]))
+        first_loc = sorted_locs[0][1]
+        
+        # Sort by end position to find last
+        sorted_by_end = sorted(locations, key=lambda x: get_end(x[1]))
+        last_loc = sorted_by_end[-1][1]
+        
+        start_m, start_b = get_start(first_loc)
+        end_m, end_b = get_end(last_loc)
+        
+        try:
+            start_offset = _measure_offset(combined_part, start_m, start_b)
+            end_offset = _measure_offset(combined_part, end_m, end_b)
+            
+            start_seconds = _offset_to_seconds(start_offset, boundaries)
+            end_seconds = _offset_to_seconds(end_offset, boundaries)
+            
+        except Exception as e:
+            print(f"Skipping assembly {assembly_id}: {e}")
+            continue
+        
+        # Extract for each track
+        for track_name, ns in note_sequences.items():
+            suffix = "" if track_name == "full" else f".{track_name}"
+            filename = f"{assembly_id}{suffix}.ns.json"
+            
+            # Slice notes
+            sliced_notes = []
+            for note in ns["notes"]:
+                if start_seconds <= note["startTime"] < end_seconds:
+                    new_note = copy.deepcopy(note)
+                    new_note["startTime"] -= start_seconds
+                    new_note["endTime"] -= start_seconds
+                    sliced_notes.append(new_note)
+            
+            total_duration = end_seconds - start_seconds
+            
+            import json
+            extracted_ns = {
+                "notes": sliced_notes,
+                "totalTime": total_duration,
+                "tempos": [],
+                "timeSignatures": []
+            }
+            
+            with open(assemblies_dir / filename, 'w') as f:
+                json.dump(extracted_ns, f, indent=2)
+        
+        print(f"Extracted assembly {assembly_id}: {len(sliced_notes)} notes, {total_duration:.2f}s")
