@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Play, ArrowRight, Music, Send, Check, X, Minus } from "lucide-react";
-import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
 import { cn } from "@/lib/utils";
+import type { NoteSequence } from "@/types/noteSequence";
+import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
+import { ArrowLeft, ArrowRight, Check, Minus, Music, Play, Send, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface TunePracticeProps {
   tuneTitle: string;
@@ -90,6 +92,23 @@ export function TunePractice({
   isRecording = false,
 }: TunePracticeProps) {
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
+  const [shouldPulse, setShouldPulse] = useState(false);
+  const sampleSequence = currentNugget.nugget.noteSequence as NoteSequence | undefined;
+
+  useEffect(() => {
+    if (!streakComplete) {
+      setShouldPulse(false);
+      return;
+    }
+    setShouldPulse(true);
+    const timer = setTimeout(() => setShouldPulse(false), 2500);
+    return () => clearTimeout(timer);
+  }, [streakComplete]);
+
+  const handleNextNugget = () => {
+    setShouldPulse(false);
+    onSwitchNugget();
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -108,6 +127,16 @@ export function TunePractice({
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <p className="text-foreground">{currentNugget.instruction}</p>
+            {sampleSequence?.notes?.length ? (
+              <div className="mt-4 flex justify-center">
+                <SheetMusic
+                  sequence={sampleSequence}
+                  compact
+                  noTitle
+                  noControls
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -153,8 +182,8 @@ export function TunePractice({
           <Button
             variant="ghost"
             size="lg"
-            onClick={onSwitchNugget}
-            isPulsating={streakComplete}
+            onClick={handleNextNugget}
+            isPulsating={shouldPulse}
             className="gap-2"
           >
             Next

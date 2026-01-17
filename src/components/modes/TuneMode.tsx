@@ -40,11 +40,13 @@ export function TuneMode({
   const [coachDebugData, setCoachDebugData] = useState<TuneDebugData | null>(null);
   const [evalDebugData, setEvalDebugData] = useState<TuneEvaluationDebugData | null>(null);
   const [pendingCoachResponse, setPendingCoachResponse] = useState<TuneCoachResponse | null>(null);
+  const [autoPlayTrigger, setAutoPlayTrigger] = useState(0);
 
   // Track if we've processed the current recording
   const lastProcessedRecording = useRef<INoteSequence | null>(null);
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
   const preEvalTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastAutoPlayKey = useRef<string | null>(null);
   
   // Track evaluation state for inline indicator
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -242,6 +244,10 @@ export function TuneMode({
         } else {
           toast(response.feedbackText, { duration: 3000 });
         }
+
+        if (response.evaluation === "fail" && !isPlayingSample && !isRecording) {
+          handlePlaySample();
+        }
         
         // Suggest moving to next nugget if streak threshold reached
         if (response.suggestNewNugget && state.currentIndex < state.practicePlan.length - 1) {
@@ -280,6 +286,10 @@ export function TuneMode({
       } else {
         toast(response.feedbackText, { duration: 3000 });
       }
+
+      if (response.evaluation === "fail" && !isPlayingSample && !isRecording) {
+        handlePlaySample();
+      }
     } catch (error) {
       console.error("Error evaluating attempt:", error);
       setIsEvaluating(false);
@@ -307,9 +317,28 @@ export function TuneMode({
 
   const handleSwitchNugget = useCallback(() => {
     nextNugget();
-    lastProcessedRecording.current = null;
+    lastProcessedRecording.current = currentRecording ?? null;
     setIsEvaluating(false);
-  }, [nextNugget]);
+    clearEvaluation();
+    setAutoPlayTrigger((prev) => prev + 1);
+    if (preEvalTimer.current) {
+      clearTimeout(preEvalTimer.current);
+      preEvalTimer.current = null;
+    }
+    if (silenceTimer.current) {
+      clearTimeout(silenceTimer.current);
+      silenceTimer.current = null;
+    }
+  }, [nextNugget, currentRecording, clearEvaluation]);
+
+  useEffect(() => {
+    if (!currentNugget?.nuggetId) return;
+    const autoPlayKey = `${currentNugget.nuggetId}:${autoPlayTrigger}`;
+    if (lastAutoPlayKey.current === autoPlayKey) return;
+    if (isPlayingSample || isRecording) return;
+    lastAutoPlayKey.current = autoPlayKey;
+    handlePlaySample();
+  }, [currentNugget?.nuggetId, autoPlayTrigger, isPlayingSample, isRecording, handlePlaySample]);
 
   // Render based on phase
   if (state.error) {

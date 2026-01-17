@@ -65,12 +65,14 @@ export function useTuneState(tuneKey: string) {
         return {
           ...prev,
           currentIndex: 0,
+          currentStreak: 0,
           lastEvaluation: null,
         };
       }
       return {
         ...prev,
         currentIndex: nextIndex,
+        currentStreak: 0,
         lastEvaluation: null,
       };
     });

@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +15,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { PracticePlanDebugCard } from "./PracticePlanDebugCard";
-import { Music } from "lucide-react";
 
 export interface TeacherDebugData {
   debug: true;
@@ -136,19 +134,6 @@ export function TeacherWelcome({
               onClick={() => onSelectActivity(suggestion)}
             >
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  {suggestion.trackTitle && (
-                    <Badge className="flex items-center gap-1 text-xs w-fit">
-                      {suggestion.trackTitle}
-                    </Badge>
-                  )}
-                  {suggestion.activityType === "tune" && (
-                    <Badge variant="outline" className="text-purple-600 border-purple-400 flex items-center gap-1">
-                      <Music className="h-3 w-3" />
-                      Tune
-                    </Badge>
-                  )}
-                </div>
                 <CardTitle className="text-base leading-tight mt-2">
                   {suggestion.label}
                 </CardTitle>
