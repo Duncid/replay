@@ -10,7 +10,7 @@ from music21 import converter, instrument, stream
 from tune_pipeline.io import read_json, write_json
 from tune_pipeline.midi_to_ns import midi_to_note_sequence
 from tune_pipeline.mxl_unpack import unpack_mxl
-from tune_pipeline.nuggets_extract import extract_nuggets
+from tune_pipeline.nuggets_extract import extract_nuggets, extract_assemblies
 from tune_pipeline.validate_teacher import validate_teacher
 from tune_pipeline.xml_split_hands import HandSplitResult, split_by_staff
 from tune_pipeline.xml_to_midi import write_midi
@@ -279,6 +279,10 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     # 6. Nugget Extraction
     if teacher and "nuggets" in teacher:
         extract_nuggets(score, combined_part_for_nuggets, output_dir, teacher["nuggets"], note_sequences)
+    
+    # 7. Assembly Extraction
+    if teacher and "assemblies" in teacher and "nuggets" in teacher:
+        extract_assemblies(score, combined_part_for_nuggets, output_dir, teacher["assemblies"], teacher["nuggets"], note_sequences)
 
     summary = {
         "base": base_name,

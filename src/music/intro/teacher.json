@@ -1,344 +1,324 @@
 {
-    "schemaVersion": "nuggets-teacher.v1",
-    "title": "Intro",
+    "schemaVersion": "teacher.v2",
+    "title": "4-bar scalar riff with repeat + extension",
     "pipelineSettings": {
-        "instrument": "piano",
-        "expectsTwoStaves": false,
         "staffToHandDefault": {
             "1": "RH",
             "2": "LH"
         },
         "handSplitPolicy": {
-            "mode": "unknownOrSingleStaff",
-            "crossStaffHandling": "ignore"
-        },
-        "alignmentPolicy": {
-            "noteMatching": "strict",
-            "fallbackIfLowConfidence": "noHandSplit"
-        },
-        "nuggetSlicingPolicy": {
-            "preferMeasureBoundaries": true,
-            "targetDurationSeconds": [
-                2.0,
-                6.0
-            ],
-            "targetNotesPerNugget": [
-                4,
-                12
-            ],
-            "maxDurationSeconds": 8.0
-        },
-        "metadata": {
-            "sourceNoteSequenceFile": "intro.ns.json :contentReference[oaicite:0]{index=0}",
-            "assumedTempoQpm": 120,
-            "assumedTimeSignature": "4/4",
-            "assumedMeasuresFromTotalTime": 4,
-            "notesAreMonophonic": true
+            "mode": "unknownOrSingleStaff"
         }
     },
     "motifs": [
         {
             "id": "M1",
-            "label": "Chromatic lift to G",
+            "label": "5-note ascent to G",
             "importance": 0.9,
-            "description": "Stepwise chromatic approach (F–F#–G) that creates forward motion and tension-release.",
-            "occursIn": [
-                "N1",
-                "N3"
-            ]
+            "description": "C–Eb–F–F#–G (mix of steps + chromatic neighbor)."
         },
         {
             "id": "M2",
-            "label": "Call-and-response contour",
-            "importance": 0.75,
-            "description": "Ascending gesture answered by a descending return, like a short question then reply.",
-            "occursIn": [
-                "N1",
-                "N2"
-            ]
+            "label": "Bb–G response",
+            "importance": 0.6,
+            "description": "Upper neighbor (Bb) resolving to G in steady quarters."
         },
         {
             "id": "M3",
-            "label": "C-minor/blues color tones",
-            "importance": 0.7,
-            "description": "Frequent use of C, Eb, F, G, Bb (minor/blues palette) for a soulful sound.",
-            "occursIn": [
-                "N1",
-                "N2",
-                "N3",
-                "N4"
-            ]
+            "label": "Descending chromatic-ish cell",
+            "importance": 0.8,
+            "description": "G–F#–F–Eb (tight stepwise descent with chromatic inflection)."
+        },
+        {
+            "id": "M4",
+            "label": "Extension to high C then back",
+            "importance": 0.75,
+            "description": "G → Bb → C → Bb → G (larger arc finishing the tune)."
+        }
+    ],
+    "motifOccurrences": [
+        {
+            "motifId": "M1",
+            "location": {
+                "startMeasure": 1,
+                "startBeat": 1,
+                "endMeasure": 2,
+                "endBeat": 1
+            }
+        },
+        {
+            "motifId": "M1",
+            "location": {
+                "startMeasure": 3,
+                "startBeat": 1,
+                "endMeasure": 4,
+                "endBeat": 1
+            }
+        },
+        {
+            "motifId": "M2",
+            "location": {
+                "startMeasure": 2,
+                "startBeat": 1,
+                "endMeasure": 2,
+                "endBeat": 3
+            }
+        },
+        {
+            "motifId": "M3",
+            "location": {
+                "startMeasure": 2,
+                "startBeat": 2,
+                "endMeasure": 3,
+                "endBeat": 1
+            }
+        },
+        {
+            "motifId": "M4",
+            "location": {
+                "startMeasure": 3,
+                "startBeat": 4,
+                "endMeasure": 4,
+                "endBeat": 5
+            }
         }
     ],
     "nuggets": [
         {
             "id": "N1",
-            "label": "Opening climb (sets the vibe)",
-            "type": "closed",
+            "label": "Ascent to G (bar 1)",
             "location": {
                 "startMeasure": 1,
                 "startBeat": 1,
-                "endMeasure": 1,
-                "endBeat": 4
-            },
-            "staffFocus": {
-                "primary": "Unknown",
-                "supportedModes": [
-                    "RH",
-                    "HandsTogether"
-                ]
-            },
-            "priority": 0.95,
-            "difficulty": {
-                "level": 1,
-                "reasons": [
-                    "stepwise motion",
-                    "short rhythmic values near the end of the measure"
-                ]
+                "endMeasure": 2,
+                "endBeat": 1
             },
             "dependsOn": [
-                "M1",
-                "M3"
+                "M1"
             ],
-            "teacherHints": {
-                "goal": "Play a smooth, even climb and make the chromatic F–F#–G feel like a single gesture.",
-                "counting": "Count 1 (C), 2 (Eb), then subdivide beat 3 into two quick notes (F then F#) before landing G on beat 4.",
-                "commonMistakes": [
-                    "Rushing the two quick notes (F–F#)",
-                    "Accenting F# too hard instead of aiming for the G"
-                ],
-                "whatToListenFor": [
-                    "Even tone on the climb",
-                    "A clear arrival on G (beat 4) without a harsh accent"
-                ]
-            },
-            "practicePlan": [
-                {
-                    "mode": "RH",
-                    "loop": true,
-                    "reps": 4,
-                    "tempoQpm": [
-                        60,
-                        80,
-                        100,
-                        120
-                    ]
-                },
-                {
-                    "mode": "HandsTogether",
-                    "loop": true,
-                    "reps": 2,
-                    "tempoQpm": [
-                        60,
-                        80,
-                        100
-                    ]
-                }
+            "modes": [
+                "RH"
             ]
         },
         {
             "id": "N2",
-            "label": "Answer back down to C",
-            "type": "closed",
+            "label": "Bb–G (bar 2, beats 1–2)",
             "location": {
                 "startMeasure": 2,
                 "startBeat": 1,
                 "endMeasure": 2,
-                "endBeat": 4
-            },
-            "staffFocus": {
-                "primary": "Unknown",
-                "supportedModes": [
-                    "RH",
-                    "HandsTogether"
-                ]
-            },
-            "priority": 0.85,
-            "difficulty": {
-                "level": 1,
-                "reasons": [
-                    "descending control",
-                    "clean landings on longer notes"
-                ]
+                "endBeat": 3
             },
             "dependsOn": [
-                "M2",
-                "M3",
-                "N1"
+                "M2"
             ],
-            "teacherHints": {
-                "goal": "Make the descent feel like a calm reply, with stable timing on the longer notes.",
-                "counting": "Hold the longer notes on beats 1–2, then keep the beat steady through the quicker steps back down.",
-                "commonMistakes": [
-                    "Letting the tempo sag on the longer tones",
-                    "Clipping note lengths so the line sounds choppy"
-                ],
-                "whatToListenFor": [
-                    "A connected, vocal-style line",
-                    "Consistent pulse even when note lengths change"
-                ]
-            },
-            "practicePlan": [
-                {
-                    "mode": "RH",
-                    "loop": true,
-                    "reps": 4,
-                    "tempoQpm": [
-                        60,
-                        80,
-                        100,
-                        120
-                    ]
-                },
-                {
-                    "mode": "HandsTogether",
-                    "loop": true,
-                    "reps": 2,
-                    "tempoQpm": [
-                        60,
-                        80,
-                        100
-                    ]
-                }
+            "modes": [
+                "RH"
             ]
         },
         {
             "id": "N3",
-            "label": "Repeat the climb (lock in consistency)",
-            "type": "closed",
+            "label": "G down to Eb (bar 2, beats 2–4)",
             "location": {
-                "startMeasure": 3,
-                "startBeat": 1,
+                "startMeasure": 2,
+                "startBeat": 2,
                 "endMeasure": 3,
-                "endBeat": 4
-            },
-            "staffFocus": {
-                "primary": "Unknown",
-                "supportedModes": [
-                    "RH",
-                    "HandsTogether"
-                ]
-            },
-            "priority": 0.7,
-            "difficulty": {
-                "level": 1,
-                "reasons": [
-                    "repeat accuracy",
-                    "matching articulation to the first time"
-                ]
+                "endBeat": 1
             },
             "dependsOn": [
-                "M1",
-                "M3",
-                "N1"
+                "M3"
             ],
-            "teacherHints": {
-                "goal": "Play the repeat like a copy-paste of N1: same timing, same smoothness, same dynamic shape.",
-                "counting": "Use the same count as N1; aim for identical placement of the quick chromatic notes.",
-                "commonMistakes": [
-                    "Changing the timing on the quick notes compared to N1",
-                    "Getting louder just because it's a repeat"
-                ],
-                "whatToListenFor": [
-                    "Two versions that sound intentionally the same",
-                    "A relaxed hand during the chromatic motion"
-                ]
-            },
-            "practicePlan": [
-                {
-                    "mode": "RH",
-                    "loop": true,
-                    "reps": 3,
-                    "tempoQpm": [
-                        70,
-                        90,
-                        110,
-                        120
-                    ]
-                },
-                {
-                    "mode": "HandsTogether",
-                    "loop": true,
-                    "reps": 2,
-                    "tempoQpm": [
-                        70,
-                        90,
-                        110
-                    ]
-                }
+            "modes": [
+                "RH"
             ]
         },
         {
             "id": "N4",
-            "label": "Climax and cadence (Bb up to C then fall)",
-            "type": "closed",
+            "label": "Repeat ascent to G (bar 3)",
+            "location": {
+                "startMeasure": 3,
+                "startBeat": 1,
+                "endMeasure": 4,
+                "endBeat": 1
+            },
+            "dependsOn": [
+                "M1"
+            ],
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "N5",
+            "label": "Rise to high C (bar 4, beats 1–2)",
             "location": {
                 "startMeasure": 4,
                 "startBeat": 1,
                 "endMeasure": 4,
-                "endBeat": 4
-            },
-            "staffFocus": {
-                "primary": "Unknown",
-                "supportedModes": [
-                    "RH",
-                    "HandsTogether"
-                ]
-            },
-            "priority": 0.8,
-            "difficulty": {
-                "level": 2,
-                "reasons": [
-                    "register change and peak note",
-                    "shaping the phrase ending"
-                ]
+                "endBeat": 3
             },
             "dependsOn": [
-                "M3",
-                "N2"
+                "M4"
             ],
-            "teacherHints": {
-                "goal": "Shape the high point (C) as the climax, then let the line relax downward without rushing.",
-                "counting": "Keep steady quarters: Bb (beat 1), C (beat 2), then step down evenly through the last beats.",
-                "commonMistakes": [
-                    "Hitting the peak note too hard and losing the singing tone",
-                    "Speeding up on the way down"
-                ],
-                "whatToListenFor": [
-                    "A clear musical peak on C",
-                    "A controlled, gentle release through the final notes"
-                ]
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "N6",
+            "label": "Return to G (bar 4, beats 3–4)",
+            "location": {
+                "startMeasure": 4,
+                "startBeat": 3,
+                "endMeasure": 4,
+                "endBeat": 5
             },
-            "practicePlan": [
-                {
-                    "mode": "RH",
-                    "loop": true,
-                    "reps": 4,
-                    "tempoQpm": [
-                        60,
-                        80,
-                        100,
-                        120
-                    ]
-                },
-                {
-                    "mode": "HandsTogether",
-                    "loop": true,
-                    "reps": 3,
-                    "tempoQpm": [
-                        60,
-                        80,
-                        100,
-                        120
-                    ]
-                }
+            "dependsOn": [
+                "M4"
+            ],
+            "modes": [
+                "RH"
             ]
         }
     ],
+    "assemblies": [
+        {
+            "id": "A1",
+            "tier": 1,
+            "label": "Intro + response",
+            "nuggetIds": [
+                "N1",
+                "N2"
+            ],
+            "difficulty": {
+                "level": 2
+            },
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "A2",
+            "tier": 1,
+            "label": "Bar 2 complete idea",
+            "nuggetIds": [
+                "N2",
+                "N3"
+            ],
+            "difficulty": {
+                "level": 3
+            },
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "A3",
+            "tier": 1,
+            "label": "Repeat + launch into ending",
+            "nuggetIds": [
+                "N4",
+                "N5"
+            ],
+            "difficulty": {
+                "level": 3
+            },
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "A4",
+            "tier": 1,
+            "label": "Closing tag",
+            "nuggetIds": [
+                "N5",
+                "N6"
+            ],
+            "difficulty": {
+                "level": 2
+            },
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "A5",
+            "tier": 1,
+            "label": "First half (bars 1–2)",
+            "nuggetIds": [
+                "N1",
+                "N2",
+                "N3"
+            ],
+            "difficulty": {
+                "level": 4
+            },
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "A6",
+            "tier": 1,
+            "label": "Second half (bars 3–4)",
+            "nuggetIds": [
+                "N4",
+                "N5",
+                "N6"
+            ],
+            "difficulty": {
+                "level": 4
+            },
+            "modes": [
+                "RH"
+            ]
+        },
+        {
+            "id": "A7",
+            "tier": 1,
+            "label": "Turnaround into the repeat",
+            "nuggetIds": [
+                "N3",
+                "N4"
+            ],
+            "difficulty": {
+                "level": 4
+            },
+            "modes": [
+                "RH"
+            ]
+        }
+    ],
+    "tuneHints": {
+        "goal": "Keep a steady quarter-note pulse while making the half-beat (eighth-note) pairs sound clean and even; aim for a smooth arc in bars 3–4 as the melody reaches high C and returns to G.",
+        "counting": "Count 4/4 in quarters; in the two-note chromatic spots (F–F#), subdivide the beat into 'and' to keep them even.",
+        "commonMistakes": [
+            "Rushing the eighth-note pairs (F–F#) so they don’t fit evenly in the beat",
+            "Blurring the chromatic neighbors (F/F#) so the contour sounds vague",
+            "Uneven tone on the repeated Bb notes near the end"
+        ],
+        "whatToListenFor": [
+            "Clear arrival on G at each barline (end of bars 1 and 3)",
+            "Even spacing of the chromatic neighbor tones (F–F#)",
+            "A confident peak on high C (bar 4 beat 2) and a relaxed return to G"
+        ]
+    },
     "teachingOrder": [
         "N1",
         "N2",
         "N3",
-        "N4"
+        "N4",
+        "N5",
+        "N6"
+    ],
+    "assemblyOrder": [
+        "A1",
+        "A2",
+        "A7",
+        "A4",
+        "A3",
+        "A5",
+        "A6"
     ]
 }

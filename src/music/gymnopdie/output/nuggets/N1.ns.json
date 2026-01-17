@@ -23,9 +23,33 @@
       "startTime": 1.1111110000000002,
       "endTime": 3.333333,
       "velocity": 45.0
+    },
+    {
+      "pitch": 38,
+      "startTime": 3.333333,
+      "endTime": 6.666666,
+      "velocity": 45.0
+    },
+    {
+      "pitch": 57,
+      "startTime": 4.444444000000001,
+      "endTime": 6.666666,
+      "velocity": 45.0
+    },
+    {
+      "pitch": 61,
+      "startTime": 4.444444000000001,
+      "endTime": 6.666666,
+      "velocity": 45.0
+    },
+    {
+      "pitch": 66,
+      "startTime": 4.444444000000001,
+      "endTime": 6.666666,
+      "velocity": 45.0
     }
   ],
-  "totalTime": 2.5,
+  "totalTime": 5.5,
   "tempos": [],
   "timeSignatures": []
 }

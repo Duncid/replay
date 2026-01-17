@@ -17,39 +17,9 @@
       "startTime": 0.5,
       "endTime": 0.75,
       "velocity": 90.0
-    },
-    {
-      "pitch": 55,
-      "startTime": 0.75,
-      "endTime": 2.75,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 58,
-      "startTime": 0.75,
-      "endTime": 12.75,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 62,
-      "startTime": 0.75,
-      "endTime": 12.75,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 74,
-      "startTime": 0.75,
-      "endTime": 1.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 74,
-      "startTime": 1.0,
-      "endTime": 2.75,
-      "velocity": 90.0
     }
   ],
-  "totalTime": 2.25,
+  "totalTime": 0.75,
   "tempos": [],
   "timeSignatures": []
 }

@@ -1,31 +1,43 @@
 {
   "notes": [
     {
-      "pitch": 48,
+      "pitch": 43,
       "startTime": 0.0,
       "endTime": 6.0,
       "velocity": 90.0
     },
     {
-      "pitch": 52,
+      "pitch": 47,
       "startTime": 0.0,
       "endTime": 6.0,
       "velocity": 90.0
     },
     {
-      "pitch": 55,
+      "pitch": 50,
       "startTime": 0.0,
-      "endTime": 2.0,
+      "endTime": 6.0,
       "velocity": 90.0
     },
     {
-      "pitch": 63,
+      "pitch": 53,
+      "startTime": 0.0,
+      "endTime": 6.0,
+      "velocity": 90.0
+    },
+    {
+      "pitch": 71,
+      "startTime": 0.0,
+      "endTime": 0.25,
+      "velocity": 90.0
+    },
+    {
+      "pitch": 74,
       "startTime": 0.25,
       "endTime": 0.5,
       "velocity": 90.0
     },
     {
-      "pitch": 64,
+      "pitch": 71,
       "startTime": 0.5,
       "endTime": 0.75,
       "velocity": 90.0
@@ -33,71 +45,11 @@
     {
       "pitch": 67,
       "startTime": 0.75,
-      "endTime": 1.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 70,
-      "startTime": 1.0,
-      "endTime": 1.75,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 69,
-      "startTime": 1.75,
       "endTime": 2.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 55,
-      "startTime": 2.0,
-      "endTime": 6.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 59,
-      "startTime": 2.0,
-      "endTime": 10.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 62,
-      "startTime": 2.0,
-      "endTime": 10.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 67,
-      "startTime": 2.0,
-      "endTime": 5.5,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 43,
-      "startTime": 4.0,
-      "endTime": 22.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 47,
-      "startTime": 4.0,
-      "endTime": 22.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 50,
-      "startTime": 4.0,
-      "endTime": 14.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 53,
-      "startTime": 4.0,
-      "endTime": 22.0,
       "velocity": 90.0
     }
   ],
-  "totalTime": 5.5,
+  "totalTime": 2.0,
   "tempos": [],
   "timeSignatures": []
 }
