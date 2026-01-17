@@ -344,6 +344,7 @@ export type Database = {
       }
       tune_assets: {
         Row: {
+          assemblies: Json | null
           briefing: Json | null
           created_at: string | null
           id: string
@@ -355,6 +356,7 @@ export type Database = {
           version_id: string
         }
         Insert: {
+          assemblies?: Json | null
           briefing?: Json | null
           created_at?: string | null
           id?: string
@@ -366,6 +368,7 @@ export type Database = {
           version_id: string
         }
         Update: {
+          assemblies?: Json | null
           briefing?: Json | null
           created_at?: string | null
           id?: string

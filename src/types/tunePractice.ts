@@ -12,43 +12,53 @@ export interface TuneNugget {
   id: string;
   label: string;
   location: {
-    measures: [number, number];
+    startMeasure?: number;
+    endMeasure?: number;
     startBeat?: number;
     endBeat?: number;
   };
-  staffFocus: 'rh' | 'lh' | 'both';
-  priority: number;
-  difficulty: number;
   dependsOn: string[];
-  teacherHints: {
-    goal: string;
-    counting?: string;
-    commonMistakes?: string;
-    whatToListenFor?: string;
-  };
-  practicePlan?: {
-    tempoStart: number;
-    tempoTarget: number;
-    reps: number;
-  };
+  modes?: string[];
   noteSequence?: unknown; // INoteSequence from magenta
+  leftHandSequence?: unknown;
+  rightHandSequence?: unknown;
+}
+
+export interface TuneAssembly {
+  id: string;
+  tier: number;
+  label: string;
+  nuggetIds: string[];
+  difficulty?: { level: number };
+  modes?: string[];
+  noteSequence?: unknown;
+  leftHandSequence?: unknown;
+  rightHandSequence?: unknown;
+}
+
+export interface TuneHints {
+  goal?: string;
+  counting?: string;
+  commonMistakes?: string[];
+  whatToListenFor?: string[];
 }
 
 export interface TuneBriefing {
   title: string;
-  schemaVersion: number;
-  pipeline?: {
-    instrument: string;
-    staffToHand: Record<string, string>;
-    tempoSource: string;
-  };
+  schemaVersion: string;
+  pipelineSettings?: Record<string, unknown>;
   motifs: TuneMotif[];
+  motifOccurrences?: Array<Record<string, unknown>>;
+  tuneHints?: TuneHints;
   teachingOrder: string[];
+  assemblyOrder?: string[];
 }
 
 export interface PracticePlanItem {
-  nuggetId: string;
-  nugget: TuneNugget;
+  itemId: string;
+  itemType: 'nugget' | 'assembly';
+  nugget: TuneNugget | null;
+  assembly: TuneAssembly | null;
   instruction: string;
   motifs: string[];
 }
@@ -58,7 +68,9 @@ export interface TuneCoachResponse {
   encouragement: string;
   tuneTitle: string;
   motifsSummary: TuneMotif[];
+  tuneHints?: TuneHints;
   practiceHistory: NuggetPracticeHistory[];
+  proficiencyLevel?: 'beginner' | 'intermediate' | 'advanced';
 }
 
 export interface NuggetPracticeHistory {

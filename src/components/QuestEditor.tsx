@@ -83,19 +83,33 @@ interface TuneAssetBundle {
       description: string;
       occursIn: string[];
     }>;
+    motifOccurrences?: Array<Record<string, unknown>>;
+    tuneHints?: {
+      goal?: string;
+      counting?: string;
+      commonMistakes?: string[];
+      whatToListenFor?: string[];
+    };
     teachingOrder?: string[];
+    assemblyOrder?: string[];
   };
   nuggets?: Array<{
     id: string;
     label: string;
-    type?: string;
     location?: Record<string, unknown>;
-    staffFocus?: Record<string, unknown>;
-    priority?: number;
-    difficulty?: Record<string, unknown>;
     dependsOn?: string[];
-    teacherHints?: Record<string, unknown>;
-    practicePlan?: Array<Record<string, unknown>>;
+    modes?: string[];
+    noteSequence?: object | null;
+    leftHandSequence?: object | null;
+    rightHandSequence?: object | null;
+  }>;
+  assemblies?: Array<{
+    id: string;
+    tier: number;
+    label: string;
+    nuggetIds: string[];
+    difficulty?: { level: number };
+    modes?: string[];
     noteSequence?: object | null;
     leftHandSequence?: object | null;
     rightHandSequence?: object | null;
@@ -1919,7 +1933,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         let enrichedNuggets: TuneAssetBundle['nuggets'] = undefined;
         if (teacher?.nuggets && Array.isArray(teacher.nuggets)) {
           enrichedNuggets = await Promise.all(
-            teacher.nuggets.map(async (nugget: { id: string; [key: string]: unknown }) => {
+            teacher.nuggets.map(async (nugget: { id: string; label: string; location?: Record<string, unknown>; dependsOn?: string[]; modes?: string[] }) => {
               const nuggetId = nugget.id;
               
               const [nuggetNs, nuggetLh, nuggetRh] = await Promise.all([
@@ -1928,8 +1942,13 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                 import(`/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`).catch(() => null),
               ]);
               
+              // Only include essential nugget fields (simplified v2 schema)
               return {
-                ...nugget,
+                id: nugget.id,
+                label: nugget.label,
+                location: nugget.location,
+                dependsOn: nugget.dependsOn,
+                modes: nugget.modes,
                 noteSequence: nuggetNs?.default || nuggetNs || null,
                 leftHandSequence: nuggetLh?.default || nuggetLh || null,
                 rightHandSequence: nuggetRh?.default || nuggetRh || null,
@@ -1938,17 +1957,49 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           );
         }
         
+        // Load assembly note sequences from output/assemblies/
+        let enrichedAssemblies: TuneAssetBundle['assemblies'] = undefined;
+        if (teacher?.assemblies && Array.isArray(teacher.assemblies)) {
+          enrichedAssemblies = await Promise.all(
+            teacher.assemblies.map(async (assembly: { id: string; tier: number; label: string; nuggetIds: string[]; difficulty?: { level: number }; modes?: string[] }) => {
+              const assemblyId = assembly.id;
+              
+              const [assemblyNs, assemblyLh, assemblyRh] = await Promise.all([
+                import(`/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`).catch(() => null),
+                import(`/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`).catch(() => null),
+                import(`/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`).catch(() => null),
+              ]);
+              
+              return {
+                id: assembly.id,
+                tier: assembly.tier,
+                label: assembly.label,
+                nuggetIds: assembly.nuggetIds,
+                difficulty: assembly.difficulty,
+                modes: assembly.modes,
+                noteSequence: assemblyNs?.default || assemblyNs || null,
+                leftHandSequence: assemblyLh?.default || assemblyLh || null,
+                rightHandSequence: assemblyRh?.default || assemblyRh || null,
+              } as NonNullable<TuneAssetBundle['assemblies']>[number];
+            })
+          );
+        }
+        
         if (noteSequence) {
           tuneAssets[tuneKey] = {
-            // Store the full teacher structure
+            // Store the full teacher structure (v2 schema)
             briefing: teacher ? {
               schemaVersion: teacher.schemaVersion,
               title: teacher.title,
               pipelineSettings: teacher.pipelineSettings,
               motifs: teacher.motifs,
+              motifOccurrences: teacher.motifOccurrences,
+              tuneHints: teacher.tuneHints,
               teachingOrder: teacher.teachingOrder,
+              assemblyOrder: teacher.assemblyOrder,
             } : undefined,
             nuggets: enrichedNuggets,
+            assemblies: enrichedAssemblies,
             noteSequence,
             leftHandSequence: leftHand || undefined,
             rightHandSequence: rightHand || undefined,
@@ -1956,6 +2007,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
             hasBriefing: !!teacher,
             nuggetCount: enrichedNuggets?.length || 0,
+            assemblyCount: enrichedAssemblies?.length || 0,
             hasLeftHand: !!leftHand,
             hasRightHand: !!rightHand,
           });
