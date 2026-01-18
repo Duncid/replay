@@ -89,6 +89,8 @@ export interface TuneEvaluationResponse {
   suggestNewNugget: boolean;
   nextNuggetSuggestion?: string;
   replayDemo: boolean;
+  tuneAcquired?: boolean;
+  awardedSkills?: string[];
 }
 
 export interface TunePracticeState {

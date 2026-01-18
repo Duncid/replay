@@ -297,26 +297,45 @@ serve(async (req) => {
     );
 
     // Fetch acquired lessons
-    let acquiredQuery = supabase
+    let acquiredLessonsQuery = supabase
       .from("user_lesson_acquisition")
       .select("lesson_key");
 
     if (localUserId) {
-      acquiredQuery = acquiredQuery.eq("local_user_id", localUserId);
+      acquiredLessonsQuery = acquiredLessonsQuery.eq("local_user_id", localUserId);
     }
 
-    const { data: acquiredLessons, error: acquiredError } = await acquiredQuery;
+    const { data: acquiredLessons, error: acquiredLessonsError } = await acquiredLessonsQuery;
 
-    if (acquiredError) {
-      console.error("Error fetching acquired lessons:", acquiredError);
+    if (acquiredLessonsError) {
+      console.error("Error fetching acquired lessons:", acquiredLessonsError);
     }
 
     const acquiredLessonKeys = new Set(
       (acquiredLessons || []).map((a) => a.lesson_key)
     );
 
+    // Fetch acquired tunes
+    let acquiredTunesQuery = supabase
+      .from("user_tune_acquisition")
+      .select("tune_key");
+
+    if (localUserId) {
+      acquiredTunesQuery = acquiredTunesQuery.eq("local_user_id", localUserId);
+    }
+
+    const { data: acquiredTunes, error: acquiredTunesError } = await acquiredTunesQuery;
+
+    if (acquiredTunesError) {
+      console.error("Error fetching acquired tunes:", acquiredTunesError);
+    }
+
+    const acquiredTuneKeys = new Set(
+      (acquiredTunes || []).map((a) => a.tune_key)
+    );
+
     console.log(
-      `[teacher-greet] Acquired lessons for user ${localUserId || "all"}: ${acquiredLessonKeys.size}`
+      `[teacher-greet] Acquired items for user ${localUserId || "all"}: ${acquiredLessonKeys.size} lessons, ${acquiredTuneKeys.size} tunes`
     );
 
     // 3. Compute accessible activities (lessons and tunes) per track
@@ -338,8 +357,8 @@ serve(async (req) => {
         requiredSkills.length === 0 ||
         requiredSkills.every((sk) => unlockedSkills.has(sk));
 
-      // For lessons, also check prerequisite lessons (previous lessons in chain)
       if (itemType === "lesson") {
+        // Check prerequisite lessons (previous lessons in lesson_next chain)
         const lessonRequiredLessons = lessonNextEdges
           .filter((e) => e.target_key === itemKey)
           .map((e) => e.source_key);
@@ -347,6 +366,26 @@ serve(async (req) => {
           lessonRequiredLessons.length === 0 ||
           lessonRequiredLessons.every((lk) => acquiredLessonKeys.has(lk));
         return skillsMet && lessonsMet;
+      }
+
+      if (itemType === "tune") {
+        // Check prerequisite tunes (previous tunes in tune_next chain)
+        const tuneRequiredTunes = tuneNextEdges
+          .filter((e) => e.target_key === itemKey)
+          .map((e) => e.source_key);
+        const tunesMet =
+          tuneRequiredTunes.length === 0 ||
+          tuneRequiredTunes.every((tk) => acquiredTuneKeys.has(tk));
+
+        // Also check if any lessons point to this tune via lesson_next
+        const lessonRequiredLessons = lessonNextEdges
+          .filter((e) => e.target_key === itemKey)
+          .map((e) => e.source_key);
+        const lessonPrereqsMet =
+          lessonRequiredLessons.length === 0 ||
+          lessonRequiredLessons.every((lk) => acquiredLessonKeys.has(lk));
+
+        return skillsMet && tunesMet && lessonPrereqsMet;
       }
 
       return skillsMet;
@@ -473,7 +512,7 @@ serve(async (req) => {
         };
       });
 
-    // Add tunes to history (no lesson runs for tunes yet)
+    // Add tunes to history with acquisition status
     const tuneHistory = availableActivities
       .filter((a) => a.activityType === "tune")
       .map((activity) => ({
@@ -483,6 +522,7 @@ serve(async (req) => {
         trackTitle: activity.trackTitle,
         musicRef: activity.musicRef,
         level: activity.level,
+        acquired: acquiredTuneKeys.has(activity.activityKey),
       }));
 
     const lessonRunsSummary = lessonRuns.slice(0, 20).map((r) => ({
@@ -504,6 +544,8 @@ Your job when the user opens Learning mode:
 IMPORTANT - Activity Types:
 - LESSONS: Structured learning exercises focused on specific skills (technique, theory, rhythm). These build foundational knowledge.
 - TUNES: Music pieces for practice. More rewarding and enjoyable, but require prerequisite skills. These provide motivation and real-world application.
+  - Tunes marked as "acquired: true" have been mastered by the student.
+  - Suggest non-acquired tunes as priority for continued progress.
 
 Balance recommendations:
 - New users should start with lessons to build foundational skills
@@ -512,6 +554,7 @@ Balance recommendations:
 - After challenging lessons, suggest a tune as a reward
 - Consider the user's level (beginner/intermediate/advanced) when recommending
 - Tunes are great for applying learned skills in a fun, musical context
+- Prioritize non-acquired tunes over already-mastered ones
 
 Important rules:
 - The user can choose; you are advising, not forcing.
@@ -535,7 +578,7 @@ ${JSON.stringify(availableActivities, null, 2)}
 LESSON PRACTICE HISTORY:
 ${JSON.stringify(practiceHistory, null, 2)}
 
-AVAILABLE TUNES:
+AVAILABLE TUNES (with acquisition status):
 ${JSON.stringify(tuneHistory, null, 2)}
 
 RECENT LESSON RUNS (chronological list):
@@ -577,6 +620,8 @@ OUTPUT JSON SCHEMA:
             timeSinceLastPracticeHours,
             recentRunsCount: lessonRuns.length,
             unlockedSkillsCount: unlockedSkills.size,
+            acquiredLessonsCount: acquiredLessonKeys.size,
+            acquiredTunesCount: acquiredTuneKeys.size,
           },
           prompt: fullPrompt,
         }),
