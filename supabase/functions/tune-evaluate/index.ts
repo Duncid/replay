@@ -9,11 +9,11 @@ const corsHeaders = {
 
 const STREAK_THRESHOLD_FOR_NEW_NUGGET = 3;
 
-interface TuneNugget {
+interface TuneItem {
   id: string;
   label: string;
-  teacherHints: {
-    goal: string;
+  teacherHints?: {
+    goal?: string;
     counting?: string;
     commonMistakes?: string;
     whatToListenFor?: string;
@@ -66,18 +66,27 @@ serve(async (req) => {
       );
     }
 
-    const nuggets = (tuneAsset.nuggets || []) as TuneNugget[];
-    const nugget = nuggets.find((n) => n.id === nuggetId);
+    // Look in both nuggets and assemblies for the item
+    const nuggets = (tuneAsset.nuggets || []) as TuneItem[];
+    const assemblies = (tuneAsset.assemblies || []) as TuneItem[];
+    
+    let targetItem: TuneItem | undefined = nuggets.find((n) => n.id === nuggetId);
+    let isAssembly = false;
+    
+    if (!targetItem) {
+      targetItem = assemblies.find((a) => a.id === nuggetId);
+      isAssembly = true;
+    }
 
-    if (!nugget) {
+    if (!targetItem) {
       return new Response(
-        JSON.stringify({ error: `Nugget ${nuggetId} not found in tune` }),
+        JSON.stringify({ error: `Item ${nuggetId} not found in tune (checked nuggets and assemblies)` }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const targetSequence = nugget.noteSequence;
-    const teacherHints = nugget.teacherHints || {};
+    const targetSequence = targetItem.noteSequence;
+    const teacherHints = targetItem.teacherHints || {};
     
     // Extract tune-level evaluation guidance from briefing
     const briefing = (tuneAsset.briefing || {}) as Record<string, unknown>;
@@ -109,9 +118,9 @@ ${evaluationGuidance ? `
 TUNE-LEVEL EVALUATION GUIDANCE:
 ${evaluationGuidance}
 ` : ""}
-NUGGET BEING PRACTICED:
+${isAssembly ? "ASSEMBLY" : "NUGGET"} BEING PRACTICED:
 - ID: ${nuggetId}
-- Label: ${nugget.label}
+- Label: ${targetItem.label}
 - Goal: ${teacherHints.goal || "Play this section accurately"}
 ${teacherHints.counting ? `- Counting guide: ${teacherHints.counting}` : ""}
 ${teacherHints.commonMistakes ? `- Common mistakes to watch for: ${teacherHints.commonMistakes}` : ""}
@@ -203,7 +212,7 @@ FEEDBACK STYLE:
           prompt: composedPrompt,
           tuneKey,
           nuggetId,
-          nuggetLabel: nugget.label,
+          itemLabel: targetItem.label,
           targetSequence,
           userSequence,
           currentStreak,
