@@ -25,11 +25,11 @@ interface TunePracticeProps {
 const STREAK_THRESHOLD = 3;
 
 // Status display for top left (Playing, Sending, or Close evaluation)
-function StatusDisplay({ 
-  isRecording, 
-  isEvaluating, 
-  lastEvaluation 
-}: { 
+function StatusDisplay({
+  isRecording,
+  isEvaluating,
+  lastEvaluation,
+}: {
   isRecording: boolean;
   isEvaluating: boolean;
   lastEvaluation?: TuneEvaluationResponse | null;
@@ -64,10 +64,10 @@ function StatusDisplay({
 }
 
 // Streak display component for bottom left
-function StreakDisplay({ 
+function StreakDisplay({
   lastEvaluation,
-  currentNuggetId
-}: { 
+  currentNuggetId,
+}: {
   lastEvaluation?: TuneEvaluationResponse | null;
   currentNuggetId: string;
 }) {
@@ -81,9 +81,9 @@ function StreakDisplay({
   // Reset on nugget change
   useEffect(() => {
     // Clear all timeouts
-    timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+    timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
     timeoutRefs.current = [];
-    
+
     setFires([]);
     setTempMessage(null);
     setMessageVisible(false);
@@ -97,7 +97,7 @@ function StreakDisplay({
     }
 
     // Clear any existing timeouts
-    timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+    timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
     timeoutRefs.current = [];
 
     const evaluation = lastEvaluation.evaluation;
@@ -110,10 +110,10 @@ function StreakDisplay({
         setMessageVisible(true);
       }, 10);
       timeoutRefs.current.push(fadeInTimer);
-      
+
       const timer = setTimeout(() => {
         const fireId = nextFireIdRef.current++;
-        setFires(prev => [...prev, fireId]);
+        setFires((prev) => [...prev, fireId]);
         setTempMessage(null);
         setMessageVisible(false);
       }, 2000);
@@ -128,7 +128,7 @@ function StreakDisplay({
       timeoutRefs.current.push(fadeInTimer);
 
       // Get current fires to schedule removal
-      setFires(currentFires => {
+      setFires((currentFires) => {
         if (currentFires.length === 0) {
           // If no fires, just hide message after showing
           const timer = setTimeout(() => {
@@ -141,18 +141,21 @@ function StreakDisplay({
           setIsRemovingFires(true);
           const firesCopy = [...currentFires];
           firesCopy.forEach((fireId, index) => {
-            const timer = setTimeout(() => {
-              setFires(prev => {
-                const updated = prev.filter(id => id !== fireId);
-                if (index === firesCopy.length - 1) {
-                  // Last fire removed
-                  setIsRemovingFires(false);
-                  setTempMessage(null);
-                  setMessageVisible(false);
-                }
-                return updated;
-              });
-            }, (index + 1) * 500);
+            const timer = setTimeout(
+              () => {
+                setFires((prev) => {
+                  const updated = prev.filter((id) => id !== fireId);
+                  if (index === firesCopy.length - 1) {
+                    // Last fire removed
+                    setIsRemovingFires(false);
+                    setTempMessage(null);
+                    setMessageVisible(false);
+                  }
+                  return updated;
+                });
+              },
+              (index + 1) * 500,
+            );
             timeoutRefs.current.push(timer);
           });
         }
@@ -175,7 +178,7 @@ function StreakDisplay({
     }
 
     return () => {
-      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
       timeoutRefs.current = [];
     };
   }, [lastEvaluation]);
@@ -186,18 +189,15 @@ function StreakDisplay({
       {fires.map((fireId, index) => (
         <span
           key={fireId}
-          className={cn(
-            "text-lg transition-opacity duration-300",
-            isRemovingFires ? "opacity-0" : "opacity-100"
-          )}
+          className={cn("text-lg transition-opacity duration-300", isRemovingFires ? "opacity-0" : "opacity-100")}
           style={{
-            transitionDelay: isRemovingFires ? `${index * 500}ms` : '0ms'
+            transitionDelay: isRemovingFires ? `${index * 500}ms` : "0ms",
           }}
         >
           🔥
         </span>
       ))}
-      
+
       {/* Temporary message */}
       {tempMessage && (
         <span
@@ -206,7 +206,7 @@ function StreakDisplay({
             messageVisible ? "opacity-100" : "opacity-0",
             tempMessage === "success" && "text-green-600",
             tempMessage === "woops" && "text-orange-600",
-            tempMessage === "Close!" && "text-accent"
+            tempMessage === "Close!" && "text-accent",
           )}
         >
           {tempMessage}
@@ -230,9 +230,11 @@ export function TunePractice({
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
-  
+
   // Get sample sequence from either nugget or assembly
-  const sampleSequence = (currentNugget.nugget?.noteSequence || currentNugget.assembly?.noteSequence) as NoteSequence | undefined;
+  const sampleSequence = (currentNugget.nugget?.noteSequence || currentNugget.assembly?.noteSequence) as
+    | NoteSequence
+    | undefined;
 
   useEffect(() => {
     // Reset pulse state when streak is not complete
@@ -241,7 +243,7 @@ export function TunePractice({
       setPulsedStreak(null);
       return;
     }
-    
+
     // Only trigger pulse once when streak first reaches threshold
     // If streak drops and comes back, we can pulse again
     if (pulsedStreak !== STREAK_THRESHOLD && currentStreak >= STREAK_THRESHOLD) {
@@ -261,17 +263,9 @@ export function TunePractice({
   return (
     <div className="flex flex-col h-full items-center justify-center p-6">
       <Card className="w-full max-w-lg relative">
-        <CardHeader className="relative flex pb-4 justify-between items-end">
-          <StatusDisplay 
-            isRecording={isRecording}
-            isEvaluating={isEvaluating}
-            lastEvaluation={lastEvaluation}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onLeave}
-          >
+        <CardHeader className="relative flex flex-col pb-4 justify-between items-end">
+          <StatusDisplay isRecording={isRecording} isEvaluating={isEvaluating} lastEvaluation={lastEvaluation} />
+          <Button variant="ghost" size="icon" onClick={onLeave}>
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
@@ -284,24 +278,12 @@ export function TunePractice({
           <div className="flex flex-col items-center gap-1">
             {sampleSequence?.notes?.length ? (
               <div className="flex justify-center">
-                <SheetMusic
-                  sequence={sampleSequence}
-                  compact
-                  noTitle
-                  noControls
-                  hasColor
-                  scale={1.1}
-                />
+                <SheetMusic sequence={sampleSequence} compact noTitle noControls hasColor scale={1.1} />
               </div>
             ) : null}
-            
+
             {/* Play button visually attached to sheet */}
-            <Button
-              variant="ghost"
-              onClick={onPlaySample}
-              disabled={isPlaying}
-              className="gap-2"
-            >
+            <Button variant="ghost" onClick={onPlaySample} disabled={isPlaying} className="gap-2">
               <Play fill="currentColor" stroke="none" />
               Replay
             </Button>
@@ -310,11 +292,8 @@ export function TunePractice({
           {/* Bottom section: StreakDisplay left, Next button right */}
           <div className="flex items-center justify-between">
             {/* Streak display bottom left */}
-            <StreakDisplay 
-              lastEvaluation={lastEvaluation}
-              currentNuggetId={currentNugget.itemId}
-            />
-            
+            <StreakDisplay lastEvaluation={lastEvaluation} currentNuggetId={currentNugget.itemId} />
+
             {/* Next button bottom right */}
             <Button
               variant={shouldPulse ? "default" : "ghost"}
