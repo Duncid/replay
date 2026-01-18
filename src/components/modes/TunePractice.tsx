@@ -263,7 +263,7 @@ export function TunePractice({
   return (
     <div className="flex flex-col h-full items-center justify-center p-6">
       <Card className="w-full max-w-lg relative">
-        <CardHeader className="relative flex flex-col pb-4 justify-between items-end">
+        <CardHeader className="flex flex-row pb-4 justify-between items-center">
           <StatusDisplay isRecording={isRecording} isEvaluating={isEvaluating} lastEvaluation={lastEvaluation} />
           <Button variant="ghost" size="icon" onClick={onLeave}>
             <X className="h-4 w-4" />
