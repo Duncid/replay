@@ -60,7 +60,7 @@ function StatusDisplay({
     );
   }
 
-  return null;
+  return <div className="min-h-[24px]" />;
 }
 
 // Streak display component for bottom left
