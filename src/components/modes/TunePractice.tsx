@@ -36,8 +36,7 @@ function StatusDisplay({
 }) {
   if (isRecording && !isEvaluating) {
     return (
-      <div className="flex items-center gap-2 text-primary">
-        <Music className="h-4 w-4 animate-pulse" />
+      <div className="flex items-center gap-2 text-muted-foreground">
         <span className="text-sm font-medium">Playing</span>
       </div>
     );
@@ -46,7 +45,6 @@ function StatusDisplay({
   if (isEvaluating) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-        <Send className="h-4 w-4" />
         <span className="text-sm font-medium">Sending</span>
       </div>
     );
@@ -263,7 +261,7 @@ export function TunePractice({
   return (
     <div className="flex flex-col h-full items-center justify-center p-6">
       <Card className="w-full max-w-lg relative">
-        <CardHeader className="relative pb-4 justify-between items-end">
+        <CardHeader className="relative flex pb-4 justify-between items-end">
           <StatusDisplay 
             isRecording={isRecording}
             isEvaluating={isEvaluating}
