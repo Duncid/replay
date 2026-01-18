@@ -1,6 +1,6 @@
 {
     "schemaVersion": "teacher.v2",
-    "title": "Intro",
+    "title": "C-minor-ish scalar phrase (single-line)",
     "pipelineSettings": {
         "staffToHandDefault": {
             "1": "RH",
@@ -13,27 +13,21 @@
     "motifs": [
         {
             "id": "M1",
-            "label": "5-note ascent to G",
-            "importance": 0.9,
-            "description": "C–Eb–F–F#–G (mix of steps + chromatic neighbor)."
+            "label": "Ascending 5-note stepwise cell",
+            "importance": 0.85,
+            "description": "Stepwise rise 60→63→65→66→67 (minor/Chromatic flavor) as a pickup/arrival."
         },
         {
             "id": "M2",
-            "label": "Bb–G response",
-            "importance": 0.6,
-            "description": "Upper neighbor (Bb) resolving to G in steady quarters."
+            "label": "Turnaround: leap up then stepwise down",
+            "importance": 0.75,
+            "description": "Leap to a high point then descend by steps back toward the start tone."
         },
         {
             "id": "M3",
-            "label": "Descending chromatic-ish cell",
-            "importance": 0.8,
-            "description": "G–F#–F–Eb (tight stepwise descent with chromatic inflection)."
-        },
-        {
-            "id": "M4",
-            "label": "Extension to high C then back",
-            "importance": 0.75,
-            "description": "G → Bb → C → Bb → G (larger arc finishing the tune)."
+            "label": "Repetition of opening idea",
+            "importance": 0.65,
+            "description": "Second statement of the opening ascent, extended to a higher peak."
         }
     ],
     "motifOccurrences": [
@@ -42,17 +36,8 @@
             "location": {
                 "startMeasure": 1,
                 "startBeat": 1,
-                "endMeasure": 2,
-                "endBeat": 1
-            }
-        },
-        {
-            "motifId": "M1",
-            "location": {
-                "startMeasure": 3,
-                "startBeat": 1,
-                "endMeasure": 4,
-                "endBeat": 1
+                "endMeasure": 1,
+                "endBeat": 4
             }
         },
         {
@@ -61,123 +46,79 @@
                 "startMeasure": 2,
                 "startBeat": 1,
                 "endMeasure": 2,
-                "endBeat": 3
+                "endBeat": 4
+            }
+        },
+        {
+            "motifId": "M1",
+            "location": {
+                "startMeasure": 3,
+                "startBeat": 1,
+                "endMeasure": 3,
+                "endBeat": 4
             }
         },
         {
             "motifId": "M3",
             "location": {
-                "startMeasure": 2,
-                "startBeat": 2,
-                "endMeasure": 3,
-                "endBeat": 1
-            }
-        },
-        {
-            "motifId": "M4",
-            "location": {
                 "startMeasure": 3,
-                "startBeat": 4,
+                "startBeat": 1,
                 "endMeasure": 4,
-                "endBeat": 5
+                "endBeat": 4
             }
         }
     ],
     "nuggets": [
         {
             "id": "N1",
-            "label": "Ascent to G (bar 1)",
             "location": {
                 "startMeasure": 1,
                 "startBeat": 1,
-                "endMeasure": 2,
-                "endBeat": 1
+                "endMeasure": 1,
+                "endBeat": 4
             },
             "dependsOn": [
                 "M1"
-            ],
-            "modes": [
-                "RH"
             ]
         },
         {
             "id": "N2",
-            "label": "Bb–G (bar 2, beats 1–2)",
             "location": {
                 "startMeasure": 2,
                 "startBeat": 1,
                 "endMeasure": 2,
-                "endBeat": 3
+                "endBeat": 4
             },
             "dependsOn": [
-                "M2"
-            ],
-            "modes": [
-                "RH"
+                "M2",
+                "N1"
             ]
         },
         {
             "id": "N3",
-            "label": "G down to Eb (bar 2, beats 2–4)",
             "location": {
-                "startMeasure": 2,
-                "startBeat": 2,
+                "startMeasure": 3,
+                "startBeat": 1,
                 "endMeasure": 3,
-                "endBeat": 1
+                "endBeat": 4
             },
             "dependsOn": [
+                "M1",
                 "M3"
-            ],
-            "modes": [
-                "RH"
             ]
         },
         {
             "id": "N4",
-            "label": "Repeat ascent to G (bar 3)",
-            "location": {
-                "startMeasure": 3,
-                "startBeat": 1,
-                "endMeasure": 4,
-                "endBeat": 1
-            },
-            "dependsOn": [
-                "M1"
-            ],
-            "modes": [
-                "RH"
-            ]
-        },
-        {
-            "id": "N5",
-            "label": "Rise to high C (bar 4, beats 1–2)",
             "location": {
                 "startMeasure": 4,
                 "startBeat": 1,
                 "endMeasure": 4,
-                "endBeat": 3
+                "endBeat": 4
             },
             "dependsOn": [
-                "M4"
-            ],
-            "modes": [
-                "RH"
-            ]
-        },
-        {
-            "id": "N6",
-            "label": "Return to G (bar 4, beats 3–4)",
-            "location": {
-                "startMeasure": 4,
-                "startBeat": 3,
-                "endMeasure": 4,
-                "endBeat": 5
-            },
-            "dependsOn": [
-                "M4"
-            ],
-            "modes": [
-                "RH"
+                "M2",
+                "M3",
+                "N3"
             ]
         }
     ],
@@ -185,140 +126,52 @@
         {
             "id": "A1",
             "tier": 1,
-            "label": "Intro + response",
             "nuggetIds": [
                 "N1",
                 "N2"
-            ],
-            "difficulty": {
-                "level": 2
-            },
-            "modes": [
-                "RH"
             ]
         },
         {
             "id": "A2",
             "tier": 1,
-            "label": "Bar 2 complete idea",
             "nuggetIds": [
-                "N2",
-                "N3"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "RH"
+                "N3",
+                "N4"
             ]
         },
         {
             "id": "A3",
-            "tier": 1,
-            "label": "Repeat + launch into ending",
-            "nuggetIds": [
-                "N4",
-                "N5"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "RH"
-            ]
-        },
-        {
-            "id": "A4",
-            "tier": 1,
-            "label": "Closing tag",
-            "nuggetIds": [
-                "N5",
-                "N6"
-            ],
-            "difficulty": {
-                "level": 2
-            },
-            "modes": [
-                "RH"
-            ]
-        },
-        {
-            "id": "A5",
-            "tier": 1,
-            "label": "First half (bars 1–2)",
+            "tier": 2,
             "nuggetIds": [
                 "N1",
                 "N2",
                 "N3"
-            ],
-            "difficulty": {
-                "level": 4
-            },
-            "modes": [
-                "RH"
-            ]
-        },
-        {
-            "id": "A6",
-            "tier": 1,
-            "label": "Second half (bars 3–4)",
-            "nuggetIds": [
-                "N4",
-                "N5",
-                "N6"
-            ],
-            "difficulty": {
-                "level": 4
-            },
-            "modes": [
-                "RH"
-            ]
-        },
-        {
-            "id": "A7",
-            "tier": 1,
-            "label": "Turnaround into the repeat",
-            "nuggetIds": [
-                "N3",
-                "N4"
-            ],
-            "difficulty": {
-                "level": 4
-            },
-            "modes": [
-                "RH"
             ]
         }
     ],
     "tuneHints": {
-        "goal": "Keep a steady quarter-note pulse while making the half-beat (eighth-note) pairs sound clean and even; aim for a smooth arc in bars 3–4 as the melody reaches high C and returns to G.",
-        "counting": "Count 4/4 in quarters; in the two-note chromatic spots (F–F#), subdivide the beat into 'and' to keep them even.",
+        "goal": "Shape a clear two-phrase melody: an opening ascent to a peak, a stepwise return, then a repeat that climbs higher before resolving down.",
+        "counting": "4/4 at 120 qpm. Feel each measure as 4 beats; keep the short notes (eighths) even where they appear.",
         "commonMistakes": [
-            "Rushing the eighth-note pairs (F–F#) so they don’t fit evenly in the beat",
-            "Blurring the chromatic neighbors (F/F#) so the contour sounds vague",
-            "Uneven tone on the repeated Bb notes near the end"
+            "Rushing the short notes around beats 3–4 of each phrase",
+            "Missing the peak notes (70/72) by undershooting the leap",
+            "Letting the descent get uneven (stepwise line should be smooth)"
         ],
         "whatToListenFor": [
-            "Clear arrival on G at each barline (end of bars 1 and 3)",
-            "Even spacing of the chromatic neighbor tones (F–F#)",
-            "A confident peak on high C (bar 4 beat 2) and a relaxed return to G"
+            "A single connected line (legato finger changes where possible)",
+            "A gentle dynamic arch toward the peak, then relax on the way down",
+            "Consistent rhythm: same spacing for repeated patterns in measures 1 and 3"
         ]
     },
     "teachingOrder": [
         "N1",
         "N2",
         "N3",
-        "N4",
-        "N5",
-        "N6"
+        "N4"
     ],
     "assemblyOrder": [
         "A1",
         "A2",
-        "A7",
-        "A4",
-        "A3",
-        "A5",
-        "A6"
+        "A3"
     ]
 }

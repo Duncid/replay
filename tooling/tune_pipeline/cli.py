@@ -171,8 +171,11 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     teacher = read_json(teacher_path)
     validate_teacher(teacher)
 
-    # 2. Output Setup
+    # 2. Output Setup - clean and recreate
     output_dir = tune_folder / "output"
+    if output_dir.exists():
+        import shutil
+        shutil.rmtree(output_dir)
     output_dir.mkdir(exist_ok=True)
     
     # Check inputs
