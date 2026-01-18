@@ -237,13 +237,26 @@ export function TuneMode({
         // Update evaluation inline - no phase change
         updateEvaluation(response);
 
-        // Show toast feedback based on evaluation
-        if (response.evaluation === 'pass') {
-          toast.success(response.feedbackText, { duration: 3000 });
-        } else if (response.evaluation === 'close') {
-          toast(response.feedbackText, { duration: 3000 });
-        } else {
-          toast(response.feedbackText, { duration: 3000 });
+        // Celebratory toast for tune acquisition
+        if (response.tuneAcquired) {
+          toast.success(`Tune Acquired: ${state.tuneTitle}`);
+        }
+
+        // Celebratory toast for skill unlocks from tune
+        if (response.awardedSkills && response.awardedSkills.length > 0) {
+          const skillNames = response.awardedSkills.join(", ");
+          toast.success(`Skill Unlocked: ${skillNames}`);
+        }
+
+        // Show toast feedback based on evaluation (only if no acquisition happened)
+        if (!response.tuneAcquired && !response.awardedSkills?.length) {
+          if (response.evaluation === 'pass') {
+            toast.success(response.feedbackText, { duration: 3000 });
+          } else if (response.evaluation === 'close') {
+            toast(response.feedbackText, { duration: 3000 });
+          } else {
+            toast(response.feedbackText, { duration: 3000 });
+          }
         }
 
         if (response.evaluation === "fail" && !isPlayingSample && !isRecording) {
