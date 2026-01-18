@@ -266,7 +266,7 @@ export function TunePractice({
         <CardHeader className="flex flex-row pb-4 justify-between items-center">
           <StatusDisplay isRecording={isRecording} isEvaluating={isEvaluating} lastEvaluation={lastEvaluation} />
           <Button variant="ghost" size="icon" onClick={onLeave}>
-            <X className="h-4 w-4" />
+            <X />
           </Button>
         </CardHeader>
 
