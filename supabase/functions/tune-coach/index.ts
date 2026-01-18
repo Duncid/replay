@@ -42,6 +42,14 @@ interface TuneAssembly {
   rightHandSequence?: unknown;
 }
 
+interface TuneFullTune {
+  id: string;
+  label: string;
+  noteSequence?: unknown;
+  leftHandSequence?: unknown;
+  rightHandSequence?: unknown;
+}
+
 interface TuneHints {
   goal?: string;
   counting?: string;
@@ -69,7 +77,7 @@ interface NuggetState {
 
 interface PracticePlanItem {
   itemId: string;
-  itemType: "nugget" | "assembly";
+  itemType: "nugget" | "assembly" | "full_tune";
   instruction: string;
   motifs: string[];
 }
@@ -138,6 +146,13 @@ serve(async (req) => {
     const briefing = tuneAsset.briefing as TuneBriefing;
     const nuggets = (tuneAsset.nuggets || []) as TuneNugget[];
     const assemblies = (tuneAsset.assemblies || []) as TuneAssembly[];
+    const fullTune: TuneFullTune = {
+      id: "FULL_TUNE",
+      label: `${briefing.title} (full tune)`,
+      noteSequence: tuneAsset.note_sequence,
+      leftHandSequence: tuneAsset.left_hand_sequence || undefined,
+      rightHandSequence: tuneAsset.right_hand_sequence || undefined,
+    };
     const tuneHints = briefing?.tuneHints;
 
     console.log(`[tune-coach] Loaded tune: ${briefing.title}, ${nuggets.length} nuggets, ${assemblies.length} assemblies`);
@@ -452,6 +467,7 @@ Prioritize items that are:
 - Don't flood with all possible nuggets/assemblies
 - If full tune is not yet stable, prefer Tier 3 assemblies only when Tier 1 and Tier 2 are mastered
 - Once ALL Tier 3 assemblies are stable, include an item to play the FULL TUNE end-to-end
+- Use itemType "full_tune" with itemId "FULL_TUNE" for full-tune practice
 
 ---
 
@@ -492,6 +508,7 @@ Remember:
 - Only suggest READY assemblies (check ASSEMBLY READINESS)
 - Balance 1 growth target + 1-3 support targets
 - Target about 16 items, but it can be shorter and should taper as mastery increases
+- Use itemType "full_tune" with itemId "FULL_TUNE" when the plan calls for full-tune practice
 - Include brief, encouraging instructions for each item`;
 
     const composedPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
@@ -510,8 +527,8 @@ Remember:
                 items: {
                   type: "object",
                   properties: {
-                    itemId: { type: "string", description: "The nugget or assembly ID (e.g., N1, A2, B1)" },
-                    itemType: { type: "string", enum: ["nugget", "assembly"], description: "Whether this is a nugget or assembly" },
+                    itemId: { type: "string", description: "The nugget/assembly ID (e.g., N1, A2, B1) or FULL_TUNE for full-tune practice" },
+                    itemType: { type: "string", enum: ["nugget", "assembly", "full_tune"], description: "Whether this is a nugget, assembly, or full tune" },
                     instruction: { type: "string", description: "Brief instruction/goal for this item (1-2 sentences)" },
                     motifs: { type: "array", items: { type: "string" }, description: "Motif IDs this item practices" },
                   },
@@ -561,6 +578,7 @@ Remember:
             noteSequence: n.noteSequence,
             dependsOn: n.dependsOn,
           })),
+          fullTune,
           assemblies: assemblies.map((a) => ({
             id: a.id,
             tier: a.tier,
@@ -619,21 +637,36 @@ Remember:
           itemType: item.itemType,
           nugget: nugget || null,
           assembly: null,
+          fullTune: null,
           instruction: item.instruction,
           motifs: item.motifs,
         };
-      } else {
+      }
+      if (item.itemType === "assembly") {
         const assembly = assemblies.find((a) => a.id === item.itemId);
         return {
           itemId: item.itemId,
           itemType: item.itemType,
           nugget: null,
           assembly: assembly || null,
+          fullTune: null,
           instruction: item.instruction,
           motifs: item.motifs,
         };
       }
-    }).filter((item) => item.nugget !== null || item.assembly !== null);
+      if (item.itemType === "full_tune") {
+        return {
+          itemId: item.itemId,
+          itemType: item.itemType,
+          nugget: null,
+          assembly: null,
+          fullTune,
+          instruction: item.instruction,
+          motifs: item.motifs,
+        };
+      }
+      return null;
+    }).filter((item) => item !== null);
 
     return new Response(
       JSON.stringify({

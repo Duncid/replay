@@ -67,6 +67,8 @@ serve(async (req) => {
       );
     }
 
+    const briefing = (tuneAsset.briefing || {}) as Record<string, unknown>;
+
     // Look in both nuggets and assemblies for the item
     const nuggets = (tuneAsset.nuggets || []) as TuneItem[];
     const assemblies = (tuneAsset.assemblies || []) as TuneItem[];
@@ -76,6 +78,16 @@ serve(async (req) => {
     
     if (!targetItem) {
       targetItem = assemblies.find((a) => a.id === nuggetId);
+      isAssembly = true;
+    }
+
+    if (!targetItem && nuggetId === "FULL_TUNE" && tuneAsset.note_sequence) {
+      targetItem = {
+        id: "FULL_TUNE",
+        label: `${(briefing.title as string) || tuneKey} (full tune)`,
+        tier: 3,
+        noteSequence: tuneAsset.note_sequence,
+      };
       isAssembly = true;
     }
 
@@ -91,7 +103,6 @@ serve(async (req) => {
     const assemblyTier = isAssembly ? (targetItem.tier || 1) : null;
     
     // Extract tune-level evaluation guidance from briefing
-    const briefing = (tuneAsset.briefing || {}) as Record<string, unknown>;
     const evaluationGuidance = briefing.evaluationGuidance as string | null;
 
     // 2. Fetch current nugget state
