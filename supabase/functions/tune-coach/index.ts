@@ -447,9 +447,11 @@ Prioritize items that are:
 - Passed but with low confidence (low streak, few attempts, long time since last practice)
 
 ### 6) Keep the plan practical
-- Prefer 3-6 items maximum
+- Target about 16 items early in learning, but allow more or less as needed
+- As the learner nears full mastery, use far fewer items (short, focused plans)
 - Don't flood with all possible nuggets/assemblies
 - If full tune is not yet stable, prefer Tier 3 assemblies only when Tier 1 and Tier 2 are mastered
+- Once ALL Tier 3 assemblies are stable, include an item to play the FULL TUNE end-to-end
 
 ---
 
@@ -489,7 +491,7 @@ Use the submit_practice_plan function to return a structured practice plan.`;
 Remember:
 - Only suggest READY assemblies (check ASSEMBLY READINESS)
 - Balance 1 growth target + 1-3 support targets
-- 3-6 items maximum
+- Target about 16 items, but it can be shorter and should taper as mastery increases
 - Include brief, encouraging instructions for each item`;
 
     const composedPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
