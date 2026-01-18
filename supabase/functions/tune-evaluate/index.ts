@@ -12,6 +12,7 @@ const STREAK_THRESHOLD_FOR_NEW_NUGGET = 3;
 interface TuneItem {
   id: string;
   label?: string;
+  tier?: number; // For assemblies
   teacherHints?: {
     goal?: string;
     counting?: string;
@@ -87,6 +88,7 @@ serve(async (req) => {
 
     const targetSequence = targetItem.noteSequence;
     const teacherHints = targetItem.teacherHints || {};
+    const assemblyTier = isAssembly ? (targetItem.tier || 1) : null;
     
     // Extract tune-level evaluation guidance from briefing
     const briefing = (tuneAsset.briefing || {}) as Record<string, unknown>;
@@ -109,6 +111,14 @@ serve(async (req) => {
     const attemptCount = existingState?.attempt_count || 0;
 
     // 3. Build LLM prompt
+    const tier3Context = isAssembly && assemblyTier === 3 
+      ? `\n\nTIER 3 ASSEMBLY - TUNE MASTERY:
+This is a Tier 3 (final) assembly combining all nuggets of the tune.
+Successfully passing this means the student has mastered the ENTIRE tune.
+Passing this assembly will mark the tune as "Acquired" and unlock any connected tunes.
+Be appropriately celebratory if they pass!`
+      : "";
+
     const systemPrompt = `You are a piano practice evaluator. Evaluate the student's performance on a small section (nugget) of a piece.
 
 STUDENT CONTEXT:
@@ -118,13 +128,14 @@ ${evaluationGuidance ? `
 TUNE-LEVEL EVALUATION GUIDANCE:
 ${evaluationGuidance}
 ` : ""}
-${isAssembly ? "ASSEMBLY" : "NUGGET"} BEING PRACTICED:
+${isAssembly ? `ASSEMBLY (Tier ${assemblyTier})` : "NUGGET"} BEING PRACTICED:
 - ID: ${nuggetId}
-- Label: ${targetItem.label}
+- Label: ${targetItem.label || nuggetId}
 - Goal: ${teacherHints.goal || "Play this section accurately"}
 ${teacherHints.counting ? `- Counting guide: ${teacherHints.counting}` : ""}
 ${teacherHints.commonMistakes ? `- Common mistakes to watch for: ${teacherHints.commonMistakes}` : ""}
 ${teacherHints.whatToListenFor ? `- What to listen for: ${teacherHints.whatToListenFor}` : ""}
+${tier3Context}
 
 CURRENT PROGRESS:
 - Previous attempts: ${attemptCount}
@@ -212,11 +223,13 @@ FEEDBACK STYLE:
           prompt: composedPrompt,
           tuneKey,
           nuggetId,
-          itemLabel: targetItem.label,
+          itemLabel: targetItem.label || nuggetId,
           targetSequence,
           userSequence,
           currentStreak,
           attemptCount,
+          isAssembly,
+          assemblyTier,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -300,6 +313,78 @@ FEEDBACK STYLE:
     // 7. Determine if should suggest new nugget
     const suggestNewNugget = newStreak >= STREAK_THRESHOLD_FOR_NEW_NUGGET;
 
+    // 8. Check for Tune Acquisition (Tier 3 assembly pass)
+    let tuneAcquired = false;
+    const awardedSkills: string[] = [];
+
+    if (isAssembly && assemblyTier === 3 && evalResult.evaluation === "pass") {
+      console.log(`[tune-evaluate] Tier 3 assembly passed! Checking tune acquisition for ${tuneKey}`);
+      
+      // Check if tune is already acquired
+      let acquisitionQuery = supabase
+        .from("user_tune_acquisition")
+        .select("id")
+        .eq("tune_key", tuneKey);
+      
+      if (localUserId) {
+        acquisitionQuery = acquisitionQuery.eq("local_user_id", localUserId);
+      }
+      
+      const { data: existingAcquisition } = await acquisitionQuery.maybeSingle();
+      
+      if (!existingAcquisition) {
+        // Mark tune as acquired
+        const { error: acquisitionError } = await supabase
+          .from("user_tune_acquisition")
+          .insert({
+            local_user_id: localUserId,
+            tune_key: tuneKey,
+            acquired_at: new Date().toISOString(),
+          });
+        
+        if (!acquisitionError) {
+          tuneAcquired = true;
+          console.log(`[tune-evaluate] Tune ${tuneKey} acquired by user ${localUserId}`);
+          
+          // Fetch and award skills linked via tune_awards_skill edges
+          const { data: skillEdges } = await supabase
+            .from("curriculum_edges")
+            .select("target_key")
+            .eq("source_key", tuneKey)
+            .eq("edge_type", "tune_awards_skill");
+          
+          if (skillEdges && skillEdges.length > 0) {
+            for (const edge of skillEdges) {
+              const skillKey = edge.target_key;
+              
+              // Upsert skill state
+              const { error: skillError } = await supabase
+                .from("user_skill_state")
+                .upsert(
+                  {
+                    skill_key: skillKey,
+                    local_user_id: localUserId,
+                    unlocked: true,
+                    mastery: 1,
+                    updated_at: new Date().toISOString(),
+                  },
+                  { onConflict: "skill_key,local_user_id" }
+                );
+              
+              if (!skillError) {
+                awardedSkills.push(skillKey);
+                console.log(`[tune-evaluate] Skill ${skillKey} awarded to user ${localUserId}`);
+              }
+            }
+          }
+        } else {
+          console.error("[tune-evaluate] Error inserting tune acquisition:", acquisitionError);
+        }
+      } else {
+        console.log(`[tune-evaluate] Tune ${tuneKey} already acquired by user ${localUserId}`);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         evaluation: evalResult.evaluation,
@@ -307,6 +392,8 @@ FEEDBACK STYLE:
         currentStreak: newStreak,
         suggestNewNugget,
         replayDemo: evalResult.replayDemo,
+        tuneAcquired,
+        awardedSkills,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

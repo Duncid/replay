@@ -543,6 +543,38 @@ export type Database = {
           },
         ]
       }
+      user_tune_acquisition: {
+        Row: {
+          acquired_at: string
+          created_at: string
+          id: string
+          local_user_id: string | null
+          tune_key: string
+        }
+        Insert: {
+          acquired_at?: string
+          created_at?: string
+          id?: string
+          local_user_id?: string | null
+          tune_key: string
+        }
+        Update: {
+          acquired_at?: string
+          created_at?: string
+          id?: string
+          local_user_id?: string | null
+          tune_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tune_acquisition_local_user_id_fkey"
+            columns: ["local_user_id"]
+            isOneToOne: false
+            referencedRelation: "local_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
