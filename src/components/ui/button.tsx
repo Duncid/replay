@@ -49,7 +49,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <Comp
         className={cn(
           buttonVariants({ variant, size, className }),
-          isPulsating && "animate-pulse-glow"
+          isPulsating && "animate-pulse-glow",
+          "transition-transform transition-shadow duration-600"
         )}
         ref={ref}
         {...props}

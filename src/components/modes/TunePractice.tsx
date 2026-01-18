@@ -1,11 +1,11 @@
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
 import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
-import { ArrowLeft, ArrowRight, Check, Minus, Music, Play, Send, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, Minus, Music, Play, Send, X } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 interface TunePracticeProps {
   tuneTitle: string;
@@ -24,57 +24,195 @@ interface TunePracticeProps {
 
 const STREAK_THRESHOLD = 3;
 
-// Inline evaluation badge that fades after display
-function EvaluationBadge({ evaluation }: { evaluation: TuneEvaluationResponse }) {
-  const [visible, setVisible] = useState(true);
+// Status display for top left (Playing, Sending, or Close evaluation)
+function StatusDisplay({ 
+  isRecording, 
+  isEvaluating, 
+  lastEvaluation 
+}: { 
+  isRecording: boolean;
+  isEvaluating: boolean;
+  lastEvaluation?: TuneEvaluationResponse | null;
+}) {
+  if (isRecording && !isEvaluating) {
+    return (
+      <div className="flex items-center gap-2 text-primary">
+        <Music className="h-4 w-4 animate-pulse" />
+        <span className="text-sm font-medium">Playing</span>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    setVisible(true);
-    const timer = setTimeout(() => setVisible(false), 3000);
-    return () => clearTimeout(timer);
-  }, [evaluation]);
+  if (isEvaluating) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
+        <Send className="h-4 w-4" />
+        <span className="text-sm font-medium">Sending</span>
+      </div>
+    );
+  }
 
-  if (!visible) return null;
+  // Only show "close" evaluation (pass/fail are shown in streak display)
+  if (lastEvaluation?.evaluation === "close") {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
+        <Minus className="h-4 w-4" />
+        <span className="text-sm font-medium">Close</span>
+      </div>
+    );
+  }
 
-  const config = {
-    pass: { icon: Check, className: "bg-green-500/20 text-green-600 border-green-500/30" },
-    close: { icon: Minus, className: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30" },
-    fail: { icon: X, className: "bg-red-500/20 text-red-600 border-red-500/30" },
-  };
-
-  const { icon: Icon, className } = config[evaluation.evaluation];
-
-  return (
-    <div className={cn(
-      "flex items-center gap-2 px-3 py-2 rounded-lg border transition-opacity duration-500",
-      className,
-      !visible && "opacity-0"
-    )}>
-      <Icon className="h-4 w-4" />
-      <span className="text-sm font-medium capitalize">{evaluation.evaluation}</span>
-    </div>
-  );
+  return null;
 }
 
-// Streak dots component
-function StreakDots({ currentStreak }: { currentStreak: number }) {
-  const streakComplete = currentStreak >= STREAK_THRESHOLD;
-  
+// Streak display component for bottom left
+function StreakDisplay({ 
+  lastEvaluation,
+  currentNuggetId
+}: { 
+  lastEvaluation?: TuneEvaluationResponse | null;
+  currentNuggetId: string;
+}) {
+  const [fires, setFires] = useState<number[]>([]); // Array of unique IDs for fires to enable staggered removal
+  const [tempMessage, setTempMessage] = useState<"success" | "woops" | "Close!" | null>(null);
+  const [messageVisible, setMessageVisible] = useState(false);
+  const [isRemovingFires, setIsRemovingFires] = useState(false);
+  const nextFireIdRef = useRef(0);
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+
+  // Reset on nugget change
+  useEffect(() => {
+    // Clear all timeouts
+    timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+    timeoutRefs.current = [];
+    
+    setFires([]);
+    setTempMessage(null);
+    setMessageVisible(false);
+    setIsRemovingFires(false);
+  }, [currentNuggetId]);
+
+  // Handle evaluation changes
+  useEffect(() => {
+    if (!lastEvaluation) {
+      return;
+    }
+
+    // Clear any existing timeouts
+    timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+    timeoutRefs.current = [];
+
+    const evaluation = lastEvaluation.evaluation;
+
+    if (evaluation === "pass") {
+      // Success: show "success", then add fire after 2s
+      setTempMessage("success");
+      // Trigger fade-in after a tiny delay to ensure transition
+      const fadeInTimer = setTimeout(() => {
+        setMessageVisible(true);
+      }, 10);
+      timeoutRefs.current.push(fadeInTimer);
+      
+      const timer = setTimeout(() => {
+        const fireId = nextFireIdRef.current++;
+        setFires(prev => [...prev, fireId]);
+        setTempMessage(null);
+        setMessageVisible(false);
+      }, 2000);
+
+      timeoutRefs.current.push(timer);
+    } else if (evaluation === "fail") {
+      // Fail: show "woops", then remove fires one by one
+      setTempMessage("woops");
+      const fadeInTimer = setTimeout(() => {
+        setMessageVisible(true);
+      }, 10);
+      timeoutRefs.current.push(fadeInTimer);
+
+      // Get current fires to schedule removal
+      setFires(currentFires => {
+        if (currentFires.length === 0) {
+          // If no fires, just hide message after showing
+          const timer = setTimeout(() => {
+            setTempMessage(null);
+            setMessageVisible(false);
+          }, 2000);
+          timeoutRefs.current.push(timer);
+        } else {
+          // Remove fires one by one with 500ms delay
+          setIsRemovingFires(true);
+          const firesCopy = [...currentFires];
+          firesCopy.forEach((fireId, index) => {
+            const timer = setTimeout(() => {
+              setFires(prev => {
+                const updated = prev.filter(id => id !== fireId);
+                if (index === firesCopy.length - 1) {
+                  // Last fire removed
+                  setIsRemovingFires(false);
+                  setTempMessage(null);
+                  setMessageVisible(false);
+                }
+                return updated;
+              });
+            }, (index + 1) * 500);
+            timeoutRefs.current.push(timer);
+          });
+        }
+        return currentFires; // Return unchanged for now, removal happens in timeouts
+      });
+    } else if (evaluation === "close") {
+      // Close: show "Close!" but don't change fires
+      setTempMessage("Close!");
+      const fadeInTimer = setTimeout(() => {
+        setMessageVisible(true);
+      }, 10);
+      timeoutRefs.current.push(fadeInTimer);
+
+      const timer = setTimeout(() => {
+        setTempMessage(null);
+        setMessageVisible(false);
+      }, 2000);
+
+      timeoutRefs.current.push(timer);
+    }
+
+    return () => {
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
+    };
+  }, [lastEvaluation]);
+
   return (
-    <div className="flex items-center gap-1.5">
-      {Array.from({ length: STREAK_THRESHOLD }).map((_, i) => (
-        <div
-          key={i}
+    <div className="flex flex-1 items-center gap-2 min-h-[24px] s-px-3">
+      {/* Fires */}
+      {fires.map((fireId, index) => (
+        <span
+          key={fireId}
           className={cn(
-            "w-3 h-3 rounded-full border-2 transition-colors duration-300",
-            i < currentStreak
-              ? "bg-primary border-primary"
-              : "bg-transparent border-muted-foreground/30"
+            "text-lg transition-opacity duration-300",
+            isRemovingFires ? "opacity-0" : "opacity-100"
           )}
-        />
+          style={{
+            transitionDelay: isRemovingFires ? `${index * 500}ms` : '0ms'
+          }}
+        >
+          🔥
+        </span>
       ))}
-      {streakComplete && (
-        <span className="text-lg ml-1 animate-in fade-in zoom-in">🔥</span>
+      
+      {/* Temporary message */}
+      {tempMessage && (
+        <span
+          className={cn(
+            "text-sm font-medium transition-opacity duration-300",
+            messageVisible ? "opacity-100" : "opacity-0",
+            tempMessage === "success" && "text-green-600",
+            tempMessage === "woops" && "text-orange-600",
+            tempMessage === "Close!" && "text-accent"
+          )}
+        >
+          {tempMessage}
+        </span>
       )}
     </div>
   );
@@ -93,44 +231,61 @@ export function TunePractice({
 }: TunePracticeProps) {
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
+  const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
   
   // Get sample sequence from either nugget or assembly
   const sampleSequence = (currentNugget.nugget?.noteSequence || currentNugget.assembly?.noteSequence) as NoteSequence | undefined;
 
   useEffect(() => {
+    // Reset pulse state when streak is not complete
     if (!streakComplete) {
       setShouldPulse(false);
+      setPulsedStreak(null);
       return;
     }
-    setShouldPulse(true);
-    const timer = setTimeout(() => setShouldPulse(false), 2500);
-    return () => clearTimeout(timer);
-  }, [streakComplete]);
+    
+    // Only trigger pulse once when streak first reaches threshold
+    // If streak drops and comes back, we can pulse again
+    if (pulsedStreak !== STREAK_THRESHOLD && currentStreak >= STREAK_THRESHOLD) {
+      setShouldPulse(true);
+      setPulsedStreak(STREAK_THRESHOLD);
+      const timer = setTimeout(() => setShouldPulse(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [streakComplete, currentStreak, pulsedStreak]);
 
   const handleNextNugget = () => {
     setShouldPulse(false);
+    setPulsedStreak(null);
     onSwitchNugget();
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <Button variant="ghost" size="sm" onClick={onLeave}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Leave
-        </Button>
-        
-        <StreakDots currentStreak={currentStreak} />
-      </div>
+    <div className="flex flex-col h-full items-center justify-center p-6">
+      <Card className="w-full max-w-lg relative">
+        <CardHeader className="relative pb-4 justify-between items-end">
+          <StatusDisplay 
+            isRecording={isRecording}
+            isEvaluating={isEvaluating}
+            lastEvaluation={lastEvaluation}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onLeave}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-foreground">{currentNugget.instruction}</p>
+        <CardContent className="space-y-4 p-4">
+          {/* Instruction */}
+          <p className="text-foreground text-center px-3">{currentNugget.instruction}</p>
+
+          {/* Sheet music and Play button */}
+          <div className="flex flex-col items-center gap-1">
             {sampleSequence?.notes?.length ? (
-              <div className="mt-4 flex justify-center">
+              <div className="flex justify-center">
                 <SheetMusic
                   sequence={sampleSequence}
                   compact
@@ -141,60 +296,40 @@ export function TunePractice({
                 />
               </div>
             ) : null}
-          </CardContent>
-        </Card>
+            
+            {/* Play button visually attached to sheet */}
+            <Button
+              variant="ghost"
+              onClick={onPlaySample}
+              disabled={isPlaying}
+              className="gap-2"
+            >
+              <Play fill="currentColor" stroke="none" />
+              Replay
+            </Button>
+          </div>
 
-        {/* Inline Status Area - Playing, Sending, or Evaluation result */}
-        <div className="h-10 flex items-center justify-center">
-          {isRecording && !isEvaluating ? (
-            <div className="flex items-center gap-2 text-primary">
-              <Music className="h-4 w-4 animate-pulse" />
-              <span className="text-sm font-medium">Playing</span>
-            </div>
-          ) : isEvaluating ? (
-            <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-              <Send className="h-4 w-4" />
-              <span className="text-sm font-medium">Sending</span>
-            </div>
-          ) : lastEvaluation ? (
-            <EvaluationBadge evaluation={lastEvaluation} />
-          ) : null}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={onPlaySample}
-            disabled={isPlaying}
-            className="gap-2"
-          >
-            {isPlaying ? (
-              <>
-                <Music className="h-5 w-5 animate-pulse" />
-                Playing...
-              </>
-            ) : (
-              <>
-                <Play className="h-5 w-5" />
-                Play
-              </>
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={handleNextNugget}
-            isPulsating={shouldPulse}
-            className="gap-2"
-          >
-            Next
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+          {/* Bottom section: StreakDisplay left, Next button right */}
+          <div className="flex items-center justify-between">
+            {/* Streak display bottom left */}
+            <StreakDisplay 
+              lastEvaluation={lastEvaluation}
+              currentNuggetId={currentNugget.itemId}
+            />
+            
+            {/* Next button bottom right */}
+            <Button
+              variant={shouldPulse ? "default" : "ghost"}
+              onClick={handleNextNugget}
+              isPulsating={shouldPulse}
+              className="gap-2"
+            >
+              Next
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
