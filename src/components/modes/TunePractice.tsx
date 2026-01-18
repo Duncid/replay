@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
 import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
-import { ArrowRight, Minus, Music, Play, Send, X } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { ArrowRight, Minus, Play, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface TunePracticeProps {
   tuneTitle: string;
