@@ -143,57 +143,9 @@
       "startTime": 7.0,
       "endTime": 8.0,
       "velocity": 90.0
-    },
-    {
-      "pitch": 43,
-      "startTime": 8.0,
-      "endTime": 14.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 47,
-      "startTime": 8.0,
-      "endTime": 14.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 50,
-      "startTime": 8.0,
-      "endTime": 14.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 53,
-      "startTime": 8.0,
-      "endTime": 14.0,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 71,
-      "startTime": 8.0,
-      "endTime": 8.25,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 74,
-      "startTime": 8.25,
-      "endTime": 8.5,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 71,
-      "startTime": 8.5,
-      "endTime": 8.75,
-      "velocity": 90.0
-    },
-    {
-      "pitch": 67,
-      "startTime": 8.75,
-      "endTime": 10.0,
-      "velocity": 90.0
     }
   ],
-  "totalTime": 10.0,
+  "totalTime": 8.0,
   "tempos": [],
   "timeSignatures": []
 }

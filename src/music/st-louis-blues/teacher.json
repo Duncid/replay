@@ -1,6 +1,6 @@
 {
     "schemaVersion": "teacher.v2",
-    "title": "St. Louis Blues",
+    "title": "St. Louis Blues (W. C. Handy) — Lead Melody",
     "pipelineSettings": {
         "staffToHandDefault": {
             "1": "RH",
@@ -13,51 +13,39 @@
     "motifs": [
         {
             "id": "M1",
-            "label": "Pickup: repeated D eighths",
-            "importance": 0.55,
-            "description": "3–4 repeated D5 eighths as a pickup/call-in."
+            "label": "Pickup D repeats",
+            "importance": 0.45,
+            "description": "Repeated D as a pickup/attention grab before a new section."
         },
         {
             "id": "M2",
-            "label": "Cm blues lick: C–C–C#–D → A#/A",
-            "importance": 0.8,
-            "description": "Rest then C repetitions, chromatic C# to D, resolves down to A#/A for a bluesy turn."
+            "label": "Chromatic approach to D, then drop",
+            "importance": 0.85,
+            "description": "Rest then C–C–C#–D, followed by a bluesy drop to a longer note (A/A#)."
         },
         {
             "id": "M3",
-            "label": "A-hook: B–D–B–G (tie to long G)",
-            "importance": 0.75,
-            "description": "Signature A-section hook: B4–D5–B4–G4 with a tie into a sustained G."
+            "label": "Call phrase to long hold",
+            "importance": 0.9,
+            "description": "Short call (often 3–4 notes) resolving into a tied/held note."
         },
         {
             "id": "M4",
-            "label": "Chromatic climb: D#–E–G → Bb (then A)",
+            "label": "D7 pickup F#–A–F#–D (tie)",
             "importance": 0.7,
-            "description": "Passing-tone climb into Bb (often held), then step to A."
+            "description": "Turnaround pickup on D7 leading into a long D (tie/hold)."
         },
         {
             "id": "M5",
-            "label": "C-phrase: E–G–A (tie to long A)",
-            "importance": 0.65,
-            "description": "E4–G4–A4 entry with A tied/sustained."
+            "label": "Bb insistence, then A",
+            "importance": 0.6,
+            "description": "Repeated Bb (aug color) with a step to A as a tag/answer."
         },
         {
             "id": "M6",
-            "label": "D7 lick: F#–A–F#–D (tie)",
-            "importance": 0.7,
-            "description": "D7 pickup cell resolving to a sustained D (often tied)."
-        },
-        {
-            "id": "M7",
-            "label": "D aug7 line: Bb repeats → A",
+            "label": "Tonic hold (whole-note anchor)",
             "importance": 0.55,
-            "description": "Bb4 repeated figures with a final A4."
-        },
-        {
-            "id": "M8",
-            "label": "C-section riff: G ↔ (A#) ↔ B over G/G6",
-            "importance": 0.75,
-            "description": "Alternation between G harmony and G6 with A# leading to B; repeated in the C section."
+            "description": "Whole-note (or multi-beat) sustained anchor that resets the ear between phrases."
         }
     ],
     "motifOccurrences": [
@@ -76,16 +64,7 @@
                 "startMeasure": 33,
                 "startBeat": 3,
                 "endMeasure": 33,
-                "endBeat": 5
-            }
-        },
-        {
-            "motifId": "M1",
-            "location": {
-                "startMeasure": 41,
-                "startBeat": 3,
-                "endMeasure": 41,
-                "endBeat": 5
+                "endBeat": 4.5
             }
         },
         {
@@ -125,11 +104,29 @@
             }
         },
         {
+            "motifId": "M2",
+            "location": {
+                "startMeasure": 43,
+                "startBeat": 1,
+                "endMeasure": 43,
+                "endBeat": 5
+            }
+        },
+        {
             "motifId": "M3",
             "location": {
                 "startMeasure": 10,
                 "startBeat": 1,
                 "endMeasure": 10,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M3",
+            "location": {
+                "startMeasure": 14,
+                "startBeat": 1,
+                "endMeasure": 14,
                 "endBeat": 5
             }
         },
@@ -143,34 +140,7 @@
             }
         },
         {
-            "motifId": "M4",
-            "location": {
-                "startMeasure": 11,
-                "startBeat": 1,
-                "endMeasure": 11,
-                "endBeat": 5
-            }
-        },
-        {
-            "motifId": "M4",
-            "location": {
-                "startMeasure": 23,
-                "startBeat": 1,
-                "endMeasure": 23,
-                "endBeat": 5
-            }
-        },
-        {
-            "motifId": "M5",
-            "location": {
-                "startMeasure": 14,
-                "startBeat": 1,
-                "endMeasure": 14,
-                "endBeat": 5
-            }
-        },
-        {
-            "motifId": "M5",
+            "motifId": "M3",
             "location": {
                 "startMeasure": 26,
                 "startBeat": 1,
@@ -179,7 +149,7 @@
             }
         },
         {
-            "motifId": "M6",
+            "motifId": "M4",
             "location": {
                 "startMeasure": 18,
                 "startBeat": 1,
@@ -188,7 +158,7 @@
             }
         },
         {
-            "motifId": "M6",
+            "motifId": "M4",
             "location": {
                 "startMeasure": 30,
                 "startBeat": 1,
@@ -197,7 +167,7 @@
             }
         },
         {
-            "motifId": "M7",
+            "motifId": "M5",
             "location": {
                 "startMeasure": 19,
                 "startBeat": 1,
@@ -206,7 +176,7 @@
             }
         },
         {
-            "motifId": "M7",
+            "motifId": "M5",
             "location": {
                 "startMeasure": 31,
                 "startBeat": 1,
@@ -215,20 +185,92 @@
             }
         },
         {
-            "motifId": "M8",
+            "motifId": "M6",
             "location": {
-                "startMeasure": 50,
+                "startMeasure": 12,
                 "startBeat": 1,
-                "endMeasure": 51,
+                "endMeasure": 12,
                 "endBeat": 5
             }
         },
         {
-            "motifId": "M8",
+            "motifId": "M6",
             "location": {
-                "startMeasure": 54,
+                "startMeasure": 16,
                 "startBeat": 1,
-                "endMeasure": 55,
+                "endMeasure": 16,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 20,
+                "startBeat": 1,
+                "endMeasure": 20,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 24,
+                "startBeat": 1,
+                "endMeasure": 24,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 28,
+                "startBeat": 1,
+                "endMeasure": 28,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 32,
+                "startBeat": 1,
+                "endMeasure": 32,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 40,
+                "startBeat": 1,
+                "endMeasure": 40,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 52,
+                "startBeat": 1,
+                "endMeasure": 52,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 56,
+                "startBeat": 1,
+                "endMeasure": 56,
+                "endBeat": 5
+            }
+        },
+        {
+            "motifId": "M6",
+            "location": {
+                "startMeasure": 60,
+                "startBeat": 1,
+                "endMeasure": 61,
                 "endBeat": 5
             }
         }
@@ -236,35 +278,35 @@
     "nuggets": [
         {
             "id": "N1",
-            "label": "Pickup call",
             "location": {
                 "startMeasure": 1,
                 "startBeat": 1,
-                "endMeasure": 1,
-                "endBeat": 2.5
+                "endMeasure": 3,
+                "endBeat": 5
             },
             "dependsOn": [
-                "M1"
+                "M1",
+                "M2"
             ]
         },
         {
             "id": "N2",
-            "label": "Intro hold (Gm)",
             "location": {
-                "startMeasure": 2,
+                "startMeasure": 4,
                 "startBeat": 1,
-                "endMeasure": 2,
+                "endMeasure": 5,
                 "endBeat": 5
             },
-            "dependsOn": []
+            "dependsOn": [
+                "M6"
+            ]
         },
         {
             "id": "N3",
-            "label": "Blues lick → A pedal",
             "location": {
-                "startMeasure": 3,
+                "startMeasure": 6,
                 "startBeat": 1,
-                "endMeasure": 5,
+                "endMeasure": 7,
                 "endBeat": 5
             },
             "dependsOn": [
@@ -273,24 +315,22 @@
         },
         {
             "id": "N4",
-            "label": "Repeat/answer + cadence (Gm→A7→D→D7)",
             "location": {
-                "startMeasure": 6,
+                "startMeasure": 8,
                 "startBeat": 1,
                 "endMeasure": 9,
                 "endBeat": 5
             },
             "dependsOn": [
-                "M2"
+                "M6"
             ]
         },
         {
             "id": "N5",
-            "label": "A1 hook (G7)",
             "location": {
                 "startMeasure": 10,
                 "startBeat": 1,
-                "endMeasure": 10,
+                "endMeasure": 11,
                 "endBeat": 5
             },
             "dependsOn": [
@@ -299,110 +339,115 @@
         },
         {
             "id": "N6",
-            "label": "Chromatic climb (C)",
-            "location": {
-                "startMeasure": 11,
-                "startBeat": 1,
-                "endMeasure": 11,
-                "endBeat": 5
-            },
-            "dependsOn": [
-                "M4"
-            ]
-        },
-        {
-            "id": "N7",
-            "label": "Sustain + stop (G→G7)",
             "location": {
                 "startMeasure": 12,
                 "startBeat": 1,
                 "endMeasure": 13,
                 "endBeat": 5
             },
-            "dependsOn": []
-        },
-        {
-            "id": "N8",
-            "label": "A2 entry (C: E–G–A tie)",
-            "location": {
-                "startMeasure": 14,
-                "startBeat": 1,
-                "endMeasure": 14,
-                "endBeat": 5
-            },
             "dependsOn": [
-                "M5"
+                "M6"
             ]
         },
         {
-            "id": "N9",
-            "label": "A2 continuation (Bb color → A)",
+            "id": "N7",
             "location": {
-                "startMeasure": 15,
+                "startMeasure": 14,
                 "startBeat": 1,
                 "endMeasure": 15,
                 "endBeat": 5
             },
             "dependsOn": [
-                "M4"
+                "M3"
             ]
         },
         {
-            "id": "N10",
-            "label": "Sustain + rest (G)",
+            "id": "N8",
             "location": {
                 "startMeasure": 16,
                 "startBeat": 1,
                 "endMeasure": 17,
                 "endBeat": 5
             },
-            "dependsOn": []
+            "dependsOn": [
+                "M6"
+            ]
         },
         {
-            "id": "N11",
-            "label": "Verse cell (D7 lick → Daug7 → G resolution)",
+            "id": "N9",
             "location": {
                 "startMeasure": 18,
+                "startBeat": 1,
+                "endMeasure": 19,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M4",
+                "M5"
+            ]
+        },
+        {
+            "id": "N10",
+            "location": {
+                "startMeasure": 20,
                 "startBeat": 1,
                 "endMeasure": 21,
                 "endBeat": 5
             },
             "dependsOn": [
-                "M6",
-                "M7"
+                "M6"
+            ]
+        },
+        {
+            "id": "N11",
+            "location": {
+                "startMeasure": 22,
+                "startBeat": 1,
+                "endMeasure": 23,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M3"
             ]
         },
         {
             "id": "N12",
-            "label": "A3 (repeat A1: hook → climb → sustain)",
             "location": {
-                "startMeasure": 22,
+                "startMeasure": 24,
                 "startBeat": 1,
                 "endMeasure": 25,
                 "endBeat": 5
             },
             "dependsOn": [
-                "M3",
-                "M4"
+                "M6"
             ]
         },
         {
             "id": "N13",
-            "label": "A4 (repeat A2: E–G–A tie → sustain)",
             "location": {
                 "startMeasure": 26,
+                "startBeat": 1,
+                "endMeasure": 27,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M3"
+            ]
+        },
+        {
+            "id": "N14",
+            "location": {
+                "startMeasure": 28,
                 "startBeat": 1,
                 "endMeasure": 29,
                 "endBeat": 5
             },
             "dependsOn": [
-                "M5",
-                "M4"
+                "M6"
             ]
         },
         {
-            "id": "N14",
-            "label": "Verse2 + pickup",
+            "id": "N15",
             "location": {
                 "startMeasure": 30,
                 "startBeat": 1,
@@ -410,56 +455,43 @@
                 "endBeat": 5
             },
             "dependsOn": [
-                "M6",
-                "M7",
-                "M1"
+                "M4",
+                "M5",
+                "M1",
+                "M6"
             ]
         },
         {
-            "id": "N15",
-            "label": "B1 (Gm long D)",
+            "id": "N16",
             "location": {
                 "startMeasure": 34,
                 "startBeat": 1,
-                "endMeasure": 34,
+                "endMeasure": 35,
                 "endBeat": 5
             },
-            "dependsOn": []
+            "dependsOn": [
+                "M2",
+                "M3"
+            ]
         },
         {
-            "id": "N16",
-            "label": "B1 continuation (Cm lick → D7 hold/pickups)",
+            "id": "N17",
             "location": {
-                "startMeasure": 35,
+                "startMeasure": 36,
                 "startBeat": 1,
                 "endMeasure": 37,
                 "endBeat": 5
             },
             "dependsOn": [
-                "M2"
-            ]
-        },
-        {
-            "id": "N17",
-            "label": "B2 (D7 long C → lick → Gm + pickup)",
-            "location": {
-                "startMeasure": 38,
-                "startBeat": 1,
-                "endMeasure": 41,
-                "endBeat": 5
-            },
-            "dependsOn": [
-                "M2",
-                "M1"
+                "M6"
             ]
         },
         {
             "id": "N18",
-            "label": "B3/B4 (repeat with Cm7; D7 → Gm/A7/E → D7 fermata + pickup)",
             "location": {
-                "startMeasure": 42,
+                "startMeasure": 38,
                 "startBeat": 1,
-                "endMeasure": 49,
+                "endMeasure": 39,
                 "endBeat": 5
             },
             "dependsOn": [
@@ -468,7 +500,68 @@
         },
         {
             "id": "N19",
-            "label": "C1 riff (G ↔ G6) + sustain",
+            "location": {
+                "startMeasure": 40,
+                "startBeat": 1,
+                "endMeasure": 41,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M6",
+                "M1"
+            ]
+        },
+        {
+            "id": "N20",
+            "location": {
+                "startMeasure": 42,
+                "startBeat": 1,
+                "endMeasure": 43,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M2",
+                "M3"
+            ]
+        },
+        {
+            "id": "N21",
+            "location": {
+                "startMeasure": 44,
+                "startBeat": 1,
+                "endMeasure": 45,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M6"
+            ]
+        },
+        {
+            "id": "N22",
+            "location": {
+                "startMeasure": 46,
+                "startBeat": 1,
+                "endMeasure": 47,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M2"
+            ]
+        },
+        {
+            "id": "N23",
+            "location": {
+                "startMeasure": 48,
+                "startBeat": 1,
+                "endMeasure": 49,
+                "endBeat": 5
+            },
+            "dependsOn": [
+                "M6"
+            ]
+        },
+        {
+            "id": "N24",
             "location": {
                 "startMeasure": 50,
                 "startBeat": 1,
@@ -476,12 +569,11 @@
                 "endBeat": 5
             },
             "dependsOn": [
-                "M8"
+                "M6"
             ]
         },
         {
-            "id": "N20",
-            "label": "C2 riff (C-based variant) + sustain",
+            "id": "N25",
             "location": {
                 "startMeasure": 54,
                 "startBeat": 1,
@@ -489,163 +581,124 @@
                 "endBeat": 5
             },
             "dependsOn": [
-                "M8"
+                "M6"
             ]
         },
         {
-            "id": "N21",
-            "label": "Tag/ending (G/D bass feel → D7 walk → final G)",
+            "id": "N26",
             "location": {
                 "startMeasure": 58,
                 "startBeat": 1,
                 "endMeasure": 61,
                 "endBeat": 5
             },
-            "dependsOn": []
+            "dependsOn": [
+                "M6"
+            ]
         }
     ],
     "assemblies": [
         {
             "id": "A1",
             "tier": 1,
-            "label": "Intro: call → hold → lick",
             "nuggetIds": [
                 "N1",
-                "N2",
-                "N3"
-            ],
-            "difficulty": {
-                "level": 2
-            }
+                "N2"
+            ]
         },
         {
             "id": "A2",
             "tier": 1,
-            "label": "Intro cadence into A",
             "nuggetIds": [
-                "N4",
-                "N5"
-            ],
-            "difficulty": {
-                "level": 2
-            }
+                "N3",
+                "N4"
+            ]
         },
         {
             "id": "A3",
             "tier": 1,
-            "label": "A1 sentence",
             "nuggetIds": [
                 "N5",
-                "N6",
-                "N7"
-            ],
-            "difficulty": {
-                "level": 3
-            }
+                "N6"
+            ]
         },
         {
             "id": "A4",
             "tier": 1,
-            "label": "A2 sentence",
             "nuggetIds": [
-                "N8",
-                "N9",
-                "N10"
-            ],
-            "difficulty": {
-                "level": 3
-            }
+                "N7",
+                "N8"
+            ]
         },
         {
             "id": "A5",
             "tier": 1,
-            "label": "Verse bridge into A3",
             "nuggetIds": [
-                "N11",
-                "N12"
-            ],
-            "difficulty": {
-                "level": 4
-            }
+                "N9",
+                "N10"
+            ]
         },
         {
             "id": "A6",
             "tier": 1,
-            "label": "A3→A4 stitch",
             "nuggetIds": [
-                "N12",
-                "N13"
-            ],
-            "difficulty": {
-                "level": 3
-            }
+                "N11",
+                "N12"
+            ]
         },
         {
             "id": "A7",
             "tier": 1,
-            "label": "B1+B2 chunk",
             "nuggetIds": [
-                "N15",
-                "N16"
-            ],
-            "difficulty": {
-                "level": 3
-            }
+                "N13",
+                "N14"
+            ]
         },
         {
             "id": "A8",
             "tier": 1,
-            "label": "B2→B3 pickup & launch",
             "nuggetIds": [
-                "N17",
-                "N18"
-            ],
-            "difficulty": {
-                "level": 4
-            }
+                "N15",
+                "N16"
+            ]
         },
         {
             "id": "A9",
             "tier": 1,
-            "label": "C section (two riffs)",
             "nuggetIds": [
-                "N19",
-                "N20"
-            ],
-            "difficulty": {
-                "level": 3
-            }
+                "N18",
+                "N19"
+            ]
         },
         {
             "id": "A10",
             "tier": 1,
-            "label": "C2 into ending",
             "nuggetIds": [
                 "N20",
                 "N21"
-            ],
-            "difficulty": {
-                "level": 3
-            }
+            ]
         },
         {
             "id": "A11",
+            "tier": 1,
+            "nuggetIds": [
+                "N24",
+                "N25"
+            ]
+        },
+        {
+            "id": "A12",
             "tier": 2,
-            "label": "Full intro (setup + cadence)",
             "nuggetIds": [
                 "N1",
                 "N2",
                 "N3",
                 "N4"
-            ],
-            "difficulty": {
-                "level": 3
-            }
+            ]
         },
         {
-            "id": "A12",
+            "id": "A13",
             "tier": 2,
-            "label": "Full A (A1 + A2)",
             "nuggetIds": [
                 "N5",
                 "N6",
@@ -653,44 +706,50 @@
                 "N8",
                 "N9",
                 "N10"
-            ],
-            "difficulty": {
-                "level": 4
-            }
-        },
-        {
-            "id": "A13",
-            "tier": 2,
-            "label": "Verse2 lead-in to B",
-            "nuggetIds": [
-                "N14",
-                "N15",
-                "N16",
-                "N17"
-            ],
-            "difficulty": {
-                "level": 4
-            }
+            ]
         },
         {
             "id": "A14",
             "tier": 2,
-            "label": "B section (longer run)",
             "nuggetIds": [
-                "N15",
-                "N16",
-                "N17",
-                "N18"
-            ],
-            "difficulty": {
-                "level": 4
-            }
+                "N11",
+                "N12",
+                "N13",
+                "N14",
+                "N15"
+            ]
         },
         {
             "id": "A15",
-            "tier": 3,
-            "label": "Middle arc: A→verse→A→verse2→B1",
+            "tier": 2,
             "nuggetIds": [
+                "N16",
+                "N17",
+                "N18",
+                "N19",
+                "N20",
+                "N21",
+                "N22",
+                "N23"
+            ]
+        },
+        {
+            "id": "A16",
+            "tier": 2,
+            "nuggetIds": [
+                "N24",
+                "N25",
+                "N26"
+            ]
+        },
+        {
+            "id": "A17",
+            "tier": 3,
+            "nuggetIds": [
+                "N1",
+                "N2",
+                "N3",
+                "N4",
                 "N5",
                 "N6",
                 "N7",
@@ -701,20 +760,13 @@
                 "N12",
                 "N13",
                 "N14",
-                "N15",
-                "N16"
-            ],
-            "difficulty": {
-                "level": 5
-            }
+                "N15"
+            ]
         },
         {
-            "id": "A16",
+            "id": "A18",
             "tier": 3,
-            "label": "End arc: from A4 to finish",
             "nuggetIds": [
-                "N10",
-                "N11",
                 "N12",
                 "N13",
                 "N14",
@@ -724,64 +776,69 @@
                 "N18",
                 "N19",
                 "N20",
-                "N21"
-            ],
-            "difficulty": {
-                "level": 5
-            }
+                "N21",
+                "N22",
+                "N23",
+                "N24",
+                "N25",
+                "N26"
+            ]
         }
     ],
     "tuneHints": {
-        "goal": "Play a clear vocal-style lead line with blues phrasing: crisp pickups, relaxed long tones, and confident chromatic color tones (C#, D#, A#).",
-        "counting": "Count steady 4/4; treat many long notes as “hold the sound” moments while staying aware of the next pickup (often on beat 1 or beat 3).",
+        "goal": "Lock in the blues phrasing: short calls, chromatic approaches, then relaxed long holds. Make the pickups crisp and let the sustained notes settle without rushing into the next phrase.",
+        "counting": "Count steady 4/4, but phrase like a blues: pickups lead into beat 1, and long notes should feel laid-back (often a subtle behind-the-beat).",
         "commonMistakes": [
-            "Rushing the pickup eighths and arriving early on the tied long note",
-            "Underplaying the chromatic approach notes (C#, D#, A#) so the blues color disappears",
-            "Letting sustained notes drift out of time so the next entrance feels late"
+            "Rushing the tied/held notes and stealing time from the pickup into the next phrase",
+            "Playing the chromatic C–C#–D approach too evenly (it needs a clear destination)",
+            "Letting the repeated-note pickups (D or Bb) blur or lose articulation"
         ],
         "whatToListenFor": [
-            "Call-and-response feel between short pickups and long held answers",
-            "Tension-release: chromatic climbs resolving into stable chord tones",
-            "Consistent articulation: pickups lightly accented, long notes warm and supported"
+            "Call-and-response shape: short gesture then a confident, centered long tone",
+            "Chromatic tension resolving cleanly into D (or the target note) before the drop",
+            "Consistent pulse through rests (rests are part of the groove)"
         ]
     },
     "teachingOrder": [
-        "N1",
-        "N3",
         "N5",
         "N6",
         "N7",
         "N8",
         "N9",
         "N10",
-        "N4",
-        "N2",
         "N11",
         "N12",
         "N13",
         "N14",
         "N15",
+        "N1",
+        "N2",
+        "N3",
+        "N4",
         "N16",
         "N17",
         "N18",
         "N19",
         "N20",
-        "N21"
+        "N21",
+        "N22",
+        "N23",
+        "N24",
+        "N25",
+        "N26"
     ],
     "assemblyOrder": [
-        "A1",
-        "A2",
         "A3",
         "A4",
-        "A11",
-        "A12",
         "A5",
         "A6",
-        "A14",
+        "A7",
+        "A12",
         "A13",
-        "A9",
-        "A10",
+        "A14",
         "A15",
-        "A16"
+        "A16",
+        "A17",
+        "A18"
     ]
 }
