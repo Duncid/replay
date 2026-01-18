@@ -107,6 +107,9 @@ export function TuneMode({
     }
   }, [state.phase]);
 
+  // Track whether this is a regeneration (plan was exhausted)
+  const isRegeneration = state.practicePlan.length === 0 && state.currentIndex === 0 && state.phase === "loading";
+
   const fetchPracticePlan = async () => {
     try {
       setPhase("coaching");
@@ -142,7 +145,12 @@ export function TuneMode({
         
         if (response.practicePlan && response.practicePlan.length > 0) {
           setPracticePlan(response.practicePlan, response.tuneTitle);
-          toast.success(response.encouragement || "Let's practice!");
+          // Show different message for regeneration vs first load
+          toast.success(
+            isRegeneration 
+              ? "New practice plan ready!" 
+              : (response.encouragement || "Let's practice!")
+          );
         } else {
           throw new Error("No practice plan received");
         }

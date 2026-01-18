@@ -61,12 +61,14 @@ export function useTuneState(tuneKey: string) {
     setState((prev) => {
       const nextIndex = prev.currentIndex + 1;
       if (nextIndex >= prev.practicePlan.length) {
-        // Wrap around to first nugget for continuous practice
+        // Signal plan exhausted - trigger regeneration by returning to loading phase
         return {
           ...prev,
+          phase: "loading",
           currentIndex: 0,
           currentStreak: 0,
           lastEvaluation: null,
+          practicePlan: [], // Clear old plan to signal regeneration
         };
       }
       return {
