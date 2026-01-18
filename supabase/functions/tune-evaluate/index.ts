@@ -11,7 +11,7 @@ const STREAK_THRESHOLD_FOR_NEW_NUGGET = 3;
 
 interface TuneItem {
   id: string;
-  label: string;
+  label?: string;
   teacherHints?: {
     goal?: string;
     counting?: string;
