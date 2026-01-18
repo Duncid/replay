@@ -16,7 +16,7 @@ interface TuneMotif {
 
 interface TuneNugget {
   id: string;
-  label: string;
+  label?: string;
   location: { 
     startMeasure?: number;
     endMeasure?: number;
@@ -33,7 +33,7 @@ interface TuneNugget {
 interface TuneAssembly {
   id: string;
   tier: number;
-  label: string;
+  label?: string;
   nuggetIds: string[];
   difficulty?: { level: number };
   modes?: string[];
@@ -206,7 +206,7 @@ ${nuggets.map((n) => {
   const state = statesMap.get(n.id);
   const motifLabels = n.dependsOn?.join(", ") || "none";
   const measureRange = getMeasureRange(n);
-  return `- ${n.id} "${n.label}" (measures ${measureRange})
+  return `- ${n.id} "${n.label || n.id}" (measures ${measureRange})
     Motifs: [${motifLabels}], Modes: ${n.modes?.join(", ") || "all"}
     Practice history: ${state ? `${state.attempt_count} attempts, ${state.pass_count} passes, streak: ${state.current_streak}` : "Never practiced"}`;
 }).join("\n")}
@@ -218,7 +218,7 @@ ${assemblies.map((a) => {
   const avgAssemblyStreak = assemblyNuggetStreaks.reduce((sum, s) => sum + s, 0) / Math.max(assemblyNuggetStreaks.length, 1);
   const allMastered = assemblyNuggetStreaks.every(s => s >= 3);
   
-  return `- ${a.id} "${a.label}" (tier ${a.tier}, difficulty ${a.difficulty?.level || 1})
+  return `- ${a.id} "${a.label || a.id}" (tier ${a.tier}, difficulty ${a.difficulty?.level || 1})
     Groups: [${a.nuggetIds.join(", ")}]
     Modes: ${a.modes?.join(", ") || "HandsTogether"}
     Readiness: avg nugget streak ${avgAssemblyStreak.toFixed(1)}, ${allMastered ? "all nuggets mastered ✓" : "still building"}`;

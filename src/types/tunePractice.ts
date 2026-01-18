@@ -10,7 +10,7 @@ export interface TuneMotif {
 
 export interface TuneNugget {
   id: string;
-  label: string;
+  label?: string;
   location: {
     startMeasure?: number;
     endMeasure?: number;
@@ -27,7 +27,7 @@ export interface TuneNugget {
 export interface TuneAssembly {
   id: string;
   tier: number;
-  label: string;
+  label?: string;
   nuggetIds: string[];
   difficulty?: { level: number };
   modes?: string[];

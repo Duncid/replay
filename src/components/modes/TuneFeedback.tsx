@@ -70,7 +70,7 @@ export function TuneFeedback({
         <CardContent className="space-y-4">
           <div className="text-center">
             <p className="text-sm text-muted-foreground mb-1">
-              {currentNugget.nugget.label}
+              {currentNugget.nugget?.label || currentNugget.itemId}
             </p>
             {evaluation.currentStreak > 0 && (
               <Badge variant="default" className="text-lg px-3 py-1">

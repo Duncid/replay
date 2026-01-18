@@ -95,7 +95,7 @@ interface TuneAssetBundle {
   };
   nuggets?: Array<{
     id: string;
-    label: string;
+    label?: string;
     location?: Record<string, unknown>;
     dependsOn?: string[];
     modes?: string[];
@@ -106,7 +106,7 @@ interface TuneAssetBundle {
   assemblies?: Array<{
     id: string;
     tier: number;
-    label: string;
+    label?: string;
     nuggetIds: string[];
     difficulty?: { level: number };
     modes?: string[];
