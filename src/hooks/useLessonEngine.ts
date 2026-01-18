@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { UseMutationResult } from "@tanstack/react-query";
 import {
@@ -412,20 +413,15 @@ export function useLessonEngine(
               skillUnlockStatus = awardedSkillsWithTitles[0];
             }
             
-            // Celebratory toast for skill unlocks
+          // Celebratory toast for skill unlocks
             const skillNames = awardedSkillsWithTitles.map(s => s.title).join(", ");
-            toast({
-              title: `🎉 Congrats! You unlocked`,
-              description: skillNames,
-            });
+            sonnerToast.success(`Skill Unlocked: ${skillNames}`);
           }
 
           // Celebratory toast for lesson acquisition
           if (evaluationOutput.markLessonAcquired) {
-            toast({
-              title: `🎓 Congrats! You completed`,
-              description: state.lessonState.lesson.lessonNodeKey || "this lesson",
-            });
+            const lessonTitle = state.lessonState.lesson.trackTitle || state.lessonState.lesson.lessonNodeKey || "this lesson";
+            sonnerToast.success(`Lesson Acquired: ${lessonTitle}`);
           }
 
           // Determine evaluation result based on evaluation
