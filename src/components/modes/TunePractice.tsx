@@ -231,10 +231,12 @@ export function TunePractice({
   const [shouldPulse, setShouldPulse] = useState(false);
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
 
-  // Get sample sequence from either nugget or assembly
-  const sampleSequence = (currentNugget.nugget?.noteSequence || currentNugget.assembly?.noteSequence) as
-    | NoteSequence
-    | undefined;
+  // Get sample sequence from nugget, assembly, or full tune
+  const sampleSequence = (
+    currentNugget.nugget?.noteSequence || 
+    currentNugget.assembly?.noteSequence || 
+    currentNugget.fullTune?.noteSequence
+  ) as NoteSequence | undefined;
 
   useEffect(() => {
     // Reset pulse state when streak is not complete
