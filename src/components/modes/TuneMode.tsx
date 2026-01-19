@@ -189,8 +189,12 @@ export function TuneMode({
   const handleEvaluate = async (recording: INoteSequence) => {
     if (!currentNugget) return;
 
-    // Get the note sequence from either nugget or assembly
-    const targetSequence = (currentNugget.nugget?.noteSequence || currentNugget.assembly?.noteSequence) as INoteSequence | undefined;
+    // Get the note sequence from nugget, assembly, or full tune
+    const targetSequence = (
+      currentNugget.nugget?.noteSequence || 
+      currentNugget.assembly?.noteSequence ||
+      currentNugget.fullTune?.noteSequence
+    ) as INoteSequence | undefined;
     const targetNoteCount = targetSequence?.notes?.length || 8;
     const maxNotes = targetNoteCount * 2;
     
@@ -332,8 +336,8 @@ export function TuneMode({
       silenceTimer.current = null;
     }
     
-    // Get note sequence from either nugget or assembly
-    const noteSequence = currentNugget?.nugget?.noteSequence || currentNugget?.assembly?.noteSequence;
+    // Get note sequence from nugget, assembly, or full tune
+    const noteSequence = currentNugget?.nugget?.noteSequence || currentNugget?.assembly?.noteSequence || currentNugget?.fullTune?.noteSequence;
     if (noteSequence) {
       onPlaySample(noteSequence as INoteSequence);
     }

@@ -36,6 +36,14 @@ export interface TuneAssembly {
   rightHandSequence?: unknown;
 }
 
+export interface TuneFullTune {
+  id: string;
+  label: string;
+  noteSequence?: unknown;
+  leftHandSequence?: unknown;
+  rightHandSequence?: unknown;
+}
+
 export interface TuneHints {
   goal?: string;
   counting?: string;
@@ -56,9 +64,10 @@ export interface TuneBriefing {
 
 export interface PracticePlanItem {
   itemId: string;
-  itemType: 'nugget' | 'assembly';
+  itemType: 'nugget' | 'assembly' | 'full_tune';
   nugget: TuneNugget | null;
   assembly: TuneAssembly | null;
+  fullTune: TuneFullTune | null;
   instruction: string;
   motifs: string[];
 }
