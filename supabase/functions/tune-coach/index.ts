@@ -339,6 +339,36 @@ serve(async (req) => {
     }
 
     // ============================================
+    // FULL TUNE READINESS
+    // ============================================
+    const fullTuneState = statesMap.get("FULL_TUNE");
+    const tier3Assemblies = assemblyHistory.filter((h) => h.tier === 3);
+    const allTier3Stable = tier3Assemblies.length > 0 && tier3Assemblies.every((h) => h.status === "stable");
+    const tier2Assemblies = assemblyHistory.filter((h) => h.tier === 2);
+    const allTier2Stable = tier2Assemblies.length > 0 && tier2Assemblies.every((h) => h.status === "stable");
+    // Full tune is ready if: all tier 3 stable, OR (no tier 3 and all tier 2 stable), OR (no tier 2/3 and all nuggets stable)
+    const fullTuneReady = tier3Assemblies.length > 0
+      ? allTier3Stable
+      : tier2Assemblies.length > 0
+        ? allTier2Stable
+        : stableNuggets === nuggets.length;
+
+    const fullTuneHistory = {
+      attemptCount: fullTuneState?.attempt_count || 0,
+      passCount: fullTuneState?.pass_count || 0,
+      currentStreak: fullTuneState?.current_streak || 0,
+      bestStreak: fullTuneState?.best_streak || 0,
+      lastPracticedAt: fullTuneState?.last_practiced_at || null,
+      status: !fullTuneState || fullTuneState.attempt_count === 0
+        ? "unseen"
+        : fullTuneState.current_streak >= 2
+          ? "stable"
+          : fullTuneState.current_streak >= 1
+            ? "building"
+            : "struggling",
+    };
+
+    // ============================================
     // BUILD SYSTEM PROMPT
     // ============================================
 
@@ -377,6 +407,13 @@ serve(async (req) => {
     Ready: ${h.isReady ? "YES ✓" : `NO - blocked by ${h.blockedBy}`}`,
       )
       .join("\n");
+
+    // Full tune status section
+    const fullTuneStatusText = `- FULL_TUNE "${fullTune.label}"
+    Readiness: ${fullTuneReady ? "READY ✓ - all prerequisite tiers are stable" : "NOT READY - complete all tier assemblies first"}
+    ${tier3Assemblies.length > 0 ? `Tier 3 status: ${allTier3Stable ? "all stable ✓" : `${tier3Assemblies.filter(h => h.status === "stable").length}/${tier3Assemblies.length} stable`}` : ""}
+    ${tier2Assemblies.length > 0 ? `Tier 2 status: ${allTier2Stable ? "all stable ✓" : `${tier2Assemblies.filter(h => h.status === "stable").length}/${tier2Assemblies.length} stable`}` : ""}
+    Practice history: ${fullTuneHistory.status.toUpperCase()} | attempts: ${fullTuneHistory.attemptCount}, passes: ${fullTuneHistory.passCount}, streak: ${fullTuneHistory.currentStreak}/${fullTuneHistory.bestStreak}`;
 
     const systemPrompt = `You are a piano teacher AI building a short practice plan for a student learning "${briefing.title}".
 
@@ -429,6 +466,12 @@ ${nuggetHistoryText || "No nuggets defined"}
 ## ASSEMBLY PRACTICE HISTORY
 
 ${assemblyHistoryText || "No assemblies defined"}
+
+---
+
+## FULL TUNE STATUS
+
+${fullTuneStatusText}
 
 ---
 
