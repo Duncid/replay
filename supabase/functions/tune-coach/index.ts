@@ -3,8 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface TuneMotif {
@@ -17,10 +16,10 @@ interface TuneMotif {
 interface TuneNugget {
   id: string;
   label?: string;
-  location: { 
+  location: {
     startMeasure?: number;
     endMeasure?: number;
-    startBeat?: number; 
+    startBeat?: number;
     endBeat?: number;
   };
   dependsOn: string[];
@@ -93,10 +92,14 @@ function getMeasureRange(n: TuneNugget): string {
 // Helper: Convert importance string to numeric value
 function importanceToValue(importance: string): number {
   switch (importance) {
-    case "high": return 1.0;
-    case "medium": return 0.6;
-    case "low": return 0.3;
-    default: return 0.5;
+    case "high":
+      return 1.0;
+    case "medium":
+      return 0.6;
+    case "low":
+      return 0.3;
+    default:
+      return 0.5;
   }
 }
 
@@ -106,18 +109,13 @@ serve(async (req) => {
   }
 
   try {
-    const {
-      tuneKey,
-      localUserId = null,
-      language = "en",
-      debug = false,
-    } = await req.json();
+    const { tuneKey, localUserId = null, language = "en", debug = false } = await req.json();
 
     if (!tuneKey) {
-      return new Response(
-        JSON.stringify({ error: "tuneKey is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "tuneKey is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`[tune-coach] Request - tuneKey: ${tuneKey}, user: ${localUserId}, debug: ${debug}`);
@@ -137,10 +135,10 @@ serve(async (req) => {
 
     if (tuneError || !tuneAsset) {
       console.error("Error fetching tune asset:", tuneError);
-      return new Response(
-        JSON.stringify({ error: "Tune not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Tune not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const briefing = tuneAsset.briefing as TuneBriefing;
@@ -155,13 +153,12 @@ serve(async (req) => {
     };
     const tuneHints = briefing?.tuneHints;
 
-    console.log(`[tune-coach] Loaded tune: ${briefing.title}, ${nuggets.length} nuggets, ${assemblies.length} assemblies`);
+    console.log(
+      `[tune-coach] Loaded tune: ${briefing.title}, ${nuggets.length} nuggets, ${assemblies.length} assemblies`,
+    );
 
     // 2. Fetch user's nugget/assembly states for this tune
-    let nuggetStatesQuery = supabase
-      .from("tune_nugget_state")
-      .select("*")
-      .eq("tune_key", tuneKey);
+    let nuggetStatesQuery = supabase.from("tune_nugget_state").select("*").eq("tune_key", tuneKey);
 
     if (localUserId) {
       nuggetStatesQuery = nuggetStatesQuery.eq("local_user_id", localUserId);
@@ -181,15 +178,18 @@ serve(async (req) => {
     // ============================================
     // COMPUTE MOTIF PASS STATUS
     // ============================================
-    const motifStatus = new Map<string, {
-      id: string;
-      label: string;
-      importance: number;
-      totalNuggets: number;
-      passedNuggets: number;
-      avgStreak: number;
-      isPassed: boolean;
-    }>();
+    const motifStatus = new Map<
+      string,
+      {
+        id: string;
+        label: string;
+        importance: number;
+        totalNuggets: number;
+        passedNuggets: number;
+        avgStreak: number;
+        isPassed: boolean;
+      }
+    >();
 
     for (const motif of briefing.motifs || []) {
       const containingNuggets = nuggets.filter((n) => n.dependsOn?.includes(motif.id));
@@ -233,16 +233,12 @@ serve(async (req) => {
 
       // Check if all required motifs are passed
       const allMotifsReady = [...requiredMotifs].every(
-        (m) => motifStatus.get(m)?.isPassed ?? true // if no motif data, assume ready
+        (m) => motifStatus.get(m)?.isPassed ?? true, // if no motif data, assume ready
       );
 
       // Check component nugget stability
-      const nuggetStreaks = a.nuggetIds.map(
-        (nId) => statesMap.get(nId)?.current_streak || 0
-      );
-      const avgNuggetStreak =
-        nuggetStreaks.reduce((sum, s) => sum + s, 0) /
-        Math.max(nuggetStreaks.length, 1);
+      const nuggetStreaks = a.nuggetIds.map((nId) => statesMap.get(nId)?.current_streak || 0);
+      const avgNuggetStreak = nuggetStreaks.reduce((sum, s) => sum + s, 0) / Math.max(nuggetStreaks.length, 1);
       const allNuggetsStable = nuggetStreaks.every((s) => s >= 2);
 
       // Check own assembly streak
@@ -253,9 +249,7 @@ serve(async (req) => {
       let lowerTierReady = true;
       if (a.tier >= 2) {
         const lowerTierAssemblies = assemblies.filter(
-          (other) =>
-            other.tier === a.tier - 1 &&
-            a.nuggetIds.some((nId) => other.nuggetIds.includes(nId))
+          (other) => other.tier === a.tier - 1 && a.nuggetIds.some((nId) => other.nuggetIds.includes(nId)),
         );
         lowerTierReady = lowerTierAssemblies.every((lower) => {
           const lowerState = statesMap.get(lower.id);
@@ -293,13 +287,14 @@ serve(async (req) => {
         currentStreak: state?.current_streak || 0,
         bestStreak: state?.best_streak || 0,
         lastPracticedAt: state?.last_practiced_at || null,
-        status: !state || state.attempt_count === 0
-          ? "unseen"
-          : state.current_streak >= 2
-            ? "stable"
-            : state.current_streak >= 1
-              ? "building"
-              : "struggling",
+        status:
+          !state || state.attempt_count === 0
+            ? "unseen"
+            : state.current_streak >= 2
+              ? "stable"
+              : state.current_streak >= 1
+                ? "building"
+                : "struggling",
       };
     });
 
@@ -317,19 +312,16 @@ serve(async (req) => {
         currentStreak: state?.current_streak || 0,
         bestStreak: state?.best_streak || 0,
         lastPracticedAt: state?.last_practiced_at || null,
-        status: !state || state.attempt_count === 0
-          ? "unseen"
-          : state.current_streak >= 2
-            ? "stable"
-            : state.current_streak >= 1
-              ? "building"
-              : "struggling",
+        status:
+          !state || state.attempt_count === 0
+            ? "unseen"
+            : state.current_streak >= 2
+              ? "stable"
+              : state.current_streak >= 1
+                ? "building"
+                : "struggling",
         isReady: readiness?.isReady ?? false,
-        blockedBy: !readiness?.allMotifsReady
-          ? "motifs"
-          : !readiness?.lowerTierReady
-            ? "lower_tier"
-            : null,
+        blockedBy: !readiness?.allMotifsReady ? "motifs" : !readiness?.lowerTierReady ? "lower_tier" : null,
       };
     });
 
@@ -352,30 +344,38 @@ serve(async (req) => {
 
     // Motif status section
     const motifStatusText = [...motifStatus.values()]
-      .map((m) => `- ${m.id} "${m.label}" [importance: ${m.importance.toFixed(1)}]
-    Status: ${m.isPassed ? "PASSED ✓" : "NOT PASSED"} (${m.passedNuggets}/${m.totalNuggets} nuggets at streak 2+, avg streak ${m.avgStreak.toFixed(1)})`)
+      .map(
+        (m) => `- ${m.id} "${m.label}" [importance: ${m.importance.toFixed(1)}]
+    Status: ${m.isPassed ? "PASSED ✓" : "NOT PASSED"} (${m.passedNuggets}/${m.totalNuggets} nuggets at streak 2+, avg streak ${m.avgStreak.toFixed(1)})`,
+      )
       .join("\n");
 
     // Assembly readiness section
     const assemblyReadinessText = assemblyReadiness
-      .map((a) => `- ${a.id} "${a.label}" (Tier ${a.tier})
+      .map(
+        (a) => `- ${a.id} "${a.label}" (Tier ${a.tier})
     Required motifs: [${a.requiredMotifs.join(", ") || "none"}] - ${a.allMotifsReady ? "all passed ✓" : "BLOCKED"}
     Component stability: avg streak ${a.avgNuggetStreak.toFixed(1)}, ${a.allNuggetsStable ? "all stable ✓" : "building"}
     ${a.tier > 1 ? `Tier gate: ${a.lowerTierReady ? "lower tier ready ✓" : "BLOCKED by lower tier"}` : ""}
-    Overall: ${a.isReady ? "READY to practice ✓" : "NOT READY - blocked"}`)
+    Overall: ${a.isReady ? "READY to practice ✓" : "NOT READY - blocked"}`,
+      )
       .join("\n");
 
     // Nugget history section
     const nuggetHistoryText = practiceHistory
-      .map((h) => `- ${h.nuggetId} "${h.label}" (${h.measureRange}) [motifs: ${h.dependsOn.join(", ") || "none"}]
-    Status: ${h.status.toUpperCase()} | attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}`)
+      .map(
+        (h) => `- ${h.nuggetId} "${h.label}" (${h.measureRange}) [motifs: ${h.dependsOn.join(", ") || "none"}]
+    Status: ${h.status.toUpperCase()} | attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}`,
+      )
       .join("\n");
 
     // Assembly history section
     const assemblyHistoryText = assemblyHistory
-      .map((h) => `- ${h.assemblyId} "${h.label}" (Tier ${h.tier}, nuggets: ${h.nuggetIds.join("+")})
+      .map(
+        (h) => `- ${h.assemblyId} "${h.label}" (Tier ${h.tier}, nuggets: ${h.nuggetIds.join("+")})
     Status: ${h.status.toUpperCase()} | attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}
-    Ready: ${h.isReady ? "YES ✓" : `NO - blocked by ${h.blockedBy}`}`)
+    Ready: ${h.isReady ? "YES ✓" : `NO - blocked by ${h.blockedBy}`}`,
+      )
       .join("\n");
 
     const systemPrompt = `You are a piano teacher AI building a short practice plan for a student learning "${briefing.title}".
@@ -484,7 +484,7 @@ Prioritize items that are:
 - Passed but with low confidence (low streak, few attempts, long time since last practice)
 
 ### 6) Keep the plan practical
-- Target about 16 items early in learning, but allow more or less as needed
+- Target about 16 items early in learning, only allow less if full tune is in the list
 - As the learner nears full mastery, use far fewer items (short, focused plans)
 - Don't flood with all possible nuggets/assemblies
 - If full tune is not yet stable, prefer Tier 3 assemblies only when Tier 1 and Tier 2 are mastered
@@ -534,7 +534,7 @@ Remember:
 - Avoid proposing items that are already stable (status "STABLE") unless they're needed for support
 - Focus on forward progress rather than repeating mastered content
 - Balance 1 growth target + 1-3 support targets
-- Target about 16 items, but it can be shorter and should taper as mastery increases
+- Target about 16 items, but it can be shorter if full tune in the list
 - Use itemType "full_tune" with itemId "FULL_TUNE" when the plan calls for full-tune practice
 - Include brief, encouraging instructions for each item`;
 
@@ -554,9 +554,19 @@ Remember:
                 items: {
                   type: "object",
                   properties: {
-                    itemId: { type: "string", description: "The nugget/assembly ID (e.g., N1, A2, B1) or FULL_TUNE for full-tune practice" },
-                    itemType: { type: "string", enum: ["nugget", "assembly", "full_tune"], description: "Whether this is a nugget, assembly, or full tune" },
-                    instruction: { type: "string", description: "Brief instruction/goal for this item (1-2 sentences)" },
+                    itemId: {
+                      type: "string",
+                      description: "The nugget/assembly ID (e.g., N1, A2, B1) or FULL_TUNE for full-tune practice",
+                    },
+                    itemType: {
+                      type: "string",
+                      enum: ["nugget", "assembly", "full_tune"],
+                      description: "Whether this is a nugget, assembly, or full tune",
+                    },
+                    instruction: {
+                      type: "string",
+                      description: "Brief instruction/goal for this item (1-2 sentences)",
+                    },
                     motifs: { type: "array", items: { type: "string" }, description: "Motif IDs this item practices" },
                   },
                   required: ["itemId", "itemType", "instruction", "motifs"],
@@ -616,7 +626,7 @@ Remember:
           motifsSummary: briefing.motifs || [],
           tuneHints,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -656,44 +666,46 @@ Remember:
     };
 
     // Enrich practice plan with full nugget/assembly data
-    const enrichedPlan = planResult.practicePlan.map((item) => {
-      if (item.itemType === "nugget") {
-        const nugget = nuggets.find((n) => n.id === item.itemId);
-        return {
-          itemId: item.itemId,
-          itemType: item.itemType,
-          nugget: nugget || null,
-          assembly: null,
-          fullTune: null,
-          instruction: item.instruction,
-          motifs: item.motifs,
-        };
-      }
-      if (item.itemType === "assembly") {
-        const assembly = assemblies.find((a) => a.id === item.itemId);
-        return {
-          itemId: item.itemId,
-          itemType: item.itemType,
-          nugget: null,
-          assembly: assembly || null,
-          fullTune: null,
-          instruction: item.instruction,
-          motifs: item.motifs,
-        };
-      }
-      if (item.itemType === "full_tune") {
-        return {
-          itemId: item.itemId,
-          itemType: item.itemType,
-          nugget: null,
-          assembly: null,
-          fullTune,
-          instruction: item.instruction,
-          motifs: item.motifs,
-        };
-      }
-      return null;
-    }).filter((item) => item !== null);
+    const enrichedPlan = planResult.practicePlan
+      .map((item) => {
+        if (item.itemType === "nugget") {
+          const nugget = nuggets.find((n) => n.id === item.itemId);
+          return {
+            itemId: item.itemId,
+            itemType: item.itemType,
+            nugget: nugget || null,
+            assembly: null,
+            fullTune: null,
+            instruction: item.instruction,
+            motifs: item.motifs,
+          };
+        }
+        if (item.itemType === "assembly") {
+          const assembly = assemblies.find((a) => a.id === item.itemId);
+          return {
+            itemId: item.itemId,
+            itemType: item.itemType,
+            nugget: null,
+            assembly: assembly || null,
+            fullTune: null,
+            instruction: item.instruction,
+            motifs: item.motifs,
+          };
+        }
+        if (item.itemType === "full_tune") {
+          return {
+            itemId: item.itemId,
+            itemType: item.itemType,
+            nugget: null,
+            assembly: null,
+            fullTune,
+            instruction: item.instruction,
+            motifs: item.motifs,
+          };
+        }
+        return null;
+      })
+      .filter((item) => item !== null);
 
     return new Response(
       JSON.stringify({
@@ -705,14 +717,13 @@ Remember:
         practiceHistory,
         proficiencyLevel,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
   } catch (error) {
     console.error("[tune-coach] Error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
