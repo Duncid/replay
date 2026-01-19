@@ -571,7 +571,7 @@ Remember:
                   },
                   required: ["itemId", "itemType", "instruction", "motifs"],
                 },
-                description: "Ordered list of 3-6 items (nuggets and/or assemblies) to practice",
+                description: "Ordered list of practice items - target about 16 items early in learning, fewer if full tune is included or learner is near mastery",
               },
               encouragement: {
                 type: "string",
