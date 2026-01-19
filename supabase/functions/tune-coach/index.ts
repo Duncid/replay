@@ -450,10 +450,32 @@ ${assemblyHistoryText || "No assemblies defined"}
 - If higher tier is tempting but foundations are weak, choose the foundation items first
 - NEVER suggest an assembly that is "BLOCKED" in the readiness section
 
+### 3a) Tier 2 → Tier 3 progression: always move forward
+- When ALL Tier 2 assemblies are passed (streak 2+, status "STABLE" in ASSEMBLY PRACTICE HISTORY), ALWAYS prioritize Tier 3 assemblies
+- Do not continue proposing Tier 2 items that are already stable
+- Check the ASSEMBLY PRACTICE HISTORY section to identify when all Tier 2 assemblies have status "STABLE"
+
+### 3b) Full Tune proposal: the ultimate goal
+- Once ALL Tier 3 assemblies are passed (streak 2+, status "STABLE" in ASSEMBLY PRACTICE HISTORY), the coach should propose Full Tune practice
+- Full Tune is the ultimate goal and should be prioritized over repeating Tier 3 assemblies that are already stable
+- Check the ASSEMBLY PRACTICE HISTORY section to identify when all Tier 3 assemblies have status "STABLE"
+- Use itemType "full_tune" with itemId "FULL_TUNE" for full-tune practice
+
 ### 4) Balance forward progress and consolidation
 In a short session plan, mix:
 - 1 GROWTH target at the learner's current ceiling (next tier when allowed)
 - 1-3 SUPPORT targets that reduce risk (weak motifs, recent failures, shaky transitions)
+
+### 4a) Lean toward progress: avoid repeating mastered content
+- Prioritize items that move the learner forward
+- Avoid proposing items that are already passed (streak 2+, status "STABLE") unless they are needed as support for a higher-tier activity
+- Once a tier is fully passed, focus on the next tier or Full Tune
+- Do not propose items the user has already mastered unless they are necessary for building toward the next level
+
+### 4b) Take into account the time that has passed between lessons
+- If a lesson has been practice in the same day, don't propose it again
+- If a lesson has not been practice in recent days, and was only passed a a few times, you can propose it again to consolidate the learning
+- If a lesson has not been practice in the last 30 days, might be worth proposing again to help the student remember the content
 
 ### 5) Use past activity signals
 Prioritize items that are:
@@ -506,6 +528,11 @@ Use the submit_practice_plan function to return a structured practice plan.`;
 
 Remember:
 - Only suggest READY assemblies (check ASSEMBLY READINESS)
+- Check the ASSEMBLY PRACTICE HISTORY section to identify which tiers are fully passed
+- When all Tier 2 assemblies are stable (status "STABLE"), prioritize Tier 3 assemblies
+- When all Tier 3 assemblies are stable (status "STABLE"), prioritize Full Tune
+- Avoid proposing items that are already stable (status "STABLE") unless they're needed for support
+- Focus on forward progress rather than repeating mastered content
 - Balance 1 growth target + 1-3 support targets
 - Target about 16 items, but it can be shorter and should taper as mastery increases
 - Use itemType "full_tune" with itemId "FULL_TUNE" when the plan calls for full-tune practice
