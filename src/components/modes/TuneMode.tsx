@@ -429,6 +429,8 @@ export function TuneMode({
         isPlaying={isPlayingSample}
         isEvaluating={isEvaluating}
         isRecording={isRecording}
+        debugMode={debugMode}
+        practicePlan={state.practicePlan}
       />
     );
   }

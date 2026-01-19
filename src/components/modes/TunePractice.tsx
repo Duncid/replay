@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
 import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
-import { ArrowRight, Minus, Play, X } from "lucide-react";
+import { ArrowRight, Minus, Play, X, List } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 interface TunePracticeProps {
   tuneTitle: string;
@@ -20,6 +23,8 @@ interface TunePracticeProps {
   isPlaying?: boolean;
   isEvaluating?: boolean;
   isRecording?: boolean;
+  debugMode?: boolean;
+  practicePlan?: PracticePlanItem[];
 }
 
 const STREAK_THRESHOLD = 3;
@@ -218,6 +223,7 @@ function StreakDisplay({
 
 export function TunePractice({
   currentNugget,
+  currentIndex,
   currentStreak,
   lastEvaluation,
   onPlaySample,
@@ -226,10 +232,13 @@ export function TunePractice({
   isPlaying = false,
   isEvaluating = false,
   isRecording = false,
+  debugMode = false,
+  practicePlan = [],
 }: TunePracticeProps) {
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
+  const [showPlanSheet, setShowPlanSheet] = useState(false);
 
   // Get sample sequence from nugget, assembly, or full tune
   const sampleSequence = (
@@ -267,9 +276,87 @@ export function TunePractice({
       <Card className="w-full max-w-lg relative">
         <CardHeader className="flex flex-row pb-4 justify-between items-center">
           <StatusDisplay isRecording={isRecording} isEvaluating={isEvaluating} lastEvaluation={lastEvaluation} />
-          <Button variant="ghost" size="icon" onClick={onLeave}>
-            <X />
-          </Button>
+          <div className="flex items-center gap-2">
+            {debugMode && practicePlan.length > 0 && (
+              <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" title="View Practice Plan">
+                    <List className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+                  <SheetHeader>
+                    <SheetTitle>Practice Plan</SheetTitle>
+                  </SheetHeader>
+                  <ScrollArea className="h-[calc(100vh-100px)] mt-4">
+                    <div className="space-y-4 pr-4">
+                      {practicePlan.map((item, index) => {
+                        const isCurrent = index === currentIndex;
+                        const itemTypeLabel = 
+                          item.itemType === 'nugget' ? 'Nugget' :
+                          item.itemType === 'assembly' ? 'Assembly' :
+                          'Full Tune';
+                        
+                        return (
+                          <div
+                            key={`${item.itemId}-${index}`}
+                            className={cn(
+                              "p-4 rounded-lg border",
+                              isCurrent 
+                                ? "border-primary bg-primary/5" 
+                                : "border-border bg-muted/30"
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-mono text-muted-foreground">
+                                  {index + 1}.
+                                </span>
+                                <span className="font-medium font-mono text-sm">
+                                  {item.itemId}
+                                </span>
+                                <Badge 
+                                  variant={isCurrent ? "default" : "outline"}
+                                  className="text-xs"
+                                >
+                                  {itemTypeLabel}
+                                </Badge>
+                                {isCurrent && (
+                                  <Badge variant="default" className="text-xs">
+                                    Current
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-foreground mb-2">
+                              {item.instruction}
+                            </p>
+                            {item.motifs && item.motifs.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                <span className="text-xs text-muted-foreground">Motifs:</span>
+                                {item.motifs.map((motif) => (
+                                  <Badge 
+                                    key={motif} 
+                                    variant="secondary" 
+                                    className="text-xs"
+                                  >
+                                    {motif}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
+            )}
+            <Button variant="ghost" size="icon" onClick={onLeave}>
+              <X />
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-4 p-4">
