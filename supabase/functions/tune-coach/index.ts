@@ -111,21 +111,42 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Fetch tune asset
+    // 1. Fetch tune asset from the latest PUBLISHED curriculum version
+    // This ensures we use assets from a successfully published version, not failed/partial publishes
     const { data: tuneAsset, error: tuneError } = await supabase
       .from("tune_assets")
-      .select("*")
+      .select(`
+        *,
+        curriculum_versions!inner (
+          id,
+          status,
+          published_at
+        )
+      `)
       .eq("tune_key", tuneKey)
-      .order("created_at", { ascending: false })
+      .eq("curriculum_versions.status", "published")
+      .order("curriculum_versions(published_at)", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (tuneError || !tuneAsset) {
       console.error("Error fetching tune asset:", tuneError);
-      return new Response(JSON.stringify({ error: "Tune not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Fallback: try without version filter in case of migration issues
+      const { data: fallbackAsset, error: fallbackError } = await supabase
+        .from("tune_assets")
+        .select("*")
+        .eq("tune_key", tuneKey)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (fallbackError || !fallbackAsset) {
+        return new Response(JSON.stringify({ error: "Tune not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.warn(`[tune-coach] Using fallback query for ${tuneKey} - no published version found`);
     }
 
     const briefing = tuneAsset.briefing as TuneBriefing;
