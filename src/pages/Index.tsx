@@ -1025,6 +1025,143 @@ const Index = () => {
     }
   }, [activeMode, metronomeBpm, metronomeTimeSignature, toast]);
 
+  const handleUploadNoteSequence = useCallback(async () => {
+    const validateNoteSequence = (data: unknown): boolean => {
+      if (!data || typeof data !== "object") return false;
+      const obj = data as Record<string, unknown>;
+
+      if (!Array.isArray(obj.notes)) return false;
+
+      for (const note of obj.notes as unknown[]) {
+        if (!note || typeof note !== "object") return false;
+        const n = note as Record<string, unknown>;
+        if (typeof n.pitch !== "number" || n.pitch < 0 || n.pitch > 127) return false;
+        if (typeof n.startTime !== "number" || n.startTime < 0) return false;
+        if (typeof n.endTime !== "number" || n.endTime < 0) return false;
+        if (n.endTime <= n.startTime) return false;
+        // Allow velocity in either 0-1 or 0-127 range
+        if (typeof n.velocity !== "number" || n.velocity < 0 || n.velocity > 127) return false;
+      }
+      return true;
+    };
+
+    const normalizeVelocity = (value?: number) => {
+      if (typeof value !== "number" || Number.isNaN(value)) return 0.8;
+      // If velocity > 1, assume it's MIDI (0-127) and normalize
+      const normalized = value > 1 ? value / 127 : value;
+      return Math.min(1, Math.max(0, normalized));
+    };
+
+    const normalizeSequence = (data: Record<string, unknown>): NoteSequence => {
+      const notes = (data.notes as Array<Record<string, unknown>>).map((note) => ({
+        pitch: note.pitch as number,
+        startTime: note.startTime as number,
+        endTime: note.endTime as number,
+        velocity: normalizeVelocity(note.velocity as number),
+      }));
+
+      const totalTime =
+        typeof data.totalTime === "number" && data.totalTime > 0
+          ? data.totalTime
+          : notes.reduce((max, note) => Math.max(max, note.endTime), 0);
+
+      return {
+        notes,
+        totalTime,
+        tempos: Array.isArray(data.tempos) ? (data.tempos as NoteSequence["tempos"]) : undefined,
+        timeSignatures: Array.isArray(data.timeSignatures) ? (data.timeSignatures as NoteSequence["timeSignatures"]) : undefined,
+      };
+    };
+
+    const processNsFile = async (file: File) => {
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+
+        if (!validateNoteSequence(parsed)) {
+          toast({
+            title: "Invalid NoteSequence file",
+            description:
+              "The file does not contain a valid NoteSequence structure.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const sequence = normalizeSequence(parsed as Record<string, unknown>);
+
+        if (sequence.notes.length === 0) {
+          toast({
+            title: "Empty NoteSequence",
+            description: "The file contains no notes.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (activeMode === "play") {
+          playModeRef.current?.addEntry(sequence, false);
+          toast({ title: "NoteSequence file uploaded and added" });
+        }
+      } catch (error) {
+        console.error("NoteSequence upload error:", error);
+        toast({
+          title: "Error importing NoteSequence",
+          description:
+            error instanceof Error ? error.message : "Failed to parse file",
+          variant: "destructive",
+        });
+      }
+    };
+
+    try {
+      if ("showOpenFilePicker" in window) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fileHandles = await (window as any).showOpenFilePicker({
+          types: [
+            {
+              description: "NoteSequence JSON files",
+              accept: {
+                "application/json": [".ns.json", ".json"],
+              },
+            },
+          ],
+          multiple: false,
+        });
+
+        if (!fileHandles || fileHandles.length === 0) return;
+
+        const file = await fileHandles[0].getFile();
+        await processNsFile(file);
+      } else {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".ns.json,.json,application/json";
+        input.style.display = "none";
+        document.body.appendChild(input);
+
+        input.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          document.body.removeChild(input);
+          if (!file) return;
+          await processNsFile(file);
+        };
+
+        input.click();
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("NoteSequence upload error:", error);
+        toast({
+          title: "Error importing NoteSequence",
+          description:
+            error instanceof Error ? error.message : "Failed to read file",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [activeMode, toast]);
+
   // Play mode hook
   const playMode = PlayMode({
     bpm: metronomeBpm,
@@ -1816,6 +1953,10 @@ const Index = () => {
                         <DropdownMenuItem onClick={handleUploadMidi}>
                           <Upload className="h-4 w-4 mr-2" />
                           {t("menus.uploadMidi")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleUploadNoteSequence}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {t("menus.uploadNoteSequence")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => setPartitionDialogOpen(true)}
