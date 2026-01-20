@@ -838,6 +838,13 @@ serve(async (req) => {
       tuneEvalGuidanceMap.set(tuneNode.key, evalGuidance);
     }
 
+    // Log received tune assets for debugging
+    console.log(`[curriculum-publish] Received tune assets: ${Object.keys(tuneAssets || {}).join(', ') || 'NONE'}`);
+    for (const [key, assets] of Object.entries(tuneAssets || {})) {
+      const noteCount = (assets.noteSequence as { notes?: unknown[] })?.notes?.length || 0;
+      console.log(`[curriculum-publish] Tune ${key}: ${(assets.nuggets as unknown[])?.length || 0} nuggets, ${(assets.assemblies as unknown[])?.length || 0} assemblies, ${noteCount} notes in main sequence`);
+    }
+
     let tuneAssetsInserted = 0;
     if (tuneAssets && Object.keys(tuneAssets).length > 0) {
       const tuneAssetRows = Object.entries(tuneAssets).map(([tuneKey, assets]) => {
@@ -875,6 +882,8 @@ serve(async (req) => {
         tuneAssetsInserted = tuneAssetRows.length;
         console.log("[curriculum-publish] Inserted tune assets:", tuneAssetsInserted);
       }
+    } else {
+      console.warn("[curriculum-publish] No tune assets received - tunes in graph may not have musicRef or assets failed to bundle");
     }
 
     // 6. Update version status to published

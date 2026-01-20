@@ -1904,6 +1904,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
   // Helper function to bundle tune assets for publishing
   const bundleTuneAssets = useCallback(async (): Promise<Record<string, TuneAssetBundle>> => {
     const tuneAssets: Record<string, TuneAssetBundle> = {};
+    const bundlingErrors: string[] = [];
     
     // Find all tune nodes with musicRef
     const tuneNodes = nodes.filter(
@@ -1928,6 +1929,22 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         const noteSequence = noteSequenceModule?.default || noteSequenceModule;
         const leftHand = leftHandModule?.default || leftHandModule;
         const rightHand = rightHandModule?.default || rightHandModule;
+        
+        // VALIDATION: Check that noteSequence was loaded
+        if (!noteSequence) {
+          const errMsg = `Failed to load note sequence for tune "${tuneKey}" (musicRef: ${musicRef})`;
+          console.error(`[QuestEditor] CRITICAL: ${errMsg}`);
+          bundlingErrors.push(errMsg);
+          continue;
+        }
+        
+        // VALIDATION: Check that noteSequence has notes
+        if (!noteSequence.notes || !Array.isArray(noteSequence.notes) || noteSequence.notes.length === 0) {
+          const errMsg = `Note sequence for tune "${tuneKey}" has no notes`;
+          console.error(`[QuestEditor] CRITICAL: ${errMsg}`);
+          bundlingErrors.push(errMsg);
+          continue;
+        }
         
         // Load nugget note sequences from output/nuggets/
         let enrichedNuggets: TuneAssetBundle['nuggets'] = undefined;
@@ -1955,6 +1972,13 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
               } as NonNullable<TuneAssetBundle['nuggets']>[number];
             })
           );
+          
+          // VALIDATION: Check nugget count matches teacher.json
+          const expectedNuggetCount = teacher.nuggets.length;
+          const loadedNuggetCount = enrichedNuggets.filter(n => n.noteSequence).length;
+          if (loadedNuggetCount !== expectedNuggetCount) {
+            console.warn(`[QuestEditor] Nugget count mismatch for ${tuneKey}: expected ${expectedNuggetCount}, got ${loadedNuggetCount} with note sequences`);
+          }
         }
         
         // Load assembly note sequences from output/assemblies/
@@ -1983,40 +2007,51 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
               } as NonNullable<TuneAssetBundle['assemblies']>[number];
             })
           );
+          
+          // VALIDATION: Check assembly count matches teacher.json
+          const expectedAssemblyCount = teacher.assemblies.length;
+          const loadedAssemblyCount = enrichedAssemblies.filter(a => a.noteSequence).length;
+          if (loadedAssemblyCount !== expectedAssemblyCount) {
+            console.warn(`[QuestEditor] Assembly count mismatch for ${tuneKey}: expected ${expectedAssemblyCount}, got ${loadedAssemblyCount} with note sequences`);
+          }
         }
         
-        if (noteSequence) {
-          tuneAssets[tuneKey] = {
-            // Store the full teacher structure (v2 schema)
-            briefing: teacher ? {
-              schemaVersion: teacher.schemaVersion,
-              title: teacher.title,
-              pipelineSettings: teacher.pipelineSettings,
-              motifs: teacher.motifs,
-              motifOccurrences: teacher.motifOccurrences,
-              tuneHints: teacher.tuneHints,
-              teachingOrder: teacher.teachingOrder,
-              assemblyOrder: teacher.assemblyOrder,
-            } : undefined,
-            nuggets: enrichedNuggets,
-            assemblies: enrichedAssemblies,
-            noteSequence,
-            leftHandSequence: leftHand || undefined,
-            rightHandSequence: rightHand || undefined,
-          };
-          console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
-            hasBriefing: !!teacher,
-            nuggetCount: enrichedNuggets?.length || 0,
-            assemblyCount: enrichedAssemblies?.length || 0,
-            hasLeftHand: !!leftHand,
-            hasRightHand: !!rightHand,
-          });
-        } else {
-          console.warn(`[QuestEditor] No note sequence found for tune ${musicRef}`);
-        }
+        tuneAssets[tuneKey] = {
+          // Store the full teacher structure (v2 schema)
+          briefing: teacher ? {
+            schemaVersion: teacher.schemaVersion,
+            title: teacher.title,
+            pipelineSettings: teacher.pipelineSettings,
+            motifs: teacher.motifs,
+            motifOccurrences: teacher.motifOccurrences,
+            tuneHints: teacher.tuneHints,
+            teachingOrder: teacher.teachingOrder,
+            assemblyOrder: teacher.assemblyOrder,
+          } : undefined,
+          nuggets: enrichedNuggets,
+          assemblies: enrichedAssemblies,
+          noteSequence,
+          leftHandSequence: leftHand || undefined,
+          rightHandSequence: rightHand || undefined,
+        };
+        console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
+          hasBriefing: !!teacher,
+          nuggetCount: enrichedNuggets?.length || 0,
+          assemblyCount: enrichedAssemblies?.length || 0,
+          hasLeftHand: !!leftHand,
+          hasRightHand: !!rightHand,
+          noteCount: noteSequence.notes?.length || 0,
+        });
       } catch (error) {
-        console.warn(`[QuestEditor] Failed to load assets for tune ${musicRef}:`, error);
+        const errMsg = `Failed to load assets for tune "${tuneKey}" (musicRef: ${musicRef}): ${error instanceof Error ? error.message : String(error)}`;
+        console.error(`[QuestEditor] ${errMsg}`);
+        bundlingErrors.push(errMsg);
       }
+    }
+    
+    // If there were critical errors, throw to prevent publishing with missing assets
+    if (bundlingErrors.length > 0) {
+      throw new Error(`Tune asset bundling failed:\n${bundlingErrors.join('\n')}`);
     }
     
     return tuneAssets;
