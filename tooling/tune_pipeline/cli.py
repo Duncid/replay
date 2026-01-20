@@ -9,7 +9,6 @@ from music21 import converter, instrument, stream
 
 from tune_pipeline.io import read_json, write_json
 from tune_pipeline.midi_to_ns import midi_to_note_sequence
-from tune_pipeline.mxl_unpack import unpack_mxl
 from tune_pipeline.nuggets_extract import extract_nuggets, extract_assemblies
 from tune_pipeline.validate_teacher import validate_teacher
 from tune_pipeline.xml_split_hands import HandSplitResult, split_by_staff
@@ -179,19 +178,15 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     output_dir.mkdir(exist_ok=True)
     
     # Check inputs
-    tune_mxl = tune_folder / "tune.mxl"
+    tune_xml = tune_folder / "tune.xml"
     tune_ns_candidates = list(tune_folder.glob("*.ns.json"))
     
-    # Priority: MXL -> NS
-    if tune_mxl.exists():
-        # --- MXL/XML PATH ---
-        
-        # 3. Unpack
-        tune_xml = output_dir / "tune.xml"
-        unpack_mxl(tune_mxl, tune_xml)
+    # Priority: XML -> NS
+    if tune_xml.exists():
+        # --- XML PATH ---
         base_name = tune_xml.stem
 
-        # 4. Parse & Split
+        # 3. Parse & Split
         score = converter.parse(str(tune_xml))
         raw_piano_parts = _get_piano_parts(score)
         
@@ -277,7 +272,7 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         combined_part_for_nuggets = score.parts[0]
         
     else:
-         raise PipelineError(f"Missing input file: expected tune.mxl or *.ns.json in {tune_folder}")
+         raise PipelineError(f"Missing input file: expected tune.xml or *.ns.json in {tune_folder}")
 
     # 6. Nugget Extraction
     if teacher and "nuggets" in teacher:

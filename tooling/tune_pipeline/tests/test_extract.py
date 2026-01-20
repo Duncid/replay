@@ -51,7 +51,7 @@ def test_extract_removes_ghost_notes(tmp_path: Path) -> None:
 
     cleaned_path = extract_xml(tune_folder)
     assert cleaned_path.exists()
-    assert cleaned_path.name == "tune.cleaned.xml"
+    assert cleaned_path.name == "tune.xml"
 
     cleaned_score = converter.parse(str(cleaned_path))
     notes = list(cleaned_score.recurse().notes)

@@ -70,17 +70,15 @@ def extract_xml(
 
     score = converter.parse(str(xml_path))
     removed, total = remove_ghost_notes(score, threshold_seconds=threshold_seconds)
-
-    cleaned_path = tune_folder / "tune.cleaned.xml"
-    score.write("musicxml", fp=str(cleaned_path))
+    score.write("musicxml", fp=str(xml_path))
 
     print("Extraction summary:")
     print(f"- total notes: {total}")
     print(f"- ghost notes removed: {removed}")
     print(f"- threshold seconds: {threshold_seconds:.3f}")
-    print(f"- cleaned xml: {cleaned_path}")
+    print(f"- cleaned xml: {xml_path}")
 
-    return cleaned_path
+    return xml_path
 
 
 def main() -> None:
