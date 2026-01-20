@@ -89,19 +89,6 @@ function getMeasureRange(n: TuneNugget): string {
   return "unknown";
 }
 
-// Helper: Convert importance string to numeric value
-function importanceToValue(importance: string): number {
-  switch (importance) {
-    case "high":
-      return 1.0;
-    case "medium":
-      return 0.6;
-    case "low":
-      return 0.3;
-    default:
-      return 0.5;
-  }
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -176,104 +163,7 @@ serve(async (req) => {
     }
 
     // ============================================
-    // COMPUTE MOTIF PASS STATUS
-    // ============================================
-    const motifStatus = new Map<
-      string,
-      {
-        id: string;
-        label: string;
-        importance: number;
-        totalNuggets: number;
-        passedNuggets: number;
-        avgStreak: number;
-        isPassed: boolean;
-      }
-    >();
-
-    for (const motif of briefing.motifs || []) {
-      const containingNuggets = nuggets.filter((n) => n.dependsOn?.includes(motif.id));
-      const passedCount = containingNuggets.filter((n) => {
-        const state = statesMap.get(n.id);
-        return state && state.current_streak >= 2; // 2+ streak = "passed"
-      }).length;
-
-      const totalStreaks = containingNuggets.reduce((sum, n) => {
-        return sum + (statesMap.get(n.id)?.current_streak || 0);
-      }, 0);
-      const avgStreak = totalStreaks / Math.max(containingNuggets.length, 1);
-
-      const importanceValue = importanceToValue(motif.importance);
-      // High importance motifs need 70%+ pass rate, others 50%+
-      const threshold = importanceValue >= 0.8 ? 0.7 : 0.5;
-      const passRate = passedCount / Math.max(containingNuggets.length, 1);
-      const isPassed = passRate >= threshold;
-
-      motifStatus.set(motif.id, {
-        id: motif.id,
-        label: motif.label,
-        importance: importanceValue,
-        totalNuggets: containingNuggets.length,
-        passedNuggets: passedCount,
-        avgStreak,
-        isPassed,
-      });
-    }
-
-    // ============================================
-    // COMPUTE ASSEMBLY READINESS
-    // ============================================
-    const assemblyReadiness = assemblies.map((a) => {
-      // Get motifs required by this assembly's nuggets
-      const requiredMotifs = new Set<string>();
-      for (const nId of a.nuggetIds) {
-        const nugget = nuggets.find((n) => n.id === nId);
-        nugget?.dependsOn?.forEach((m) => requiredMotifs.add(m));
-      }
-
-      // Check if all required motifs are passed
-      const allMotifsReady = [...requiredMotifs].every(
-        (m) => motifStatus.get(m)?.isPassed ?? true, // if no motif data, assume ready
-      );
-
-      // Check component nugget stability
-      const nuggetStreaks = a.nuggetIds.map((nId) => statesMap.get(nId)?.current_streak || 0);
-      const avgNuggetStreak = nuggetStreaks.reduce((sum, s) => sum + s, 0) / Math.max(nuggetStreaks.length, 1);
-      const allNuggetsStable = nuggetStreaks.every((s) => s >= 2);
-
-      // Check own assembly streak
-      const ownState = statesMap.get(a.id);
-      const ownStreak = ownState?.current_streak || 0;
-
-      // For Tier 2+, check if lower tier assemblies in same span are stable
-      let lowerTierReady = true;
-      if (a.tier >= 2) {
-        const lowerTierAssemblies = assemblies.filter(
-          (other) => other.tier === a.tier - 1 && a.nuggetIds.some((nId) => other.nuggetIds.includes(nId)),
-        );
-        lowerTierReady = lowerTierAssemblies.every((lower) => {
-          const lowerState = statesMap.get(lower.id);
-          return lowerState && lowerState.current_streak >= 2;
-        });
-      }
-
-      return {
-        id: a.id,
-        tier: a.tier,
-        label: a.label || a.id,
-        nuggetIds: a.nuggetIds,
-        requiredMotifs: [...requiredMotifs],
-        allMotifsReady,
-        avgNuggetStreak,
-        allNuggetsStable,
-        ownStreak,
-        lowerTierReady,
-        isReady: allMotifsReady && (a.tier === 1 || lowerTierReady),
-      };
-    });
-
-    // ============================================
-    // BUILD PRACTICE HISTORY
+    // BUILD PRACTICE HISTORY (raw data for LLM to reason about)
     // ============================================
     const practiceHistory = nuggets.map((n) => {
       const state = statesMap.get(n.id);
@@ -287,21 +177,12 @@ serve(async (req) => {
         currentStreak: state?.current_streak || 0,
         bestStreak: state?.best_streak || 0,
         lastPracticedAt: state?.last_practiced_at || null,
-        status:
-          !state || state.attempt_count === 0
-            ? "unseen"
-            : state.current_streak >= 2
-              ? "stable"
-              : state.current_streak >= 1
-                ? "building"
-                : "struggling",
       };
     });
 
-    // Assembly history
+    // Assembly history (raw data for LLM to reason about)
     const assemblyHistory = assemblies.map((a) => {
       const state = statesMap.get(a.id);
-      const readiness = assemblyReadiness.find((r) => r.id === a.id);
       return {
         assemblyId: a.id,
         label: a.label || a.id,
@@ -312,117 +193,64 @@ serve(async (req) => {
         currentStreak: state?.current_streak || 0,
         bestStreak: state?.best_streak || 0,
         lastPracticedAt: state?.last_practiced_at || null,
-        status:
-          !state || state.attempt_count === 0
-            ? "unseen"
-            : state.current_streak >= 2
-              ? "stable"
-              : state.current_streak >= 1
-                ? "building"
-                : "struggling",
-        isReady: readiness?.isReady ?? false,
-        blockedBy: !readiness?.allMotifsReady ? "motifs" : !readiness?.lowerTierReady ? "lower_tier" : null,
       };
     });
 
-    // Calculate overall proficiency
-    const stableNuggets = practiceHistory.filter((h) => h.status === "stable").length;
-    const stableAssemblies = assemblyHistory.filter((h) => h.status === "stable").length;
-    const totalItems = nuggets.length + assemblies.length;
-    const stableItems = stableNuggets + stableAssemblies;
-
-    let proficiencyLevel: "beginner" | "intermediate" | "advanced" = "beginner";
-    if (stableItems >= totalItems * 0.7) {
-      proficiencyLevel = "advanced";
-    } else if (stableItems >= totalItems * 0.3) {
-      proficiencyLevel = "intermediate";
-    }
-
-    // ============================================
-    // FULL TUNE READINESS
-    // ============================================
+    // Full tune history (raw data for LLM to reason about)
     const fullTuneState = statesMap.get("FULL_TUNE");
-    const tier3Assemblies = assemblyHistory.filter((h) => h.tier === 3);
-    const allTier3Stable = tier3Assemblies.length > 0 && tier3Assemblies.every((h) => h.status === "stable");
-    const tier2Assemblies = assemblyHistory.filter((h) => h.tier === 2);
-    const allTier2Stable = tier2Assemblies.length > 0 && tier2Assemblies.every((h) => h.status === "stable");
-    // Full tune is ready if: all tier 3 stable, OR (no tier 3 and all tier 2 stable), OR (no tier 2/3 and all nuggets stable)
-    const fullTuneReady = tier3Assemblies.length > 0
-      ? allTier3Stable
-      : tier2Assemblies.length > 0
-        ? allTier2Stable
-        : stableNuggets === nuggets.length;
-
     const fullTuneHistory = {
       attemptCount: fullTuneState?.attempt_count || 0,
       passCount: fullTuneState?.pass_count || 0,
       currentStreak: fullTuneState?.current_streak || 0,
       bestStreak: fullTuneState?.best_streak || 0,
       lastPracticedAt: fullTuneState?.last_practiced_at || null,
-      status: !fullTuneState || fullTuneState.attempt_count === 0
-        ? "unseen"
-        : fullTuneState.current_streak >= 2
-          ? "stable"
-          : fullTuneState.current_streak >= 1
-            ? "building"
-            : "struggling",
     };
 
     // ============================================
     // BUILD SYSTEM PROMPT
     // ============================================
 
-    // Motif status section
-    const motifStatusText = [...motifStatus.values()]
-      .map(
-        (m) => `- ${m.id} "${m.label}" [importance: ${m.importance.toFixed(1)}]
-    Status: ${m.isPassed ? "PASSED ✓" : "NOT PASSED"} (${m.passedNuggets}/${m.totalNuggets} nuggets at streak 2+, avg streak ${m.avgStreak.toFixed(1)})`,
-      )
+    // Motifs info section (raw data, no pass/fail flags)
+    const motifsInfoText = (briefing.motifs || [])
+      .map((m) => `- ${m.id} "${m.label}" [importance: ${m.importance}]: ${m.description}`)
       .join("\n");
 
-    // Assembly readiness section
-    const assemblyReadinessText = assemblyReadiness
-      .map(
-        (a) => `- ${a.id} "${a.label}" (Tier ${a.tier})
-    Required motifs: [${a.requiredMotifs.join(", ") || "none"}] - ${a.allMotifsReady ? "all passed ✓" : "BLOCKED"}
-    Component stability: avg streak ${a.avgNuggetStreak.toFixed(1)}, ${a.allNuggetsStable ? "all stable ✓" : "building"}
-    ${a.tier > 1 ? `Tier gate: ${a.lowerTierReady ? "lower tier ready ✓" : "BLOCKED by lower tier"}` : ""}
-    Overall: ${a.isReady ? "READY to practice ✓" : "NOT READY - blocked"}`,
-      )
-      .join("\n");
-
-    // Nugget history section
+    // Nugget history section (raw data)
     const nuggetHistoryText = practiceHistory
       .map(
-        (h) => `- ${h.nuggetId} "${h.label}" (${h.measureRange}) [motifs: ${h.dependsOn.join(", ") || "none"}]
-    Status: ${h.status.toUpperCase()} | attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}`,
+        (h) => `- ${h.nuggetId} "${h.label}" (measures ${h.measureRange}) [motifs: ${h.dependsOn.join(", ") || "none"}]
+    attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}, last practiced: ${h.lastPracticedAt || "never"}`,
       )
       .join("\n");
 
-    // Assembly history section
+    // Assembly history section (raw data)
     const assemblyHistoryText = assemblyHistory
       .map(
         (h) => `- ${h.assemblyId} "${h.label}" (Tier ${h.tier}, nuggets: ${h.nuggetIds.join("+")})
-    Status: ${h.status.toUpperCase()} | attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}
-    Ready: ${h.isReady ? "YES ✓" : `NO - blocked by ${h.blockedBy}`}`,
+    attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}, last practiced: ${h.lastPracticedAt || "never"}`,
       )
       .join("\n");
 
-    // Full tune status section
-    const fullTuneStatusText = `- FULL_TUNE "${fullTune.label}"
-    Readiness: ${fullTuneReady ? "READY ✓ - all prerequisite tiers are stable" : "NOT READY - complete all tier assemblies first"}
-    ${tier3Assemblies.length > 0 ? `Tier 3 status: ${allTier3Stable ? "all stable ✓" : `${tier3Assemblies.filter(h => h.status === "stable").length}/${tier3Assemblies.length} stable`}` : ""}
-    ${tier2Assemblies.length > 0 ? `Tier 2 status: ${allTier2Stable ? "all stable ✓" : `${tier2Assemblies.filter(h => h.status === "stable").length}/${tier2Assemblies.length} stable`}` : ""}
-    Practice history: ${fullTuneHistory.status.toUpperCase()} | attempts: ${fullTuneHistory.attemptCount}, passes: ${fullTuneHistory.passCount}, streak: ${fullTuneHistory.currentStreak}/${fullTuneHistory.bestStreak}`;
+    // Full tune history section (raw data)
+    const fullTuneHistoryText = `- FULL_TUNE "${fullTune.label}"
+    attempts: ${fullTuneHistory.attemptCount}, passes: ${fullTuneHistory.passCount}, streak: ${fullTuneHistory.currentStreak}/${fullTuneHistory.bestStreak}, last practiced: ${fullTuneHistory.lastPracticedAt || "never"}`;
 
-    const systemPrompt = `You are a piano teacher AI building a short practice plan for a student learning "${briefing.title}".
+    const systemPrompt = `You are a piano teacher planning the next practice session for a student learning "${briefing.title}".
 
-STUDENT CONTEXT:
+GOAL: Plan a growth path that moves this student from their current state (point A) toward playing the full tune (point B). The full tune is the ultimate destination - it's fine if the plan doesn't reach it, just plan in that direction.
+
+PLAN LENGTH:
+- For beginners (far from full tune): plan up to ~16 activities
+- As the student approaches mastery: use fewer activities
+- Near full tune: just a few focused activities
+- The closer to the goal, the shorter the plan should be
+
+---
+
+## STUDENT CONTEXT
+
 - ID: ${localUserId || "anonymous"}
 - Language: ${language}
-- Overall proficiency: ${proficiencyLevel}
-- Stable nuggets: ${stableNuggets}/${nuggets.length}
-- Stable assemblies: ${stableAssemblies}/${assemblies.length}
 
 ---
 
@@ -445,141 +273,56 @@ ${tuneHints?.whatToListenFor?.length ? `Listen for: ${tuneHints.whatToListenFor.
 
 ---
 
-## MOTIF STATUS
+## MOTIFS (musical concepts in this piece)
 
-${motifStatusText || "No motifs defined"}
-
----
-
-## ASSEMBLY READINESS
-
-${assemblyReadinessText || "No assemblies defined"}
+${motifsInfoText || "No motifs defined"}
 
 ---
 
-## NUGGET PRACTICE HISTORY
+## AVAILABLE PRACTICE ITEMS
 
+### Nuggets (small focused sections)
 ${nuggetHistoryText || "No nuggets defined"}
 
----
-
-## ASSEMBLY PRACTICE HISTORY
+### Assemblies (combinations of nuggets at different tiers)
+Tier 1 = small combos, Tier 2 = larger sections, Tier 3 = near full tune
 
 ${assemblyHistoryText || "No assemblies defined"}
 
----
-
-## FULL TUNE STATUS
-
-${fullTuneStatusText}
+### Full Tune
+${fullTuneHistoryText}
 
 ---
 
-## CORE PRINCIPLES FOR CHOOSING NEXT ACTIVITIES
+## YOUR TASK
 
-### 1) Prefer the smallest unit that unlocks progress
-- If the learner is stuck (recent fails, low streak), go DOWN a level (assembly → nugget) to fix the blocker
-- If the learner is stable (streak 2+), go UP one level (nugget → tier1, tier1 → tier2, etc.)
+Based on this student's practice history, plan a logical growth path toward the full tune. Use your pedagogical judgment to decide:
 
-### 2) Motif gating: only require motifs that matter for the target
-- Every assembly implicitly depends on the motifs present in its nugget span
-- The learner can start assemblies early, BUT ONLY assemblies whose REQUIRED MOTIFS are already passed
-- Do NOT require "all motifs in the tune", only motifs relevant to the chosen assembly
-- Check the "ASSEMBLY READINESS" section - only suggest assemblies marked "READY to practice ✓"
+- What foundations need strengthening
+- When to introduce new challenges
+- How to sequence activities for effective learning
+- When the student is ready to attempt larger sections
+- How many activities are appropriate given their current progress
 
-### 3) Tier gating: don't skip the ladder
-- Tier 2 activities should only be prioritized when Tier 1 assemblies inside that span are stable
-- Tier 3 should only be prioritized when Tier 2 inside that span is stable
-- If higher tier is tempting but foundations are weak, choose the foundation items first
-- NEVER suggest an assembly that is "BLOCKED" in the readiness section
-
-### 3a) Tier 2 → Tier 3 progression: always move forward
-- When ALL Tier 2 assemblies are passed (streak 2+, status "STABLE" in ASSEMBLY PRACTICE HISTORY), ALWAYS prioritize Tier 3 assemblies
-- Do not continue proposing Tier 2 items that are already stable
-- Check the ASSEMBLY PRACTICE HISTORY section to identify when all Tier 2 assemblies have status "STABLE"
-
-### 3b) Full Tune proposal: the ultimate goal
-- Once ALL Tier 3 assemblies are passed (streak 2+, status "STABLE" in ASSEMBLY PRACTICE HISTORY), the coach should propose Full Tune practice
-- Full Tune is the ultimate goal and should be prioritized over repeating Tier 3 assemblies that are already stable
-- Check the ASSEMBLY PRACTICE HISTORY section to identify when all Tier 3 assemblies have status "STABLE"
-- Use itemType "full_tune" with itemId "FULL_TUNE" for full-tune practice
-
-### 4) Balance forward progress and consolidation
-In a short session plan, mix:
-- 1 GROWTH target at the learner's current ceiling (next tier when allowed)
-- 1-3 SUPPORT targets that reduce risk (weak motifs, recent failures, shaky transitions)
-
-### 4a) Lean toward progress: avoid repeating mastered content
-- Prioritize items that move the learner forward
-- Avoid proposing items that are already passed (streak 2+, status "STABLE") unless they are needed as support for a higher-tier activity
-- Once a tier is fully passed, focus on the next tier or Full Tune
-- Do not propose items the user has already mastered unless they are necessary for building toward the next level
-
-### 4b) Take into account the time that has passed between lessons
-- If a lesson has been practice in the same day, don't propose it again
-- If a lesson has not been practice in recent days, and was only passed a a few times, you can propose it again to consolidate the learning
-- If a lesson has not been practice in the last 30 days, might be worth proposing again to help the student remember the content
-
-### 5) Use past activity signals
-Prioritize items that are:
-- Recently failed (needs immediate attention)
-- Unseen but needed soon (prereq / motif unlock)
-- Passed but with low confidence (low streak, few attempts, long time since last practice)
-
-### 6) Keep the plan practical
-- Target about 16 items early in learning, only allow less if full tune is in the list
-- As the learner nears full mastery, use far fewer items (short, focused plans)
-- Don't flood with all possible nuggets/assemblies
-- If full tune is not yet stable, prefer Tier 3 assemblies only when Tier 1 and Tier 2 are mastered
-- Once ALL Tier 3 assemblies are stable, include an item to play the FULL TUNE end-to-end
-- Use itemType "full_tune" with itemId "FULL_TUNE" for full-tune practice
-
----
-
-## WHAT "MOTIF PASSED" MEANS
-
-A motif is "passed" when the learner has succeeded on ENOUGH activities that contain it:
-- High-importance motifs (0.8+): need 70%+ of containing nuggets at streak 2+
-- Other motifs: need 50%+ of containing nuggets at streak 2+
-
-Use the MOTIF STATUS section above - motifs marked "PASSED ✓" are ready.
-
----
-
-## EXAMPLES
-
-### Example 1: Motifs passed, no Tier 2 yet
-- Plan: Tier 1 → Tier 2
-- Pick 1-2 Tier 1 assemblies not yet solid, then introduce 1 Tier 2 assembly
-- Don't add motif drills (motifs aren't the blocker)
-
-### Example 2: User failing at Tier 2
-- Plan: Tier 1 parts of that Tier 2 → retry Tier 2
-- Pick the Tier 1 assemblies that sit inside (or overlap) the failed Tier 2 span
-- After those stabilize, propose the same Tier 2 again
-
-### Example 3: User completed some nuggets, but not all (starting Tier 1)
-- Plan: finish key nuggets needed for Tier 1 + introduce Tier 1
-- Pick missing/failed nuggets that unlock motifs used by Tier 1 assemblies
-- In the same plan, introduce one easy Tier 1 assembly that only depends on already-passed motifs
-
----
+Consider factors like:
+- Recent failures (may need attention)
+- Items never attempted (gaps in coverage)
+- Low streaks on previously passed items (may need reinforcement)
+- Time since last practice (memory decay)
+- Logical musical progression through the piece
 
 Use the submit_practice_plan function to return a structured practice plan.`;
 
-    const userPrompt = `Create a practice plan for this ${proficiencyLevel} student based on their history, motif status, and the progression principles above.
+    const userPrompt = `Create a practice plan that forms a growth path from this student's current abilities toward playing the full tune.
 
-Remember:
-- Only suggest READY assemblies (check ASSEMBLY READINESS)
-- Check the ASSEMBLY PRACTICE HISTORY section to identify which tiers are fully passed
-- When all Tier 2 assemblies are stable (status "STABLE"), prioritize Tier 3 assemblies
-- When all Tier 3 assemblies are stable (status "STABLE"), prioritize Full Tune
-- Avoid proposing items that are already stable (status "STABLE") unless they're needed for support
-- Focus on forward progress rather than repeating mastered content
-- Balance 1 growth target + 1-3 support targets
-- Target about 16 items, but it can be shorter if full tune in the list
-- Use itemType "full_tune" with itemId "FULL_TUNE" when the plan calls for full-tune practice
-- Include brief, encouraging instructions for each item`;
+Plan length guidance:
+- For beginners: plan up to ~16 activities
+- As they approach mastery: fewer activities
+- The closer to full tune, the shorter the plan
+
+Use your pedagogical judgment about what activities will help them progress. Include brief, encouraging instructions for each item.
+
+Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practice.`;
 
     const composedPrompt = `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userPrompt}`;
 
@@ -647,11 +390,9 @@ Remember:
           motifsCount: briefing.motifs?.length || 0,
           nuggetsCount: nuggets.length,
           assembliesCount: assemblies.length,
-          proficiencyLevel,
-          motifStatus: Object.fromEntries(motifStatus),
-          assemblyReadiness,
           practiceHistory,
           assemblyHistory,
+          fullTuneHistory,
           nuggets: nuggets.map((n) => ({
             id: n.id,
             label: n.label,
@@ -758,7 +499,6 @@ Remember:
         motifsSummary: briefing.motifs || [],
         tuneHints,
         practiceHistory,
-        proficiencyLevel,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
