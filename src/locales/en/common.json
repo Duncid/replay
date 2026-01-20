@@ -32,6 +32,7 @@
     "uploadAbc": "Upload ABC",
     "uploadMusicXml": "Upload MusicXML",
     "uploadMidi": "Upload MIDI",
+    "uploadNoteSequence": "Upload NoteSequence",
     "writeAbc": "Write ABC",
     "whistleImport": "Whistle (mic)",
     "writeNoteSequence": "Write NoteSequence",

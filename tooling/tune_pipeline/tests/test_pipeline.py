@@ -1,26 +1,11 @@
 from __future__ import annotations
 
 import json
-import zipfile
 from pathlib import Path
 
 from music21 import instrument, note, stream
 
 from tune_pipeline.cli import build_tune
-
-
-def _write_mxl(xml_path: Path, mxl_path: Path) -> None:
-    container = (
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        "<container version=\"1.0\" xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\">\n"
-        "  <rootfiles>\n"
-        f"    <rootfile full-path=\"{xml_path.name}\" media-type=\"application/vnd.recordare.musicxml+xml\"/>\n"
-        "  </rootfiles>\n"
-        "</container>\n"
-    )
-    with zipfile.ZipFile(mxl_path, "w") as zf:
-        zf.writestr("META-INF/container.xml", container)
-        zf.write(xml_path, arcname=xml_path.name)
 
 
 def _make_score() -> stream.Score:
@@ -50,9 +35,6 @@ def test_build_pipeline(tmp_path: Path) -> None:
     score = _make_score()
     xml_path = tune_folder / "tune.xml"
     score.write("musicxml", fp=str(xml_path))
-    mxl_path = tune_folder / "tune.mxl"
-    _write_mxl(xml_path, mxl_path)
-    xml_path.unlink()
     teacher = {
         "schemaVersion": "nuggets-teacher.v1",
         "pipelineSettings": {

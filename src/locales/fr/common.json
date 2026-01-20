@@ -33,6 +33,7 @@
     "uploadAbc": "Importer un fichier ABC",
     "uploadMusicXml": "Importer un fichier MusicXML",
     "uploadMidi": "Importer un fichier MIDI",
+    "uploadNoteSequence": "Importer une NoteSequence",
     "writeAbc": "Écrire en ABC",
     "whistleImport": "Siffler (micro)",
     "writeNoteSequence": "Écrire une NoteSequence",
