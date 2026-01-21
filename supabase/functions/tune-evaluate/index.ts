@@ -298,6 +298,9 @@ ${acquisitionContext}
 STUDENT CONTEXT:
 ${localUserId ? `- Student ID: ${localUserId}` : "- Anonymous student"}
 - Language preference: ${language}
+LANGUAGE INSTRUCTION:
+- Respond in ${language}. Do not mix languages.
+- Keep feedback brief.
 ${evaluationGuidance ? `
 TUNE-LEVEL EVALUATION GUIDANCE:
 ${evaluationGuidance}

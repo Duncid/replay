@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 interface TunePracticeProps {
   tuneTitle: string;
@@ -34,15 +35,17 @@ function StatusDisplay({
   isRecording,
   isEvaluating,
   lastEvaluation,
+  labels,
 }: {
   isRecording: boolean;
   isEvaluating: boolean;
   lastEvaluation?: TuneEvaluationResponse | null;
+  labels: { playing: string; sending: string; close: string };
 }) {
   if (isRecording && !isEvaluating) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground">
-        <span className="text-sm font-medium">Playing</span>
+        <span className="text-sm font-medium">{labels.playing}</span>
       </div>
     );
   }
@@ -50,7 +53,7 @@ function StatusDisplay({
   if (isEvaluating) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-        <span className="text-sm font-medium">Sending</span>
+        <span className="text-sm font-medium">{labels.sending}</span>
       </div>
     );
   }
@@ -60,7 +63,7 @@ function StatusDisplay({
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
         <Minus className="h-4 w-4" />
-        <span className="text-sm font-medium">Close</span>
+        <span className="text-sm font-medium">{labels.close}</span>
       </div>
     );
   }
@@ -72,12 +75,14 @@ function StatusDisplay({
 function StreakDisplay({
   lastEvaluation,
   currentNuggetId,
+  messages,
 }: {
   lastEvaluation?: TuneEvaluationResponse | null;
   currentNuggetId: string;
+  messages: { success: string; fail: string; close: string };
 }) {
   const [fires, setFires] = useState<number[]>([]); // Array of unique IDs for fires to enable staggered removal
-  const [tempMessage, setTempMessage] = useState<"success" | "woops" | "Close!" | null>(null);
+  const [tempMessage, setTempMessage] = useState<"success" | "fail" | "close" | null>(null);
   const [messageVisible, setMessageVisible] = useState(false);
   const [isRemovingFires, setIsRemovingFires] = useState(false);
   const nextFireIdRef = useRef(0);
@@ -126,7 +131,7 @@ function StreakDisplay({
       timeoutRefs.current.push(timer);
     } else if (evaluation === "fail") {
       // Fail: show "woops", then remove fires one by one
-      setTempMessage("woops");
+      setTempMessage("fail");
       const fadeInTimer = setTimeout(() => {
         setMessageVisible(true);
       }, 10);
@@ -168,7 +173,7 @@ function StreakDisplay({
       });
     } else if (evaluation === "close") {
       // Close: show "Close!" but don't change fires
-      setTempMessage("Close!");
+      setTempMessage("close");
       const fadeInTimer = setTimeout(() => {
         setMessageVisible(true);
       }, 10);
@@ -210,11 +215,15 @@ function StreakDisplay({
             "text-sm font-medium transition-opacity duration-300",
             messageVisible ? "opacity-100" : "opacity-0",
             tempMessage === "success" && "text-green-600",
-            tempMessage === "woops" && "text-orange-600",
-            tempMessage === "Close!" && "text-accent",
+            tempMessage === "fail" && "text-orange-600",
+            tempMessage === "close" && "text-accent",
           )}
         >
-          {tempMessage}
+          {tempMessage === "success"
+            ? messages.success
+            : tempMessage === "fail"
+              ? messages.fail
+              : messages.close}
         </span>
       )}
     </div>
@@ -235,10 +244,21 @@ export function TunePractice({
   debugMode = false,
   practicePlan = [],
 }: TunePracticeProps) {
+  const { t } = useTranslation();
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
   const [showPlanSheet, setShowPlanSheet] = useState(false);
+  const statusLabels = {
+    playing: t("tune.status.playing"),
+    sending: t("tune.status.sending"),
+    close: t("tune.status.close"),
+  };
+  const streakMessages = {
+    success: t("tune.feedback.greatJob"),
+    fail: t("tune.feedback.keepPracticing"),
+    close: t("tune.feedback.almostThere"),
+  };
 
   // Get sample sequence from nugget, assembly, or full tune
   const sampleSequence = (
@@ -275,7 +295,12 @@ export function TunePractice({
     <div className="flex flex-col h-full items-center justify-center p-6">
       <Card className="w-full max-w-lg relative">
         <CardHeader className="flex flex-row pb-4 justify-between items-center">
-          <StatusDisplay isRecording={isRecording} isEvaluating={isEvaluating} lastEvaluation={lastEvaluation} />
+          <StatusDisplay
+            isRecording={isRecording}
+            isEvaluating={isEvaluating}
+            lastEvaluation={lastEvaluation}
+            labels={statusLabels}
+          />
           <div className="flex items-center gap-2">
             {debugMode && practicePlan.length > 0 && (
               <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
@@ -374,14 +399,18 @@ export function TunePractice({
             {/* Play button visually attached to sheet */}
             <Button variant="ghost" onClick={onPlaySample} disabled={isPlaying} className="gap-2">
               <Play fill="currentColor" stroke="none" />
-              Replay
+              {t("tune.buttons.replay")}
             </Button>
           </div>
 
           {/* Bottom section: StreakDisplay left, Next button right */}
           <div className="flex items-center justify-between">
             {/* Streak display bottom left */}
-            <StreakDisplay lastEvaluation={lastEvaluation} currentNuggetId={currentNugget.itemId} />
+            <StreakDisplay
+              lastEvaluation={lastEvaluation}
+              currentNuggetId={currentNugget.itemId}
+              messages={streakMessages}
+            />
 
             {/* Next button bottom right */}
             <Button
@@ -390,7 +419,7 @@ export function TunePractice({
               isPulsating={shouldPulse}
               className="gap-2"
             >
-              Next
+              {t("tune.buttons.next")}
               <ArrowRight className="h-5 w-5" />
             </Button>
           </div>

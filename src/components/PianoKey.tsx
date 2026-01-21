@@ -56,6 +56,19 @@ export const PianoKey = ({
     }
   };
 
+  const noteColor = hasColor ? getNoteColorForNoteName(note) : undefined;
+
+  const getActiveColorStyle = () => {
+    if (!isActive || !noteColor) return undefined;
+    const baseColor = isBlack ? "hsl(var(--key-black))" : "hsl(var(--key-white))";
+    const hotColor = noteColor;
+    const coldColor = `color-mix(in srgb, ${hotColor} 50%, ${baseColor} 50%)`;
+    return {
+      backgroundColor: isSustained ? coldColor : hotColor,
+      boxShadow: `0 0 20px ${hotColor}80`,
+    };
+  };
+
   // Determine colors based on state
   const getKeyColor = () => {
     if (!isActive) {
@@ -63,6 +76,10 @@ export const PianoKey = ({
       return isBlack
         ? "bg-key-black hover:bg-key-black-light"
         : "bg-key-white hover:bg-key-white-shadow";
+    }
+
+    if (noteColor) {
+      return "shadow-lg";
     }
 
     if (isSustained) {
@@ -77,6 +94,8 @@ export const PianoKey = ({
         : "bg-red-500 shadow-lg shadow-red-500/50";
     }
   };
+
+  const activeColorStyle = getActiveColorStyle();
 
   return (
     <button
@@ -104,6 +123,7 @@ export const PianoKey = ({
               gridColumnStart: gridColumn * 2,
             }
           : {}),
+        ...(activeColorStyle ?? {}),
       }}
     >
       <span
