@@ -107,6 +107,11 @@
     "tuneAcquired": "Tune Acquired: {{title}}",
     "skillUnlocked": "Skill Unlocked: {{skills}}",
     "nextSectionHint": "Nice streak! Try the next section when you're ready.",
+    "comments": {
+      "title": "Coach comments",
+      "placeholder": "Play a phrase to get feedback.",
+      "helper": "Comments update automatically after each take."
+    },
     "status": {
       "playing": "Playing",
       "sending": "Sending",

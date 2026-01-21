@@ -326,12 +326,14 @@ ${JSON.stringify(targetSequence, null, 2)}
 USER'S RECORDED SEQUENCE (${(userSequence as any)?.notes?.length || 0} notes):
 ${JSON.stringify(userSequence, null, 2)}
 
-FOCUS ON LAST NOTES:
-The recording may contain notes from earlier attempts or warm-up playing.
-Focus on the LAST notes of their recording - this is their most recent attempt.
-If the target has N notes and the recording has M notes (where M > N), look at the final ~N notes.
-Try to find where the target sequence best matches within the recording, prioritizing the end.
-Evaluate based on the best matching section, not the entire recording.
+CONTINUOUS RECORDING MATCHING:
+The recording may contain multiple attempts, warm-ups, or partial phrases.
+Search the FULL recording for one or more occurrences of the target sequence (or a close variant).
+Prioritize segments toward the end, but do not ignore earlier complete matches.
+Evaluate the performance based on:
+1) The best matching segment (for grading), AND
+2) Overall consistency across attempts (for feedback).
+If there are multiple valid matches, consider it a stronger pass and mention consistency in feedback.
 IMPORTANT: For assemblies and nuggets, if the recording has exactly N+1 notes (where N is the target count) and the first N notes match the target perfectly in pitch and order, this should still be considered a valid performance even with the extra note at the end.
 
 EVALUATION CRITERIA:
@@ -343,16 +345,21 @@ LENIENCY FOR ASSEMBLIES AND NUGGETS:
 For assemblies and nuggets of all tiers: If all target notes are played correctly in order with correct pitch, and there is exactly one extra note at the end, this should still be considered a "pass" (assuming timing is reasonable). The key is that the target sequence must be present in full, in the correct order, with correct pitches - an additional note at the end is acceptable.
 
 GRADING:
-- "pass": Good pitch accuracy (80%+), reasonable timing, all notes present. For assemblies and nuggets: If all target notes are present in correct order with correct pitches, and there is exactly one or two extra notes at the end, this qualifies as "pass" (assuming timing is reasonable).
-- "close": Mostly correct but minor issues (1-2 wrong notes, slight timing issues)
-- "fail": Multiple wrong notes, missing notes, or significant timing problems
+- "pass": At least one complete matching segment with good pitch accuracy (80%+), reasonable timing, and all notes present. For assemblies and nuggets: If all target notes are present in correct order with correct pitches, and there is exactly one or two extra notes at the end, this qualifies as "pass" (assuming timing is reasonable).
+- "close": No complete match, but there is a near match (mostly correct with 1-2 wrong notes or slight timing issues).
+- "fail": No meaningful match found, or multiple wrong/missing notes with significant timing problems.
+
+SUCCESS COUNT:
+- If evaluation is "pass", return successCount = number of complete matching segments you found (minimum 1).
+- If evaluation is "close" or "fail", return successCount = 0.
 
 FEEDBACK STYLE:
 - Be encouraging and constructive
 - Reference the teacherHints when giving feedback
 - Keep feedback brief (1-2 sentences)
 - If they failed, mention what to focus on
-- If they passed, acknowledge what they did well`;
+- If they passed, acknowledge what they did well
+- If there were multiple attempts, mention consistency (or inconsistency) briefly`;
 
     const userPrompt = `Evaluate this performance and provide feedback.`;
 
@@ -376,6 +383,10 @@ FEEDBACK STYLE:
                 type: "string",
                 description: "Encouraging, constructive feedback (1-2 sentences)",
               },
+              successCount: {
+                type: "number",
+                description: "Number of complete matching segments found in the recording (0 for close/fail, minimum 1 for pass).",
+              },
               replayDemo: {
                 type: "boolean",
                 description: "Whether to replay the demo after this evaluation (usually on fail)",
@@ -389,7 +400,7 @@ FEEDBACK STYLE:
                 description: `Whether to award skills associated with this tune. Only set if markTuneAcquired is true AND demonstrating competency. Skills are automatically fetched from tune_awards_skill edges. Available skills: ${availableSkills.length > 0 ? availableSkills.join(", ") : "none"}. Already unlocked: ${unlockedSkills.length > 0 ? unlockedSkills.join(", ") : "none"}.`,
               },
             },
-            required: ["evaluation", "feedbackText", "replayDemo"],
+            required: ["evaluation", "feedbackText", "successCount", "replayDemo"],
           },
         },
       },
@@ -457,14 +468,18 @@ FEEDBACK STYLE:
     const evalResult = JSON.parse(toolCall.function.arguments) as {
       evaluation: "pass" | "close" | "fail";
       feedbackText: string;
+      successCount: number;
       replayDemo: boolean;
       markTuneAcquired?: boolean;
       awardSkills?: boolean;
     };
 
     // 5. Update nugget state
-    const newStreak = evalResult.evaluation === "pass" ? currentStreak + 1 : 0;
-    const newPassCount = (existingState?.pass_count || 0) + (evalResult.evaluation === "pass" ? 1 : 0);
+    const normalizedSuccessCount = evalResult.evaluation === "pass"
+      ? Math.max(1, Math.floor(evalResult.successCount || 1))
+      : 0;
+    const newStreak = evalResult.evaluation === "pass" ? currentStreak + normalizedSuccessCount : 0;
+    const newPassCount = (existingState?.pass_count || 0) + normalizedSuccessCount;
     const newBestStreak = Math.max(existingState?.best_streak || 0, newStreak);
 
     if (existingState) {
@@ -484,7 +499,7 @@ FEEDBACK STYLE:
         nugget_id: nuggetId,
         local_user_id: localUserId,
         attempt_count: 1,
-        pass_count: evalResult.evaluation === "pass" ? 1 : 0,
+        pass_count: normalizedSuccessCount,
         current_streak: newStreak,
         best_streak: newStreak,
         last_practiced_at: new Date().toISOString(),
@@ -572,6 +587,7 @@ FEEDBACK STYLE:
         evaluation: evalResult.evaluation,
         feedbackText: evalResult.feedbackText,
         currentStreak: newStreak,
+        successCount: normalizedSuccessCount,
         suggestNewNugget,
         replayDemo: evalResult.replayDemo,
         tuneAcquired,

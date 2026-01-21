@@ -108,6 +108,11 @@
     "tuneAcquired": "Morceau acquis : {{title}}",
     "skillUnlocked": "Compétence débloquée : {{skills}}",
     "nextSectionHint": "Belle série ! Passe à la section suivante quand tu es prêt.",
+    "comments": {
+      "title": "Commentaires du coach",
+      "placeholder": "Joue une phrase pour obtenir un retour.",
+      "helper": "Les commentaires se mettent à jour automatiquement après chaque prise."
+    },
     "status": {
       "playing": "Lecture",
       "sending": "Envoi",

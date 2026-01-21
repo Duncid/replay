@@ -87,6 +87,23 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes comment-typing {
+    from {
+      clip-path: inset(0 100% 0 0);
+      opacity: 0.35;
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
+  }
+
+  .comment-typing {
+    display: block;
+    animation: comment-typing 1.1s steps(36, end);
+    will-change: clip-path, opacity;
+  }
+
   /* Custom scrollbar - minimalist with muted color */
   .custom-scrollbar {
     scrollbar-width: thin;

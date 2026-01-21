@@ -58,7 +58,6 @@ export function TuneMode({
     // Reset when recording starts
     if (isRecording) {
       setIsEvaluating(false);
-      clearEvaluation(); // Clear previous evaluation when user starts playing
       if (preEvalTimer.current) {
         clearTimeout(preEvalTimer.current);
         preEvalTimer.current = null;
@@ -262,21 +261,6 @@ export function TuneMode({
           toast.success(t("tune.skillUnlocked", { skills: skillNames }));
         }
 
-        // Show toast feedback based on evaluation (only if no acquisition happened)
-        if (!response.tuneAcquired && !response.awardedSkills?.length) {
-          if (response.evaluation === 'pass') {
-            toast.success(response.feedbackText, { duration: 3000 });
-          } else if (response.evaluation === 'close') {
-            toast(response.feedbackText, { duration: 3000 });
-          } else {
-            toast(response.feedbackText, { duration: 3000 });
-          }
-        }
-
-        if (response.evaluation === "fail" && !isPlayingSample && !isRecording) {
-          handlePlaySample();
-        }
-        
         // Suggest moving to next nugget if streak threshold reached
         if (response.suggestNewNugget && state.currentIndex < state.practicePlan.length - 1) {
           toast.info(t("tune.nextSectionHint"), { duration: 4000 });
@@ -308,16 +292,6 @@ export function TuneMode({
       setIsEvaluating(false);
       updateEvaluation(response);
       
-      // Show toast feedback
-      if (response.evaluation === 'pass') {
-        toast.success(response.feedbackText, { duration: 3000 });
-      } else {
-        toast(response.feedbackText, { duration: 3000 });
-      }
-
-      if (response.evaluation === "fail" && !isPlayingSample && !isRecording) {
-        handlePlaySample();
-      }
     } catch (error) {
       console.error("Error evaluating attempt:", error);
       setIsEvaluating(false);
