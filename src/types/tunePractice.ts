@@ -95,6 +95,7 @@ export interface TuneEvaluationResponse {
   evaluation: 'pass' | 'close' | 'fail';
   feedbackText: string;
   currentStreak: number;
+  successCount?: number;
   suggestNewNugget: boolean;
   nextNuggetSuggestion?: string;
   replayDemo: boolean;
