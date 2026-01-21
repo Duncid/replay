@@ -62,6 +62,10 @@
       "Teach me a long jazzy sequence",
       "Teach me a moody classic sequence"
     ],
+    "loadingTeacher": "Preparing your lesson...",
+    "preparingLesson": "Preparing lesson...",
+    "generatingLesson": "Generating lesson...",
+    "startButton": "Start",
     "startLearning": "Start Learning",
     "generateErrorTitle": "Failed to generate lesson",
     "generateErrorDescription": "Please try again",
@@ -88,6 +92,41 @@
       "permissionDenied": "Microphone access was denied. Please allow microphone permissions and try again.",
       "accessFailed": "Unable to access microphone: {{error}}",
       "unknown": "Unknown error"
+    }
+  },
+  "tune": {
+    "loadingTune": "Loading tune...",
+    "preparingPlan": "Preparing practice plan...",
+    "planReady": "New practice plan ready!",
+    "letsPractice": "Let's practice!",
+    "loadPlanFailed": "Failed to load practice plan",
+    "evaluateFailed": "Failed to evaluate performance",
+    "practiceComplete": "Practice session complete!",
+    "getNewPlan": "Get new practice plan",
+    "returnToSelection": "Return to selection",
+    "tuneAcquired": "Tune Acquired: {{title}}",
+    "skillUnlocked": "Skill Unlocked: {{skills}}",
+    "nextSectionHint": "Nice streak! Try the next section when you're ready.",
+    "status": {
+      "playing": "Playing",
+      "sending": "Sending",
+      "close": "Close"
+    },
+    "buttons": {
+      "replay": "Replay",
+      "next": "Next"
+    },
+    "feedback": {
+      "greatJob": "Great job!",
+      "almostThere": "Almost there!",
+      "keepPracticing": "Keep practicing!",
+      "pass": "Pass",
+      "close": "Close",
+      "tryAgain": "Try Again",
+      "leave": "Leave",
+      "practiceAgain": "Practice Again",
+      "nextSection": "Next Section",
+      "masteredPrompt": "You've mastered this section! Ready for the next one?"
     }
   }
 }

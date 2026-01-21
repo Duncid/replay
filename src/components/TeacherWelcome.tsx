@@ -152,7 +152,7 @@ export function TeacherWelcome({
   if (isLoading) {
     return (
       <LoadingSpinner
-        message={t("learnMode.loadingTeacher", "Preparing your lesson...")}
+        message={t("learnMode.loadingTeacher")}
       />
     );
   }
@@ -195,7 +195,7 @@ export function TeacherWelcome({
   // Normal mode - just show Start button
   return (
     <div className="w-full max-w-3xl h-full flex flex-col justify-center items-center mx-auto space-y-6">
-      <Button onClick={onStart}>Start</Button>
+      <Button onClick={onStart}>{t("learnMode.startButton")}</Button>
     </div>
   );
 }

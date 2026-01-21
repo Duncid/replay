@@ -8,6 +8,7 @@ import { TuneEvaluationDebugCard } from "@/components/TuneEvaluationDebugCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import type { TuneDebugData, TuneEvaluationDebugData, TuneCoachResponse } from "@/types/tunePractice";
 import type { INoteSequence } from "@magenta/music/es6";
+import { useTranslation } from "react-i18next";
 
 interface TuneModeProps {
   tuneKey: string;
@@ -32,6 +33,7 @@ export function TuneMode({
   currentRecording,
   isRecording = false,
 }: TuneModeProps) {
+  const { t } = useTranslation();
   const { state, currentNugget, setPhase, setPracticePlan, updateEvaluation, clearEvaluation, nextNugget, setError } = useTuneState(tuneKey);
   
   const startPractice = useStartTunePractice();
@@ -148,8 +150,8 @@ export function TuneMode({
           // Show different message for regeneration vs first load
           toast.success(
             isRegeneration 
-              ? "New practice plan ready!" 
-              : (response.encouragement || "Let's practice!")
+              ? t("tune.planReady")
+              : (response.encouragement || t("tune.letsPractice"))
           );
         } else {
           throw new Error("No practice plan received");
@@ -157,8 +159,8 @@ export function TuneMode({
       }
     } catch (error) {
       console.error("Error fetching practice plan:", error);
-      setError(error instanceof Error ? error.message : "Failed to load practice plan");
-      toast.error("Failed to load practice plan");
+      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
+      toast.error(t("tune.loadPlanFailed"));
     }
   };
 
@@ -175,14 +177,14 @@ export function TuneMode({
       
       if (response.practicePlan && response.practicePlan.length > 0) {
         setPracticePlan(response.practicePlan, response.tuneTitle);
-        toast.success(response.encouragement || "Let's practice!");
+        toast.success(response.encouragement || t("tune.letsPractice"));
       } else {
         throw new Error("No practice plan received");
       }
     } catch (error) {
       console.error("Error fetching practice plan:", error);
-      setError(error instanceof Error ? error.message : "Failed to load practice plan");
-      toast.error("Failed to load practice plan");
+      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
+      toast.error(t("tune.loadPlanFailed"));
     }
   };
 
@@ -251,13 +253,13 @@ export function TuneMode({
 
         // Celebratory toast for tune acquisition
         if (response.tuneAcquired) {
-          toast.success(`Tune Acquired: ${state.tuneTitle}`);
+          toast.success(t("tune.tuneAcquired", { title: state.tuneTitle }));
         }
 
         // Celebratory toast for skill unlocks from tune
         if (response.awardedSkills && response.awardedSkills.length > 0) {
           const skillNames = response.awardedSkills.join(", ");
-          toast.success(`Skill Unlocked: ${skillNames}`);
+          toast.success(t("tune.skillUnlocked", { skills: skillNames }));
         }
 
         // Show toast feedback based on evaluation (only if no acquisition happened)
@@ -277,13 +279,13 @@ export function TuneMode({
         
         // Suggest moving to next nugget if streak threshold reached
         if (response.suggestNewNugget && state.currentIndex < state.practicePlan.length - 1) {
-          toast.info("Nice streak! Try the next section when you're ready.", { duration: 4000 });
+          toast.info(t("tune.nextSectionHint"), { duration: 4000 });
         }
       }
     } catch (error) {
       console.error("Error evaluating attempt:", error);
       setIsEvaluating(false);
-      toast.error("Failed to evaluate performance");
+      toast.error(t("tune.evaluateFailed"));
     }
   };
 
@@ -374,7 +376,7 @@ export function TuneMode({
       <div className="flex flex-col items-center justify-center h-full p-6">
         <p className="text-destructive mb-4">{state.error}</p>
         <button onClick={onLeave} className="text-primary hover:underline">
-          Return to selection
+          {t("tune.returnToSelection")}
         </button>
       </div>
     );
@@ -408,7 +410,9 @@ export function TuneMode({
   if (state.phase === "loading" || state.phase === "coaching") {
     return (
       <LoadingSpinner 
-        message={state.phase === "loading" ? "Loading tune..." : "Preparing practice plan..."} 
+        message={
+          state.phase === "loading" ? t("tune.loadingTune") : t("tune.preparingPlan")
+        }
       />
     );
   }
@@ -438,9 +442,9 @@ export function TuneMode({
   // Fallback - practice plan exhausted, go back to coaching
   return (
     <div className="flex flex-col items-center justify-center h-full p-6">
-      <p className="text-foreground mb-4">Practice session complete!</p>
+      <p className="text-foreground mb-4">{t("tune.practiceComplete")}</p>
       <button onClick={fetchPracticePlan} className="text-primary hover:underline">
-        Get new practice plan
+        {t("tune.getNewPlan")}
       </button>
     </div>
   );

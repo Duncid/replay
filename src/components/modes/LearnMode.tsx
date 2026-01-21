@@ -440,8 +440,8 @@ export function LearnMode({
         return (
           <LoadingSpinner 
             message={isLoadingLessonDebug 
-              ? "Preparing lesson..." 
-              : t("learnMode.generatingLesson", "Generating lesson...")} 
+              ? t("learnMode.preparingLesson") 
+              : t("learnMode.generatingLesson")} 
           />
         );
       }

@@ -63,6 +63,10 @@
       "Apprends-moi une longue séquence jazz",
       "Apprends-moi une séquence classique sombre"
     ],
+    "loadingTeacher": "Préparation de votre leçon...",
+    "preparingLesson": "Préparation de la leçon...",
+    "generatingLesson": "Génération de la leçon...",
+    "startButton": "Commencer",
     "startLearning": "Commencer l'apprentissage",
     "generateErrorTitle": "Échec de la création de la leçon",
     "generateErrorDescription": "Veuillez réessayer",
@@ -89,6 +93,41 @@
       "permissionDenied": "L'accès au microphone a été refusé. Veuillez autoriser les permissions du microphone et réessayer.",
       "accessFailed": "Impossible d'accéder au microphone : {{error}}",
       "unknown": "Erreur inconnue"
+    }
+  },
+  "tune": {
+    "loadingTune": "Chargement du morceau...",
+    "preparingPlan": "Préparation du plan d'entraînement...",
+    "planReady": "Nouveau plan d'entraînement prêt !",
+    "letsPractice": "Allons pratiquer !",
+    "loadPlanFailed": "Échec du chargement du plan d'entraînement",
+    "evaluateFailed": "Échec de l'évaluation de la performance",
+    "practiceComplete": "Séance d'entraînement terminée !",
+    "getNewPlan": "Obtenir un nouveau plan d'entraînement",
+    "returnToSelection": "Retour à la sélection",
+    "tuneAcquired": "Morceau acquis : {{title}}",
+    "skillUnlocked": "Compétence débloquée : {{skills}}",
+    "nextSectionHint": "Belle série ! Passe à la section suivante quand tu es prêt.",
+    "status": {
+      "playing": "Lecture",
+      "sending": "Envoi",
+      "close": "Presque"
+    },
+    "buttons": {
+      "replay": "Rejouer",
+      "next": "Suivant"
+    },
+    "feedback": {
+      "greatJob": "Bravo !",
+      "almostThere": "Presque !",
+      "keepPracticing": "Continue à t'entraîner !",
+      "pass": "Réussi",
+      "close": "Presque",
+      "tryAgain": "Réessaie",
+      "leave": "Quitter",
+      "practiceAgain": "Reprendre l'entraînement",
+      "nextSection": "Section suivante",
+      "masteredPrompt": "Tu maîtrises cette section ! Prêt pour la suite ?"
     }
   }
 }

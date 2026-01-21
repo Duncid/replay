@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, MinusCircle, RotateCcw, SkipForward, ArrowLeft } from "lucide-react";
 import type { TuneEvaluationResponse, PracticePlanItem } from "@/types/tunePractice";
+import { useTranslation } from "react-i18next";
 
 interface TuneFeedbackProps {
   evaluation: TuneEvaluationResponse;
@@ -22,6 +23,7 @@ export function TuneFeedback({
   onNextNugget,
   onLeave,
 }: TuneFeedbackProps) {
+  const { t } = useTranslation();
   const getEvaluationIcon = () => {
     switch (evaluation.evaluation) {
       case "pass":
@@ -36,22 +38,22 @@ export function TuneFeedback({
   const getEvaluationLabel = () => {
     switch (evaluation.evaluation) {
       case "pass":
-        return "Great job!";
+        return t("tune.feedback.greatJob");
       case "close":
-        return "Almost there!";
+        return t("tune.feedback.almostThere");
       case "fail":
-        return "Keep practicing!";
+        return t("tune.feedback.keepPracticing");
     }
   };
 
   const getEvaluationBadge = () => {
     switch (evaluation.evaluation) {
       case "pass":
-        return <Badge className="bg-green-500 text-white">Pass</Badge>;
+        return <Badge className="bg-green-500 text-white">{t("tune.feedback.pass")}</Badge>;
       case "close":
-        return <Badge className="bg-yellow-500 text-white">Close</Badge>;
+        return <Badge className="bg-yellow-500 text-white">{t("tune.feedback.close")}</Badge>;
       case "fail":
-        return <Badge className="bg-red-500 text-white">Try Again</Badge>;
+        return <Badge className="bg-red-500 text-white">{t("tune.feedback.tryAgain")}</Badge>;
     }
   };
 
@@ -86,7 +88,7 @@ export function TuneFeedback({
           {evaluation.suggestNewNugget && hasMoreNuggets && (
             <div className="bg-primary/10 p-3 rounded-lg text-center">
               <p className="text-sm text-primary font-medium">
-                🎉 You've mastered this section! Ready for the next one?
+                🎉 {t("tune.feedback.masteredPrompt")}
               </p>
             </div>
           )}
@@ -96,12 +98,12 @@ export function TuneFeedback({
       <div className="flex flex-wrap justify-center gap-3">
         <Button variant="outline" onClick={onLeave} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
-          Leave
+          {t("tune.feedback.leave")}
         </Button>
 
         <Button variant="outline" onClick={onRetry} className="gap-2">
           <RotateCcw className="h-4 w-4" />
-          Practice Again
+          {t("tune.feedback.practiceAgain")}
         </Button>
 
         {hasMoreNuggets && (
@@ -111,7 +113,7 @@ export function TuneFeedback({
             variant={evaluation.suggestNewNugget ? "default" : "outline"}
           >
             <SkipForward className="h-4 w-4" />
-            Next Section
+            {t("tune.feedback.nextSection")}
           </Button>
         )}
       </div>

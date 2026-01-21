@@ -272,6 +272,9 @@ PLAN LENGTH:
 
 - ID: ${localUserId || "anonymous"}
 - Language: ${language}
+LANGUAGE INSTRUCTION:
+- Respond in ${language}. Do not mix languages.
+- Keep instructions and encouragement brief.
 
 ---
 
