@@ -120,6 +120,7 @@
     },
     "buttons": {
       "replay": "Rejouer",
+      "previous": "Précédent",
       "next": "Suivant"
     },
     "feedback": {

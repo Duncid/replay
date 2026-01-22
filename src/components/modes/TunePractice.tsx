@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
 import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
-import { ArrowRight, Minus, Play, X, List } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Play, X, List } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +20,7 @@ interface TunePracticeProps {
   lastEvaluation?: TuneEvaluationResponse | null;
   onPlaySample: () => void;
   onSwitchNugget: () => void;
+  onPreviousNugget: () => void;
   onLeave: () => void;
   isPlaying?: boolean;
   isEvaluating?: boolean;
@@ -243,6 +244,7 @@ export function TunePractice({
   lastEvaluation,
   onPlaySample,
   onSwitchNugget,
+  onPreviousNugget,
   onLeave,
   isPlaying = false,
   isEvaluating = false,
@@ -256,6 +258,7 @@ export function TunePractice({
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
   const [showPlanSheet, setShowPlanSheet] = useState(false);
   const [commentKey, setCommentKey] = useState(0);
+  const isFirstNugget = currentIndex === 0;
   const statusLabels = {
     playing: t("tune.status.playing"),
     sending: t("tune.status.sending"),
@@ -424,7 +427,7 @@ export function TunePractice({
               </Button>
             </div>
 
-            {/* Bottom section: StreakDisplay left, Next button right */}
+            {/* Bottom section: StreakDisplay left, Previous/Next buttons right */}
             <div className="flex items-center justify-between">
               {/* Streak display bottom left */}
               <StreakDisplay
@@ -434,15 +437,26 @@ export function TunePractice({
               />
 
               {/* Next button bottom right */}
-              <Button
-                variant={shouldPulse ? "default" : "ghost"}
-                onClick={handleNextNugget}
-                isPulsating={shouldPulse}
-                className="gap-2"
-              >
-                {t("tune.buttons.next")}
-                <ArrowRight className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={onPreviousNugget}
+                  className="gap-2"
+                  disabled={isFirstNugget}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                  {t("tune.buttons.previous")}
+                </Button>
+                <Button
+                  variant={shouldPulse ? "default" : "ghost"}
+                  onClick={handleNextNugget}
+                  isPulsating={shouldPulse}
+                  className="gap-2"
+                >
+                  {t("tune.buttons.next")}
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

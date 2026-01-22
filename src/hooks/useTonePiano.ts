@@ -200,7 +200,6 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
     }
   }).toDestination();
 
-  // Helper functions that depend on sampler - must be defined after sampler
   const samplerWithSources = sampler as unknown as {
     _activeSources?: Map<number, Tone.ToneBufferSource[]>;
   };

@@ -80,6 +80,21 @@ export function useTuneState(tuneKey: string) {
     });
   }, []);
 
+  const previousNugget = useCallback(() => {
+    setState((prev) => {
+      const previousIndex = Math.max(0, prev.currentIndex - 1);
+      if (previousIndex === prev.currentIndex) {
+        return prev;
+      }
+      return {
+        ...prev,
+        currentIndex: previousIndex,
+        currentStreak: 0,
+        lastEvaluation: null,
+      };
+    });
+  }, []);
+
   const setError = useCallback((error: string | null) => {
     setState((prev) => ({ ...prev, error }));
   }, []);
@@ -98,6 +113,7 @@ export function useTuneState(tuneKey: string) {
     updateEvaluation,
     clearEvaluation,
     nextNugget,
+    previousNugget,
     setError,
     reset,
   };
