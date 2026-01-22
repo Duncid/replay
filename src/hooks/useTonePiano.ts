@@ -173,6 +173,29 @@ function createFMSynthEngine(): { engine: AudioEngine; loadPromise: Promise<void
 function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine; loadPromise: Promise<void> } {
   const urls = getSamplerUrls(instrument);
   const baseUrl = getSamplerBaseUrl(instrument);
+  const enableShallowRelease = instrument === "acoustic-piano";
+  const shallowReleaseGapMs = 35;
+  const shallowReleaseHoldMs = 120;
+  const shallowReleaseOverlapMs = 10;
+  const pendingReleases = new Map<
+    string,
+    { time: number; sources: Tone.ToneBufferSource[]; timeoutId: ReturnType<typeof setTimeout> }
+  >();
+  const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const samplerWithSources = sampler as unknown as {
+    _activeSources?: Map<number, Tone.ToneBufferSource[]>;
+  };
+  const getActiveSources = (noteKey: string) => {
+    const midi = Tone.Frequency(noteKey).toMidi();
+    const sources = samplerWithSources._activeSources?.get(midi);
+    return sources && sources.length > 0 ? [...sources] : [];
+  };
+  const stopSources = (sources: Tone.ToneBufferSource[], delayMs = 0) => {
+    const stopTime = Tone.now() + delayMs / 1000;
+    sources.forEach((source) => {
+      source.stop(stopTime);
+    });
+  };
   
   let resolveLoad: () => void;
   const loadPromise = new Promise<void>((resolve) => {
@@ -195,15 +218,47 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
     engine: {
       type: "sampler",
       startNote: (noteKey: string) => {
+        if (enableShallowRelease) {
+          const pending = pendingReleases.get(noteKey);
+          if (pending) {
+            const gap = nowMs() - pending.time;
+            clearTimeout(pending.timeoutId);
+            pendingReleases.delete(noteKey);
+            if (gap <= shallowReleaseGapMs) {
+              stopSources(pending.sources, shallowReleaseOverlapMs);
+            } else {
+              stopSources(pending.sources);
+            }
+          }
+        }
         sampler.triggerAttack(noteKey, Tone.now());
       },
       stopNote: (noteKey: string) => {
-        sampler.triggerRelease(noteKey, Tone.now());
+        if (!enableShallowRelease) {
+          sampler.triggerRelease(noteKey, Tone.now());
+          return;
+        }
+
+        const sources = getActiveSources(noteKey);
+        if (sources.length === 0) return;
+
+        const existing = pendingReleases.get(noteKey);
+        if (existing) {
+          clearTimeout(existing.timeoutId);
+        }
+
+        const releaseTimeout = setTimeout(() => {
+          stopSources(sources);
+          pendingReleases.delete(noteKey);
+        }, shallowReleaseHoldMs);
+        pendingReleases.set(noteKey, { time: nowMs(), sources, timeoutId: releaseTimeout });
       },
       playNote: (noteKey: string, duration: number) => {
         sampler.triggerAttackRelease(noteKey, duration, Tone.now());
       },
       dispose: () => {
+        pendingReleases.forEach(({ timeoutId }) => clearTimeout(timeoutId));
+        pendingReleases.clear();
         sampler.dispose();
       },
     },
