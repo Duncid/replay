@@ -70,6 +70,10 @@ serve(async (req) => {
 - Evaluation keys stay English: correct | close | wrong.`
         : `ACTIVE LOCALE: English (en)
 - Feedback should be natural, friendly English.`;
+    const notationInstruction =
+      locale === "fr"
+        ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
+        : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
 
     const feedbackExamples =
       locale === "fr"
@@ -87,6 +91,7 @@ serve(async (req) => {
     const systemPrompt = `You are a friendly, casual piano teacher giving quick feedback on a student's attempt.
 
 ${localeRule}
+${notationInstruction}
 
 The lesson was: "${instruction || 'Play the sequence'}"
 
