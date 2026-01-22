@@ -182,20 +182,6 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
     { time: number; sources: Tone.ToneBufferSource[]; timeoutId: ReturnType<typeof setTimeout> }
   >();
   const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
-  const samplerWithSources = sampler as unknown as {
-    _activeSources?: Map<number, Tone.ToneBufferSource[]>;
-  };
-  const getActiveSources = (noteKey: string) => {
-    const midi = Tone.Frequency(noteKey).toMidi();
-    const sources = samplerWithSources._activeSources?.get(midi);
-    return sources && sources.length > 0 ? [...sources] : [];
-  };
-  const stopSources = (sources: Tone.ToneBufferSource[], delayMs = 0) => {
-    const stopTime = Tone.now() + delayMs / 1000;
-    sources.forEach((source) => {
-      source.stop(stopTime);
-    });
-  };
   
   let resolveLoad: () => void;
   const loadPromise = new Promise<void>((resolve) => {
@@ -213,6 +199,21 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
       resolveLoad(); // Resolve anyway to not block
     }
   }).toDestination();
+
+  const samplerWithSources = sampler as unknown as {
+    _activeSources?: Map<number, Tone.ToneBufferSource[]>;
+  };
+  const getActiveSources = (noteKey: string) => {
+    const midi = Tone.Frequency(noteKey).toMidi();
+    const sources = samplerWithSources._activeSources?.get(midi);
+    return sources && sources.length > 0 ? [...sources] : [];
+  };
+  const stopSources = (sources: Tone.ToneBufferSource[], delayMs = 0) => {
+    const stopTime = Tone.now() + delayMs / 1000;
+    sources.forEach((source) => {
+      source.stop(stopTime);
+    });
+  };
 
   return {
     engine: {
