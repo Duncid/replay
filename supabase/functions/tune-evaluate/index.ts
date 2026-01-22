@@ -3,8 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const STREAK_THRESHOLD_FOR_NEW_NUGGET = 3;
@@ -28,20 +27,13 @@ serve(async (req) => {
   }
 
   try {
-    const {
-      tuneKey,
-      nuggetId,
-      userSequence,
-      localUserId = null,
-      language = "en",
-      debug = false,
-    } = await req.json();
+    const { tuneKey, nuggetId, userSequence, localUserId = null, language = "en", debug = false } = await req.json();
 
     if (!tuneKey || !nuggetId || !userSequence) {
-      return new Response(
-        JSON.stringify({ error: "tuneKey, nuggetId, and userSequence are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "tuneKey, nuggetId, and userSequence are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`[tune-evaluate] Request - tuneKey: ${tuneKey}, nuggetId: ${nuggetId}, user: ${localUserId}`);
@@ -55,14 +47,16 @@ serve(async (req) => {
     let tuneAsset;
     const { data: publishedAsset, error: tuneError } = await supabase
       .from("tune_assets")
-      .select(`
+      .select(
+        `
         *,
         curriculum_versions!inner (
           id,
           status,
           published_at
         )
-      `)
+      `,
+      )
       .eq("tune_key", tuneKey)
       .eq("curriculum_versions.status", "published")
       .order("curriculum_versions(published_at)", { ascending: false })
@@ -79,13 +73,13 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      
+
       if (fallbackError || !fallbackAsset) {
         console.error("Error fetching tune asset:", fallbackError);
-        return new Response(
-          JSON.stringify({ error: "Tune not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Tune not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       tuneAsset = fallbackAsset;
       console.warn(`[tune-evaluate] Using fallback query for ${tuneKey} - no published version found`);
@@ -99,10 +93,10 @@ serve(async (req) => {
     // Look in both nuggets and assemblies for the item
     const nuggets = (tuneAsset.nuggets || []) as TuneItem[];
     const assemblies = (tuneAsset.assemblies || []) as TuneItem[];
-    
+
     let targetItem: TuneItem | undefined = nuggets.find((n) => n.id === nuggetId);
     let isAssembly = false;
-    
+
     if (!targetItem) {
       targetItem = assemblies.find((a) => a.id === nuggetId);
       isAssembly = true;
@@ -121,14 +115,14 @@ serve(async (req) => {
     if (!targetItem) {
       return new Response(
         JSON.stringify({ error: `Item ${nuggetId} not found in tune (checked nuggets and assemblies)` }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const targetSequence = targetItem.noteSequence;
     const teacherHints = targetItem.teacherHints || {};
-    const assemblyTier = isAssembly ? (targetItem.tier || 1) : null;
-    
+    const assemblyTier = isAssembly ? targetItem.tier || 1 : null;
+
     // Extract tune-level evaluation guidance from briefing
     const evaluationGuidance = briefing.evaluationGuidance as string | null;
 
@@ -174,14 +168,16 @@ serve(async (req) => {
 
     const { data: allStates } = await allStatesQuery;
     const statesMap = new Map(
-      (allStates || []).map((s: {
-        nugget_id: string;
-        attempt_count?: number;
-        pass_count?: number;
-        current_streak?: number;
-        best_streak?: number;
-        last_practiced_at?: string | null;
-      }) => [s.nugget_id, s])
+      (allStates || []).map(
+        (s: {
+          nugget_id: string;
+          attempt_count?: number;
+          pass_count?: number;
+          current_streak?: number;
+          best_streak?: number;
+          last_practiced_at?: string | null;
+        }) => [s.nugget_id, s],
+      ),
     );
 
     // Calculate progress indicators
@@ -204,10 +200,7 @@ serve(async (req) => {
 
     // 4. Check acquisition and skill status (idempotency)
     let alreadyAcquired = false;
-    let acquisitionQuery = supabase
-      .from("user_tune_acquisition")
-      .select("id")
-      .eq("tune_key", tuneKey);
+    let acquisitionQuery = supabase.from("user_tune_acquisition").select("id").eq("tune_key", tuneKey);
 
     if (localUserId) {
       acquisitionQuery = acquisitionQuery.eq("local_user_id", localUserId);
@@ -242,25 +235,31 @@ serve(async (req) => {
 
     // 5. Build LLM prompt
     const isTier3OrFullTune = isAssembly && (assemblyTier === 3 || nuggetId === "FULL_TUNE");
-    
+
     // Build recent activity summary
-    const recentActivitySummary = recentRuns && recentRuns.length > 0
-      ? recentRuns.slice(0, 10).map((run, idx) => {
-          const evalStatus = run.evaluation || "unknown";
-          const timeAgo = run.ended_at 
-            ? `${Math.round((Date.now() - new Date(run.ended_at).getTime()) / (1000 * 60))} minutes ago`
-            : "unknown time";
-          return `  ${idx + 1}. ${run.nugget_id}: ${evalStatus} (${timeAgo})`;
-        }).join("\n")
-      : "  No recent practice runs";
+    const recentActivitySummary =
+      recentRuns && recentRuns.length > 0
+        ? recentRuns
+            .slice(0, 10)
+            .map((run, idx) => {
+              const evalStatus = run.evaluation || "unknown";
+              const timeAgo = run.ended_at
+                ? `${Math.round((Date.now() - new Date(run.ended_at).getTime()) / (1000 * 60))} minutes ago`
+                : "unknown time";
+              return `  ${idx + 1}. ${run.nugget_id}: ${evalStatus} (${timeAgo})`;
+            })
+            .join("\n")
+        : "  No recent practice runs";
 
     // Build progress summary
     const progressSummary = `- Total items practiced: ${totalItems}
 - Stable items (streak >= 2): ${stableItems} (${Math.round((stableItems / Math.max(totalItems, 1)) * 100)}%)
 - Overall pass rate: ${Math.round(overallPassRate * 100)}%
-- Stable assemblies by tier: ${Array.from(assemblyStatesByTier.entries())
-      .map(([tier, count]) => `Tier ${tier}: ${count}`)
-      .join(", ") || "none"}`;
+- Stable assemblies by tier: ${
+      Array.from(assemblyStatesByTier.entries())
+        .map(([tier, count]) => `Tier ${tier}: ${count}`)
+        .join(", ") || "none"
+    }`;
 
     const tier3Context = isTier3OrFullTune
       ? `\n\nTIER 3 ASSEMBLY / FULL TUNE - TUNE MASTERY:
@@ -285,9 +284,10 @@ ACQUISITION DECISION CRITERIA:
 - Only award skills if the tune is being acquired AND demonstrating competency`
       : "";
 
-    const notationInstruction = language === "fr"
-      ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
-      : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
+    const notationInstruction =
+      language === "fr"
+        ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
+        : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
 
     const systemPrompt = `You are a piano practice evaluator. Evaluate the student's performance on a small section (nugget) or assembly of a piece.
 
@@ -306,10 +306,14 @@ LANGUAGE INSTRUCTION:
 - Respond in ${language}. Do not mix languages.
 - Keep feedback brief.
 ${notationInstruction}
-${evaluationGuidance ? `
+${
+  evaluationGuidance
+    ? `
 TUNE-LEVEL EVALUATION GUIDANCE:
 ${evaluationGuidance}
-` : ""}
+`
+    : ""
+}
 ${isAssembly ? `ASSEMBLY (Tier ${assemblyTier})` : "NUGGET"} BEING PRACTICED:
 - ID: ${nuggetId}
 - Label: ${targetItem.label || nuggetId}
@@ -340,6 +344,11 @@ Evaluate the performance based on:
 2) Overall consistency across attempts (for feedback).
 If there are multiple valid matches, consider it a stronger pass and mention consistency in feedback.
 IMPORTANT: For assemblies and nuggets, if the recording has exactly N+1 notes (where N is the target count) and the first N notes match the target perfectly in pitch and order, this should still be considered a valid performance even with the extra note at the end.
+
+REPEATED NOTE HANDLING:
+Some scores place the same pitch back-to-back with note end and next note start at the exact same time (no gap).
+That is not physically re-articulable.
+Do NOT penalize the student if they the gap between notes is longer; be lenient on timing for these repeated-note boundaries.
 
 EVALUATION CRITERIA:
 1. PITCH ACCURACY: Did they play the correct notes?
@@ -390,7 +399,8 @@ FEEDBACK STYLE:
               },
               successCount: {
                 type: "number",
-                description: "Number of complete matching segments found in the recording (0 for close/fail, minimum 1 for pass).",
+                description:
+                  "Number of complete matching segments found in the recording (0 for close/fail, minimum 1 for pass).",
               },
               replayDemo: {
                 type: "boolean",
@@ -437,7 +447,7 @@ FEEDBACK STYLE:
           isAssembly,
           assemblyTier,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -480,9 +490,8 @@ FEEDBACK STYLE:
     };
 
     // 5. Update nugget state
-    const normalizedSuccessCount = evalResult.evaluation === "pass"
-      ? Math.max(1, Math.floor(evalResult.successCount || 1))
-      : 0;
+    const normalizedSuccessCount =
+      evalResult.evaluation === "pass" ? Math.max(1, Math.floor(evalResult.successCount || 1)) : 0;
     const newStreak = evalResult.evaluation === "pass" ? currentStreak + normalizedSuccessCount : 0;
     const newPassCount = (existingState?.pass_count || 0) + normalizedSuccessCount;
     const newBestStreak = Math.max(existingState?.best_streak || 0, newStreak);
@@ -532,16 +541,14 @@ FEEDBACK STYLE:
     // Only process acquisition if LLM decided to acquire AND idempotency checks pass
     if (evalResult.markTuneAcquired === true && !alreadyAcquired && isTier3OrFullTune && localUserId) {
       console.log(`[tune-evaluate] LLM decided to acquire tune ${tuneKey} for user ${localUserId}`);
-      
+
       // Mark tune as acquired
-      const { error: acquisitionError } = await supabase
-        .from("user_tune_acquisition")
-        .insert({
-          local_user_id: localUserId,
-          tune_key: tuneKey,
-          acquired_at: new Date().toISOString(),
-        });
-      
+      const { error: acquisitionError } = await supabase.from("user_tune_acquisition").insert({
+        local_user_id: localUserId,
+        tune_key: tuneKey,
+        acquired_at: new Date().toISOString(),
+      });
+
       if (!acquisitionError) {
         tuneAcquired = true;
         console.log(`[tune-evaluate] Tune ${tuneKey} acquired by user ${localUserId}`);
@@ -551,28 +558,28 @@ FEEDBACK STYLE:
     } else if (evalResult.markTuneAcquired === true && alreadyAcquired) {
       console.log(`[tune-evaluate] LLM attempted to acquire already-acquired tune ${tuneKey} - ignoring (idempotency)`);
     } else if (evalResult.markTuneAcquired === true && !isTier3OrFullTune) {
-      console.log(`[tune-evaluate] LLM attempted to acquire tune ${tuneKey} while not practicing Tier 3/Full Tune - ignoring`);
+      console.log(
+        `[tune-evaluate] LLM attempted to acquire tune ${tuneKey} while not practicing Tier 3/Full Tune - ignoring`,
+      );
     }
 
     // Process skill unlocking if LLM decided to award skills AND tune is being acquired or already acquired
     if (evalResult.awardSkills === true && (tuneAcquired || alreadyAcquired) && localUserId) {
       console.log(`[tune-evaluate] LLM decided to award skills for tune ${tuneKey}`);
-      
+
       // Only unlock skills that aren't already unlocked (idempotency per skill)
       for (const skillKey of skillsToAward) {
-        const { error: skillError } = await supabase
-          .from("user_skill_state")
-          .upsert(
-            {
-              skill_key: skillKey,
-              local_user_id: localUserId,
-              unlocked: true,
-              mastery: 1,
-              last_practiced_at: new Date().toISOString(),
-            },
-            { onConflict: "skill_key,local_user_id" }
-          );
-        
+        const { error: skillError } = await supabase.from("user_skill_state").upsert(
+          {
+            skill_key: skillKey,
+            local_user_id: localUserId,
+            unlocked: true,
+            mastery: 1,
+            last_practiced_at: new Date().toISOString(),
+          },
+          { onConflict: "skill_key,local_user_id" },
+        );
+
         if (!skillError) {
           awardedSkills.push(skillKey);
           console.log(`[tune-evaluate] Skill ${skillKey} awarded to user ${localUserId}`);
@@ -580,7 +587,7 @@ FEEDBACK STYLE:
           console.error(`[tune-evaluate] Error upserting skill ${skillKey}:`, skillError);
         }
       }
-      
+
       // Warn if trying to unlock already-unlocked skills
       if (skillsToAward.length === 0 && availableSkills.length > 0) {
         console.log(`[tune-evaluate] All skills already unlocked for tune ${tuneKey}`);
@@ -598,14 +605,13 @@ FEEDBACK STYLE:
         tuneAcquired,
         awardedSkills,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
   } catch (error) {
     console.error("[tune-evaluate] Error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
