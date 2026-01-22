@@ -43,6 +43,7 @@ export function TuneMode({
   const [evalDebugData, setEvalDebugData] = useState<TuneEvaluationDebugData | null>(null);
   const [pendingCoachResponse, setPendingCoachResponse] = useState<TuneCoachResponse | null>(null);
   const [autoPlayTrigger, setAutoPlayTrigger] = useState(0);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
   // Track if we've processed the current recording
   const lastProcessedRecording = useRef<INoteSequence | null>(null);
@@ -299,7 +300,10 @@ export function TuneMode({
     }
   };
 
-  const handlePlaySample = useCallback(() => {
+  const handlePlaySample = useCallback((markInteraction = false) => {
+    if (markInteraction) {
+      setHasUserInteracted(true);
+    }
     // Reset recording state when playing sample
     lastProcessedRecording.current = null;
     setIsEvaluating(false);
@@ -320,6 +324,7 @@ export function TuneMode({
   }, [currentNugget, onPlaySample]);
 
   const handleSwitchNugget = useCallback(() => {
+    setHasUserInteracted(true);
     nextNugget();
     lastProcessedRecording.current = currentRecording ?? null;
     setIsEvaluating(false);
@@ -339,6 +344,7 @@ export function TuneMode({
     if (state.currentIndex === 0) {
       return;
     }
+    setHasUserInteracted(true);
     previousNugget();
     lastProcessedRecording.current = currentRecording ?? null;
     setIsEvaluating(false);
@@ -358,10 +364,10 @@ export function TuneMode({
     if (!currentNugget?.itemId) return;
     const autoPlayKey = `${currentNugget.itemId}:${autoPlayTrigger}`;
     if (lastAutoPlayKey.current === autoPlayKey) return;
-    if (isPlayingSample || isRecording) return;
+    if (!hasUserInteracted || isPlayingSample || isRecording) return;
     lastAutoPlayKey.current = autoPlayKey;
     handlePlaySample();
-  }, [currentNugget?.itemId, autoPlayTrigger, isPlayingSample, isRecording, handlePlaySample]);
+  }, [currentNugget?.itemId, autoPlayTrigger, isPlayingSample, isRecording, handlePlaySample, hasUserInteracted]);
 
   // Render based on phase
   if (state.error) {
@@ -420,7 +426,7 @@ export function TuneMode({
         totalNuggets={state.practicePlan.length}
         currentStreak={state.currentStreak}
         lastEvaluation={state.lastEvaluation}
-        onPlaySample={handlePlaySample}
+        onPlaySample={() => handlePlaySample(true)}
         onSwitchNugget={handleSwitchNugget}
         onPreviousNugget={handlePreviousNugget}
         onLeave={onLeave}
