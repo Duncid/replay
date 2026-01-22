@@ -5,8 +5,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Card, CardContent } from "@/components/ui/card";
 import { SheetMusic } from "@/components/SheetMusic";
 import { NoteSequence } from "@/types/noteSequence";
-import { createEmptyNoteSequence } from "@/utils/noteSequenceUtils";
-import { midiToNoteName, midiToFrequency } from "@/utils/noteSequenceUtils";
+import { createEmptyNoteSequence, midiToFrequency, midiToSolfege, pitchToAbcNote } from "@/utils/noteSequenceUtils";
 import { AlertCircle, AudioLines, Mic, Play, RefreshCw, Square, X } from "lucide-react";
 import { usePianoAudio } from "@/hooks/usePianoAudio";
 
@@ -30,42 +29,15 @@ const MIN_DURATION = 0.1; // seconds
 const STABILITY_FRAMES = 3;
 const RELEASE_FRAMES = 6;
 
-// Solfege syllables for C major scale
-const SOLFEGE_NAMES = ["Do", "Di", "Re", "Ri", "Mi", "Fa", "Fi", "Sol", "Si", "La", "Li", "Ti"];
-const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-
 function hzToMidi(hz: number): number {
   return 69 + 12 * Math.log2(hz / 440);
 }
 
-function midiToSolfege(pitch: number): string {
-  const noteIndex = pitch % 12;
-  return SOLFEGE_NAMES[noteIndex];
-}
-
-function pitchToAbcNote(pitch: number): string {
-  const noteName = midiToNoteName(pitch);
-  const note = noteName.slice(0, -1); // e.g., "C#"
-  const octave = parseInt(noteName.slice(-1)); // e.g., 4
-  
-  // Convert to ABC notation
-  let abcNote = note.replace("#", "^").replace("b", "_");
-  
-  if (octave === 3) {
-    abcNote = abcNote.toUpperCase() + ",";
-  } else if (octave === 4) {
-    abcNote = abcNote.toUpperCase();
-  } else if (octave === 5) {
-    abcNote = abcNote.toLowerCase();
-  } else if (octave === 6) {
-    abcNote = abcNote.toLowerCase() + "'";
-  }
-  
-  return abcNote;
-}
-
-function formatNoteWithSolfegeAndAbc(pitch: number): string {
+function formatNoteWithSolfegeAndAbc(pitch: number, language: string): string {
   const solfege = midiToSolfege(pitch);
+  if (language === "fr") {
+    return solfege;
+  }
   const abc = pitchToAbcNote(pitch);
   return `${solfege} (${abc})`;
 }
@@ -195,7 +167,7 @@ export function WhistleImportSheet({
   bpm,
   timeSignature,
 }: WhistleImportSheetProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [notes, setNotes] = useState<NoteSequence["notes"]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -542,7 +514,8 @@ export function WhistleImportSheet({
   }, [open, stopRecording, handleClear]);
 
   const hasRecording = notes.length > 0;
-  const liveNoteLabel = livePitch !== null ? formatNoteWithSolfegeAndAbc(Math.round(livePitch)) : "";
+  const liveNoteLabel =
+    livePitch !== null ? formatNoteWithSolfegeAndAbc(Math.round(livePitch), i18n.language) : "";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

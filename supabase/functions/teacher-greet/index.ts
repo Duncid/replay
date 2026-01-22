@@ -533,6 +533,10 @@ serve(async (req) => {
     }));
 
     // 5. Build LLM prompt
+    const notationInstruction = language === "fr"
+      ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
+      : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
+
     const systemPrompt = `You are the Teacher agent for an app teaching music through piano.
 
 Your job when the user opens Learning mode:
@@ -564,6 +568,7 @@ Important rules:
 - IMPORTANT: The "label" field should be a SHORT, human-friendly activity name. Do NOT include activity keys in the label.
 - REQUIRED: The "trackTitle" field MUST match one of the track titles from the available activities.
 - REQUIRED: The "notes" field MUST be included and should briefly explain to the user why you're suggesting these activities.
+- ${notationInstruction}
 
 Return ONLY valid JSON following the schema provided.`;
 

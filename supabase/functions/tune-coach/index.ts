@@ -256,6 +256,10 @@ serve(async (req) => {
     const fullTuneHistoryText = `- FULL_TUNE "${fullTune.label}"
     attempts: ${fullTuneHistory.attemptCount}, passes: ${fullTuneHistory.passCount}, streak: ${fullTuneHistory.currentStreak}/${fullTuneHistory.bestStreak}, last practiced: ${fullTuneHistory.lastPracticedAt || "never"}`;
 
+    const notationInstruction = language === "fr"
+      ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
+      : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
+
     const systemPrompt = `You are a piano teacher planning the next practice session for a student learning "${briefing.title}".
 
 GOAL: Plan a growth path that moves this student from their current state (point A) toward playing the full tune (point B). The full tune is the ultimate destination - it's fine if the plan doesn't reach it, just plan in that direction.
@@ -275,6 +279,7 @@ PLAN LENGTH:
 LANGUAGE INSTRUCTION:
 - Respond in ${language}. Do not mix languages.
 - Keep instructions and encouragement brief.
+${notationInstruction}
 
 ---
 

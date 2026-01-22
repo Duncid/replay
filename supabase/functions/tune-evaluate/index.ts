@@ -285,6 +285,10 @@ ACQUISITION DECISION CRITERIA:
 - Only award skills if the tune is being acquired AND demonstrating competency`
       : "";
 
+    const notationInstruction = language === "fr"
+      ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
+      : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
+
     const systemPrompt = `You are a piano practice evaluator. Evaluate the student's performance on a small section (nugget) or assembly of a piece.
 
 RECENT PRACTICE ACTIVITY (last 10 runs):
@@ -301,6 +305,7 @@ ${localUserId ? `- Student ID: ${localUserId}` : "- Anonymous student"}
 LANGUAGE INSTRUCTION:
 - Respond in ${language}. Do not mix languages.
 - Keep feedback brief.
+${notationInstruction}
 ${evaluationGuidance ? `
 TUNE-LEVEL EVALUATION GUIDANCE:
 ${evaluationGuidance}

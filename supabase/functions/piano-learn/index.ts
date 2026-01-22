@@ -55,6 +55,9 @@ serve(async (req) => {
     const languageInstruction = language === "fr"
       ? "IMPORTANT: Write all instruction text in French. Be encouraging and use natural French phrasing."
       : "IMPORTANT: Write all instruction text in English. Be encouraging and clear.";
+    const notationInstruction = language === "fr"
+      ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
+      : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -76,6 +79,7 @@ serve(async (req) => {
     const systemPrompt = `You are a piano teacher creating short practice sequences for students.
 
 ${languageInstruction}
+${notationInstruction}
 
 The student wants to learn: "${prompt}"
 

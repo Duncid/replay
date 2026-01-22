@@ -295,6 +295,10 @@ serve(async (req) => {
       }
     });
 
+    const notationInstruction = language === "fr"
+      ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
+      : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
+
     const systemPrompt = `You are a music coach. Your role is to introduce a lesson and provide a sequence of notes for the student to replicate following level of difficulty of the lesson, level of the student and brief.
 
 LESSON BRIEF:
@@ -372,6 +376,7 @@ IMPORTANT: The sequences shown above are sequences the student has already pract
 }
 
 LANGUAGE: Respond in ${language === "fr" ? "French" : "English"}.
+${notationInstruction}
 
 Your task:
 1. Write a brief, encouraging instruction (2-3 sentences) explaining what the student will practice

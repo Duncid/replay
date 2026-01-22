@@ -2,6 +2,14 @@ import { NoteSequence, Note, DEFAULT_QPM } from "@/types/noteSequence";
 
 // MIDI note number constants
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const SOLFEGE_NAMES = ["Do", "Di", "Re", "Ri", "Mi", "Fa", "Fi", "Sol", "Si", "La", "Li", "Ti"];
+
+export const ABC_TO_SOLFEGE_MAP = Object.freeze(
+  Object.fromEntries(NOTE_NAMES.map((note, index) => [note, SOLFEGE_NAMES[index]])),
+);
+export const SOLFEGE_TO_ABC_MAP = Object.freeze(
+  Object.fromEntries(SOLFEGE_NAMES.map((solfege, index) => [solfege, NOTE_NAMES[index]])),
+);
 
 /**
  * Convert note name (e.g., "C4", "F#5") to MIDI pitch number
@@ -27,6 +35,21 @@ export function midiToNoteName(pitch: number): string {
   const octave = Math.floor(pitch / 12) - 1;
   const noteIndex = pitch % 12;
   return `${NOTE_NAMES[noteIndex]}${octave}`;
+}
+
+export function noteNameToSolfege(noteName: string): string {
+  const baseNote = noteName.replace(/\d+$/, "");
+  return ABC_TO_SOLFEGE_MAP[baseNote] ?? baseNote;
+}
+
+export function solfegeToNoteName(solfege: string, octave?: number): string {
+  const noteName = SOLFEGE_TO_ABC_MAP[solfege] ?? solfege;
+  return octave !== undefined ? `${noteName}${octave}` : noteName;
+}
+
+export function midiToSolfege(pitch: number): string {
+  const noteIndex = pitch % 12;
+  return SOLFEGE_NAMES[noteIndex];
 }
 
 /**
@@ -165,7 +188,7 @@ function noteToAbcString(note: Note, qpm: number): string {
   return abcNote + getDurationString(durationInBeats);
 }
 
-function pitchToAbcNote(pitch: number): string {
+export function pitchToAbcNote(pitch: number): string {
   const noteName = midiToNoteName(pitch);
   const note = noteName.slice(0, -1); // e.g., "C#"
   const octave = parseInt(noteName.slice(-1)); // e.g., 4
