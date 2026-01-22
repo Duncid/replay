@@ -336,6 +336,9 @@ export function TuneMode({
   }, [nextNugget, currentRecording, clearEvaluation]);
 
   const handlePreviousNugget = useCallback(() => {
+    if (state.currentIndex === 0) {
+      return;
+    }
     previousNugget();
     lastProcessedRecording.current = currentRecording ?? null;
     setIsEvaluating(false);
@@ -349,7 +352,7 @@ export function TuneMode({
       clearTimeout(silenceTimer.current);
       silenceTimer.current = null;
     }
-  }, [previousNugget, currentRecording, clearEvaluation]);
+  }, [previousNugget, currentRecording, clearEvaluation, state.currentIndex]);
 
   useEffect(() => {
     if (!currentNugget?.itemId) return;

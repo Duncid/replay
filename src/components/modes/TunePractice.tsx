@@ -427,7 +427,7 @@ export function TunePractice({
               </Button>
             </div>
 
-            {/* Bottom section: StreakDisplay left, Next button right */}
+            {/* Bottom section: StreakDisplay left, Previous/Next buttons right */}
             <div className="flex items-center justify-between">
               {/* Streak display bottom left */}
               <StreakDisplay
