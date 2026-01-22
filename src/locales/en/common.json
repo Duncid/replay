@@ -119,6 +119,7 @@
     },
     "buttons": {
       "replay": "Replay",
+      "previous": "Previous",
       "next": "Next"
     },
     "feedback": {

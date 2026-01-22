@@ -34,7 +34,7 @@ export function TuneMode({
   isRecording = false,
 }: TuneModeProps) {
   const { t } = useTranslation();
-  const { state, currentNugget, setPhase, setPracticePlan, updateEvaluation, clearEvaluation, nextNugget, setError } = useTuneState(tuneKey);
+  const { state, currentNugget, setPhase, setPracticePlan, updateEvaluation, clearEvaluation, nextNugget, previousNugget, setError } = useTuneState(tuneKey);
   
   const startPractice = useStartTunePractice();
   const evaluateAttempt = useEvaluateTuneAttempt();
@@ -335,6 +335,22 @@ export function TuneMode({
     }
   }, [nextNugget, currentRecording, clearEvaluation]);
 
+  const handlePreviousNugget = useCallback(() => {
+    previousNugget();
+    lastProcessedRecording.current = currentRecording ?? null;
+    setIsEvaluating(false);
+    clearEvaluation();
+    setAutoPlayTrigger((prev) => prev + 1);
+    if (preEvalTimer.current) {
+      clearTimeout(preEvalTimer.current);
+      preEvalTimer.current = null;
+    }
+    if (silenceTimer.current) {
+      clearTimeout(silenceTimer.current);
+      silenceTimer.current = null;
+    }
+  }, [previousNugget, currentRecording, clearEvaluation]);
+
   useEffect(() => {
     if (!currentNugget?.itemId) return;
     const autoPlayKey = `${currentNugget.itemId}:${autoPlayTrigger}`;
@@ -403,6 +419,7 @@ export function TuneMode({
         lastEvaluation={state.lastEvaluation}
         onPlaySample={handlePlaySample}
         onSwitchNugget={handleSwitchNugget}
+        onPreviousNugget={handlePreviousNugget}
         onLeave={onLeave}
         isPlaying={isPlayingSample}
         isEvaluating={isEvaluating}
