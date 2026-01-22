@@ -341,6 +341,14 @@ Evaluate the performance based on:
 If there are multiple valid matches, consider it a stronger pass and mention consistency in feedback.
 IMPORTANT: For assemblies and nuggets, if the recording has exactly N+1 notes (where N is the target count) and the first N notes match the target perfectly in pitch and order, this should still be considered a valid performance even with the extra note at the end.
 
+REPEATED NOTE HANDLING:
+Some scores place the same pitch back-to-back with note end and next note start at the exact same time (no gap).
+That is not physically re-articulable; treat consecutive identical pitches with zero-gap boundaries as a single sustained note for matching.
+Do NOT penalize the student if they:
+- Hold a single note across those boundaries, OR
+- Re-articulate with a tiny gap or overlap.
+Focus on pitch order and overall rhythm; be lenient on timing for these repeated-note boundaries.
+
 EVALUATION CRITERIA:
 1. PITCH ACCURACY: Did they play the correct notes?
 2. TIMING: Were notes played at approximately the right times?
