@@ -1,8 +1,9 @@
-import { cn } from "@/lib/utils";
 import { getNoteColorForNoteName } from "@/constants/noteColors";
+import { cn } from "@/lib/utils";
 
 interface PianoKeyProps {
   note: string;
+  displayLabel?: string;
   frequency: number;
   isBlack: boolean;
   isActive: boolean;
@@ -17,6 +18,7 @@ interface PianoKeyProps {
 
 export const PianoKey = ({
   note,
+  displayLabel,
   isBlack,
   isActive,
   isSustained,
@@ -29,7 +31,9 @@ export const PianoKey = ({
 }: PianoKeyProps) => {
   // Debug logging
   if (isActive) {
-    console.log(`PianoKey ${note}: isActive=${isActive}, isSustained=${isSustained}`);
+    console.log(
+      `PianoKey ${note}: isActive=${isActive}, isSustained=${isSustained}`,
+    );
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -46,13 +50,13 @@ export const PianoKey = ({
   const getTransitionDuration = () => {
     if (isActive && !isSustained) {
       // Fresh press - instant transition
-      return '0ms';
+      return "0ms";
     } else if (isActive && isSustained) {
       // Transitioning to sustained - slow fade
-      return '400ms';
+      return "400ms";
     } else {
       // Release - fast transition
-      return '50ms';
+      return "50ms";
     }
   };
 
@@ -60,7 +64,9 @@ export const PianoKey = ({
 
   const getActiveColorStyle = () => {
     if (!isActive || !noteColor) return undefined;
-    const baseColor = isBlack ? "hsl(var(--key-black))" : "hsl(var(--key-white))";
+    const baseColor = isBlack
+      ? "hsl(var(--key-black))"
+      : "hsl(var(--key-white))";
     const hotColor = noteColor;
     const coldColor = `color-mix(in srgb, ${hotColor} 50%, ${baseColor} 50%)`;
     return {
@@ -113,7 +119,8 @@ export const PianoKey = ({
           : "h-full rounded-b-lg shadow-md",
         getKeyColor(),
         (!isPlayable || disabled) && "cursor-not-allowed",
-        !isPlayable && (isBlack ? "bg-key-black-disabled" : "bg-key-white-disabled"),
+        !isPlayable &&
+          (isBlack ? "bg-key-black-disabled" : "bg-key-white-disabled"),
       )}
       style={{
         transition: `background-color ${getTransitionDuration()} ease-out, box-shadow ${getTransitionDuration()} ease-out`,
@@ -128,16 +135,18 @@ export const PianoKey = ({
     >
       <span
         className={cn(
-          "absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium pointer-events-none select-none",
-          hasColor
-            ? "px-2 py-0.5 rounded-full text-white"
-            : "opacity-30",
+          "absolute bottom-4 left-1/2 -translate-x-1/2 text-xs font-medium pointer-events-none select-none",
+          hasColor ? "px-2 py-0.5 rounded-full text-white" : "opacity-80",
           hasColor && (isActive ? "opacity-0" : "opacity-100"),
           !hasColor && (isBlack ? "text-foreground" : "text-muted-foreground"),
         )}
-        style={hasColor ? { backgroundColor: getNoteColorForNoteName(note) } : undefined}
+        style={
+          hasColor
+            ? { backgroundColor: getNoteColorForNoteName(note) }
+            : undefined
+        }
       >
-        {note}
+        {displayLabel ?? note}
       </span>
     </button>
   );

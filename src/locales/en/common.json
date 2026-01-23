@@ -2,7 +2,11 @@
   "language": {
     "label": "Language",
     "english": "English",
-    "french": "French"
+    "french": "French",
+    "musicNotation": "Music notation",
+    "musicNotationAuto": "Auto",
+    "musicNotationAbc": "ABC",
+    "musicNotationSolfege": "Solfege"
   },
   "userMenu": {
     "menuLabel": "Menu",

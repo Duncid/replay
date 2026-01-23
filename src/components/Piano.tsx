@@ -8,6 +8,7 @@ import {
   SAMPLED_INSTRUMENTS,
 } from "@/hooks/usePianoSound";
 import { Loader2 } from "lucide-react";
+import { noteNameToSolfege } from "@/utils/noteSequenceUtils";
 
 interface PianoNote {
   note: string;
@@ -23,6 +24,8 @@ interface PianoProps {
   onNoteStart?: (noteKey: string, frequency: number, velocity: number) => void;
   onNoteEnd?: (noteKey: string, frequency: number) => void;
   hasColor?: boolean;
+  language: string;
+  notationPreference: "auto" | "abc" | "solfege";
 }
 
 export interface PianoHandle {
@@ -33,7 +36,19 @@ export interface PianoHandle {
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
-  ({ activeKeys, allowInput, soundType = "classic", onNoteStart, onNoteEnd, hasColor = false }, ref) => {
+  (
+    {
+      activeKeys,
+      allowInput,
+      soundType = "classic",
+      onNoteStart,
+      onNoteEnd,
+      hasColor = false,
+      language,
+      notationPreference,
+    },
+    ref
+  ) => {
   const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(new Set());
   const [sustainedKeys, setSustainedKeys] = useState<Set<string>>(new Set());
   const pressedKeysRef = useRef<Set<string>>(new Set());
@@ -250,6 +265,22 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
   const whiteKeys = notes.filter((n) => !n.isBlack);
   const blackKeys = notes.filter((n) => n.isBlack);
 
+  const resolvedNotation =
+    notationPreference === "auto"
+      ? language === "fr"
+        ? "solfege"
+        : "abc"
+      : notationPreference;
+
+  const getDisplayLabel = (note: PianoNote) => {
+    const baseNote = note.note;
+    const octave = note.octave;
+    if (resolvedNotation === "solfege") {
+      return `${noteNameToSolfege(baseNote)}${octave}`;
+    }
+    return `${baseNote}${octave}`;
+  };
+
   const getBlackKeyColumn = (blackNote: PianoNote) => {
     const noteIndex = notes.findIndex((n) => `${n.note}${n.octave}` === `${blackNote.note}${blackNote.octave}`);
     return notes.slice(0, noteIndex).filter((n) => !n.isBlack).length;
@@ -285,6 +316,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
               <PianoKey
                 key={noteKey}
                 note={noteKey}
+                displayLabel={getDisplayLabel(note)}
                 frequency={note.frequency}
                 isBlack={false}
                 isActive={isActive}
@@ -311,6 +343,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
               <PianoKey
                 key={noteKey}
                 note={noteKey}
+                displayLabel={getDisplayLabel(note)}
                 frequency={note.frequency}
                 isBlack={true}
                 isActive={isActive}

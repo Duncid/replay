@@ -187,6 +187,9 @@ const Index = () => {
   const [questEditorOpen, setQuestEditorOpen] = useState(false);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
+  const [musicNotation, setMusicNotation] = useLocalStorage<
+    "auto" | "abc" | "solfege"
+  >(STORAGE_KEYS.MUSIC_NOTATION, "auto");
 
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(
@@ -1626,7 +1629,12 @@ const Index = () => {
         {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
         <div className="w-full flex items-center justify-between gap-4 p-2">
           <div className="flex items-center gap-2">
-            <UserMenu language={language} onLanguageChange={setLanguage} />
+            <UserMenu
+              language={language}
+              onLanguageChange={setLanguage}
+              notationPreference={musicNotation}
+              onNotationChange={setMusicNotation}
+            />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1699,6 +1707,8 @@ const Index = () => {
           }
           soundType={pianoSoundType}
           hasColor={isInTuneMode}
+          language={language}
+          notationPreference={musicNotation}
           onNoteStart={handleNoteStart}
           onNoteEnd={handleNoteEnd}
         />

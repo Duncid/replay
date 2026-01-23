@@ -21,6 +21,8 @@ import { useTranslation } from "react-i18next";
 interface UserMenuProps {
   language: string;
   onLanguageChange: (lang: string) => void;
+  notationPreference: "auto" | "abc" | "solfege";
+  onNotationChange: (notation: "auto" | "abc" | "solfege") => void;
 }
 
 const languageOptions = [
@@ -28,7 +30,18 @@ const languageOptions = [
   { value: "fr", label: "Français", flag: "🇫🇷" },
 ];
 
-export function UserMenu({ language, onLanguageChange }: UserMenuProps) {
+const notationOptions = [
+  { value: "auto", labelKey: "language.musicNotationAuto" },
+  { value: "abc", labelKey: "language.musicNotationAbc" },
+  { value: "solfege", labelKey: "language.musicNotationSolfege" },
+];
+
+export function UserMenu({
+  language,
+  onLanguageChange,
+  notationPreference,
+  onNotationChange,
+}: UserMenuProps) {
   const { t } = useTranslation();
   const { users, currentUser, switchUser, createUser, isLoading } =
     useLocalUsers();
@@ -82,6 +95,26 @@ export function UserMenu({ language, onLanguageChange }: UserMenuProps) {
               {t("language.label")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  {t("language.musicNotation")}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="bg-popover">
+                  <DropdownMenuRadioGroup
+                    value={notationPreference}
+                    onValueChange={(value) =>
+                      onNotationChange(value as "auto" | "abc" | "solfege")
+                    }
+                  >
+                    {notationOptions.map((option) => (
+                      <DropdownMenuRadioItem key={option.value} value={option.value}>
+                        {t(option.labelKey)}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
               {languageOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}

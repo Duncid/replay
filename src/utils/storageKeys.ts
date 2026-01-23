@@ -14,6 +14,7 @@ export const STORAGE_KEYS = {
   AUTOREPLY: "replay-autoreply",
   LEARN_DIFFICULTY: "replay-learn-difficulty",
   LANGUAGE: "replay-language",
+  MUSIC_NOTATION: "replay-music-notation",
   MAGENTA_TEMPERATURE: "replay-magenta-temperature",
   DEBUG_MODE: "replay-debug-mode",
   CURRENT_USER_ID: "replay-current-user-id",
