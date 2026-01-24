@@ -23,6 +23,7 @@ export function TuneEvaluationDebugCard({
   onCancel,
 }: TuneEvaluationDebugCardProps) {
   const [showPrompt, setShowPrompt] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   const targetNotes =
     (debugData.targetSequence as { notes?: unknown[] })?.notes || [];
@@ -30,6 +31,11 @@ export function TuneEvaluationDebugCard({
     (debugData.userSequence as { notes?: unknown[] })?.notes || [];
   const promptText =
     debugData.prompt || JSON.stringify(debugData.request, null, 2);
+  const promptWithFence = `\
+\`\`\`
+${promptText}
+\`\`\`
+`;
 
   const formatNumber = (value: unknown) => {
     if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -167,13 +173,26 @@ export function TuneEvaluationDebugCard({
         <SheetHeader>
           <SheetTitle>Evaluation Prompt</SheetTitle>
         </SheetHeader>
+        <div className="flex justify-end mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(promptWithFence);
+                setPromptCopied(true);
+                window.setTimeout(() => setPromptCopied(false), 2000);
+              } catch (error) {
+                console.error("Failed to copy prompt", error);
+              }
+            }}
+          >
+            {promptCopied ? "Copied" : "Copy"}
+          </Button>
+        </div>
         <ScrollArea className="h-[calc(100vh-100px)] mt-4">
           <pre className="text-xs whitespace-pre-wrap font-mono bg-muted p-4 rounded">
-            {`\
-\`\`\`
-${promptText}
-\`\`\`
-`}
+            {promptWithFence}
           </pre>
         </ScrollArea>
       </SheetContent>

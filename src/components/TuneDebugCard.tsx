@@ -14,6 +14,8 @@ interface TuneDebugCardProps {
 
 export function TuneDebugCard({ debugData, onProceed, onCancel }: TuneDebugCardProps) {
   const [showPrompt, setShowPrompt] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
+  const promptText = debugData.prompt || JSON.stringify(debugData.request, null, 2);
 
   const practiceStats = debugData.practiceHistory.reduce(
     (acc, h) => ({
@@ -83,9 +85,26 @@ export function TuneDebugCard({ debugData, onProceed, onCancel }: TuneDebugCardP
           <SheetHeader>
             <SheetTitle>LLM Prompt Preview</SheetTitle>
           </SheetHeader>
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(promptText);
+                  setPromptCopied(true);
+                  window.setTimeout(() => setPromptCopied(false), 2000);
+                } catch (error) {
+                  console.error("Failed to copy prompt", error);
+                }
+              }}
+            >
+              {promptCopied ? "Copied" : "Copy"}
+            </Button>
+          </div>
           <ScrollArea className="h-[calc(100vh-100px)] mt-4">
             <pre className="text-xs whitespace-pre-wrap font-mono bg-muted p-4 rounded">
-              {debugData.prompt || JSON.stringify(debugData.request, null, 2)}
+              {promptText}
             </pre>
           </ScrollArea>
         </SheetContent>
