@@ -36,6 +36,7 @@ export function EvaluationDebugCard({
 }: EvaluationDebugCardProps) {
   const [requestSheetOpen, setRequestSheetOpen] = useState(false);
   const [evalSheetOpen, setEvalSheetOpen] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   const hasResults = evaluationOutput || freePracticeEvaluation;
 
@@ -73,6 +74,23 @@ export function EvaluationDebugCard({
               <SheetHeader>
                 <SheetTitle>LLM Evaluation Request</SheetTitle>
               </SheetHeader>
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(prompt);
+                      setPromptCopied(true);
+                      window.setTimeout(() => setPromptCopied(false), 2000);
+                    } catch (error) {
+                      console.error("Failed to copy prompt", error);
+                    }
+                  }}
+                >
+                  {promptCopied ? "Copied" : "Copy"}
+                </Button>
+              </div>
               <ScrollArea className="h-[calc(100vh-120px)] mt-4">
                 <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
                   {prompt}

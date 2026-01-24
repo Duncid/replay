@@ -9,6 +9,14 @@ import pretty_midi
 Note = Dict[str, float | int]
 
 
+def _normalize_velocity(value: float) -> float:
+    if value <= 1.0:
+        normalized = value
+    else:
+        normalized = value / 127.0
+    return max(0.0, min(1.0, normalized))
+
+
 def midi_to_note_sequence(midi_path: Path) -> Dict[str, object]:
     pm = pretty_midi.PrettyMIDI(str(midi_path))
     notes: List[Note] = []
@@ -19,7 +27,7 @@ def midi_to_note_sequence(midi_path: Path) -> Dict[str, object]:
                     "pitch": int(note.pitch),
                     "startTime": float(note.start),
                     "endTime": float(note.end),
-                    "velocity": float(note.velocity),
+                    "velocity": _normalize_velocity(float(note.velocity)),
                 }
             )
     notes.sort(key=lambda n: (n["startTime"], n["pitch"], n["endTime"]))

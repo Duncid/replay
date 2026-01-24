@@ -23,6 +23,7 @@ export function PracticePlanDebugCard({
   onCancel,
 }: PracticePlanDebugCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   return (
     <DebugCard
@@ -66,6 +67,23 @@ export function PracticePlanDebugCard({
               <SheetHeader>
                 <SheetTitle>LLM Prompt Preview</SheetTitle>
               </SheetHeader>
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(debugData.prompt);
+                      setPromptCopied(true);
+                      window.setTimeout(() => setPromptCopied(false), 2000);
+                    } catch (error) {
+                      console.error("Failed to copy prompt", error);
+                    }
+                  }}
+                >
+                  {promptCopied ? "Copied" : "Copy"}
+                </Button>
+              </div>
               <ScrollArea className="h-[calc(100vh-120px)] mt-4">
                 <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
                   {debugData.prompt}

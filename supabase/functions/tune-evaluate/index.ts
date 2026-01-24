@@ -3,10 +3,33 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 const STREAK_THRESHOLD_FOR_NEW_NUGGET = 3;
+
+const sanitizeNoteSequence = (sequence: unknown) => {
+  if (!sequence || typeof sequence !== "object") return sequence;
+  const typedSequence = sequence as {
+    notes?: Array<{ pitch?: number; startTime?: number; endTime?: number }>;
+  };
+  if (!Array.isArray(typedSequence.notes)) return sequence;
+  return {
+    ...typedSequence,
+    notes: typedSequence.notes.map((note) => ({
+      pitch: note.pitch,
+      startTime: note.startTime,
+      endTime: note.endTime,
+    })),
+  };
+};
+
+const getNoteCount = (sequence: unknown) => {
+  if (!sequence || typeof sequence !== "object") return 0;
+  const notes = (sequence as { notes?: unknown[] }).notes;
+  return Array.isArray(notes) ? notes.length : 0;
+};
 
 interface TuneItem {
   id: string;
@@ -27,16 +50,30 @@ serve(async (req) => {
   }
 
   try {
-    const { tuneKey, nuggetId, userSequence, localUserId = null, language = "en", debug = false } = await req.json();
+    const {
+      tuneKey,
+      nuggetId,
+      userSequence,
+      localUserId = null,
+      language = "en",
+      debug = false,
+    } = await req.json();
 
     if (!tuneKey || !nuggetId || !userSequence) {
-      return new Response(JSON.stringify({ error: "tuneKey, nuggetId, and userSequence are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "tuneKey, nuggetId, and userSequence are required",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    console.log(`[tune-evaluate] Request - tuneKey: ${tuneKey}, nuggetId: ${nuggetId}, user: ${localUserId}`);
+    console.log(
+      `[tune-evaluate] Request - tuneKey: ${tuneKey}, nuggetId: ${nuggetId}, user: ${localUserId}`,
+    );
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,7 +101,9 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tuneError || !publishedAsset) {
-      console.warn(`[tune-evaluate] No published version found for ${tuneKey}, trying fallback`);
+      console.warn(
+        `[tune-evaluate] No published version found for ${tuneKey}, trying fallback`,
+      );
       // Fallback: try without version filter in case of migration issues
       const { data: fallbackAsset, error: fallbackError } = await supabase
         .from("tune_assets")
@@ -82,10 +121,14 @@ serve(async (req) => {
         });
       }
       tuneAsset = fallbackAsset;
-      console.warn(`[tune-evaluate] Using fallback query for ${tuneKey} - no published version found`);
+      console.warn(
+        `[tune-evaluate] Using fallback query for ${tuneKey} - no published version found`,
+      );
     } else {
       tuneAsset = publishedAsset;
-      console.log(`[tune-evaluate] Using published version ${publishedAsset.curriculum_versions?.id} for ${tuneKey}`);
+      console.log(
+        `[tune-evaluate] Using published version ${publishedAsset.curriculum_versions?.id} for ${tuneKey}`,
+      );
     }
 
     const briefing = (tuneAsset.briefing || {}) as Record<string, unknown>;
@@ -94,7 +137,9 @@ serve(async (req) => {
     const nuggets = (tuneAsset.nuggets || []) as TuneItem[];
     const assemblies = (tuneAsset.assemblies || []) as TuneItem[];
 
-    let targetItem: TuneItem | undefined = nuggets.find((n) => n.id === nuggetId);
+    let targetItem: TuneItem | undefined = nuggets.find(
+      (n) => n.id === nuggetId,
+    );
     let isAssembly = false;
 
     if (!targetItem) {
@@ -114,12 +159,19 @@ serve(async (req) => {
 
     if (!targetItem) {
       return new Response(
-        JSON.stringify({ error: `Item ${nuggetId} not found in tune (checked nuggets and assemblies)` }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: `Item ${nuggetId} not found in tune (checked nuggets and assemblies)`,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     const targetSequence = targetItem.noteSequence;
+    const sanitizedTargetSequence = sanitizeNoteSequence(targetSequence);
+    const sanitizedUserSequence = sanitizeNoteSequence(userSequence);
     const teacherHints = targetItem.teacherHints || {};
     const assemblyTier = isAssembly ? targetItem.tier || 1 : null;
 
@@ -159,7 +211,9 @@ serve(async (req) => {
     // Fetch all nugget/assembly states for this tune
     let allStatesQuery = supabase
       .from("tune_nugget_state")
-      .select("nugget_id, attempt_count, pass_count, current_streak, best_streak, last_practiced_at")
+      .select(
+        "nugget_id, attempt_count, pass_count, current_streak, best_streak, last_practiced_at",
+      )
       .eq("tune_key", tuneKey);
 
     if (localUserId) {
@@ -182,10 +236,18 @@ serve(async (req) => {
 
     // Calculate progress indicators
     const allStateItems = allStates || [];
-    const totalAttempts = allStateItems.reduce((sum, s) => sum + (s.attempt_count || 0), 0);
-    const totalPasses = allStateItems.reduce((sum, s) => sum + (s.pass_count || 0), 0);
+    const totalAttempts = allStateItems.reduce(
+      (sum, s) => sum + (s.attempt_count || 0),
+      0,
+    );
+    const totalPasses = allStateItems.reduce(
+      (sum, s) => sum + (s.pass_count || 0),
+      0,
+    );
     const overallPassRate = totalAttempts > 0 ? totalPasses / totalAttempts : 0;
-    const stableItems = allStateItems.filter((s) => (s.current_streak || 0) >= 2).length;
+    const stableItems = allStateItems.filter(
+      (s) => (s.current_streak || 0) >= 2,
+    ).length;
     const totalItems = nuggets.length + assemblies.length;
 
     // Calculate assembly states by tier
@@ -194,13 +256,17 @@ serve(async (req) => {
       const state = statesMap.get(assembly.id);
       const tier = assembly.tier || 1;
       const current = assemblyStatesByTier.get(tier) || 0;
-      const stateStreak = (state as { current_streak?: number } | undefined)?.current_streak || 0;
+      const stateStreak =
+        (state as { current_streak?: number } | undefined)?.current_streak || 0;
       assemblyStatesByTier.set(tier, current + (stateStreak >= 2 ? 1 : 0));
     }
 
     // 4. Check acquisition and skill status (idempotency)
     let alreadyAcquired = false;
-    let acquisitionQuery = supabase.from("user_tune_acquisition").select("id").eq("tune_key", tuneKey);
+    let acquisitionQuery = supabase
+      .from("user_tune_acquisition")
+      .select("id")
+      .eq("tune_key", tuneKey);
 
     if (localUserId) {
       acquisitionQuery = acquisitionQuery.eq("local_user_id", localUserId);
@@ -231,10 +297,13 @@ serve(async (req) => {
       unlockedSkills = (skillStates || []).map((s) => s.skill_key);
     }
 
-    const skillsToAward = availableSkills.filter((sk) => !unlockedSkills.includes(sk));
+    const skillsToAward = availableSkills.filter(
+      (sk) => !unlockedSkills.includes(sk),
+    );
 
     // 5. Build LLM prompt
-    const isTier3OrFullTune = isAssembly && (assemblyTier === 3 || nuggetId === "FULL_TUNE");
+    const isTier3OrFullTune =
+      isAssembly && (assemblyTier === 3 || nuggetId === "FULL_TUNE");
 
     // Build recent activity summary
     const recentActivitySummary =
@@ -304,7 +373,7 @@ ${localUserId ? `- Student ID: ${localUserId}` : "- Anonymous student"}
 - Language preference: ${language}
 LANGUAGE INSTRUCTION:
 - Respond in ${language}. Do not mix languages.
-- Keep feedback brief.
+
 ${notationInstruction}
 ${
   evaluationGuidance
@@ -329,11 +398,11 @@ CURRENT ITEM PROGRESS:
 - Best streak: ${existingState?.best_streak || 0}
 - Streak threshold for moving on: ${STREAK_THRESHOLD_FOR_NEW_NUGGET}
 
-TARGET SEQUENCE (${(targetSequence as any)?.notes?.length || 0} notes):
-${JSON.stringify(targetSequence, null, 2)}
+TARGET SEQUENCE (${getNoteCount(sanitizedTargetSequence)} notes):
+${JSON.stringify(sanitizedTargetSequence, null, 2)}
 
-USER'S RECORDED SEQUENCE (${(userSequence as any)?.notes?.length || 0} notes):
-${JSON.stringify(userSequence, null, 2)}
+USER'S RECORDED SEQUENCE (${getNoteCount(sanitizedUserSequence)} notes):
+${JSON.stringify(sanitizedUserSequence, null, 2)}
 
 CONTINUOUS RECORDING MATCHING:
 The recording may contain multiple attempts, warm-ups, or partial phrases.
@@ -368,10 +437,10 @@ SUCCESS COUNT:
 - If evaluation is "close" or "fail", return successCount = 0.
 
 FEEDBACK STYLE:
-- Be encouraging and constructive
-- Reference the teacherHints when giving feedback
-- Keep feedback brief (1-2 sentences)
-- If they failed, mention what to focus on
+- User is playing, the feedback MUST BE very brief and focus. A few words, referencing specific aspects of their performance.
+- Focus on the one or two most important aspects to improve.
+- If there is a problem with notes, mention which notes (by name and index number in the sample) were incorrect or missing.
+- Be factual, avoid judgemental language.
 - If they passed, acknowledge what they did well
 - If there were multiple attempts, mention consistency (or inconsistency) briefly`;
 
@@ -395,7 +464,8 @@ FEEDBACK STYLE:
               },
               feedbackText: {
                 type: "string",
-                description: "Encouraging, constructive feedback (1-2 sentences)",
+                description:
+                  "Encouraging, constructive feedback (1-2 sentences)",
               },
               successCount: {
                 type: "number",
@@ -404,7 +474,8 @@ FEEDBACK STYLE:
               },
               replayDemo: {
                 type: "boolean",
-                description: "Whether to replay the demo after this evaluation (usually on fail)",
+                description:
+                  "Whether to replay the demo after this evaluation (usually on fail)",
               },
               markTuneAcquired: {
                 type: "boolean",
@@ -415,7 +486,12 @@ FEEDBACK STYLE:
                 description: `Whether to award skills associated with this tune. Only set if markTuneAcquired is true AND demonstrating competency. Skills are automatically fetched from tune_awards_skill edges. Available skills: ${availableSkills.length > 0 ? availableSkills.join(", ") : "none"}. Already unlocked: ${unlockedSkills.length > 0 ? unlockedSkills.join(", ") : "none"}.`,
               },
             },
-            required: ["evaluation", "feedbackText", "successCount", "replayDemo"],
+            required: [
+              "evaluation",
+              "feedbackText",
+              "successCount",
+              "replayDemo",
+            ],
           },
         },
       },
@@ -428,7 +504,10 @@ FEEDBACK STYLE:
         { role: "user", content: userPrompt },
       ],
       tools: toolsDefinition,
-      tool_choice: { type: "function", function: { name: "submit_evaluation" } },
+      tool_choice: {
+        type: "function",
+        function: { name: "submit_evaluation" },
+      },
     };
 
     // Debug mode
@@ -440,8 +519,8 @@ FEEDBACK STYLE:
           tuneKey,
           nuggetId,
           itemLabel: targetItem.label || nuggetId,
-          targetSequence,
-          userSequence,
+          targetSequence: sanitizedTargetSequence,
+          userSequence: sanitizedUserSequence,
           currentStreak,
           attemptCount,
           isAssembly,
@@ -457,14 +536,17 @@ FEEDBACK STYLE:
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const llmResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
+    const llmResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(debugRequest),
       },
-      body: JSON.stringify(debugRequest),
-    });
+    );
 
     if (!llmResponse.ok) {
       const errorText = await llmResponse.text();
@@ -491,9 +573,15 @@ FEEDBACK STYLE:
 
     // 5. Update nugget state
     const normalizedSuccessCount =
-      evalResult.evaluation === "pass" ? Math.max(1, Math.floor(evalResult.successCount || 1)) : 0;
-    const newStreak = evalResult.evaluation === "pass" ? currentStreak + normalizedSuccessCount : 0;
-    const newPassCount = (existingState?.pass_count || 0) + normalizedSuccessCount;
+      evalResult.evaluation === "pass"
+        ? Math.max(1, Math.floor(evalResult.successCount || 1))
+        : 0;
+    const newStreak =
+      evalResult.evaluation === "pass"
+        ? currentStreak + normalizedSuccessCount
+        : 0;
+    const newPassCount =
+      (existingState?.pass_count || 0) + normalizedSuccessCount;
     const newBestStreak = Math.max(existingState?.best_streak || 0, newStreak);
 
     if (existingState) {
@@ -539,24 +627,40 @@ FEEDBACK STYLE:
     const awardedSkills: string[] = [];
 
     // Only process acquisition if LLM decided to acquire AND idempotency checks pass
-    if (evalResult.markTuneAcquired === true && !alreadyAcquired && isTier3OrFullTune && localUserId) {
-      console.log(`[tune-evaluate] LLM decided to acquire tune ${tuneKey} for user ${localUserId}`);
+    if (
+      evalResult.markTuneAcquired === true &&
+      !alreadyAcquired &&
+      isTier3OrFullTune &&
+      localUserId
+    ) {
+      console.log(
+        `[tune-evaluate] LLM decided to acquire tune ${tuneKey} for user ${localUserId}`,
+      );
 
       // Mark tune as acquired
-      const { error: acquisitionError } = await supabase.from("user_tune_acquisition").insert({
-        local_user_id: localUserId,
-        tune_key: tuneKey,
-        acquired_at: new Date().toISOString(),
-      });
+      const { error: acquisitionError } = await supabase
+        .from("user_tune_acquisition")
+        .insert({
+          local_user_id: localUserId,
+          tune_key: tuneKey,
+          acquired_at: new Date().toISOString(),
+        });
 
       if (!acquisitionError) {
         tuneAcquired = true;
-        console.log(`[tune-evaluate] Tune ${tuneKey} acquired by user ${localUserId}`);
+        console.log(
+          `[tune-evaluate] Tune ${tuneKey} acquired by user ${localUserId}`,
+        );
       } else {
-        console.error("[tune-evaluate] Error inserting tune acquisition:", acquisitionError);
+        console.error(
+          "[tune-evaluate] Error inserting tune acquisition:",
+          acquisitionError,
+        );
       }
     } else if (evalResult.markTuneAcquired === true && alreadyAcquired) {
-      console.log(`[tune-evaluate] LLM attempted to acquire already-acquired tune ${tuneKey} - ignoring (idempotency)`);
+      console.log(
+        `[tune-evaluate] LLM attempted to acquire already-acquired tune ${tuneKey} - ignoring (idempotency)`,
+      );
     } else if (evalResult.markTuneAcquired === true && !isTier3OrFullTune) {
       console.log(
         `[tune-evaluate] LLM attempted to acquire tune ${tuneKey} while not practicing Tier 3/Full Tune - ignoring`,
@@ -564,33 +668,48 @@ FEEDBACK STYLE:
     }
 
     // Process skill unlocking if LLM decided to award skills AND tune is being acquired or already acquired
-    if (evalResult.awardSkills === true && (tuneAcquired || alreadyAcquired) && localUserId) {
-      console.log(`[tune-evaluate] LLM decided to award skills for tune ${tuneKey}`);
+    if (
+      evalResult.awardSkills === true &&
+      (tuneAcquired || alreadyAcquired) &&
+      localUserId
+    ) {
+      console.log(
+        `[tune-evaluate] LLM decided to award skills for tune ${tuneKey}`,
+      );
 
       // Only unlock skills that aren't already unlocked (idempotency per skill)
       for (const skillKey of skillsToAward) {
-        const { error: skillError } = await supabase.from("user_skill_state").upsert(
-          {
-            skill_key: skillKey,
-            local_user_id: localUserId,
-            unlocked: true,
-            mastery: 1,
-            last_practiced_at: new Date().toISOString(),
-          },
-          { onConflict: "skill_key,local_user_id" },
-        );
+        const { error: skillError } = await supabase
+          .from("user_skill_state")
+          .upsert(
+            {
+              skill_key: skillKey,
+              local_user_id: localUserId,
+              unlocked: true,
+              mastery: 1,
+              last_practiced_at: new Date().toISOString(),
+            },
+            { onConflict: "skill_key,local_user_id" },
+          );
 
         if (!skillError) {
           awardedSkills.push(skillKey);
-          console.log(`[tune-evaluate] Skill ${skillKey} awarded to user ${localUserId}`);
+          console.log(
+            `[tune-evaluate] Skill ${skillKey} awarded to user ${localUserId}`,
+          );
         } else {
-          console.error(`[tune-evaluate] Error upserting skill ${skillKey}:`, skillError);
+          console.error(
+            `[tune-evaluate] Error upserting skill ${skillKey}:`,
+            skillError,
+          );
         }
       }
 
       // Warn if trying to unlock already-unlocked skills
       if (skillsToAward.length === 0 && availableSkills.length > 0) {
-        console.log(`[tune-evaluate] All skills already unlocked for tune ${tuneKey}`);
+        console.log(
+          `[tune-evaluate] All skills already unlocked for tune ${tuneKey}`,
+        );
       }
     }
 
@@ -609,9 +728,14 @@ FEEDBACK STYLE:
     );
   } catch (error) {
     console.error("[tune-evaluate] Error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
