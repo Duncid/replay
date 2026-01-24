@@ -1,6 +1,6 @@
 {
   "schemaVersion": "teacher.v2",
-  "title": "St. Louis Blues (W. C. Handy)",
+  "title": "St. Louis Blues (melody lead-sheet, single staff)",
   "pipelineSettings": {
     "staffToHandDefault": {
       "1": "RH",
@@ -13,65 +13,233 @@
   "motifs": [
     {
       "id": "M1",
-      "label": "Pickup-to-long-hold (tie into sustain)",
-      "importance": 0.7,
-      "description": "Short pickup gesture that resolves into a long held tone; keep the sustain steady and counted."
+      "label": "Triple pickup (same pitch, 3x eighths)",
+      "importance": 0.6,
+      "description": "Three repeated eighth-notes setting up a phrase entry."
     },
     {
       "id": "M2",
-      "label": "Chromatic approach (C–C–C#–D) into hold",
+      "label": "Chromatic approach: D#–E–G–Bb–A",
       "importance": 0.85,
-      "description": "Bluesy chromatic lift into a target tone; keep the rhythm even and the approach expressive."
+      "description": "Bluesy chromatic climb into Bb then resolves to A; appears as a signature color line."
     },
     {
       "id": "M3",
-      "label": "A-theme cell (B–D–B–G) with tie",
-      "importance": 0.9,
-      "description": "Main melodic hook shape: up to D then down to G with a held resolution."
+      "label": "Blues riff: C–C–C#–D then drop/hold",
+      "importance": 0.8,
+      "description": "Repeated C with C# leading to D, then falls to a longer tone (often A/A# or a held note)."
     },
     {
       "id": "M4",
-      "label": "Verse pickup (E–G–A) into long A",
-      "importance": 0.75,
-      "description": "Light pickup into a tied/held A; avoid rushing the pickup."
+      "label": "Cadence/anchor: long G (whole/held)",
+      "importance": 0.9,
+      "description": "Big resting point on G used to end phrases/sections; sustain and release cleanly."
     },
     {
       "id": "M5",
-      "label": "Tag pickup (A#–B)",
-      "importance": 0.6,
-      "description": "Two-note pickup that launches the next phrase/repeat; land cleanly on B."
+      "label": "A-hook: B–D–B–G (tie into sustain)",
+      "importance": 0.75,
+      "description": "Call-and-response hook: B to D back to B then resolves to G with a tie."
+    },
+    {
+      "id": "M6",
+      "label": "Answer figure: F#–A–F#–D (tie)",
+      "importance": 0.65,
+      "description": "Descending/answer gesture that lands on a tied D."
     }
   ],
   "motifOccurrences": [
     {
       "motifId": "M1",
       "location": {
-        "startMeasure": 2,
+        "startMeasure": 1,
         "startBeat": 1,
-        "endMeasure": 2,
+        "endMeasure": 1,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M1",
+      "location": {
+        "startMeasure": 33,
+        "startBeat": 2,
+        "endMeasure": 33,
         "endBeat": 4
       }
     },
     {
       "motifId": "M2",
       "location": {
+        "startMeasure": 11,
+        "startBeat": 2,
+        "endMeasure": 11,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M2",
+      "location": {
+        "startMeasure": 15,
+        "startBeat": 2,
+        "endMeasure": 15,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M2",
+      "location": {
+        "startMeasure": 23,
+        "startBeat": 2,
+        "endMeasure": 23,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M2",
+      "location": {
+        "startMeasure": 27,
+        "startBeat": 2,
+        "endMeasure": 27,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M3",
+      "location": {
         "startMeasure": 3,
-        "startBeat": 1.5,
+        "startBeat": 2,
         "endMeasure": 3,
         "endBeat": 4
       }
     },
     {
-      "motifId": "M2",
+      "motifId": "M3",
       "location": {
         "startMeasure": 7,
-        "startBeat": 1.5,
+        "startBeat": 2,
         "endMeasure": 7,
         "endBeat": 4
       }
     },
     {
       "motifId": "M3",
+      "location": {
+        "startMeasure": 35,
+        "startBeat": 2,
+        "endMeasure": 35,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M3",
+      "location": {
+        "startMeasure": 43,
+        "startBeat": 2,
+        "endMeasure": 43,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 12,
+        "startBeat": 1,
+        "endMeasure": 12,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 16,
+        "startBeat": 1,
+        "endMeasure": 16,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 20,
+        "startBeat": 1,
+        "endMeasure": 20,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 24,
+        "startBeat": 1,
+        "endMeasure": 24,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 28,
+        "startBeat": 1,
+        "endMeasure": 28,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 32,
+        "startBeat": 1,
+        "endMeasure": 32,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 40,
+        "startBeat": 1,
+        "endMeasure": 40,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 52,
+        "startBeat": 1,
+        "endMeasure": 52,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 56,
+        "startBeat": 1,
+        "endMeasure": 56,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 60,
+        "startBeat": 1,
+        "endMeasure": 60,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 61,
+        "startBeat": 1,
+        "endMeasure": 61,
+        "endBeat": 4
+      }
+    },
+    {
+      "motifId": "M5",
       "location": {
         "startMeasure": 10,
         "startBeat": 1,
@@ -80,7 +248,7 @@
       }
     },
     {
-      "motifId": "M3",
+      "motifId": "M5",
       "location": {
         "startMeasure": 22,
         "startBeat": 1,
@@ -89,458 +257,231 @@
       }
     },
     {
-      "motifId": "M4",
+      "motifId": "M6",
       "location": {
-        "startMeasure": 14,
-        "startBeat": 1.5,
-        "endMeasure": 14,
+        "startMeasure": 18,
+        "startBeat": 1,
+        "endMeasure": 18,
         "endBeat": 4
       }
     },
     {
-      "motifId": "M4",
+      "motifId": "M6",
       "location": {
-        "startMeasure": 26,
-        "startBeat": 1.5,
-        "endMeasure": 26,
+        "startMeasure": 30,
+        "startBeat": 1,
+        "endMeasure": 30,
         "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M5",
-      "location": {
-        "startMeasure": 49,
-        "startBeat": 4,
-        "endMeasure": 49,
-        "endBeat": 4.9
-      }
-    },
-    {
-      "motifId": "M5",
-      "location": {
-        "startMeasure": 53,
-        "startBeat": 4,
-        "endMeasure": 53,
-        "endBeat": 4.9
-      }
-    },
-    {
-      "motifId": "M5",
-      "location": {
-        "startMeasure": 57,
-        "startBeat": 4,
-        "endMeasure": 57,
-        "endBeat": 4.9
       }
     }
   ],
   "nuggets": [
     {
       "id": "N1",
+      "length": 5,
       "location": {
         "startMeasure": 1,
         "startBeat": 1,
-        "endMeasure": 1,
+        "endMeasure": 2,
         "endBeat": 4
       },
-      "dependsOn": []
+      "dependsOn": ["M1"]
     },
     {
       "id": "N2",
+      "length": 10,
       "location": {
-        "startMeasure": 2,
-        "startBeat": 1,
-        "endMeasure": 3,
-        "endBeat": 4
-      },
-      "dependsOn": ["M1", "M2"]
-    },
-    {
-      "id": "N3",
-      "location": {
-        "startMeasure": 4,
+        "startMeasure": 3,
         "startBeat": 1,
         "endMeasure": 5,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N4",
-      "location": {
-        "startMeasure": 6,
-        "startBeat": 1,
-        "endMeasure": 7,
-        "endBeat": 4
-      },
-      "dependsOn": ["M2"]
-    },
-    {
-      "id": "N5",
-      "location": {
-        "startMeasure": 8,
-        "startBeat": 1,
-        "endMeasure": 9,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-
-    {
-      "id": "N6",
-      "location": {
-        "startMeasure": 10,
-        "startBeat": 1,
-        "endMeasure": 11,
         "endBeat": 4
       },
       "dependsOn": ["M3"]
     },
     {
-      "id": "N7",
+      "id": "N3",
+      "length": 11,
       "location": {
-        "startMeasure": 12,
+        "startMeasure": 6,
+        "startBeat": 1,
+        "endMeasure": 9,
+        "endBeat": 4
+      },
+      "dependsOn": ["M3"]
+    },
+    {
+      "id": "N4",
+      "length": 10,
+      "location": {
+        "startMeasure": 10,
         "startBeat": 1,
         "endMeasure": 13,
         "endBeat": 4
       },
-      "dependsOn": []
+      "dependsOn": ["M5", "M2", "M4"]
     },
     {
-      "id": "N8",
+      "id": "N5",
+      "length": 10,
       "location": {
         "startMeasure": 14,
         "startBeat": 1,
-        "endMeasure": 15,
+        "endMeasure": 17,
+        "endBeat": 4
+      },
+      "dependsOn": ["M2", "M4"]
+    },
+    {
+      "id": "N6",
+      "length": 9,
+      "location": {
+        "startMeasure": 18,
+        "startBeat": 1,
+        "endMeasure": 21,
+        "endBeat": 4
+      },
+      "dependsOn": ["M6", "M4"]
+    },
+    {
+      "id": "N7",
+      "length": 12,
+      "location": {
+        "startMeasure": 22,
+        "startBeat": 1,
+        "endMeasure": 25,
+        "endBeat": 4
+      },
+      "dependsOn": ["M5", "M2", "M4"]
+    },
+    {
+      "id": "N8",
+      "length": 11,
+      "location": {
+        "startMeasure": 26,
+        "startBeat": 1,
+        "endMeasure": 29,
+        "endBeat": 4
+      },
+      "dependsOn": ["M2", "M4"]
+    },
+    {
+      "id": "N9",
+      "length": 12,
+      "location": {
+        "startMeasure": 30,
+        "startBeat": 1,
+        "endMeasure": 33,
+        "endBeat": 4
+      },
+      "dependsOn": ["M6", "M1", "M4"]
+    },
+    {
+      "id": "N10",
+      "length": 10,
+      "location": {
+        "startMeasure": 34,
+        "startBeat": 1,
+        "endMeasure": 37,
+        "endBeat": 4
+      },
+      "dependsOn": ["M3"]
+    },
+    {
+      "id": "N11",
+      "length": 8,
+      "location": {
+        "startMeasure": 38,
+        "startBeat": 1,
+        "endMeasure": 41,
         "endBeat": 4
       },
       "dependsOn": ["M4"]
     },
     {
-      "id": "N9",
-      "location": {
-        "startMeasure": 16,
-        "startBeat": 1,
-        "endMeasure": 17,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-
-    {
-      "id": "N10",
-      "location": {
-        "startMeasure": 18,
-        "startBeat": 1,
-        "endMeasure": 19,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N11",
-      "location": {
-        "startMeasure": 20,
-        "startBeat": 1,
-        "endMeasure": 21,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
       "id": "N12",
+      "length": 9,
       "location": {
-        "startMeasure": 22,
+        "startMeasure": 42,
         "startBeat": 1,
-        "endMeasure": 23,
+        "endMeasure": 45,
         "endBeat": 4
       },
       "dependsOn": ["M3"]
     },
     {
       "id": "N13",
+      "length": 11,
       "location": {
-        "startMeasure": 24,
+        "startMeasure": 46,
         "startBeat": 1,
-        "endMeasure": 25,
+        "endMeasure": 49,
         "endBeat": 4
       },
-      "dependsOn": []
+      "dependsOn": ["M4"]
     },
-
     {
       "id": "N14",
+      "length": 18,
       "location": {
-        "startMeasure": 26,
+        "startMeasure": 50,
         "startBeat": 1,
-        "endMeasure": 27,
+        "endMeasure": 53,
         "endBeat": 4
       },
       "dependsOn": ["M4"]
     },
     {
       "id": "N15",
-      "location": {
-        "startMeasure": 28,
-        "startBeat": 1,
-        "endMeasure": 29,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N16",
-      "location": {
-        "startMeasure": 30,
-        "startBeat": 1,
-        "endMeasure": 31,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N17",
-      "location": {
-        "startMeasure": 32,
-        "startBeat": 1,
-        "endMeasure": 33,
-        "endBeat": 4
-      },
-      "dependsOn": ["M5"]
-    },
-
-    {
-      "id": "N18",
-      "location": {
-        "startMeasure": 34,
-        "startBeat": 1,
-        "endMeasure": 35,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N19",
-      "location": {
-        "startMeasure": 36,
-        "startBeat": 1,
-        "endMeasure": 37,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N20",
-      "location": {
-        "startMeasure": 38,
-        "startBeat": 1,
-        "endMeasure": 39,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N21",
-      "location": {
-        "startMeasure": 40,
-        "startBeat": 1,
-        "endMeasure": 41,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-
-    {
-      "id": "N22",
-      "location": {
-        "startMeasure": 42,
-        "startBeat": 1,
-        "endMeasure": 43,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N23",
-      "location": {
-        "startMeasure": 44,
-        "startBeat": 1,
-        "endMeasure": 45,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N24",
-      "location": {
-        "startMeasure": 46,
-        "startBeat": 1,
-        "endMeasure": 47,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N25",
-      "location": {
-        "startMeasure": 48,
-        "startBeat": 1,
-        "endMeasure": 49,
-        "endBeat": 4
-      },
-      "dependsOn": ["M5"]
-    },
-
-    {
-      "id": "N26",
-      "location": {
-        "startMeasure": 50,
-        "startBeat": 1,
-        "endMeasure": 51,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N27",
-      "location": {
-        "startMeasure": 52,
-        "startBeat": 1,
-        "endMeasure": 53,
-        "endBeat": 4
-      },
-      "dependsOn": ["M5"]
-    },
-    {
-      "id": "N28",
+      "length": 16,
       "location": {
         "startMeasure": 54,
-        "startBeat": 1,
-        "endMeasure": 55,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N29",
-      "location": {
-        "startMeasure": 56,
         "startBeat": 1,
         "endMeasure": 57,
         "endBeat": 4
       },
-      "dependsOn": ["M5"]
+      "dependsOn": ["M4"]
     },
-
     {
-      "id": "N30",
+      "id": "N16",
+      "length": 16,
       "location": {
         "startMeasure": 58,
-        "startBeat": 1,
-        "endMeasure": 59,
-        "endBeat": 4
-      },
-      "dependsOn": []
-    },
-    {
-      "id": "N31",
-      "location": {
-        "startMeasure": 60,
         "startBeat": 1,
         "endMeasure": 61,
         "endBeat": 4
       },
-      "dependsOn": []
+      "dependsOn": ["M4"]
     }
   ],
   "assemblies": [
-    { "id": "A1", "tier": 1, "nuggetIds": ["N1", "N2", "N3"] },
-    { "id": "A2", "tier": 1, "nuggetIds": ["N4", "N5"] },
-
-    { "id": "A3", "tier": 1, "nuggetIds": ["N6", "N7", "N8", "N9"] },
-    { "id": "A4", "tier": 1, "nuggetIds": ["N10", "N11", "N12", "N13"] },
-    { "id": "A5", "tier": 1, "nuggetIds": ["N14", "N15", "N16", "N17"] },
-
-    { "id": "A6", "tier": 1, "nuggetIds": ["N18", "N19", "N20", "N21"] },
-    { "id": "A7", "tier": 1, "nuggetIds": ["N22", "N23", "N24", "N25"] },
-    { "id": "A8", "tier": 1, "nuggetIds": ["N26", "N27", "N28", "N29"] },
-
-    {
-      "id": "A9",
-      "tier": 2,
-      "nuggetIds": ["N6", "N7", "N8", "N9", "N10", "N11", "N12", "N13"]
-    },
-    {
-      "id": "A10",
-      "tier": 2,
-      "nuggetIds": ["N14", "N15", "N16", "N17", "N18", "N19", "N20", "N21"]
-    },
-    {
-      "id": "A11",
-      "tier": 2,
-      "nuggetIds": ["N22", "N23", "N24", "N25", "N26", "N27", "N28", "N29"]
-    },
-
-    {
-      "id": "A12",
-      "tier": 3,
-      "nuggetIds": [
-        "N6",
-        "N7",
-        "N8",
-        "N9",
-        "N10",
-        "N11",
-        "N12",
-        "N13",
-        "N14",
-        "N15",
-        "N16",
-        "N17",
-        "N18",
-        "N19",
-        "N20",
-        "N21"
-      ]
-    },
-    {
-      "id": "A13",
-      "tier": 3,
-      "nuggetIds": [
-        "N10",
-        "N11",
-        "N12",
-        "N13",
-        "N14",
-        "N15",
-        "N16",
-        "N17",
-        "N18",
-        "N19",
-        "N20",
-        "N21",
-        "N22",
-        "N23",
-        "N24",
-        "N25"
-      ]
-    }
+    { "id": "A1", "tier": 1, "nuggetIds": ["N1", "N2"] },
+    { "id": "A2", "tier": 1, "nuggetIds": ["N3", "N4"] },
+    { "id": "A3", "tier": 1, "nuggetIds": ["N5", "N6"] },
+    { "id": "A4", "tier": 1, "nuggetIds": ["N7", "N8"] },
+    { "id": "A5", "tier": 1, "nuggetIds": ["N9", "N10"] },
+    { "id": "A6", "tier": 1, "nuggetIds": ["N11", "N12"] },
+    { "id": "A7", "tier": 1, "nuggetIds": ["N13", "N14"] },
+    { "id": "A8", "tier": 1, "nuggetIds": ["N15", "N16"] },
+    { "id": "A9", "tier": 2, "nuggetIds": ["N1", "N2", "N3"] },
+    { "id": "A10", "tier": 2, "nuggetIds": ["N4", "N5", "N6"] },
+    { "id": "A11", "tier": 2, "nuggetIds": ["N7", "N8", "N9"] },
+    { "id": "A12", "tier": 2, "nuggetIds": ["N10", "N11", "N12", "N13"] },
+    { "id": "A13", "tier": 2, "nuggetIds": ["N14", "N15", "N16"] }
   ],
   "tuneHints": {
-    "goal": "Learn the melody as a singable blues line: clean pickups, expressive chromatic color, and steady long notes so the phrases breathe naturally (then connect sections smoothly through the repeat).",
-    "counting": "Count ties and whole-note sustains precisely; many phrases rely on holding the pitch through the full bar without drifting the tempo.",
+    "goal": "Learn the melody as a singing line with clear phrase shapes, then add a relaxed blues inflection (especially around chromatic passing tones like C#, D#, and A#).",
+    "counting": "Count steady 4/4, but keep the eighths light—many phrases feel like pickup-to-downbeat with long holds at cadences.",
     "commonMistakes": [
-      "Rushing eighth-note pickups (especially before long ties).",
-      "Uneven rhythm in the chromatic approach (C–C–C#–D).",
-      "Cutting long notes short (whole notes and tied halves).",
-      "Missing the fermata feel at the big cadence points.",
-      "Forgetting the two-note tag pickup (A#–B) into the next phrase/repeat."
+      "Rushing the short pickup figures before a tied/held note",
+      "Playing chromatic notes (C#, D#, A#) too loud instead of as passing color",
+      "Not sustaining the long G cadences evenly (tone droops or releases early)",
+      "Blurring rests—phrase starts lose their punch"
     ],
     "whatToListenFor": [
-      "A relaxed blues swing in the phrasing (even if the notation is straight).",
-      "Clear target-tone arrivals after chromatic approaches.",
-      "Consistent tone and breath-like shaping on long sustains.",
-      "Smooth connection across section boundaries and the repeat."
+      "Call-and-response between short hooks and long holds",
+      "Smooth resolution into the long G anchors",
+      "Evenness of repeated notes (no accents unless intended)",
+      "A gentle blues ‘lean’ on the chromatic approaches without losing time"
     ]
   },
   "teachingOrder": [
@@ -559,32 +500,17 @@
     "N13",
     "N14",
     "N15",
-    "N16",
-    "N17",
-    "N18",
-    "N19",
-    "N20",
-    "N21",
-    "N22",
-    "N23",
-    "N24",
-    "N25",
-    "N26",
-    "N27",
-    "N28",
-    "N29",
-    "N30",
-    "N31"
+    "N16"
   ],
   "assemblyOrder": [
+    "A1",
+    "A2",
     "A3",
     "A4",
     "A5",
     "A6",
     "A7",
     "A8",
-    "A1",
-    "A2",
     "A9",
     "A10",
     "A11",
