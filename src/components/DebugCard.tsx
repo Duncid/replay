@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ReactNode } from "react";
 
 interface DebugCardProps {
@@ -12,8 +12,9 @@ export function DebugCard({ title, content, actions }: DebugCardProps) {
     <div className="w-full max-w-xl mx-auto">
       <Card className="border-none bg-amber-950/50">
         <CardHeader className="pb-3">
-          <span className="text-xs uppercase text-amber-400/60">Debug</span>
-          <CardTitle className="text-lg">{title}</CardTitle>
+          <span className="text-xs uppercase text-amber-400/60">
+            Debug - {title}
+          </span>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
           {content}

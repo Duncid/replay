@@ -4,43 +4,43 @@
       "pitch": 64,
       "startTime": 0.25,
       "endTime": 0.5,
-      "velocity": 90.0
+      "velocity": 0.7086614173228346
     },
     {
       "pitch": 67,
       "startTime": 0.5,
       "endTime": 0.75,
-      "velocity": 90.0
+      "velocity": 0.7086614173228346
     },
     {
       "pitch": 69,
       "startTime": 0.75,
       "endTime": 2.0,
-      "velocity": 90.0
+      "velocity": 0.7086614173228346
     },
     {
       "pitch": 64,
       "startTime": 2.25,
       "endTime": 2.5,
-      "velocity": 90.0
+      "velocity": 0.7086614173228346
     },
     {
       "pitch": 67,
       "startTime": 2.5,
       "endTime": 2.75,
-      "velocity": 90.0
+      "velocity": 0.7086614173228346
     },
     {
       "pitch": 69,
       "startTime": 2.75,
       "endTime": 3.0,
-      "velocity": 90.0
+      "velocity": 0.7086614173228346
     },
     {
       "pitch": 70,
       "startTime": 3.0,
       "endTime": 3.75,
-      "velocity": 90.0
+      "velocity": 0.7086614173228346
     }
   ],
   "totalTime": 3.5,

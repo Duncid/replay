@@ -54,6 +54,16 @@ export function TuneMode({
   // Track evaluation state for inline indicator
   const [isEvaluating, setIsEvaluating] = useState(false);
 
+  const sanitizeNoteSequence = (sequence?: INoteSequence | null): INoteSequence | undefined => {
+    if (!sequence) return undefined;
+    const notes = (sequence.notes || []).map((note) => ({
+      pitch: note.pitch,
+      startTime: note.startTime,
+      endTime: note.endTime,
+    }));
+    return { ...sequence, notes };
+  };
+
   // Auto-evaluate when recording stops (silence detected)
   useEffect(() => {
     // Reset when recording starts
@@ -213,6 +223,9 @@ export function TuneMode({
       console.log(`[TuneMode] Trimmed recording from ${recording.notes.length} to ${trimmedNotes.length} notes (target: ${targetNoteCount})`);
     }
 
+    const sanitizedTargetSequence = sanitizeNoteSequence(targetSequence) ?? targetSequence;
+    const sanitizedRecording = sanitizeNoteSequence(trimmedRecording) ?? trimmedRecording;
+
     // Don't change phase - stay on practice screen
     setIsEvaluating(true);
 
@@ -221,7 +234,7 @@ export function TuneMode({
         const debugResponse = await evaluateAttempt.mutateAsync({
           tuneKey,
           nuggetId: currentNugget.itemId,
-          userSequence: trimmedRecording,
+          userSequence: sanitizedRecording,
           localUserId,
           language,
           debug: true,
@@ -231,8 +244,8 @@ export function TuneMode({
         setEvalDebugData({
           tuneKey,
           nuggetId: currentNugget.itemId,
-          targetSequence,
-          userSequence: trimmedRecording,
+          targetSequence: sanitizedTargetSequence,
+          userSequence: sanitizedRecording,
           prompt: (debugResponse as any).prompt,
           request: (debugResponse as any).request,
         });
@@ -240,7 +253,7 @@ export function TuneMode({
         const response = await evaluateAttempt.mutateAsync({
           tuneKey,
           nuggetId: currentNugget.itemId,
-          userSequence: trimmedRecording,
+          userSequence: sanitizedRecording,
           localUserId,
           language,
           debug: false,
@@ -281,10 +294,12 @@ export function TuneMode({
     setIsEvaluating(true);
 
     try {
+      const sanitizedRecording =
+        sanitizeNoteSequence(lastProcessedRecording.current) ?? lastProcessedRecording.current;
       const response = await evaluateAttempt.mutateAsync({
         tuneKey,
         nuggetId: currentNugget.itemId,
-        userSequence: lastProcessedRecording.current,
+        userSequence: sanitizedRecording,
         localUserId,
         language,
         debug: false,
