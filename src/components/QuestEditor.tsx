@@ -57,16 +57,104 @@ import {
 } from "@/types/quest";
 
 // Auto-discover all teacher.json files at build time
-const teacherModules = import.meta.glob<{ default: { title?: string } }>(
+const teacherModules = import.meta.glob<{ default: Record<string, unknown> }>(
   '/src/music/*/teacher.json',
   { eager: true }
 );
+
+// Pre-load all tune note sequences at build time
+const tuneNsModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/tune.ns.json',
+  { eager: true }
+);
+
+const tuneLhModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/tune.lh.ns.json',
+  { eager: true }
+);
+
+const tuneRhModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/tune.rh.ns.json',
+  { eager: true }
+);
+
+// Pre-load all nugget note sequences
+const nuggetNsModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/nuggets/*.ns.json',
+  { eager: true }
+);
+
+const nuggetLhModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/nuggets/*.lh.ns.json',
+  { eager: true }
+);
+
+const nuggetRhModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/nuggets/*.rh.ns.json',
+  { eager: true }
+);
+
+// Pre-load all assembly note sequences
+const assemblyNsModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/assemblies/*.ns.json',
+  { eager: true }
+);
+
+const assemblyLhModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/assemblies/*.lh.ns.json',
+  { eager: true }
+);
+
+const assemblyRhModules = import.meta.glob<{ default: object }>(
+  '/src/music/*/output/assemblies/*.rh.ns.json',
+  { eager: true }
+);
+
+// Helper to get module from glob by path
+const getGlobModule = (
+  modules: Record<string, { default?: object }>,
+  path: string
+): object | null => {
+  const module = modules[path];
+  return module?.default || (module as unknown as object) || null;
+};
+
+const getTeacher = (musicRef: string) =>
+  getGlobModule(teacherModules, `/src/music/${musicRef}/teacher.json`) as Record<string, unknown> | null;
+
+const getTuneNs = (musicRef: string) =>
+  getGlobModule(tuneNsModules, `/src/music/${musicRef}/output/tune.ns.json`);
+
+const getTuneLh = (musicRef: string) =>
+  getGlobModule(tuneLhModules, `/src/music/${musicRef}/output/tune.lh.ns.json`);
+
+const getTuneRh = (musicRef: string) =>
+  getGlobModule(tuneRhModules, `/src/music/${musicRef}/output/tune.rh.ns.json`);
+
+const getNuggetNs = (musicRef: string, nuggetId: string) =>
+  getGlobModule(nuggetNsModules, `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`);
+
+const getNuggetLh = (musicRef: string, nuggetId: string) =>
+  getGlobModule(nuggetLhModules, `/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`);
+
+const getNuggetRh = (musicRef: string, nuggetId: string) =>
+  getGlobModule(nuggetRhModules, `/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`);
+
+const getAssemblyNs = (musicRef: string, assemblyId: string) =>
+  getGlobModule(assemblyNsModules, `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`);
+
+const getAssemblyLh = (musicRef: string, assemblyId: string) =>
+  getGlobModule(assemblyLhModules, `/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`);
+
+const getAssemblyRh = (musicRef: string, assemblyId: string) =>
+  getGlobModule(assemblyRhModules, `/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`);
 
 // Extract tune list from discovered files
 const availableTunes = Object.entries(teacherModules).map(([path, module]) => {
   const match = path.match(/\/music\/([^/]+)\/teacher\.json$/);
   const key = match ? match[1] : '';
-  const title = module.default?.title || key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const teacher = module.default || module;
+  const title = (teacher as { title?: string })?.title || key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   return { key, label: title };
 }).filter(t => t.key);
 
@@ -1901,8 +1989,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [showPublishDialog, currentGraph, validationResult, isValidating, runValidation]);
 
-  // Helper function to bundle tune assets for publishing
-  const bundleTuneAssets = useCallback(async (): Promise<Record<string, TuneAssetBundle>> => {
+  // Helper function to bundle tune assets for publishing (uses pre-loaded glob modules)
+  const bundleTuneAssets = useCallback((): Record<string, TuneAssetBundle> => {
     const tuneAssets: Record<string, TuneAssetBundle> = {};
     const bundlingErrors: string[] = [];
     
@@ -1916,19 +2004,11 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       const tuneKey = node.data.tuneKey!;
       
       try {
-        // Load main files from output/ subfolder with .ns.json extension
-        const [teacherModule, noteSequenceModule, leftHandModule, rightHandModule] = await Promise.all([
-          import(`/src/music/${musicRef}/teacher.json`).catch(() => null),
-          import(`/src/music/${musicRef}/output/tune.ns.json`).catch(() => null),
-          import(`/src/music/${musicRef}/output/tune.lh.ns.json`).catch(() => null),
-          import(`/src/music/${musicRef}/output/tune.rh.ns.json`).catch(() => null),
-        ]);
-        
-        // Get the default export or the module itself
-        const teacher = teacherModule?.default || teacherModule;
-        const noteSequence = noteSequenceModule?.default || noteSequenceModule;
-        const leftHand = leftHandModule?.default || leftHandModule;
-        const rightHand = rightHandModule?.default || rightHandModule;
+        // Load main files from pre-loaded glob modules
+        const teacher = getTeacher(musicRef);
+        const noteSequence = getTuneNs(musicRef) as { notes?: unknown[] } | null;
+        const leftHand = getTuneLh(musicRef);
+        const rightHand = getTuneRh(musicRef);
         
         // VALIDATION: Check that noteSequence was loaded
         if (!noteSequence) {
@@ -1946,70 +2026,55 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           continue;
         }
         
-        // Load nugget note sequences from output/nuggets/
+        // Load nugget note sequences from pre-loaded glob modules
         let enrichedNuggets: TuneAssetBundle['nuggets'] = undefined;
-        if (teacher?.nuggets && Array.isArray(teacher.nuggets)) {
-          enrichedNuggets = await Promise.all(
-            teacher.nuggets.map(async (nugget: { id: string; label: string; location?: Record<string, unknown>; dependsOn?: string[]; modes?: string[] }) => {
-              const nuggetId = nugget.id;
-              
-              const [nuggetNs, nuggetLh, nuggetRh] = await Promise.all([
-                import(`/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`).catch(() => null),
-                import(`/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`).catch(() => null),
-                import(`/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`).catch(() => null),
-              ]);
-              
-              // Only include essential nugget fields (simplified v2 schema)
-              return {
-                id: nugget.id,
-                label: nugget.label,
-                location: nugget.location,
-                dependsOn: nugget.dependsOn,
-                modes: nugget.modes,
-                noteSequence: nuggetNs?.default || nuggetNs || null,
-                leftHandSequence: nuggetLh?.default || nuggetLh || null,
-                rightHandSequence: nuggetRh?.default || nuggetRh || null,
-              } as NonNullable<TuneAssetBundle['nuggets']>[number];
-            })
-          );
+        const teacherNuggets = teacher?.nuggets as Array<{ id: string; label: string; location?: Record<string, unknown>; dependsOn?: string[]; modes?: string[] }> | undefined;
+        if (teacherNuggets && Array.isArray(teacherNuggets)) {
+          enrichedNuggets = teacherNuggets.map((nugget) => {
+            const nuggetId = nugget.id;
+            
+            return {
+              id: nugget.id,
+              label: nugget.label,
+              location: nugget.location,
+              dependsOn: nugget.dependsOn,
+              modes: nugget.modes,
+              noteSequence: getNuggetNs(musicRef, nuggetId),
+              leftHandSequence: getNuggetLh(musicRef, nuggetId),
+              rightHandSequence: getNuggetRh(musicRef, nuggetId),
+            } as NonNullable<TuneAssetBundle['nuggets']>[number];
+          });
           
           // VALIDATION: Check nugget count matches teacher.json
-          const expectedNuggetCount = teacher.nuggets.length;
+          const expectedNuggetCount = teacherNuggets.length;
           const loadedNuggetCount = enrichedNuggets.filter(n => n.noteSequence).length;
           if (loadedNuggetCount !== expectedNuggetCount) {
             console.warn(`[QuestEditor] Nugget count mismatch for ${tuneKey}: expected ${expectedNuggetCount}, got ${loadedNuggetCount} with note sequences`);
           }
         }
         
-        // Load assembly note sequences from output/assemblies/
+        // Load assembly note sequences from pre-loaded glob modules
         let enrichedAssemblies: TuneAssetBundle['assemblies'] = undefined;
-        if (teacher?.assemblies && Array.isArray(teacher.assemblies)) {
-          enrichedAssemblies = await Promise.all(
-            teacher.assemblies.map(async (assembly: { id: string; tier: number; label: string; nuggetIds: string[]; difficulty?: { level: number }; modes?: string[] }) => {
-              const assemblyId = assembly.id;
-              
-              const [assemblyNs, assemblyLh, assemblyRh] = await Promise.all([
-                import(`/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`).catch(() => null),
-                import(`/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`).catch(() => null),
-                import(`/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`).catch(() => null),
-              ]);
-              
-              return {
-                id: assembly.id,
-                tier: assembly.tier,
-                label: assembly.label,
-                nuggetIds: assembly.nuggetIds,
-                difficulty: assembly.difficulty,
-                modes: assembly.modes,
-                noteSequence: assemblyNs?.default || assemblyNs || null,
-                leftHandSequence: assemblyLh?.default || assemblyLh || null,
-                rightHandSequence: assemblyRh?.default || assemblyRh || null,
-              } as NonNullable<TuneAssetBundle['assemblies']>[number];
-            })
-          );
+        const teacherAssemblies = teacher?.assemblies as Array<{ id: string; tier: number; label: string; nuggetIds: string[]; difficulty?: { level: number }; modes?: string[] }> | undefined;
+        if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
+          enrichedAssemblies = teacherAssemblies.map((assembly) => {
+            const assemblyId = assembly.id;
+            
+            return {
+              id: assembly.id,
+              tier: assembly.tier,
+              label: assembly.label,
+              nuggetIds: assembly.nuggetIds,
+              difficulty: assembly.difficulty,
+              modes: assembly.modes,
+              noteSequence: getAssemblyNs(musicRef, assemblyId),
+              leftHandSequence: getAssemblyLh(musicRef, assemblyId),
+              rightHandSequence: getAssemblyRh(musicRef, assemblyId),
+            } as NonNullable<TuneAssetBundle['assemblies']>[number];
+          });
           
           // VALIDATION: Check assembly count matches teacher.json
-          const expectedAssemblyCount = teacher.assemblies.length;
+          const expectedAssemblyCount = teacherAssemblies.length;
           const loadedAssemblyCount = enrichedAssemblies.filter(a => a.noteSequence).length;
           if (loadedAssemblyCount !== expectedAssemblyCount) {
             console.warn(`[QuestEditor] Assembly count mismatch for ${tuneKey}: expected ${expectedAssemblyCount}, got ${loadedAssemblyCount} with note sequences`);
@@ -2019,14 +2084,14 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         tuneAssets[tuneKey] = {
           // Store the full teacher structure (v2 schema)
           briefing: teacher ? {
-            schemaVersion: teacher.schemaVersion,
-            title: teacher.title,
-            pipelineSettings: teacher.pipelineSettings,
-            motifs: teacher.motifs,
-            motifOccurrences: teacher.motifOccurrences,
-            tuneHints: teacher.tuneHints,
-            teachingOrder: teacher.teachingOrder,
-            assemblyOrder: teacher.assemblyOrder,
+            schemaVersion: teacher.schemaVersion as string | undefined,
+            title: teacher.title as string | undefined,
+            pipelineSettings: teacher.pipelineSettings as Record<string, unknown> | undefined,
+            motifs: teacher.motifs as TuneAssetBundle['briefing']['motifs'],
+            motifOccurrences: teacher.motifOccurrences as Array<Record<string, unknown>> | undefined,
+            tuneHints: teacher.tuneHints as TuneAssetBundle['briefing']['tuneHints'],
+            teachingOrder: teacher.teachingOrder as string[] | undefined,
+            assemblyOrder: teacher.assemblyOrder as string[] | undefined,
           } : undefined,
           nuggets: enrichedNuggets,
           assemblies: enrichedAssemblies,
@@ -2063,8 +2128,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     setIsPublishing(true);
 
     try {
-      // Bundle tune assets before publishing
-      const tuneAssets = await bundleTuneAssets();
+      // Bundle tune assets before publishing (synchronous - uses pre-loaded globs)
+      const tuneAssets = bundleTuneAssets();
       console.log(`[QuestEditor] Publishing with ${Object.keys(tuneAssets).length} tune assets`);
 
       const { data, error } = await supabase.functions.invoke(
