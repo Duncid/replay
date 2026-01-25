@@ -139,7 +139,7 @@ export const PianoKey = ({
       className={cn(
         "relative ease-out select-none touch-none",
         isBlack
-          ? "h-[60%] rounded-b-md shadow-lg z-20 pointer-events-auto col-span-2"
+          ? "h-[66.6667%] rounded-b-md shadow-lg z-20 pointer-events-auto col-span-2"
           : "h-full rounded-b-lg shadow-md",
         getKeyColor(),
         (!isPlayable || disabled) && "cursor-not-allowed",
