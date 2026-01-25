@@ -107,10 +107,12 @@ export function TeacherWelcome({
     onStart();
   }, [onStart]);
 
+  let content: React.ReactNode = null;
+
   // If greeting is available, show the suggestions UI
   if (greeting) {
-    return (
-      <div className="w-full max-w-3xl mx-auto space-y-6">
+    content = (
+      <div className="space-y-6">
         {/* Greeting */}
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2">
@@ -146,28 +148,18 @@ export function TeacherWelcome({
         </div>
       </div>
     );
-  }
-
-  // Loading state for initial greeting fetch (after Start is clicked)
-  if (isLoading) {
-    return (
-      <LoadingSpinner
-        message={t("learnMode.loadingTeacher")}
-      />
-    );
-  }
-
-  // Debug Card - shown by default before Start is clicked (only in debug mode)
-  if (debugMode) {
+  } else if (isLoading) {
+    // Loading state for initial greeting fetch (after Start is clicked)
+    content = <LoadingSpinner message={t("learnMode.loadingTeacher")} />;
+  } else if (debugMode) {
+    // Debug Card - shown by default before Start is clicked (only in debug mode)
     if (isLoadingDebug) {
-      return (
+      content = (
         <LoadingSpinner message="Loading curriculum and activity data..." />
       );
-    }
-
-    if (debugError) {
-      return (
-        <div className="w-full max-w-3xl mx-auto space-y-6">
+    } else if (debugError) {
+      content = (
+        <div className="space-y-6">
           <Card className="border-amber-500/30 bg-amber-500/5">
             <CardContent className="pt-6">
               <div className="flex flex-col gap-2">
@@ -180,22 +172,22 @@ export function TeacherWelcome({
           </Card>
         </div>
       );
-    }
-
-    if (debugData) {
-      return (
+    } else if (debugData) {
+      content = (
         <PracticePlanDebugCard
           debugData={debugData}
           onProceed={handleProceedFromDebug}
         />
       );
     }
+  } else {
+    // Normal mode - just show Start button
+    content = (
+      <div className="h-full flex flex-col justify-center items-center space-y-6">
+        <Button onClick={onStart}>{t("learnMode.startButton")}</Button>
+      </div>
+    );
   }
 
-  // Normal mode - just show Start button
-  return (
-    <div className="w-full max-w-3xl h-full flex flex-col justify-center items-center mx-auto space-y-6">
-      <Button onClick={onStart}>{t("learnMode.startButton")}</Button>
-    </div>
-  );
+  return <div className="w-full max-w-3xl mx-auto">{content}</div>;
 }

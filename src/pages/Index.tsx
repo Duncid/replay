@@ -1629,133 +1629,20 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-background">
-      <div
-        id="topContainer"
-        className="w-full flex flex-col items-center justify-start relative flex-1"
+      <Tabs
+        value={activeMode}
+        onValueChange={(v) => handleModeChange(v as ActiveMode)}
+        className="w-full flex-1 flex flex-col"
       >
-        {/* AI Playing / Replay indicator */}
-        <TopToastLabel
-          show={appState === "ai_playing"}
-          label={isReplaying ? t("status.replay") : t("status.playing")}
-          pulse
-        />
-
-        {/* Generation toast (Free and Duo modes) */}
-        {generationLabel && (
-          <TopToastLabel show={true} label={generationLabel} pulse />
-        )}
-
-        {/* Recording ending progress toast (play mode) */}
-        {activeMode === "play" && (
-          <TopToastProgress
-            show={recordingManager.showEndingProgress}
-            progress={recordingManager.endingProgress}
-          />
-        )}
-
-        {/* AI preparing progress (play mode with autoreply) */}
-        {activeMode === "play" && isAutoreplyActive && (
-          <TopToastProgress
-            show={recordingManager.showProgress}
-            progress={recordingManager.progress}
-            label={t("status.improvising")}
-          />
-        )}
-
-        {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
-        <div className="w-full flex items-center justify-between gap-4 p-2">
-          <div className="flex items-center gap-2">
-            <UserMenu
-              language={language}
-              onLanguageChange={setLanguage}
-              notationPreference={musicNotation}
-              onNotationChange={setMusicNotation}
-            />
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover">
-                <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
-                <DropdownMenuRadioGroup
-                  value={pianoSoundType}
-                  onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
-                >
-                  <DropdownMenuRadioItem value="classic">
-                    {t("piano.basic")}
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    {t("piano.sampledInstruments")}
-                  </DropdownMenuLabel>
-                  {SAMPLED_INSTRUMENTS.map((instrument) => (
-                    <DropdownMenuRadioItem key={instrument} value={instrument}>
-                      {PIANO_SOUND_LABELS[instrument]}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-              <Metronome
-                bpm={metronomeBpm}
-                setBpm={setMetronomeBpm}
-                timeSignature={metronomeTimeSignature}
-                setTimeSignature={setMetronomeTimeSignature}
-                isPlaying={metronomeIsPlaying}
-                setIsPlaying={setMetronomeIsPlaying}
-                feel={activeMode === "learn" ? metronomeFeel : undefined}
-                onFeelChange={
-                  activeMode === "learn" ? setMetronomeFeel : undefined
-                }
-                onMetronomeStartTimeChange={
-                  activeMode === "learn" ? setMetronomeStartTime : undefined
-                }
-              soundType={
-                activeMode === "learn" ? metronomeSoundType : undefined
-              }
-              onSoundTypeChange={
-                activeMode === "learn" ? setMetronomeSoundType : undefined
-              }
-            />
-          </div>
-
-          <MidiConnector
-            isConnected={!!connectedDevice}
-            deviceName={connectedDevice?.name || null}
-            isSupported={isMidiSupported}
-            onConnect={requestAccess}
-            onDisconnect={disconnect}
-          />
-        </div>
-
-        <Piano
-          ref={pianoRef}
-          activeKeys={activeKeys}
-          allowInput={
-            appState === "idle" ||
-            appState === "user_playing" ||
-            appState === "waiting_for_ai"
-          }
-          soundType={pianoSoundType}
-          hasColor={isInTuneMode}
-          language={language}
-          notationPreference={musicNotation}
-          onNoteStart={handleNoteStart}
-          onNoteEnd={handleNoteEnd}
-        />
-
-        <Tabs
-          value={activeMode}
-          onValueChange={(v) => handleModeChange(v as ActiveMode)}
-          className="w-full relative z-10 flex-1 flex flex-col"
-        >
-          <div className="flex items-center justify-between px-2 py-4">
-            <div className="flex items-center gap-4">
+        <div className="sticky top-0 z-30 w-full bg-background border-b">
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="flex items-center gap-2">
+              <UserMenu
+                language={language}
+                onLanguageChange={setLanguage}
+                notationPreference={musicNotation}
+                onNotationChange={setMusicNotation}
+              />
               <TabsList>
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
@@ -1900,7 +1787,7 @@ const Index = () => {
                   </Popover>
                 )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {activeMode === "learn" && (
                 <>
                   <div className="flex items-center gap-2 ml-auto">
@@ -2193,15 +2080,145 @@ const Index = () => {
               )}
             </div>
           </div>
-          <TabsContent value="play">{playMode.render()}</TabsContent>
-          <TabsContent value="learn">
-            {learnModeType === "free-practice" ? (
-              <FreePracticeMode {...freePracticeModeProps} />
-            ) : (
-              learnMode.render()
-            )}
-          </TabsContent>
-        </Tabs>
+        </div>
+
+        <div
+          id="topContainer"
+          className="w-full flex flex-col items-stretch justify-start relative flex-1 pb-64"
+        >
+          {/* AI Playing / Replay indicator */}
+          <TopToastLabel
+            show={appState === "ai_playing"}
+            label={isReplaying ? t("status.replay") : t("status.playing")}
+            pulse
+          />
+
+          {/* Generation toast (Free and Duo modes) */}
+          {generationLabel && (
+            <TopToastLabel show={true} label={generationLabel} pulse />
+          )}
+
+          {/* Recording ending progress toast (play mode) */}
+          {activeMode === "play" && (
+            <TopToastProgress
+              show={recordingManager.showEndingProgress}
+              progress={recordingManager.endingProgress}
+            />
+          )}
+
+          {/* AI preparing progress (play mode with autoreply) */}
+          {activeMode === "play" && isAutoreplyActive && (
+            <TopToastProgress
+              show={recordingManager.showProgress}
+              progress={recordingManager.progress}
+              label={t("status.improvising")}
+            />
+          )}
+
+          <div className="flex-1 w-full flex items-center justify-center">
+            <div className="w-full h-full flex flex-col">
+              <TabsContent
+                value="play"
+                className="w-full h-full flex items-center justify-center"
+              >
+                {playMode.render()}
+              </TabsContent>
+              <TabsContent
+                value="learn"
+                className="w-full h-full flex items-center justify-center"
+              >
+                {learnModeType === "free-practice" ? (
+                  <FreePracticeMode {...freePracticeModeProps} />
+                ) : (
+                  learnMode.render()
+                )}
+              </TabsContent>
+            </div>
+          </div>
+        </div>
+      </Tabs>
+
+      <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
+        {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
+        <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 bg-popover">
+                <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={pianoSoundType}
+                  onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
+                >
+                  <DropdownMenuRadioItem value="classic">
+                    {t("piano.basic")}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    {t("piano.sampledInstruments")}
+                  </DropdownMenuLabel>
+                  {SAMPLED_INSTRUMENTS.map((instrument) => (
+                    <DropdownMenuRadioItem key={instrument} value={instrument}>
+                      {PIANO_SOUND_LABELS[instrument]}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Metronome
+              bpm={metronomeBpm}
+              setBpm={setMetronomeBpm}
+              timeSignature={metronomeTimeSignature}
+              setTimeSignature={setMetronomeTimeSignature}
+              isPlaying={metronomeIsPlaying}
+              setIsPlaying={setMetronomeIsPlaying}
+              feel={activeMode === "learn" ? metronomeFeel : undefined}
+              onFeelChange={
+                activeMode === "learn" ? setMetronomeFeel : undefined
+              }
+              onMetronomeStartTimeChange={
+                activeMode === "learn" ? setMetronomeStartTime : undefined
+              }
+              soundType={
+                activeMode === "learn" ? metronomeSoundType : undefined
+              }
+              onSoundTypeChange={
+                activeMode === "learn" ? setMetronomeSoundType : undefined
+              }
+            />
+          </div>
+
+          <MidiConnector
+            isConnected={!!connectedDevice}
+            deviceName={connectedDevice?.name || null}
+            isSupported={isMidiSupported}
+            onConnect={requestAccess}
+            onDisconnect={disconnect}
+          />
+        </div>
+
+        <Piano
+          className="flex-1 min-h-0"
+          ref={pianoRef}
+          activeKeys={activeKeys}
+          allowInput={
+            appState === "idle" ||
+            appState === "user_playing" ||
+            appState === "waiting_for_ai"
+          }
+          soundType={pianoSoundType}
+          hasColor={isInTuneMode}
+          language={language}
+          notationPreference={musicNotation}
+          onNoteStart={handleNoteStart}
+          onNoteEnd={handleNoteEnd}
+        />
       </div>
 
       {/* Add/Edit Partition Sheet */}

@@ -9,6 +9,7 @@ import {
 } from "@/hooks/usePianoSound";
 import { Loader2 } from "lucide-react";
 import { noteNameToSolfege } from "@/utils/noteSequenceUtils";
+import { cn } from "@/lib/utils";
 
 interface PianoNote {
   note: string;
@@ -26,6 +27,7 @@ interface PianoProps {
   hasColor?: boolean;
   language: string;
   notationPreference: "auto" | "abc" | "solfege";
+  className?: string;
 }
 
 export interface PianoHandle {
@@ -46,6 +48,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       hasColor = false,
       language,
       notationPreference,
+      className,
     },
     ref
   ) => {
@@ -295,7 +298,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
   };
 
   return (
-    <div className="relative w-full select-none">
+    <div className={cn("relative w-full h-full select-none flex flex-col", className)}>
       {!audio.isLoaded && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -304,7 +307,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           </div>
         </div>
       )}
-      <div className="relative h-[25vw] min-h-64 max-h-[350px] bg-card shadow-2xl">
+      <div className="relative h-full">
         <div className="absolute inset-0 grid grid-cols-22 gap-px">
           {whiteKeys.map((note) => {
             const noteKey = `${note.note}${note.octave}`;
