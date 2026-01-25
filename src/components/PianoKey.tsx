@@ -1,4 +1,4 @@
-import { getNoteColorForNoteName } from "@/constants/noteColors";
+import { getBaseNoteLetter } from "@/constants/noteColors";
 import { cn } from "@/lib/utils";
 
 interface PianoKeyProps {
@@ -60,20 +60,46 @@ export const PianoKey = ({
     }
   };
 
-  const noteColor = hasColor ? getNoteColorForNoteName(note) : undefined;
-
-  const getActiveColorStyle = () => {
-    if (!isActive || !noteColor) return undefined;
-    const baseColor = isBlack
-      ? "hsl(var(--key-black))"
-      : "hsl(var(--key-white))";
-    const hotColor = noteColor;
-    const coldColor = `color-mix(in srgb, ${hotColor} 50%, ${baseColor} 50%)`;
-    return {
-      backgroundColor: isSustained ? coldColor : hotColor,
-      boxShadow: `0 0 20px ${hotColor}80`,
-    };
-  };
+  const noteLetter = hasColor ? getBaseNoteLetter(note) : null;
+  const noteColorClasses = noteLetter
+    ? {
+        C: {
+          active: "bg-red-500 shadow-lg shadow-red-500/50",
+          sustained: "bg-red-400 shadow-lg shadow-red-400/50",
+          label: "bg-red-500",
+        },
+        D: {
+          active: "bg-orange-500 shadow-lg shadow-orange-500/50",
+          sustained: "bg-orange-400 shadow-lg shadow-orange-400/50",
+          label: "bg-orange-500",
+        },
+        E: {
+          active: "bg-yellow-500 shadow-lg shadow-yellow-500/50",
+          sustained: "bg-yellow-400 shadow-lg shadow-yellow-400/50",
+          label: "bg-yellow-500",
+        },
+        F: {
+          active: "bg-green-500 shadow-lg shadow-green-500/50",
+          sustained: "bg-green-400 shadow-lg shadow-green-400/50",
+          label: "bg-green-500",
+        },
+        G: {
+          active: "bg-teal-500 shadow-lg shadow-teal-500/50",
+          sustained: "bg-teal-400 shadow-lg shadow-teal-400/50",
+          label: "bg-teal-500",
+        },
+        A: {
+          active: "bg-blue-500 shadow-lg shadow-blue-500/50",
+          sustained: "bg-blue-400 shadow-lg shadow-blue-400/50",
+          label: "bg-blue-500",
+        },
+        B: {
+          active: "bg-violet-500 shadow-lg shadow-violet-500/50",
+          sustained: "bg-violet-400 shadow-lg shadow-violet-400/50",
+          label: "bg-violet-500",
+        },
+      }[noteLetter]
+    : undefined;
 
   // Determine colors based on state
   const getKeyColor = () => {
@@ -84,8 +110,8 @@ export const PianoKey = ({
         : "bg-key-white hover:bg-key-white-shadow";
     }
 
-    if (noteColor) {
-      return "shadow-lg";
+    if (noteColorClasses) {
+      return isSustained ? noteColorClasses.sustained : noteColorClasses.active;
     }
 
     if (isSustained) {
@@ -100,8 +126,6 @@ export const PianoKey = ({
         : "bg-red-500 shadow-lg shadow-red-500/50";
     }
   };
-
-  const activeColorStyle = getActiveColorStyle();
 
   return (
     <button
@@ -130,7 +154,6 @@ export const PianoKey = ({
               gridColumnStart: gridColumn * 2,
             }
           : {}),
-        ...(activeColorStyle ?? {}),
       }}
     >
       <span
@@ -139,12 +162,8 @@ export const PianoKey = ({
           hasColor ? "px-2 py-0.5 rounded-full text-white" : "opacity-80",
           hasColor && (isActive ? "opacity-0" : "opacity-100"),
           !hasColor && (isBlack ? "text-foreground" : "text-muted-foreground"),
+          hasColor && noteColorClasses?.label,
         )}
-        style={
-          hasColor
-            ? { backgroundColor: getNoteColorForNoteName(note) }
-            : undefined
-        }
       >
         {displayLabel ?? note}
       </span>
