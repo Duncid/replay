@@ -185,6 +185,7 @@ const Index = () => {
   >("add");
   const [whistleSheetOpen, setWhistleSheetOpen] = useState(false);
   const [questEditorOpen, setQuestEditorOpen] = useState(false);
+  const previousUserIdRef = useRef<string | null>(null);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
   const [musicNotation, setMusicNotation] = useLocalStorage<
@@ -1303,11 +1304,46 @@ const Index = () => {
     setMetronomeSoundType: (soundType: LessonMetronomeSoundType) =>
       setMetronomeSoundType(soundType as MetronomeSoundType),
   });
+
+  const { resetToStart: resetLearnToStart } = learnMode;
   
   // Sync tune mode state from LearnMode
   useEffect(() => {
     setIsInTuneMode(learnMode.isInTuneMode);
   }, [learnMode.isInTuneMode]);
+
+  // Reset learn flow when the current user changes
+  useEffect(() => {
+    if (
+      previousUserIdRef.current &&
+      currentUserId &&
+      previousUserIdRef.current !== currentUserId
+    ) {
+      console.log(
+        `[UserSwitch] Switched user from ${previousUserIdRef.current} to ${currentUserId}`
+      );
+      stopAiPlayback();
+      recordingManager.cancelRecording();
+      learnRecordingManager.cancelRecording();
+      freePracticeRecordingManager.cancelRecording();
+      setLearnModeRecording(null);
+      learnModeRecordingRef.current = null;
+      setFreePracticeRecording(null);
+      freePracticeRecordingRef.current = null;
+      setLearnModeType("curriculum");
+      setAppState("idle");
+      resetLearnToStart();
+    }
+
+    previousUserIdRef.current = currentUserId ?? null;
+  }, [
+    currentUserId,
+    stopAiPlayback,
+    recordingManager,
+    learnRecordingManager,
+    freePracticeRecordingManager,
+    resetLearnToStart,
+  ]);
 
   // Free practice mode props (used in JSX)
   const freePracticeModeProps = {

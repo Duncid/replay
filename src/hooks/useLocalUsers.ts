@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
 import { useCallback, useEffect, useState } from "react";
 
+const CURRENT_USER_EVENT = "replay:current-user-change";
+
 export interface LocalUser {
   id: string;
   name: string;
@@ -28,6 +30,9 @@ export function useLocalUsers() {
       } else {
         localStorage.removeItem(STORAGE_KEYS.CURRENT_USER_ID);
       }
+      window.dispatchEvent(
+        new CustomEvent(CURRENT_USER_EVENT, { detail: id })
+      );
     } catch (error) {
       console.warn("Failed to persist current user ID:", error);
     }
@@ -63,6 +68,23 @@ export function useLocalUsers() {
     fetchUsers();
   }, [fetchUsers]);
 
+  useEffect(() => {
+    console.log(`[UserSwitch] currentUserId is now ${currentUserId}`);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    const handleUserChange = (event: Event) => {
+      const detail = (event as CustomEvent<string | null>).detail ?? null;
+      setCurrentUserIdState(detail);
+    };
+
+    if (typeof window === "undefined") return undefined;
+    window.addEventListener(CURRENT_USER_EVENT, handleUserChange);
+    return () => {
+      window.removeEventListener(CURRENT_USER_EVENT, handleUserChange);
+    };
+  }, []);
+
   const createUser = useCallback(
     async (name: string): Promise<LocalUser | null> => {
       const { data, error } = await supabase
@@ -87,10 +109,11 @@ export function useLocalUsers() {
     (userId: string) => {
       const userExists = users.some((u) => u.id === userId);
       if (userExists) {
+        console.log(`[UserSwitch] Switched user from ${currentUserId} to ${userId}`);
         setCurrentUserId(userId);
       }
     },
-    [users, setCurrentUserId]
+    [currentUserId, users, setCurrentUserId]
   );
 
   const currentUser = users.find((u) => u.id === currentUserId) || null;
