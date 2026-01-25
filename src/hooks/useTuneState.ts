@@ -45,6 +45,7 @@ export function useTuneState(tuneKey: string) {
       ...prev,
       lastEvaluation: evaluation,
       currentStreak: evaluation.currentStreak,
+      currentEvalIndex: evaluation.evalIndex,
       // Stay in practicing phase - no transition
     }));
   }, []);
