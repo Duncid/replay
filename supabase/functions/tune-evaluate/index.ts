@@ -239,61 +239,11 @@ serve(async (req) => {
     }
 
     const skillsToAward = availableSkills.filter((sk) => !unlockedSkills.includes(sk));
+    const isTier3OrFullTune = isAssembly && (assemblyTier === 3 || nuggetId === "FULL_TUNE");
 
     // 5. Build LLM prompt
-    const isTier3OrFullTune = isAssembly && (assemblyTier === 3 || nuggetId === "FULL_TUNE");
-    
-    // Build recent activity summary
-    const recentActivitySummary = recentRuns && recentRuns.length > 0
-      ? recentRuns.slice(0, 10).map((run, idx) => {
-          const evalStatus = run.evaluation || "unknown";
-          const timeAgo = run.ended_at 
-            ? `${Math.round((Date.now() - new Date(run.ended_at).getTime()) / (1000 * 60))} minutes ago`
-            : "unknown time";
-          return `  ${idx + 1}. ${run.nugget_id}: ${evalStatus} (${timeAgo})`;
-        }).join("\n")
-      : "  No recent practice runs";
-
-    // Build progress summary
-    const progressSummary = `- Total items practiced: ${totalItems}
-- Stable items (streak >= 2): ${stableItems} (${Math.round((stableItems / Math.max(totalItems, 1)) * 100)}%)
-- Overall pass rate: ${Math.round(overallPassRate * 100)}%
-- Stable assemblies by tier: ${Array.from(assemblyStatesByTier.entries())
-      .map(([tier, count]) => `Tier ${tier}: ${count}`)
-      .join(", ") || "none"}`;
-
-    const tier3Context = isTier3OrFullTune
-      ? `\n\nTIER 3 ASSEMBLY / FULL TUNE - TUNE MASTERY:
-This is ${nuggetId === "FULL_TUNE" ? "the full tune" : "a Tier 3 (final) assembly"} combining all nuggets of the tune.
-Successfully passing this demonstrates mastery of the ENTIRE tune.
-You may decide to mark the tune as "Acquired" and unlock associated skills if mastery is demonstrated.
-Be appropriately celebratory if they pass and you decide to acquire the tune!`
-      : "";
-
-    const acquisitionContext = isTier3OrFullTune
-      ? `\n\nTUNE ACQUISITION CONTEXT:
-${alreadyAcquired ? "⚠️ WARNING: This tune is ALREADY acquired. You CANNOT acquire it again." : "This tune has NOT been acquired yet. You may acquire it if mastery is demonstrated."}
-- Available skills to award: ${availableSkills.length > 0 ? availableSkills.join(", ") : "none"}
-- Already unlocked skills: ${unlockedSkills.length > 0 ? unlockedSkills.join(", ") : "none"}
-- Skills that can still be unlocked: ${skillsToAward.length > 0 ? skillsToAward.join(", ") : "none"}
-
-ACQUISITION DECISION CRITERIA:
-- You can only decide to acquire when practicing Tier 3 assemblies or Full Tune (current item: ${isTier3OrFullTune ? "YES" : "NO"})
-- Consider sustained mastery: multiple passes, stable streaks, overall proficiency
-- Look for consistent performance across recent practice runs
-- Consider overall progress: ${Math.round((stableItems / Math.max(totalItems, 1)) * 100)}% stable items, ${Math.round(overallPassRate * 100)}% pass rate
-- Only award skills if the tune is being acquired AND demonstrating competency`
-      : "";
 
     const systemPrompt = `You are a piano practice evaluator. Evaluate the student's performance on a small section (nugget) or assembly of a piece.
-
-RECENT PRACTICE ACTIVITY (last 10 runs):
-${recentActivitySummary}
-
-OVERALL PROGRESS:
-${progressSummary}
-${tier3Context}
-${acquisitionContext}
 
 STUDENT CONTEXT:
 ${localUserId ? `- Student ID: ${localUserId}` : "- Anonymous student"}
@@ -309,14 +259,6 @@ ${isAssembly ? `ASSEMBLY (Tier ${assemblyTier})` : "NUGGET"} BEING PRACTICED:
 ${teacherHints.counting ? `- Counting guide: ${teacherHints.counting}` : ""}
 ${teacherHints.commonMistakes ? `- Common mistakes to watch for: ${teacherHints.commonMistakes}` : ""}
 ${teacherHints.whatToListenFor ? `- What to listen for: ${teacherHints.whatToListenFor}` : ""}
-
-CURRENT ITEM PROGRESS:
-- Item ID: ${nuggetId}
-- Previous attempts: ${attemptCount}
-- Current streak: ${currentStreak}
-- Best streak: ${existingState?.best_streak || 0}
-- Streak threshold for moving on: ${STREAK_THRESHOLD_FOR_NEW_NUGGET}
-
 TARGET SEQUENCE (${getNoteCount(sanitizedTargetSequence)} notes):
 ${JSON.stringify(sanitizedTargetSequence, null, 2)}
 
@@ -380,7 +322,12 @@ FEEDBACK STYLE:
               },
               feedbackText: {
                 type: "string",
-                description: "Encouraging, constructive feedback (1-2 sentences)",
+                description: "Focused, short feedback",
+              },
+              successCount: {
+                type: "number",
+                description:
+                  "Number of complete matching segments found in the recording (0 for close/fail, minimum 1 for pass).",
               },
               replayDemo: {
                 type: "boolean",
@@ -395,7 +342,7 @@ FEEDBACK STYLE:
                 description: `Whether to award skills associated with this tune. Only set if markTuneAcquired is true AND demonstrating competency. Skills are automatically fetched from tune_awards_skill edges. Available skills: ${availableSkills.length > 0 ? availableSkills.join(", ") : "none"}. Already unlocked: ${unlockedSkills.length > 0 ? unlockedSkills.join(", ") : "none"}.`,
               },
             },
-            required: ["evaluation", "feedbackText", "replayDemo"],
+            required: ["evaluation", "feedbackText", "successCount", "replayDemo"],
           },
         },
       },
@@ -463,14 +410,24 @@ FEEDBACK STYLE:
     const evalResult = JSON.parse(toolCall.function.arguments) as {
       evaluation: "pass" | "close" | "fail";
       feedbackText: string;
+      successCount: number;
       replayDemo: boolean;
       markTuneAcquired?: boolean;
       awardSkills?: boolean;
     };
 
     // 5. Update nugget state
-    const newStreak = evalResult.evaluation === "pass" ? currentStreak + 1 : 0;
-    const newPassCount = (existingState?.pass_count || 0) + (evalResult.evaluation === "pass" ? 1 : 0);
+    const normalizedSuccessCount =
+    evalResult.evaluation === "pass"
+      ? Math.max(1, Math.floor(evalResult.successCount || 1))
+      : 0;
+  const newStreak =
+    evalResult.evaluation === "pass"
+      ? currentStreak + normalizedSuccessCount
+      : 0;
+  const newPassCount =
+    (existingState?.pass_count || 0) + normalizedSuccessCount;
+
     const newBestStreak = Math.max(existingState?.best_streak || 0, newStreak);
 
     if (existingState) {
@@ -490,7 +447,7 @@ FEEDBACK STYLE:
         nugget_id: nuggetId,
         local_user_id: localUserId,
         attempt_count: 1,
-        pass_count: evalResult.evaluation === "pass" ? 1 : 0,
+        pass_count: normalizedSuccessCount,
         current_streak: newStreak,
         best_streak: newStreak,
         last_practiced_at: new Date().toISOString(),
@@ -578,6 +535,7 @@ FEEDBACK STYLE:
         evaluation: evalResult.evaluation,
         feedbackText: evalResult.feedbackText,
         currentStreak: newStreak,
+        successCount: normalizedSuccessCount,
         suggestNewNugget,
         replayDemo: evalResult.replayDemo,
         tuneAcquired,
