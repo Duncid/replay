@@ -2084,7 +2084,7 @@ const Index = () => {
 
         <div
           id="topContainer"
-          className="w-full flex flex-col items-stretch justify-start relative flex-1 pb-64"
+          className="w-full flex flex-col items-stretch justify-start relative flex-1"
         >
           {/* AI Playing / Replay indicator */}
           <TopToastLabel
