@@ -16,6 +16,7 @@ interface EvaluateTuneAttemptParams {
   localUserId?: string | null;
   language?: string;
   debug?: boolean;
+  evalIndex?: number;
 }
 
 export function useStartTunePractice() {
@@ -50,6 +51,7 @@ export function useEvaluateTuneAttempt() {
           localUserId: params.localUserId,
           language: params.language || "en",
           debug: params.debug || false,
+          evalIndex: params.evalIndex,
         },
       });
 

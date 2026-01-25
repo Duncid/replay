@@ -51,6 +51,11 @@ export function TuneMode({
   const preEvalTimer = useRef<NodeJS.Timeout | null>(null);
   const lastAutoPlayKey = useRef<string | null>(null);
   
+  // Evaluation indexing to handle out-of-order responses
+  const evalIndexRef = useRef(0);
+  const latestReceivedIndexRef = useRef(0);
+  const [pendingEvalIndex, setPendingEvalIndex] = useState<number | undefined>(undefined);
+  
   // Track evaluation state for inline indicator
   const [isEvaluating, setIsEvaluating] = useState(false);
 
@@ -228,6 +233,11 @@ export function TuneMode({
 
     // Don't change phase - stay on practice screen
     setIsEvaluating(true);
+    
+    // Increment eval index and track pending
+    evalIndexRef.current += 1;
+    const currentEvalIndex = evalIndexRef.current;
+    setPendingEvalIndex(currentEvalIndex);
 
     try {
       if (debugMode) {
@@ -238,9 +248,11 @@ export function TuneMode({
           localUserId,
           language,
           debug: true,
+          evalIndex: currentEvalIndex,
         });
 
         setIsEvaluating(false);
+        setPendingEvalIndex(undefined);
         setEvalDebugData({
           tuneKey,
           nuggetId: currentNugget.itemId,
@@ -257,9 +269,20 @@ export function TuneMode({
           localUserId,
           language,
           debug: false,
+          evalIndex: currentEvalIndex,
         });
 
         setIsEvaluating(false);
+        setPendingEvalIndex(undefined);
+        
+        // Check if this response is stale
+        if (response.evalIndex !== undefined && response.evalIndex < latestReceivedIndexRef.current) {
+          console.log(`[TuneMode] Ignoring stale eval response (index ${response.evalIndex}, latest: ${latestReceivedIndexRef.current})`);
+          return;
+        }
+        
+        // Update latest received index
+        latestReceivedIndexRef.current = Math.max(latestReceivedIndexRef.current, response.evalIndex ?? 0);
         
         // Update evaluation inline - no phase change
         updateEvaluation(response);
@@ -283,6 +306,7 @@ export function TuneMode({
     } catch (error) {
       console.error("Error evaluating attempt:", error);
       setIsEvaluating(false);
+      setPendingEvalIndex(undefined);
       toast.error(t("tune.evaluateFailed"));
     }
   };
@@ -292,6 +316,10 @@ export function TuneMode({
 
     setEvalDebugData(null);
     setIsEvaluating(true);
+    
+    // Use the same eval index that was used for the debug request
+    const currentEvalIndex = evalIndexRef.current;
+    setPendingEvalIndex(currentEvalIndex);
 
     try {
       const sanitizedRecording =
@@ -303,14 +331,27 @@ export function TuneMode({
         localUserId,
         language,
         debug: false,
+        evalIndex: currentEvalIndex,
       });
 
       setIsEvaluating(false);
+      setPendingEvalIndex(undefined);
+      
+      // Check if this response is stale
+      if (response.evalIndex !== undefined && response.evalIndex < latestReceivedIndexRef.current) {
+        console.log(`[TuneMode] Ignoring stale eval response (index ${response.evalIndex}, latest: ${latestReceivedIndexRef.current})`);
+        return;
+      }
+      
+      // Update latest received index
+      latestReceivedIndexRef.current = Math.max(latestReceivedIndexRef.current, response.evalIndex ?? 0);
+      
       updateEvaluation(response);
       
     } catch (error) {
       console.error("Error evaluating attempt:", error);
       setIsEvaluating(false);
+      setPendingEvalIndex(undefined);
       toast.error("Failed to evaluate performance");
     }
   };
@@ -345,6 +386,10 @@ export function TuneMode({
     setIsEvaluating(false);
     clearEvaluation();
     setAutoPlayTrigger((prev) => prev + 1);
+    // Reset eval index tracking for new nugget
+    evalIndexRef.current = 0;
+    latestReceivedIndexRef.current = 0;
+    setPendingEvalIndex(undefined);
     if (preEvalTimer.current) {
       clearTimeout(preEvalTimer.current);
       preEvalTimer.current = null;
@@ -365,6 +410,10 @@ export function TuneMode({
     setIsEvaluating(false);
     clearEvaluation();
     setAutoPlayTrigger((prev) => prev + 1);
+    // Reset eval index tracking for new nugget
+    evalIndexRef.current = 0;
+    latestReceivedIndexRef.current = 0;
+    setPendingEvalIndex(undefined);
     if (preEvalTimer.current) {
       clearTimeout(preEvalTimer.current);
       preEvalTimer.current = null;
@@ -450,6 +499,8 @@ export function TuneMode({
         isRecording={isRecording}
         debugMode={debugMode}
         practicePlan={state.practicePlan}
+        currentEvalIndex={state.currentEvalIndex}
+        pendingEvalIndex={pendingEvalIndex}
       />
     );
   }

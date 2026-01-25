@@ -101,6 +101,7 @@ export interface TuneEvaluationResponse {
   replayDemo: boolean;
   tuneAcquired?: boolean;
   awardedSkills?: string[];
+  evalIndex?: number;
 }
 
 export interface TunePracticeState {
@@ -112,6 +113,7 @@ export interface TunePracticeState {
   currentStreak: number;
   lastEvaluation: TuneEvaluationResponse | null;
   error: string | null;
+  currentEvalIndex?: number;
 }
 
 export interface TuneDebugData {

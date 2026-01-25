@@ -27,6 +27,8 @@ interface TunePracticeProps {
   isRecording?: boolean;
   debugMode?: boolean;
   practicePlan?: PracticePlanItem[];
+  currentEvalIndex?: number;
+  pendingEvalIndex?: number;
 }
 
 const STREAK_THRESHOLD = 3;
@@ -37,11 +39,17 @@ function StatusDisplay({
   isEvaluating,
   lastEvaluation,
   labels,
+  debugMode,
+  currentEvalIndex,
+  pendingEvalIndex,
 }: {
   isRecording: boolean;
   isEvaluating: boolean;
   lastEvaluation?: TuneEvaluationResponse | null;
   labels: { playing: string; sending: string; close: string };
+  debugMode?: boolean;
+  currentEvalIndex?: number;
+  pendingEvalIndex?: number;
 }) {
   if (isRecording && !isEvaluating) {
     return (
@@ -55,6 +63,9 @@ function StatusDisplay({
     return (
       <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
         <span className="text-sm font-medium">{labels.sending}</span>
+        {debugMode && pendingEvalIndex !== undefined && (
+          <span className="text-xs font-mono text-muted-foreground/70">#{pendingEvalIndex}</span>
+        )}
       </div>
     );
   }
@@ -65,6 +76,18 @@ function StatusDisplay({
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
         <Minus className="h-4 w-4" />
         <span className="text-sm font-medium">{labels.close}</span>
+        {debugMode && currentEvalIndex !== undefined && (
+          <span className="text-xs font-mono opacity-70">#{currentEvalIndex}</span>
+        )}
+      </div>
+    );
+  }
+
+  // Show eval index in debug mode when there's a recent evaluation
+  if (debugMode && currentEvalIndex !== undefined && lastEvaluation) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground min-h-[24px]">
+        <span className="text-xs font-mono">Eval #{currentEvalIndex}</span>
       </div>
     );
   }
@@ -251,6 +274,8 @@ export function TunePractice({
   isRecording = false,
   debugMode = false,
   practicePlan = [],
+  currentEvalIndex,
+  pendingEvalIndex,
 }: TunePracticeProps) {
   const { t } = useTranslation();
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
@@ -324,6 +349,9 @@ export function TunePractice({
               isEvaluating={isEvaluating}
               lastEvaluation={lastEvaluation}
               labels={statusLabels}
+              debugMode={debugMode}
+              currentEvalIndex={currentEvalIndex}
+              pendingEvalIndex={pendingEvalIndex}
             />
             <div className="flex items-center gap-2">
               {debugMode && practicePlan.length > 0 && (

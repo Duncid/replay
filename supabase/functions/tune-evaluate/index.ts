@@ -60,6 +60,7 @@ serve(async (req) => {
       localUserId = null,
       language = "en",
       debug = false,
+      evalIndex = null,
     } = await req.json();
 
     if (!tuneKey || !nuggetId || !userSequence) {
@@ -540,6 +541,7 @@ FEEDBACK STYLE:
         replayDemo: evalResult.replayDemo,
         tuneAcquired,
         awardedSkills,
+        evalIndex,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
