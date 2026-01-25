@@ -71,7 +71,10 @@ export function UserMenu({
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={currentUser?.id ?? ""}
-            onValueChange={(id) => switchUser(id)}
+            onValueChange={(id) => {
+              console.log(`[UserSwitch] Menu selection changed to ${id}`);
+              switchUser(id);
+            }}
           >
             {users.map((user: LocalUser) => (
               <DropdownMenuRadioItem key={user.id} value={user.id}>

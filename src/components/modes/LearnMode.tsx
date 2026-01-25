@@ -1,4 +1,3 @@
-import { SkillToUnlock } from "@/components/LessonCard";
 import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { EvaluationDebugCard } from "@/components/EvaluationDebugCard";
 import { FeedbackScreen } from "@/components/FeedbackScreen";
@@ -128,8 +127,11 @@ export function LearnMode({
 
   // Fetch teacher greeting when user clicks Start
   const handleStartTeacherGreet = useCallback(() => {
+    console.log(
+      `[LearnMode] Start clicked: user=${localUserId ?? "unknown"}`
+    );
     setShouldFetchGreeting(true);
-  }, []);
+  }, [localUserId]);
 
   // === Effects ===
   // Show error toast if teacher greeting fails
@@ -553,6 +555,17 @@ export function LearnMode({
     markUserAction();
   }, [markUserAction]);
 
+  const resetToStart = useCallback(() => {
+    handleLeave();
+  }, [handleLeave]);
+
   // Expose lesson mode and tune mode state to parent so it can control recording
-  return { lesson, render, handleUserAction, lessonMode, isInTuneMode: activeTuneKey !== null };
+  return {
+    lesson,
+    render,
+    handleUserAction,
+    lessonMode,
+    isInTuneMode: activeTuneKey !== null,
+    resetToStart,
+  };
 }
