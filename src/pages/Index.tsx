@@ -1635,7 +1635,7 @@ const Index = () => {
         className="w-full flex-1 flex flex-col"
       >
         <div className="sticky top-0 z-30 w-full bg-background border-b">
-          <div className="flex items-center justify-between px-2 py-2">
+          <div className="flex items-center justify-between p-2">
             <div className="flex items-center gap-2">
               <UserMenu
                 language={language}
@@ -1647,6 +1647,8 @@ const Index = () => {
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
               </TabsList>
+              </div>
+              <div className="flex items-center gap-2">
               {activeMode === "play" && (
                 <div className="flex items-center gap-2">
                   <Switch
@@ -1661,32 +1663,6 @@ const Index = () => {
                     {t("controls.autoreply")}
                   </Label>
                 </div>
-              )}
-
-              {activeMode === "learn" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="justify-between"
-                    >
-                      {AI_MODELS.llm.find((m) => m.value === selectedModel)
-                        ?.label || selectedModel}
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {AI_MODELS.llm.map((model) => (
-                      <DropdownMenuItem
-                        key={model.value}
-                        onClick={() => setSelectedModel(model.value)}
-                      >
-                        {model.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
               )}
 
               {activeMode === "play" && isAutoreplyActive && (
@@ -1789,7 +1765,31 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               {activeMode === "learn" && (
-                <>
+                <>{activeMode === "learn" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="justify-between"
+                      >
+                        {AI_MODELS.llm.find((m) => m.value === selectedModel)
+                          ?.label || selectedModel}
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {AI_MODELS.llm.map((model) => (
+                        <DropdownMenuItem
+                          key={model.value}
+                          onClick={() => setSelectedModel(model.value)}
+                        >
+                          {model.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                   <div className="flex items-center gap-2 ml-auto">
                     <Label
                       htmlFor="debug-mode"
