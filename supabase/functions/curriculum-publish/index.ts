@@ -67,6 +67,10 @@ interface TuneAssetBundle {
   noteSequence: Record<string, unknown>;
   leftHandSequence?: Record<string, unknown>;
   rightHandSequence?: Record<string, unknown>;
+  // XML fields for sheet music rendering
+  tuneXml?: string;
+  nuggetXmls?: Record<string, string>;
+  assemblyXmls?: Record<string, string>;
 }
 
 interface PublishRequest {
@@ -864,6 +868,10 @@ serve(async (req) => {
           right_hand_sequence: assets.rightHandSequence || null,
           nuggets: assets.nuggets || null,
           assemblies: assets.assemblies || null,
+          // XML columns for sheet music rendering
+          tune_xml: assets.tuneXml || null,
+          nugget_xmls: assets.nuggetXmls || null,
+          assembly_xmls: assets.assemblyXmls || null,
         };
       });
 

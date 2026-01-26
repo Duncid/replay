@@ -159,6 +159,22 @@ const assemblyRhModules = import.meta.glob<{ default: object }>(
   { eager: true },
 );
 
+// Pre-load all XML files at build time (for sheet music rendering)
+const tuneXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/tune.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const nuggetXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/nuggets/*.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const assemblyXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/assemblies/*.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
 // Helper to get module from glob by path
 const getGlobModule = (
   modules: Record<string, { default?: object }>,
@@ -218,6 +234,22 @@ const getAssemblyRh = (musicRef: string, assemblyId: string) =>
     assemblyRhModules,
     `/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`,
   );
+
+// XML helper functions
+const getTuneXml = (musicRef: string): string | null => {
+  const path = `/src/music/${musicRef}/output/tune.xml`;
+  return tuneXmlModules[path] || null;
+};
+
+const getNuggetXml = (musicRef: string, nuggetId: string): string | null => {
+  const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.xml`;
+  return nuggetXmlModules[path] || null;
+};
+
+const getAssemblyXml = (musicRef: string, assemblyId: string): string | null => {
+  const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.xml`;
+  return assemblyXmlModules[path] || null;
+};
 
 // Extract tune list from discovered files
 const availableTunes = Object.entries(teacherModules)
@@ -279,6 +311,10 @@ interface TuneAssetBundle {
   noteSequence: object;
   leftHandSequence?: object;
   rightHandSequence?: object;
+  // XML fields for sheet music rendering
+  tuneXml?: string;
+  nuggetXmls?: Record<string, string>;
+  assemblyXmls?: Record<string, string>;
 }
 
 // Custom styles for React Flow Controls and MiniMap
@@ -2175,6 +2211,31 @@ export function QuestEditor({
           }
         }
 
+        // Collect XML content for sheet music rendering
+        const tuneXml = getTuneXml(musicRef);
+
+        // Build nugget XMLs map
+        const nuggetXmls: Record<string, string> = {};
+        if (teacherNuggets && Array.isArray(teacherNuggets)) {
+          for (const nugget of teacherNuggets) {
+            const xml = getNuggetXml(musicRef, nugget.id);
+            if (xml) {
+              nuggetXmls[nugget.id] = xml;
+            }
+          }
+        }
+
+        // Build assembly XMLs map
+        const assemblyXmls: Record<string, string> = {};
+        if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
+          for (const assembly of teacherAssemblies) {
+            const xml = getAssemblyXml(musicRef, assembly.id);
+            if (xml) {
+              assemblyXmls[assembly.id] = xml;
+            }
+          }
+        }
+
         tuneAssets[tuneKey] = {
           // Store the full teacher structure (v2 schema)
           briefing: teacher
@@ -2199,6 +2260,10 @@ export function QuestEditor({
           noteSequence,
           leftHandSequence: leftHand || undefined,
           rightHandSequence: rightHand || undefined,
+          // XML fields
+          tuneXml: tuneXml || undefined,
+          nuggetXmls: Object.keys(nuggetXmls).length > 0 ? nuggetXmls : undefined,
+          assemblyXmls: Object.keys(assemblyXmls).length > 0 ? assemblyXmls : undefined,
         };
         console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
           hasBriefing: !!teacher,
@@ -2207,6 +2272,9 @@ export function QuestEditor({
           hasLeftHand: !!leftHand,
           hasRightHand: !!rightHand,
           noteCount: noteSequence.notes?.length || 0,
+          hasTuneXml: !!tuneXml,
+          nuggetXmlCount: Object.keys(nuggetXmls).length,
+          assemblyXmlCount: Object.keys(assemblyXmls).length,
         });
       } catch (error) {
         const errMsg = `Failed to load assets for tune "${tuneKey}" (musicRef: ${musicRef}): ${error instanceof Error ? error.message : String(error)}`;
