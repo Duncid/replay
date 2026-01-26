@@ -259,7 +259,18 @@
       "velocity": 0.7086614173228346
     }
   ],
-  "totalTime": 23.5,
-  "tempos": [],
-  "timeSignatures": []
+  "totalTime": 24.0,
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 4,
+      "denominator": 4
+    }
+  ]
 }

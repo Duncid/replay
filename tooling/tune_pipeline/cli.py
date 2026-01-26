@@ -5,7 +5,7 @@ import copy
 from pathlib import Path
 from typing import Dict, Optional
 
-from music21 import converter, instrument, stream
+from music21 import converter, instrument, stream, tempo, meter, note as m21note
 
 from tune_pipeline.io import read_json, write_json
 from tune_pipeline.midi_to_ns import midi_to_note_sequence
@@ -158,6 +158,73 @@ def _create_skeleton_score(metadata: Dict[str, object]) -> stream.Score:
     
     return score
 
+
+def _score_from_note_sequence(ns: Dict[str, object], metadata: Dict[str, object]) -> stream.Score:
+    score = stream.Score()
+    part = stream.Part()
+    part.insert(0, instrument.Piano())
+    score.insert(0, part)
+
+    tempos = list(ns.get("tempos", []) or [])
+    time_signatures = list(ns.get("timeSignatures", []) or [])
+
+    default_qpm = metadata.get("assumedTempoQpm", 120)
+    default_ts = metadata.get("assumedTimeSignature", "4/4")
+
+    if not tempos:
+        tempos = [{"time": 0.0, "qpm": float(default_qpm)}]
+    tempos = sorted(tempos, key=lambda t: t.get("time", 0.0))
+    if tempos[0].get("time", 0.0) > 0:
+        tempos.insert(0, {"time": 0.0, "qpm": float(default_qpm)})
+
+    def seconds_to_ql(seconds: float) -> float:
+        ql = 0.0
+        prev_time = 0.0
+        current_qpm = float(tempos[0].get("qpm", default_qpm))
+        for entry in tempos[1:]:
+            change_time = float(entry.get("time", 0.0))
+            if seconds <= change_time:
+                break
+            ql += (change_time - prev_time) * (current_qpm / 60.0)
+            prev_time = change_time
+            current_qpm = float(entry.get("qpm", current_qpm))
+        ql += (seconds - prev_time) * (current_qpm / 60.0)
+        return ql
+
+    for entry in tempos:
+        t = float(entry.get("time", 0.0))
+        qpm = float(entry.get("qpm", default_qpm))
+        part.insert(seconds_to_ql(t), tempo.MetronomeMark(number=qpm))
+
+    if not time_signatures:
+        time_signatures = [{"time": 0.0, "numerator": int(default_ts.split("/")[0]), "denominator": int(default_ts.split("/")[1])}]
+    time_signatures = sorted(time_signatures, key=lambda t: t.get("time", 0.0))
+    if time_signatures[0].get("time", 0.0) > 0:
+        time_signatures.insert(0, {"time": 0.0, "numerator": int(default_ts.split("/")[0]), "denominator": int(default_ts.split("/")[1])})
+
+    for entry in time_signatures:
+        t = float(entry.get("time", 0.0))
+        numerator = int(entry.get("numerator", default_ts.split("/")[0]))
+        denominator = int(entry.get("denominator", default_ts.split("/")[1]))
+        part.insert(seconds_to_ql(t), meter.TimeSignature(f"{numerator}/{denominator}"))
+
+    for note_data in ns.get("notes", []):
+        start_time = float(note_data.get("startTime", 0.0))
+        end_time = float(note_data.get("endTime", start_time))
+        if end_time <= start_time:
+            continue
+        start_ql = seconds_to_ql(start_time)
+        end_ql = seconds_to_ql(end_time)
+        duration_ql = max(0.0, end_ql - start_ql)
+        n = m21note.Note(int(note_data.get("pitch", 60)))
+        n.duration.quarterLength = duration_ql
+        velocity = float(note_data.get("velocity", 0.5))
+        n.volume.velocity = int(round(max(0.0, min(1.0, velocity)) * 127))
+        part.insert(start_ql, n)
+
+    score.makeMeasures(inPlace=True)
+    return score
+
 def build_tune(tune_folder: Path) -> Dict[str, object]:
     # 1. Inspection
     if not tune_folder.exists():
@@ -199,6 +266,7 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         
         # Determine tracks to process
         parts_to_process = [("", combined_part)]
+        parts_by_track: Dict[str, stream.Part] = {"full": combined_part}
         
         settings = teacher.get("pipelineSettings", {})
         hand_policy = settings.get("handSplitPolicy", {})
@@ -214,6 +282,8 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
                 # Extract parts from the scores returned by split_result
                 parts_to_process.append(("rh", split_result.rh_score.parts[0]))
                 parts_to_process.append(("lh", split_result.lh_score.parts[0]))
+                parts_by_track["rh"] = split_result.rh_score.parts[0]
+                parts_by_track["lh"] = split_result.lh_score.parts[0]
                 split_info = split_result.reason
             else:
                 split_info = f"Split failed: {split_result.reason}"
@@ -258,29 +328,45 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
             }
         }
         split_info = "not applicable (NS source)"
+        parts_by_track = {}
         
-        # Build Skeleton Score
+        # Build score from NS and use as XML input
         settings = teacher.get("pipelineSettings", {})
         metadata = settings.get("metadata", {})
         
         if not metadata:
-             # Should we error or try defaults?
-             # For now, warn?
-             print("Warning: No metadata in teacher.json for skeleton score.")
-             
-        score = _create_skeleton_score(metadata)
+             print("Warning: No metadata in teacher.json for NS-derived score.")
+
+        score = _score_from_note_sequence(source_ns_data, metadata)
+        _write_musicxml(score, output_dir / "tune.xml")
         combined_part_for_nuggets = score.parts[0]
+        parts_by_track = {"full": score.parts[0]}
         
     else:
          raise PipelineError(f"Missing input file: expected tune.xml or *.ns.json in {tune_folder}")
 
     # 6. Nugget Extraction
     if teacher and "nuggets" in teacher:
-        extract_nuggets(score, combined_part_for_nuggets, output_dir, teacher["nuggets"], note_sequences)
+        extract_nuggets(
+            score,
+            combined_part_for_nuggets,
+            output_dir,
+            teacher["nuggets"],
+            note_sequences,
+            parts_by_track=parts_by_track
+        )
     
     # 7. Assembly Extraction
     if teacher and "assemblies" in teacher and "nuggets" in teacher:
-        extract_assemblies(score, combined_part_for_nuggets, output_dir, teacher["assemblies"], teacher["nuggets"], note_sequences)
+        extract_assemblies(
+            score,
+            combined_part_for_nuggets,
+            output_dir,
+            teacher["assemblies"],
+            teacher["nuggets"],
+            note_sequences,
+            parts_by_track=parts_by_track
+        )
 
     summary = {
         "base": base_name,
