@@ -14,6 +14,7 @@ import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
 import { UserMenu } from "@/components/UserMenu";
 import { WhistleImportSheet } from "@/components/WhistleImportSheet";
 import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
+import { LabMode } from "@/components/modes/LabMode";
 import { LearnMode } from "@/components/modes/LearnMode";
 import { PlayEntry, PlayMode } from "@/components/modes/PlayMode";
 import {
@@ -124,7 +125,7 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
-type ActiveMode = "play" | "learn" | "quest";
+type ActiveMode = "play" | "learn" | "quest" | "lab";
 
 // Normalize creativity (0-100) to model-specific temperature ranges
 const normalizeCreativityToRNN = (creativity: number): number => {
@@ -1711,6 +1712,7 @@ const Index = () => {
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
                 <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
+                <TabsTrigger value="lab">{t("tabs.lab")}</TabsTrigger>
               </TabsList>
               {activeMode === "quest" && questHeaderTitle && (
                 <span className="text-sm text-muted-foreground ml-2">
@@ -2203,10 +2205,16 @@ const Index = () => {
               onHeaderTitleChange={setQuestHeaderTitle}
             />
           </TabsContent>
+          <TabsContent
+            value="lab"
+            className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
+          >
+            <LabMode />
+          </TabsContent>
         </div>
       </Tabs>
 
-      {activeMode !== "quest" && (
+      {activeMode !== "quest" && activeMode !== "lab" && (
         <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
           {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
           <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
