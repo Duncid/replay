@@ -2688,11 +2688,19 @@ export function QuestEditor({
     onHeaderActionsChange(null);
   }, [headerActions, isActive, isEmbedded, onHeaderActionsChange]);
 
+  const editorTitle = isEmbedded ? (
+    <h2 className="text-lg font-semibold leading-none tracking-tight">
+      Quest Editor
+    </h2>
+  ) : (
+    <DialogTitle>Quest Editor</DialogTitle>
+  );
+
   const editorContent = (
     <>
       <div className="p-3 border-b h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <DialogTitle>Quest Editor</DialogTitle>
+          {editorTitle}
           {currentGraph && (
             <span className="text-sm text-muted-foreground">
               — {currentGraph.title}
