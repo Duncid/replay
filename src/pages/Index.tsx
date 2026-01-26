@@ -94,7 +94,7 @@ import {
   Upload,
 } from "lucide-react";
 import JSZip from "jszip";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const AI_MODELS = {
@@ -118,7 +118,7 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
-type ActiveMode = "play" | "learn";
+type ActiveMode = "play" | "learn" | "quest";
 
 // Normalize creativity (0-100) to model-specific temperature ranges
 const normalizeCreativityToRNN = (creativity: number): number => {
@@ -184,7 +184,8 @@ const Index = () => {
     "add" | "edit"
   >("add");
   const [whistleSheetOpen, setWhistleSheetOpen] = useState(false);
-  const [questEditorOpen, setQuestEditorOpen] = useState(false);
+  const [questHeaderActions, setQuestHeaderActions] =
+    useState<ReactNode>(null);
   const previousUserIdRef = useRef<string | null>(null);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
@@ -1646,6 +1647,7 @@ const Index = () => {
               <TabsList>
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
+                <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
               </TabsList>
               </div>
               <div className="flex items-center gap-2">
@@ -1764,6 +1766,7 @@ const Index = () => {
                 )}
             </div>
             <div className="flex items-center gap-2">
+              {activeMode === "quest" && questHeaderActions}
               {activeMode === "learn" && (
                 <>{activeMode === "learn" && (
                   <DropdownMenu>
@@ -1807,17 +1810,6 @@ const Index = () => {
                   </div>
                   {debugMode && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setQuestEditorOpen(true)}
-                        disabled={
-                          appState === "ai_playing" ||
-                          appState === "waiting_for_ai"
-                        }
-                      >
-                        Quest Editor
-                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -2133,93 +2125,105 @@ const Index = () => {
                   learnMode.render()
                 )}
               </TabsContent>
+              <TabsContent
+                value="quest"
+                className="w-full h-full flex items-center justify-center"
+              >
+                <QuestEditor
+                  mode="embedded"
+                  isActive={activeMode === "quest"}
+                  onHeaderActionsChange={setQuestHeaderActions}
+                />
+              </TabsContent>
             </div>
           </div>
         </div>
       </Tabs>
 
-      <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
-        {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
-        <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover">
-                <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
-                <DropdownMenuRadioGroup
-                  value={pianoSoundType}
-                  onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
-                >
-                  <DropdownMenuRadioItem value="classic">
-                    {t("piano.basic")}
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    {t("piano.sampledInstruments")}
-                  </DropdownMenuLabel>
-                  {SAMPLED_INSTRUMENTS.map((instrument) => (
-                    <DropdownMenuRadioItem key={instrument} value={instrument}>
-                      {PIANO_SOUND_LABELS[instrument]}
+      {activeMode !== "quest" && (
+        <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
+          {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
+          <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-popover">
+                  <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={pianoSoundType}
+                    onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
+                  >
+                    <DropdownMenuRadioItem value="classic">
+                      {t("piano.basic")}
                     </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      {t("piano.sampledInstruments")}
+                    </DropdownMenuLabel>
+                    {SAMPLED_INSTRUMENTS.map((instrument) => (
+                      <DropdownMenuRadioItem key={instrument} value={instrument}>
+                        {PIANO_SOUND_LABELS[instrument]}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <Metronome
-              bpm={metronomeBpm}
-              setBpm={setMetronomeBpm}
-              timeSignature={metronomeTimeSignature}
-              setTimeSignature={setMetronomeTimeSignature}
-              isPlaying={metronomeIsPlaying}
-              setIsPlaying={setMetronomeIsPlaying}
-              feel={activeMode === "learn" ? metronomeFeel : undefined}
-              onFeelChange={
-                activeMode === "learn" ? setMetronomeFeel : undefined
-              }
-              onMetronomeStartTimeChange={
-                activeMode === "learn" ? setMetronomeStartTime : undefined
-              }
-              soundType={
-                activeMode === "learn" ? metronomeSoundType : undefined
-              }
-              onSoundTypeChange={
-                activeMode === "learn" ? setMetronomeSoundType : undefined
-              }
+              <Metronome
+                bpm={metronomeBpm}
+                setBpm={setMetronomeBpm}
+                timeSignature={metronomeTimeSignature}
+                setTimeSignature={setMetronomeTimeSignature}
+                isPlaying={metronomeIsPlaying}
+                setIsPlaying={setMetronomeIsPlaying}
+                feel={activeMode === "learn" ? metronomeFeel : undefined}
+                onFeelChange={
+                  activeMode === "learn" ? setMetronomeFeel : undefined
+                }
+                onMetronomeStartTimeChange={
+                  activeMode === "learn" ? setMetronomeStartTime : undefined
+                }
+                soundType={
+                  activeMode === "learn" ? metronomeSoundType : undefined
+                }
+                onSoundTypeChange={
+                  activeMode === "learn" ? setMetronomeSoundType : undefined
+                }
+              />
+            </div>
+
+            <MidiConnector
+              isConnected={!!connectedDevice}
+              deviceName={connectedDevice?.name || null}
+              isSupported={isMidiSupported}
+              onConnect={requestAccess}
+              onDisconnect={disconnect}
             />
           </div>
 
-          <MidiConnector
-            isConnected={!!connectedDevice}
-            deviceName={connectedDevice?.name || null}
-            isSupported={isMidiSupported}
-            onConnect={requestAccess}
-            onDisconnect={disconnect}
+          <Piano
+            className="flex-1 min-h-0"
+            ref={pianoRef}
+            activeKeys={activeKeys}
+            allowInput={
+              appState === "idle" ||
+              appState === "user_playing" ||
+              appState === "waiting_for_ai"
+            }
+            soundType={pianoSoundType}
+            hasColor={isInTuneMode}
+            language={language}
+            notationPreference={musicNotation}
+            onNoteStart={handleNoteStart}
+            onNoteEnd={handleNoteEnd}
           />
         </div>
-
-        <Piano
-          className="flex-1 min-h-0"
-          ref={pianoRef}
-          activeKeys={activeKeys}
-          allowInput={
-            appState === "idle" ||
-            appState === "user_playing" ||
-            appState === "waiting_for_ai"
-          }
-          soundType={pianoSoundType}
-          hasColor={isInTuneMode}
-          language={language}
-          notationPreference={musicNotation}
-          onNoteStart={handleNoteStart}
-          onNoteEnd={handleNoteEnd}
-        />
-      </div>
+      )}
 
       {/* Add/Edit Partition Sheet */}
       <AddPartitionDialog
@@ -2382,7 +2386,6 @@ const Index = () => {
         defaultTitle={compositions.currentComposition?.title || ""}
       />
 
-      <QuestEditor open={questEditorOpen} onOpenChange={setQuestEditorOpen} />
     </div>
   );
 };

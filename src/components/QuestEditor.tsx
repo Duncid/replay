@@ -248,7 +248,14 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 // Custom styles for React Flow Controls and MiniMap
 const questControlsStyles = `
@@ -320,8 +327,11 @@ const questControlsStyles = `
 `;
 
 interface QuestEditorProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  mode?: "modal" | "embedded";
+  isActive?: boolean;
+  onHeaderActionsChange?: (actions: React.ReactNode) => void;
 }
 
 // Node variation configuration
@@ -720,7 +730,13 @@ function QuestEditorFlow({
   );
 }
 
-export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
+export function QuestEditor({
+  open = false,
+  onOpenChange,
+  mode = "modal",
+  isActive = true,
+  onHeaderActionsChange,
+}: QuestEditorProps) {
   const { toast } = useToast();
   const {
     questGraphs,
@@ -827,10 +843,13 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     [setQuestData, setNodes, setEdges]
   );
 
+  const isEmbedded = mode === "embedded";
+  const isVisible = isEmbedded ? isActive : open;
+
   // Load most recently saved graph when dialog opens
   useEffect(() => {
     if (
-      open &&
+      isVisible &&
       !isDbLoading &&
       !currentGraph &&
       questGraphs.length > 0 &&
@@ -843,7 +862,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       setHasUnsavedChanges(false);
     }
   }, [
-    open,
+    isVisible,
     isDbLoading,
     currentGraph,
     questGraphs,
@@ -2511,200 +2530,227 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     [edges, nodes, updateQuestData]
   );
 
-  return (
+  const headerActions = useMemo(
+    () => (
+      <div className="flex gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Add Node</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => addNode("track")}>
+              Track
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addNode("lesson")}>
+              Lesson
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addNode("skill")}>
+              Skill
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addNode("tune")}>
+              Tune
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Menu className="h-4 w-4" />
+              Manage
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-48">
+            <DropdownMenuItem onClick={handleNew}>
+              <FilePlus className="h-4 w-4" />
+              New
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSave} disabled={isDbLoading}>
+              <Save className="h-4 w-4" />
+              Save
+              {hasUnsavedChanges && (
+                <span className="ml-auto text-xs text-muted-foreground">
+                  •
+                </span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderOpen className="h-4 w-4" />
+                Open
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-56">
+                {questGraphs.length === 0 ? (
+                  <DropdownMenuItem disabled>No saved graphs</DropdownMenuItem>
+                ) : (
+                  questGraphs.map((graph) => (
+                    <DropdownMenuItem
+                      key={graph.id}
+                      onClick={() => handleLoadGraph(graph)}
+                    >
+                      {graph.title}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem
+              onClick={handleRename}
+              disabled={!currentGraph || isDbLoading}
+            >
+              <Pencil className="h-4 w-4" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleDelete}
+              disabled={!currentGraph || isDbLoading}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FileJson className="h-4 w-4" />
+                Export / Import
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Schema
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleExportSchema}>
+                  <Download className="h-4 w-4" />
+                  Export Schema
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImport}>
+                  <Upload className="h-4 w-4" />
+                  Import Schema
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Graph
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleDownload}>
+                  <Download className="h-4 w-4" />
+                  Export JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenFile}>
+                  <Upload className="h-4 w-4" />
+                  Import JSON
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handlePublish}
+              disabled={!currentGraph || isDbLoading}
+            >
+              <Rocket className="h-4 w-4" />
+              Publish
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    ),
+    [
+      addNode,
+      currentGraph,
+      handleDelete,
+      handleExportSchema,
+      handleImport,
+      handleLoadGraph,
+      handleNew,
+      handleOpenFile,
+      handlePublish,
+      handleRename,
+      handleSave,
+      handleDownload,
+      hasUnsavedChanges,
+      isDbLoading,
+      questGraphs,
+    ]
+  );
+
+  useEffect(() => {
+    if (!onHeaderActionsChange) {
+      return;
+    }
+    if (isEmbedded && isActive) {
+      onHeaderActionsChange(headerActions);
+      return;
+    }
+    onHeaderActionsChange(null);
+  }, [headerActions, isActive, isEmbedded, onHeaderActionsChange]);
+
+  const editorContent = (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
-          <DialogHeader className="p-3 border-b h-16">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DialogTitle>Quest Editor</DialogTitle>
-                {currentGraph && (
-                  <span className="text-sm text-muted-foreground">
-                    — {currentGraph.title}
-                    {hasUnsavedChanges && " (unsaved)"}
-                  </span>
-                )}
-                {!currentGraph && hasUnsavedChanges && (
-                  <span className="text-sm text-muted-foreground">
-                    (unsaved)
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4" />
-                      Add
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuLabel>Add Node</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => addNode("track")}>
-                      Track
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addNode("lesson")}>
-                      Lesson
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addNode("skill")}>
-                      Skill
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addNode("tune")}>
-                      Tune
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48">
-                    <DropdownMenuItem onClick={handleNew}>
-                      <FilePlus className="h-4 w-4" />
-                      New
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleSave}
-                      disabled={isDbLoading}
-                    >
-                      <Save className="h-4 w-4" />
-                      Save
-                      {hasUnsavedChanges && (
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          •
-                        </span>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <FolderOpen className="h-4 w-4" />
-                        Open
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-56">
-                        {questGraphs.length === 0 ? (
-                          <DropdownMenuItem disabled>
-                            No saved graphs
-                          </DropdownMenuItem>
-                        ) : (
-                          questGraphs.map((graph) => (
-                            <DropdownMenuItem
-                              key={graph.id}
-                              onClick={() => handleLoadGraph(graph)}
-                            >
-                              {graph.title}
-                            </DropdownMenuItem>
-                          ))
-                        )}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuItem
-                      onClick={handleRename}
-                      disabled={!currentGraph || isDbLoading}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleDelete}
-                      disabled={!currentGraph || isDbLoading}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <FileJson className="h-4 w-4" />
-                        Export / Import
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-48">
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          Schema
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem onClick={handleExportSchema}>
-                          <Download className="h-4 w-4" />
-                          Export Schema
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleImport}>
-                          <Upload className="h-4 w-4" />
-                          Import Schema
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          Graph
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem onClick={handleDownload}>
-                          <Download className="h-4 w-4" />
-                          Export JSON
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleOpenFile}>
-                          <Upload className="h-4 w-4" />
-                          Import JSON
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handlePublish}
-                      disabled={!currentGraph || isDbLoading}
-                    >
-                      <Rocket className="h-4 w-4" />
-                      Publish
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onOpenChange(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div
-            className="flex-1 relative"
-            style={{ height: "calc(100vh - 64px)" }}
-          >
-            <style>{questControlsStyles}</style>
-            <ReactFlowProvider>
-              <QuestEditorFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onEdgesDelete={handleEdgesDelete}
-                onConnect={handleConnect}
-                onEditNode={handleEditNode}
-              />
-            </ReactFlowProvider>
+      <div className="p-3 border-b h-16 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <DialogTitle>Quest Editor</DialogTitle>
+          {currentGraph && (
+            <span className="text-sm text-muted-foreground">
+              — {currentGraph.title}
+              {hasUnsavedChanges && " (unsaved)"}
+            </span>
+          )}
+          {!currentGraph && hasUnsavedChanges && (
+            <span className="text-sm text-muted-foreground">(unsaved)</span>
+          )}
+        </div>
+        {!isEmbedded && (
+          <div className="flex gap-2">
+            {headerActions}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange?.(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
+        )}
+      </div>
 
-          <Sheet
-            open={editingNodeId !== null}
-            onOpenChange={(open) => {
-              if (!open) handleCancelEdit();
-            }}
-          >
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>
-                  Edit{" "}
-                  {editingNodeId &&
-                    nodes.find((n) => n.id === editingNodeId)?.data.type}
-                </SheetTitle>
-                <SheetDescription>Node ID: {editingNodeId}</SheetDescription>
-              </SheetHeader>
-              <div className="space-y-4 py-4">
+      <div
+        className="flex-1 relative"
+        style={isEmbedded ? undefined : { height: "calc(100vh - 64px)" }}
+      >
+        <style>{questControlsStyles}</style>
+        <ReactFlowProvider>
+          <QuestEditorFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onEdgesDelete={handleEdgesDelete}
+            onConnect={handleConnect}
+            onEditNode={handleEditNode}
+          />
+        </ReactFlowProvider>
+      </div>
+
+      <Sheet
+        open={editingNodeId !== null}
+        onOpenChange={(open) => {
+          if (!open) handleCancelEdit();
+        }}
+      >
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>
+              Edit{" "}
+              {editingNodeId &&
+                nodes.find((n) => n.id === editingNodeId)?.data.type}
+            </SheetTitle>
+            <SheetDescription>Node ID: {editingNodeId}</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Title</Label>
                   <Input
@@ -3128,8 +3174,20 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
               </SheetFooter>
             </SheetContent>
           </Sheet>
-        </DialogContent>
-      </Dialog>
+    </>
+  );
+
+  return (
+    <>
+      {isEmbedded ? (
+        <div className="flex flex-col h-full">{editorContent}</div>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
+            {editorContent}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Save Dialog */}
       <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
