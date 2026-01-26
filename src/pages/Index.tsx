@@ -2113,17 +2113,17 @@ const Index = () => {
             />
           )}
 
-          <div className="flex-1 w-full flex items-center justify-center">
-            <div className="w-full h-full flex flex-col">
+          <div className="flex-1 w-full flex items-stretch justify-center min-h-0">
+            <div className="w-full h-full flex flex-col min-h-0">
               <TabsContent
                 value="play"
-                className="w-full h-full flex items-center justify-center"
+                className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
               >
                 {playMode.render()}
               </TabsContent>
               <TabsContent
                 value="learn"
-                className="w-full h-full flex items-center justify-center"
+                className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
               >
                 {learnModeType === "free-practice" ? (
                   <FreePracticeMode {...freePracticeModeProps} />
@@ -2133,7 +2133,7 @@ const Index = () => {
               </TabsContent>
               <TabsContent
                 value="quest"
-                className="w-full h-full flex items-center justify-center"
+                className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
               >
                 <QuestEditor
                   mode="embedded"

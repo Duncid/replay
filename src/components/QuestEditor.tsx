@@ -3206,7 +3206,7 @@ export function QuestEditor({
   return (
     <>
       {isEmbedded ? (
-        <div className="flex flex-col h-full">{editorContent}</div>
+        <div className="flex flex-col h-full min-h-0">{editorContent}</div>
       ) : (
         <Dialog open={open} onOpenChange={onOpenChange}>
           <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
