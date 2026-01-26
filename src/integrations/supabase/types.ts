@@ -345,38 +345,47 @@ export type Database = {
       tune_assets: {
         Row: {
           assemblies: Json | null
+          assembly_xmls: Json | null
           briefing: Json | null
           created_at: string | null
           id: string
           left_hand_sequence: Json | null
           note_sequence: Json
+          nugget_xmls: Json | null
           nuggets: Json | null
           right_hand_sequence: Json | null
           tune_key: string
+          tune_xml: string | null
           version_id: string
         }
         Insert: {
           assemblies?: Json | null
+          assembly_xmls?: Json | null
           briefing?: Json | null
           created_at?: string | null
           id?: string
           left_hand_sequence?: Json | null
           note_sequence: Json
+          nugget_xmls?: Json | null
           nuggets?: Json | null
           right_hand_sequence?: Json | null
           tune_key: string
+          tune_xml?: string | null
           version_id: string
         }
         Update: {
           assemblies?: Json | null
+          assembly_xmls?: Json | null
           briefing?: Json | null
           created_at?: string | null
           id?: string
           left_hand_sequence?: Json | null
           note_sequence?: Json
+          nugget_xmls?: Json | null
           nuggets?: Json | null
           right_hand_sequence?: Json | null
           tune_key?: string
+          tune_xml?: string | null
           version_id?: string
         }
         Relationships: [
