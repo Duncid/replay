@@ -25,7 +25,8 @@
   "tabs": {
     "play": "Play",
     "learn": "Learn",
-    "quest": "Quest"
+    "quest": "Quest",
+    "lab": "Lab"
   },
   "piano": {
     "sound": "Piano Sound",
