@@ -9,12 +9,12 @@ import {
 import { MidiConnector } from "@/components/MidiConnector";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { QuestEditor } from "@/components/QuestEditor";
-import { UserMenu } from "@/components/UserMenu";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
+import { UserMenu } from "@/components/UserMenu";
 import { WhistleImportSheet } from "@/components/WhistleImportSheet";
-import { LearnMode } from "@/components/modes/LearnMode";
 import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
+import { LearnMode } from "@/components/modes/LearnMode";
 import { PlayEntry, PlayMode } from "@/components/modes/PlayMode";
 import {
   AlertDialog,
@@ -79,6 +79,7 @@ import {
   noteSequenceToAbc,
 } from "@/utils/noteSequenceUtils";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
+import JSZip from "jszip";
 import {
   ChevronDown,
   Download,
@@ -93,8 +94,13 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import JSZip from "jszip";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 const AI_MODELS = {
@@ -118,15 +124,15 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
-type ActiveMode = "play" | "learn";
+type ActiveMode = "play" | "learn" | "quest";
 
 // Normalize creativity (0-100) to model-specific temperature ranges
 const normalizeCreativityToRNN = (creativity: number): number => {
   const temperature = 0.1 + (creativity / 100) * (2.0 - 0.1);
   console.log(
     `[Creativity] RNN - Creativity: ${creativity}, Temperature: ${temperature.toFixed(
-      3
-    )} (range: 0.1-2.0)`
+      3,
+    )} (range: 0.1-2.0)`,
   );
   return temperature;
 };
@@ -135,8 +141,8 @@ const normalizeCreativityToVAE = (creativity: number): number => {
   const temperature = 0.1 + (creativity / 100) * (1.5 - 0.1);
   console.log(
     `[Creativity] VAE - Creativity: ${creativity}, Temperature: ${temperature.toFixed(
-      3
-    )} (range: 0.1-1.5)`
+      3,
+    )} (range: 0.1-1.5)`,
   );
   return temperature;
 };
@@ -148,15 +154,15 @@ const Index = () => {
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(
     STORAGE_KEYS.ACTIVE_MODE,
-    "play"
+    "play",
   );
   const [isAutoreplyActive, setIsAutoreplyActive] = useLocalStorage<boolean>(
     STORAGE_KEYS.AUTOREPLY,
-    false
+    false,
   );
   const [selectedModel, setSelectedModel] = useLocalStorage(
     STORAGE_KEYS.AI_MODEL,
-    "magenta/music-rnn"
+    "magenta/music-rnn",
   );
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -166,7 +172,7 @@ const Index = () => {
   const [generationLabel, setGenerationLabel] = useState<string | null>(null);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
   const [editingEntryIndex, setEditingEntryIndex] = useState<number | null>(
-    null
+    null,
   );
   const [editDialogMode, setEditDialogMode] = useState<"add" | "edit">("add");
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -184,7 +190,8 @@ const Index = () => {
     "add" | "edit"
   >("add");
   const [whistleSheetOpen, setWhistleSheetOpen] = useState(false);
-  const [questEditorOpen, setQuestEditorOpen] = useState(false);
+  const [questHeaderActions, setQuestHeaderActions] = useState<ReactNode>(null);
+  const [questHeaderTitle, setQuestHeaderTitle] = useState<string | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
@@ -195,18 +202,20 @@ const Index = () => {
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(
     STORAGE_KEYS.INSTRUMENT,
-    "classic"
+    "classic",
   );
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(
     STORAGE_KEYS.BPM,
-    120
+    120,
   );
   const [metronomeTimeSignature, setMetronomeTimeSignature] = useLocalStorage(
     STORAGE_KEYS.TIME_SIGNATURE,
-    "4/4"
+    "4/4",
   );
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
-  const [metronomeStartTime, setMetronomeStartTime] = useState<number | null>(null);
+  const [metronomeStartTime, setMetronomeStartTime] = useState<number | null>(
+    null,
+  );
   const [metronomeFeel, setMetronomeFeel] =
     useState<FeelPreset>("straight_beats");
   const [metronomeSoundType, setMetronomeSoundType] =
@@ -214,18 +223,18 @@ const Index = () => {
   // Creativity slider: 0-100 (stored as magentaTemperature for backward compatibility)
   const [magentaTemperature, setMagentaTemperature] = useLocalStorage<number>(
     STORAGE_KEYS.MAGENTA_TEMPERATURE,
-    40
+    40,
   );
   // Debug mode
   const [debugMode, setDebugMode] = useLocalStorage<boolean>(
     STORAGE_KEYS.DEBUG_MODE,
-    false
+    false,
   );
 
   // Log initial creativity value
   useEffect(() => {
     console.log(
-      `[Creativity] Initialized with value: ${magentaTemperature} (0-100 scale)`
+      `[Creativity] Initialized with value: ${magentaTemperature} (0-100 scale)`,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only log once on mount
@@ -237,7 +246,7 @@ const Index = () => {
     try {
       return (
         window.localStorage.getItem(
-          `${STORAGE_KEYS.MAGENTA_TEMPERATURE}_migrated`
+          `${STORAGE_KEYS.MAGENTA_TEMPERATURE}_migrated`,
         ) === "true"
       );
     } catch {
@@ -260,7 +269,7 @@ const Index = () => {
         const creativity = ((oldTemp - 0.1) / (2.0 - 0.1)) * 100;
         const migrated = Math.round(Math.max(0, Math.min(100, creativity)));
         console.log(
-          `[Creativity] Migrating old temperature ${oldTemp} to creativity ${migrated}`
+          `[Creativity] Migrating old temperature ${oldTemp} to creativity ${migrated}`,
         );
         setMagentaTemperature(migrated);
       }
@@ -268,11 +277,11 @@ const Index = () => {
       try {
         window.localStorage.setItem(
           `${STORAGE_KEYS.MAGENTA_TEMPERATURE}_migrated`,
-          "true"
+          "true",
         );
         setMigrationDone(true);
         console.log(
-          `[Creativity] Migration complete. Current creativity value: ${magentaTemperature}`
+          `[Creativity] Migration complete. Current creativity value: ${magentaTemperature}`,
         );
       } catch (error) {
         console.warn("[Creativity] Failed to save migration flag:", error);
@@ -284,7 +293,7 @@ const Index = () => {
   // Persisted history
   const [savedPlayHistory, setSavedPlayHistory] = useLocalStorage<PlayEntry[]>(
     STORAGE_KEYS.PLAY_HISTORY,
-    []
+    [],
   );
   const [isMusicXmlImporting, setIsMusicXmlImporting] = useState(false);
 
@@ -317,7 +326,7 @@ const Index = () => {
       setPianoSoundType,
       setMetronomeBpm,
       setMetronomeTimeSignature,
-    ]
+    ],
   );
 
   const compositions = useCompositions({
@@ -364,7 +373,7 @@ const Index = () => {
   // (they will be initialized after those functions are defined)
 
   const [playingSequence, setPlayingSequence] = useState<NoteSequence | null>(
-    null
+    null,
   );
 
   // Refs for circular dependency handling
@@ -379,8 +388,10 @@ const Index = () => {
   const [learnModeRecording, setLearnModeRecording] =
     useState<NoteSequence | null>(null);
   const learnModeRecordingRef = useRef<NoteSequence | null>(null);
-  const [learnModeType, setLearnModeType] = useState<"curriculum" | "free-practice">("curriculum");
-  
+  const [learnModeType, setLearnModeType] = useState<
+    "curriculum" | "free-practice"
+  >("curriculum");
+
   // Free practice recording
   const [freePracticeRecording, setFreePracticeRecording] =
     useState<NoteSequence | null>(null);
@@ -402,7 +413,7 @@ const Index = () => {
         }
       }
     },
-    [activeMode, isAutoreplyActive]
+    [activeMode, isAutoreplyActive],
   );
 
   const handleRecordingUpdate = useCallback((notes: Note[]) => {
@@ -439,7 +450,7 @@ const Index = () => {
       midiPressedKeysRef.current.add(noteKey);
       pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
     },
-    [appState]
+    [appState],
   );
 
   const handleMidiNoteOff = useCallback(
@@ -448,7 +459,7 @@ const Index = () => {
       midiPressedKeysRef.current.delete(noteKey);
       pianoRef.current?.handleKeyRelease(noteKey, frequency);
     },
-    []
+    [],
   );
 
   const handleNoMidiDevices = () => {
@@ -459,13 +470,16 @@ const Index = () => {
     });
   };
 
-  const handleMidiError = useCallback((errorMessage: string) => {
-    toast({
-      title: "MIDI connection error",
-      description: errorMessage,
-      variant: "destructive",
-    });
-  }, [toast]);
+  const handleMidiError = useCallback(
+    (errorMessage: string) => {
+      toast({
+        title: "MIDI connection error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+    [toast],
+  );
 
   const {
     connectedDevice,
@@ -473,7 +487,12 @@ const Index = () => {
     isSupported: isMidiSupported,
     requestAccess,
     disconnect,
-  } = useMidiInput(handleMidiNoteOn, handleMidiNoteOff, handleNoMidiDevices, handleMidiError);
+  } = useMidiInput(
+    handleMidiNoteOn,
+    handleMidiNoteOff,
+    handleNoMidiDevices,
+    handleMidiError,
+  );
 
   const stopAiPlayback = useCallback(() => {
     shouldStopAiRef.current = true;
@@ -496,7 +515,7 @@ const Index = () => {
       sequence: NoteSequence,
       requestId?: string,
       isReplay: boolean = false,
-      segments?: PlaybackSegment[]
+      segments?: PlaybackSegment[],
     ) => {
       setIsReplaying(isReplay);
       const playbackId = Math.random().toString(36).substring(7);
@@ -508,7 +527,7 @@ const Index = () => {
 
       if (isPlayingRef.current) {
         console.log(
-          `[Playback ${playbackId}] Already playing, stopping previous`
+          `[Playback ${playbackId}] Already playing, stopping previous`,
         );
       }
 
@@ -531,7 +550,7 @@ const Index = () => {
       console.log(
         `[Playback ${playbackId}] Starting: ${
           normalizedSequence.notes.length
-        } notes, ${normalizedSequence.totalTime.toFixed(3)}s`
+        } notes, ${normalizedSequence.totalTime.toFixed(3)}s`,
       );
       const playbackStartTime = Date.now();
 
@@ -574,7 +593,7 @@ const Index = () => {
 
           const segmentStartTime = Math.max(
             0,
-            segment.startTime - minStartTime
+            segment.startTime - minStartTime,
           );
           const segmentEndTime = Math.max(0, segment.endTime - minStartTime);
 
@@ -590,7 +609,7 @@ const Index = () => {
           const endTimeout = setTimeout(() => {
             if (!shouldStopAiRef.current) {
               setPlayingSequence((prev) =>
-                prev === segment.originalSequence ? null : prev
+                prev === segment.originalSequence ? null : prev,
               );
             }
           }, segmentEndTime * 1000);
@@ -630,7 +649,7 @@ const Index = () => {
         if (!shouldStopAiRef.current) {
           const elapsed = (Date.now() - playbackStartTime) / 1000;
           console.log(
-            `[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`
+            `[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`,
           );
           setAppState("idle");
           setPlayingSequence(null);
@@ -642,7 +661,7 @@ const Index = () => {
         }
       }, normalizedSequence.totalTime * 1000);
     },
-    []
+    [],
   );
 
   function handleReplaySequence(sequence: NoteSequence) {
@@ -673,10 +692,10 @@ const Index = () => {
       pianoRef.current?.ensureAudioReady();
       setTimeout(
         () => playSequence(combinedSequence, undefined, true, segments),
-        50
+        50,
       );
     },
-    [playSequence]
+    [playSequence],
   );
 
   // Handle upload ABC file
@@ -769,8 +788,13 @@ const Index = () => {
           if (containerFile) {
             try {
               const containerText = await containerFile.async("string");
-              const containerDoc = new DOMParser().parseFromString(containerText, "application/xml");
-              if (containerDoc.getElementsByTagName("parsererror").length === 0) {
+              const containerDoc = new DOMParser().parseFromString(
+                containerText,
+                "application/xml",
+              );
+              if (
+                containerDoc.getElementsByTagName("parsererror").length === 0
+              ) {
                 const rootFile =
                   containerDoc.getElementsByTagName("rootfile")[0] ??
                   containerDoc.getElementsByTagNameNS("*", "rootfile")[0];
@@ -790,7 +814,7 @@ const Index = () => {
               (name) =>
                 (name.endsWith(".xml") || name.endsWith(".musicxml")) &&
                 !name.startsWith("META-INF/") &&
-                !zip.files[name].dir
+                !zip.files[name].dir,
             );
 
             if (xmlFiles.length === 0) {
@@ -799,7 +823,9 @@ const Index = () => {
 
             // Prefer MusicXML files in the root directory, or use the first one
             const rootXmlFiles = xmlFiles.filter((name) => !name.includes("/"));
-            const rootMusicXmlFiles = rootXmlFiles.filter((name) => name.endsWith(".musicxml"));
+            const rootMusicXmlFiles = rootXmlFiles.filter((name) =>
+              name.endsWith(".musicxml"),
+            );
             const preferredRoot = rootMusicXmlFiles[0] ?? rootXmlFiles[0];
             mainXmlPath = preferredRoot ?? xmlFiles[0];
           }
@@ -876,7 +902,8 @@ const Index = () => {
         // Fallback: Use traditional file input for browsers without File System Access API
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = ".mxl,.xml,.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml";
+        input.accept =
+          ".mxl,.xml,.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml";
         input.style.display = "none";
         document.body.appendChild(input);
 
@@ -1003,7 +1030,8 @@ const Index = () => {
       } else {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = ".mid,.midi,audio/midi,audio/mid,application/octet-stream";
+        input.accept =
+          ".mid,.midi,audio/midi,audio/mid,application/octet-stream";
         input.style.display = "none";
         document.body.appendChild(input);
 
@@ -1039,12 +1067,18 @@ const Index = () => {
       for (const note of obj.notes as unknown[]) {
         if (!note || typeof note !== "object") return false;
         const n = note as Record<string, unknown>;
-        if (typeof n.pitch !== "number" || n.pitch < 0 || n.pitch > 127) return false;
+        if (typeof n.pitch !== "number" || n.pitch < 0 || n.pitch > 127)
+          return false;
         if (typeof n.startTime !== "number" || n.startTime < 0) return false;
         if (typeof n.endTime !== "number" || n.endTime < 0) return false;
         if (n.endTime <= n.startTime) return false;
         // Allow velocity in either 0-1 or 0-127 range
-        if (typeof n.velocity !== "number" || n.velocity < 0 || n.velocity > 127) return false;
+        if (
+          typeof n.velocity !== "number" ||
+          n.velocity < 0 ||
+          n.velocity > 127
+        )
+          return false;
       }
       return true;
     };
@@ -1057,12 +1091,14 @@ const Index = () => {
     };
 
     const normalizeSequence = (data: Record<string, unknown>): NoteSequence => {
-      const notes = (data.notes as Array<Record<string, unknown>>).map((note) => ({
-        pitch: note.pitch as number,
-        startTime: note.startTime as number,
-        endTime: note.endTime as number,
-        velocity: normalizeVelocity(note.velocity as number),
-      }));
+      const notes = (data.notes as Array<Record<string, unknown>>).map(
+        (note) => ({
+          pitch: note.pitch as number,
+          startTime: note.startTime as number,
+          endTime: note.endTime as number,
+          velocity: normalizeVelocity(note.velocity as number),
+        }),
+      );
 
       const totalTime =
         typeof data.totalTime === "number" && data.totalTime > 0
@@ -1072,8 +1108,12 @@ const Index = () => {
       return {
         notes,
         totalTime,
-        tempos: Array.isArray(data.tempos) ? (data.tempos as NoteSequence["tempos"]) : undefined,
-        timeSignatures: Array.isArray(data.timeSignatures) ? (data.timeSignatures as NoteSequence["timeSignatures"]) : undefined,
+        tempos: Array.isArray(data.tempos)
+          ? (data.tempos as NoteSequence["tempos"])
+          : undefined,
+        timeSignatures: Array.isArray(data.timeSignatures)
+          ? (data.timeSignatures as NoteSequence["timeSignatures"])
+          : undefined,
       };
     };
 
@@ -1199,7 +1239,7 @@ const Index = () => {
       setPendingCompositionToLoad(null);
       setSaveBeforeOpenDialogOpen(false);
     },
-    [compositions, toast]
+    [compositions, toast],
   );
 
   const handleContinueWithoutSaving = useCallback(() => {
@@ -1216,7 +1256,7 @@ const Index = () => {
       playMode.history,
       pianoSoundType,
       metronomeBpm,
-      metronomeTimeSignature
+      metronomeTimeSignature,
     );
 
     if (success) {
@@ -1250,8 +1290,14 @@ const Index = () => {
     },
     pauseTimeoutMs: 2000,
     resumeGapMs: 1000,
-    metronomeIsPlaying: activeMode === "learn" && learnModeType === "curriculum" ? metronomeIsPlaying : false,
-    metronomeStartTime: activeMode === "learn" && learnModeType === "curriculum" ? metronomeStartTime ?? undefined : undefined,
+    metronomeIsPlaying:
+      activeMode === "learn" && learnModeType === "curriculum"
+        ? metronomeIsPlaying
+        : false,
+    metronomeStartTime:
+      activeMode === "learn" && learnModeType === "curriculum"
+        ? (metronomeStartTime ?? undefined)
+        : undefined,
   });
 
   // Free practice recording manager
@@ -1265,13 +1311,19 @@ const Index = () => {
     },
     pauseTimeoutMs: 2000,
     resumeGapMs: 1000,
-    metronomeIsPlaying: activeMode === "learn" && learnModeType === "free-practice" ? metronomeIsPlaying : false,
-    metronomeStartTime: activeMode === "learn" && learnModeType === "free-practice" ? metronomeStartTime ?? undefined : undefined,
+    metronomeIsPlaying:
+      activeMode === "learn" && learnModeType === "free-practice"
+        ? metronomeIsPlaying
+        : false,
+    metronomeStartTime:
+      activeMode === "learn" && learnModeType === "free-practice"
+        ? (metronomeStartTime ?? undefined)
+        : undefined,
   });
 
   // Track tune mode state for recording logic (separate from learnMode to avoid circular reference)
   const [isInTuneMode, setIsInTuneMode] = useState(false);
-  
+
   // Learn mode hook (curriculum lessons)
   const learnMode = LearnMode({
     isPlaying: appState === "ai_playing",
@@ -1282,7 +1334,10 @@ const Index = () => {
     onStartRecording: () => {
       // Recording starts automatically when user plays
     },
-    isRecording: appState === "user_playing" && activeMode === "learn" && learnModeType === "curriculum",
+    isRecording:
+      appState === "user_playing" &&
+      activeMode === "learn" &&
+      learnModeType === "curriculum",
     userRecording: learnModeRecording,
     onClearRecording: () => {
       setLearnModeRecording(null);
@@ -1306,7 +1361,7 @@ const Index = () => {
   });
 
   const { resetToStart: resetLearnToStart } = learnMode;
-  
+
   // Sync tune mode state from LearnMode
   useEffect(() => {
     setIsInTuneMode(learnMode.isInTuneMode);
@@ -1320,7 +1375,7 @@ const Index = () => {
       previousUserIdRef.current !== currentUserId
     ) {
       console.log(
-        `[UserSwitch] Switched user from ${previousUserIdRef.current} to ${currentUserId}`
+        `[UserSwitch] Switched user from ${previousUserIdRef.current} to ${currentUserId}`,
       );
       stopAiPlayback();
       recordingManager.cancelRecording();
@@ -1352,7 +1407,10 @@ const Index = () => {
       pianoRef.current?.ensureAudioReady();
       setTimeout(() => playSequence(sequence, undefined, true), 50);
     },
-    isRecording: appState === "user_playing" && activeMode === "learn" && learnModeType === "free-practice",
+    isRecording:
+      appState === "user_playing" &&
+      activeMode === "learn" &&
+      learnModeType === "free-practice",
     userRecording: freePracticeRecording,
     onClearRecording: () => {
       setFreePracticeRecording(null);
@@ -1404,7 +1462,10 @@ const Index = () => {
           // TuneMode: Always record when a tune is active
           if (isInTuneMode) {
             learnRecordingManager.addNoteStart(noteKey, velocity);
-          } else if (learnMode.lesson.phase === "your_turn" && learnMode.lessonMode === "evaluation") {
+          } else if (
+            learnMode.lesson.phase === "your_turn" &&
+            learnMode.lessonMode === "evaluation"
+          ) {
             // Lesson mode: Only record in evaluation mode
             learnRecordingManager.addNoteStart(noteKey, velocity);
           }
@@ -1426,7 +1487,7 @@ const Index = () => {
       learnModeType,
       isInTuneMode,
       stopAiPlayback,
-    ]
+    ],
   );
 
   const handleNoteEnd = useCallback(
@@ -1438,7 +1499,10 @@ const Index = () => {
           // TuneMode: Always record when a tune is active
           if (isInTuneMode) {
             learnRecordingManager.addNoteEnd(noteKey);
-          } else if (learnMode.lesson.phase === "your_turn" && learnMode.lessonMode === "evaluation") {
+          } else if (
+            learnMode.lesson.phase === "your_turn" &&
+            learnMode.lessonMode === "evaluation"
+          ) {
             // Lesson mode: Only record in evaluation mode
             learnRecordingManager.addNoteEnd(noteKey);
           }
@@ -1457,7 +1521,7 @@ const Index = () => {
       learnMode.lessonMode,
       learnModeType,
       isInTuneMode,
-    ]
+    ],
   );
 
   // Automatic AI reply handling
@@ -1476,7 +1540,7 @@ const Index = () => {
         const creativity = magentaTemperature ?? 40;
         const modelName = selectedModel === "magenta/music-rnn" ? "RNN" : "VAE";
         console.log(
-          `[Creativity] Using creativity ${creativity} for model: ${modelName}`
+          `[Creativity] Using creativity ${creativity} for model: ${modelName}`,
         );
         const temperature =
           selectedModel === "magenta/music-rnn"
@@ -1488,7 +1552,7 @@ const Index = () => {
           selectedModel as MagentaModelType,
           metronomeBpm,
           metronomeTimeSignature,
-          { temperature }
+          { temperature },
         );
 
         if (currentRequestIdRef.current !== requestId) return;
@@ -1523,7 +1587,7 @@ const Index = () => {
         const elapsed = Date.now() - requestStartTimeRef.current;
         if (elapsed < MIN_WAIT_TIME_MS) {
           await new Promise((resolve) =>
-            setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed)
+            setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed),
           );
         }
 
@@ -1558,7 +1622,7 @@ const Index = () => {
   async function handleManualAiRequest(
     userSequence: NoteSequence,
     modelType: MagentaModelType,
-    requestLabel: string
+    requestLabel: string,
   ) {
     const requestId = crypto.randomUUID();
     currentRequestIdRef.current = requestId;
@@ -1566,7 +1630,7 @@ const Index = () => {
 
     setAppState("waiting_for_ai");
     setGenerationLabel(
-      modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging..."
+      modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging...",
     );
 
     try {
@@ -1574,7 +1638,7 @@ const Index = () => {
       const creativity = magentaTemperature ?? 40;
       const modelName = modelType === "magenta/music-rnn" ? "RNN" : "VAE";
       console.log(
-        `[Creativity] Manual request - Using creativity ${creativity} for model: ${modelName}`
+        `[Creativity] Manual request - Using creativity ${creativity} for model: ${modelName}`,
       );
       const temperature =
         modelType === "magenta/music-rnn"
@@ -1586,7 +1650,7 @@ const Index = () => {
         modelType,
         metronomeBpm,
         metronomeTimeSignature,
-        { temperature }
+        { temperature },
       );
 
       if (currentRequestIdRef.current !== requestId) return;
@@ -1595,7 +1659,7 @@ const Index = () => {
       const elapsed = Date.now() - requestStartTimeRef.current;
       if (elapsed < MIN_WAIT_TIME_MS) {
         await new Promise((resolve) =>
-          setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed)
+          setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed),
         );
       }
 
@@ -1646,9 +1710,15 @@ const Index = () => {
               <TabsList>
                 <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
+                <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
               </TabsList>
-              </div>
-              <div className="flex items-center gap-2">
+              {activeMode === "quest" && questHeaderTitle && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  {questHeaderTitle}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
               {activeMode === "play" && (
                 <div className="flex items-center gap-2">
                   <Switch
@@ -1732,16 +1802,16 @@ const Index = () => {
                             onValueChange={(values) => {
                               const newValue = values[0];
                               console.log(
-                                `[Creativity] Slider changed to: ${newValue}`
+                                `[Creativity] Slider changed to: ${newValue}`,
                               );
                               setMagentaTemperature(newValue);
                               // Verify it was saved
                               setTimeout(() => {
                                 const saved = window.localStorage.getItem(
-                                  STORAGE_KEYS.MAGENTA_TEMPERATURE
+                                  STORAGE_KEYS.MAGENTA_TEMPERATURE,
                                 );
                                 console.log(
-                                  `[Creativity] Saved to localStorage: ${saved}`
+                                  `[Creativity] Saved to localStorage: ${saved}`,
                                 );
                               }, 0);
                             }}
@@ -1764,32 +1834,34 @@ const Index = () => {
                 )}
             </div>
             <div className="flex items-center gap-2">
+              {activeMode === "quest" && questHeaderActions}
               {activeMode === "learn" && (
-                <>{activeMode === "learn" && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="justify-between"
-                      >
-                        {AI_MODELS.llm.find((m) => m.value === selectedModel)
-                          ?.label || selectedModel}
-                        <ChevronDown className="h-4 w-4 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {AI_MODELS.llm.map((model) => (
-                        <DropdownMenuItem
-                          key={model.value}
-                          onClick={() => setSelectedModel(model.value)}
+                <>
+                  {activeMode === "learn" && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="justify-between"
                         >
-                          {model.label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                          {AI_MODELS.llm.find((m) => m.value === selectedModel)
+                            ?.label || selectedModel}
+                          <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {AI_MODELS.llm.map((model) => (
+                          <DropdownMenuItem
+                            key={model.value}
+                            onClick={() => setSelectedModel(model.value)}
+                          >
+                            {model.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   <div className="flex items-center gap-2 ml-auto">
                     <Label
                       htmlFor="debug-mode"
@@ -1807,17 +1879,6 @@ const Index = () => {
                   </div>
                   {debugMode && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setQuestEditorOpen(true)}
-                        disabled={
-                          appState === "ai_playing" ||
-                          appState === "waiting_for_ai"
-                        }
-                      >
-                        Quest Editor
-                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -1962,7 +2023,7 @@ const Index = () => {
                             playMode.history,
                             pianoSoundType,
                             metronomeBpm,
-                            metronomeTimeSignature
+                            metronomeTimeSignature,
                           );
                         } else if (playMode.history.length > 0) {
                           setSaveModalMode("save");
@@ -2005,7 +2066,7 @@ const Index = () => {
                             const seq = playMode.getCombinedSequence();
                             if (seq?.sequence) {
                               await navigator.clipboard.writeText(
-                                JSON.stringify(seq.sequence, null, 2)
+                                JSON.stringify(seq.sequence, null, 2),
                               );
                               toast({ title: "Copied as NoteSequence" });
                             }
@@ -2063,7 +2124,7 @@ const Index = () => {
                                 onClick={() => {
                                   if (compositions.currentComposition) {
                                     compositions.deleteComposition(
-                                      compositions.currentComposition.id
+                                      compositions.currentComposition.id,
                                     );
                                   }
                                 }}
@@ -2115,111 +2176,125 @@ const Index = () => {
             />
           )}
 
-          <div className="flex-1 w-full flex items-center justify-center">
-            <div className="w-full h-full flex flex-col">
-              <TabsContent
-                value="play"
-                className="w-full h-full flex items-center justify-center"
-              >
-                {playMode.render()}
-              </TabsContent>
-              <TabsContent
-                value="learn"
-                className="w-full h-full flex items-center justify-center"
-              >
-                {learnModeType === "free-practice" ? (
-                  <FreePracticeMode {...freePracticeModeProps} />
-                ) : (
-                  learnMode.render()
-                )}
-              </TabsContent>
-            </div>
-          </div>
+          <TabsContent
+            value="play"
+            className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
+          >
+            {playMode.render()}
+          </TabsContent>
+          <TabsContent
+            value="learn"
+            className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
+          >
+            {learnModeType === "free-practice" ? (
+              <FreePracticeMode {...freePracticeModeProps} />
+            ) : (
+              learnMode.render()
+            )}
+          </TabsContent>
+          <TabsContent
+            value="quest"
+            className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
+          >
+            <QuestEditor
+              mode="embedded"
+              isActive={activeMode === "quest"}
+              onHeaderActionsChange={setQuestHeaderActions}
+              onHeaderTitleChange={setQuestHeaderTitle}
+            />
+          </TabsContent>
         </div>
       </Tabs>
 
-      <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
-        {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
-        <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover">
-                <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
-                <DropdownMenuRadioGroup
-                  value={pianoSoundType}
-                  onValueChange={(v) => setPianoSoundType(v as PianoSoundType)}
-                >
-                  <DropdownMenuRadioItem value="classic">
-                    {t("piano.basic")}
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    {t("piano.sampledInstruments")}
-                  </DropdownMenuLabel>
-                  {SAMPLED_INSTRUMENTS.map((instrument) => (
-                    <DropdownMenuRadioItem key={instrument} value={instrument}>
-                      {PIANO_SOUND_LABELS[instrument]}
+      {activeMode !== "quest" && (
+        <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
+          {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
+          <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-popover">
+                  <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={pianoSoundType}
+                    onValueChange={(v) =>
+                      setPianoSoundType(v as PianoSoundType)
+                    }
+                  >
+                    <DropdownMenuRadioItem value="classic">
+                      {t("piano.basic")}
                     </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      {t("piano.sampledInstruments")}
+                    </DropdownMenuLabel>
+                    {SAMPLED_INSTRUMENTS.map((instrument) => (
+                      <DropdownMenuRadioItem
+                        key={instrument}
+                        value={instrument}
+                      >
+                        {PIANO_SOUND_LABELS[instrument]}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <Metronome
-              bpm={metronomeBpm}
-              setBpm={setMetronomeBpm}
-              timeSignature={metronomeTimeSignature}
-              setTimeSignature={setMetronomeTimeSignature}
-              isPlaying={metronomeIsPlaying}
-              setIsPlaying={setMetronomeIsPlaying}
-              feel={activeMode === "learn" ? metronomeFeel : undefined}
-              onFeelChange={
-                activeMode === "learn" ? setMetronomeFeel : undefined
-              }
-              onMetronomeStartTimeChange={
-                activeMode === "learn" ? setMetronomeStartTime : undefined
-              }
-              soundType={
-                activeMode === "learn" ? metronomeSoundType : undefined
-              }
-              onSoundTypeChange={
-                activeMode === "learn" ? setMetronomeSoundType : undefined
-              }
+              <Metronome
+                bpm={metronomeBpm}
+                setBpm={setMetronomeBpm}
+                timeSignature={metronomeTimeSignature}
+                setTimeSignature={setMetronomeTimeSignature}
+                isPlaying={metronomeIsPlaying}
+                setIsPlaying={setMetronomeIsPlaying}
+                feel={activeMode === "learn" ? metronomeFeel : undefined}
+                onFeelChange={
+                  activeMode === "learn" ? setMetronomeFeel : undefined
+                }
+                onMetronomeStartTimeChange={
+                  activeMode === "learn" ? setMetronomeStartTime : undefined
+                }
+                soundType={
+                  activeMode === "learn" ? metronomeSoundType : undefined
+                }
+                onSoundTypeChange={
+                  activeMode === "learn" ? setMetronomeSoundType : undefined
+                }
+              />
+            </div>
+
+            <MidiConnector
+              isConnected={!!connectedDevice}
+              deviceName={connectedDevice?.name || null}
+              isSupported={isMidiSupported}
+              onConnect={requestAccess}
+              onDisconnect={disconnect}
             />
           </div>
 
-          <MidiConnector
-            isConnected={!!connectedDevice}
-            deviceName={connectedDevice?.name || null}
-            isSupported={isMidiSupported}
-            onConnect={requestAccess}
-            onDisconnect={disconnect}
+          <Piano
+            className="flex-1 min-h-0"
+            ref={pianoRef}
+            activeKeys={activeKeys}
+            allowInput={
+              appState === "idle" ||
+              appState === "user_playing" ||
+              appState === "waiting_for_ai"
+            }
+            soundType={pianoSoundType}
+            hasColor={isInTuneMode}
+            language={language}
+            notationPreference={musicNotation}
+            onNoteStart={handleNoteStart}
+            onNoteEnd={handleNoteEnd}
           />
         </div>
-
-        <Piano
-          className="flex-1 min-h-0"
-          ref={pianoRef}
-          activeKeys={activeKeys}
-          allowInput={
-            appState === "idle" ||
-            appState === "user_playing" ||
-            appState === "waiting_for_ai"
-          }
-          soundType={pianoSoundType}
-          hasColor={isInTuneMode}
-          language={language}
-          notationPreference={musicNotation}
-          onNoteStart={handleNoteStart}
-          onNoteEnd={handleNoteEnd}
-        />
-      </div>
+      )}
 
       {/* Add/Edit Partition Sheet */}
       <AddPartitionDialog
@@ -2365,7 +2440,7 @@ const Index = () => {
               playMode.history,
               pianoSoundType,
               metronomeBpm,
-              metronomeTimeSignature
+              metronomeTimeSignature,
             );
           }
           setSaveModalOpen(false);
@@ -2381,8 +2456,6 @@ const Index = () => {
         isLoading={compositions.isLoading}
         defaultTitle={compositions.currentComposition?.title || ""}
       />
-
-      <QuestEditor open={questEditorOpen} onOpenChange={setQuestEditorOpen} />
     </div>
   );
 };

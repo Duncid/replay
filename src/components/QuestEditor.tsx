@@ -29,6 +29,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -37,13 +44,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { QuestGraph, useQuestGraphs } from "@/hooks/useQuestGraphs";
@@ -55,72 +55,124 @@ import {
   QuestNode,
   QuestNodeType,
 } from "@/types/quest";
+import {
+  exportGraphToSchema,
+  importCurriculumToGraph,
+} from "@/utils/importCurriculumToGraph";
+import {
+  addEdge,
+  Background,
+  BaseEdge,
+  Connection,
+  Controls,
+  Edge,
+  EdgeProps,
+  EdgeTypes,
+  getBezierPath,
+  Handle,
+  MiniMap,
+  Node,
+  NodeTypes,
+  OnEdgesChange,
+  OnNodesChange,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  useEdgesState,
+  useNodesState,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import {
+  Download,
+  FileJson,
+  FilePlus,
+  FolderOpen,
+  Menu,
+  Pencil,
+  Plus,
+  Rocket,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 // Auto-discover all teacher.json files at build time
 const teacherModules = import.meta.glob<{ default: Record<string, unknown> }>(
-  '/src/music/*/teacher.json',
-  { eager: true }
+  "/src/music/*/teacher.json",
+  { eager: true },
 );
 
 // Pre-load all tune note sequences at build time
 const tuneNsModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/tune.ns.json',
-  { eager: true }
+  "/src/music/*/output/tune.ns.json",
+  { eager: true },
 );
 
 const tuneLhModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/tune.lh.ns.json',
-  { eager: true }
+  "/src/music/*/output/tune.lh.ns.json",
+  { eager: true },
 );
 
 const tuneRhModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/tune.rh.ns.json',
-  { eager: true }
+  "/src/music/*/output/tune.rh.ns.json",
+  { eager: true },
 );
 
 // Pre-load all nugget note sequences
 const nuggetNsModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/nuggets/*.ns.json',
-  { eager: true }
+  "/src/music/*/output/nuggets/*.ns.json",
+  { eager: true },
 );
 
 const nuggetLhModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/nuggets/*.lh.ns.json',
-  { eager: true }
+  "/src/music/*/output/nuggets/*.lh.ns.json",
+  { eager: true },
 );
 
 const nuggetRhModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/nuggets/*.rh.ns.json',
-  { eager: true }
+  "/src/music/*/output/nuggets/*.rh.ns.json",
+  { eager: true },
 );
 
 // Pre-load all assembly note sequences
 const assemblyNsModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/assemblies/*.ns.json',
-  { eager: true }
+  "/src/music/*/output/assemblies/*.ns.json",
+  { eager: true },
 );
 
 const assemblyLhModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/assemblies/*.lh.ns.json',
-  { eager: true }
+  "/src/music/*/output/assemblies/*.lh.ns.json",
+  { eager: true },
 );
 
 const assemblyRhModules = import.meta.glob<{ default: object }>(
-  '/src/music/*/output/assemblies/*.rh.ns.json',
-  { eager: true }
+  "/src/music/*/output/assemblies/*.rh.ns.json",
+  { eager: true },
 );
 
 // Helper to get module from glob by path
 const getGlobModule = (
   modules: Record<string, { default?: object }>,
-  path: string
+  path: string,
 ): object | null => {
   const module = modules[path];
   return module?.default || (module as unknown as object) || null;
 };
 
 const getTeacher = (musicRef: string) =>
-  getGlobModule(teacherModules, `/src/music/${musicRef}/teacher.json`) as Record<string, unknown> | null;
+  getGlobModule(
+    teacherModules,
+    `/src/music/${musicRef}/teacher.json`,
+  ) as Record<string, unknown> | null;
 
 const getTuneNs = (musicRef: string) =>
   getGlobModule(tuneNsModules, `/src/music/${musicRef}/output/tune.ns.json`);
@@ -132,31 +184,53 @@ const getTuneRh = (musicRef: string) =>
   getGlobModule(tuneRhModules, `/src/music/${musicRef}/output/tune.rh.ns.json`);
 
 const getNuggetNs = (musicRef: string, nuggetId: string) =>
-  getGlobModule(nuggetNsModules, `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`);
+  getGlobModule(
+    nuggetNsModules,
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`,
+  );
 
 const getNuggetLh = (musicRef: string, nuggetId: string) =>
-  getGlobModule(nuggetLhModules, `/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`);
+  getGlobModule(
+    nuggetLhModules,
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`,
+  );
 
 const getNuggetRh = (musicRef: string, nuggetId: string) =>
-  getGlobModule(nuggetRhModules, `/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`);
+  getGlobModule(
+    nuggetRhModules,
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`,
+  );
 
 const getAssemblyNs = (musicRef: string, assemblyId: string) =>
-  getGlobModule(assemblyNsModules, `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`);
+  getGlobModule(
+    assemblyNsModules,
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`,
+  );
 
 const getAssemblyLh = (musicRef: string, assemblyId: string) =>
-  getGlobModule(assemblyLhModules, `/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`);
+  getGlobModule(
+    assemblyLhModules,
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`,
+  );
 
 const getAssemblyRh = (musicRef: string, assemblyId: string) =>
-  getGlobModule(assemblyRhModules, `/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`);
+  getGlobModule(
+    assemblyRhModules,
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`,
+  );
 
 // Extract tune list from discovered files
-const availableTunes = Object.entries(teacherModules).map(([path, module]) => {
-  const match = path.match(/\/music\/([^/]+)\/teacher\.json$/);
-  const key = match ? match[1] : '';
-  const teacher = module.default || module;
-  const title = (teacher as { title?: string })?.title || key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  return { key, label: title };
-}).filter(t => t.key);
+const availableTunes = Object.entries(teacherModules)
+  .map(([path, module]) => {
+    const match = path.match(/\/music\/([^/]+)\/teacher\.json$/);
+    const key = match ? match[1] : "";
+    const teacher = module.default || module;
+    const title =
+      (teacher as { title?: string })?.title ||
+      key.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return { key, label: title };
+  })
+  .filter((t) => t.key);
 
 // Type for tune asset bundle sent to publish endpoint
 interface TuneAssetBundle {
@@ -206,49 +280,6 @@ interface TuneAssetBundle {
   leftHandSequence?: object;
   rightHandSequence?: object;
 }
-import {
-  exportGraphToSchema,
-  importCurriculumToGraph,
-} from "@/utils/importCurriculumToGraph";
-import {
-  addEdge,
-  Background,
-  BaseEdge,
-  Connection,
-  Controls,
-  Edge,
-  EdgeProps,
-  EdgeTypes,
-  getBezierPath,
-  Handle,
-  MiniMap,
-  Node,
-  NodeTypes,
-  OnEdgesChange,
-  OnNodesChange,
-  Position,
-  ReactFlow,
-  ReactFlowProvider,
-  useEdgesState,
-  useNodesState,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import {
-  Download,
-  FileJson,
-  FileOutput,
-  FilePlus,
-  FolderOpen,
-  Menu,
-  Pencil,
-  Plus,
-  Rocket,
-  Save,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 // Custom styles for React Flow Controls and MiniMap
 const questControlsStyles = `
@@ -320,8 +351,12 @@ const questControlsStyles = `
 `;
 
 interface QuestEditorProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  mode?: "modal" | "embedded";
+  isActive?: boolean;
+  onHeaderActionsChange?: (actions: React.ReactNode) => void;
+  onHeaderTitleChange?: (title: string | null) => void;
 }
 
 // Node variation configuration
@@ -632,8 +667,8 @@ function CustomEdge({
   const strokeColor = isRequirement
     ? "#10b981" // emerald-500
     : isUnlockable
-    ? "#10b981" // emerald-500
-    : "#0ea5e9"; // sky-500
+      ? "#10b981" // emerald-500
+      : "#0ea5e9"; // sky-500
 
   return (
     <BaseEdge
@@ -720,7 +755,14 @@ function QuestEditorFlow({
   );
 }
 
-export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
+export function QuestEditor({
+  open = false,
+  onOpenChange,
+  mode = "modal",
+  isActive = true,
+  onHeaderActionsChange,
+  onHeaderTitleChange,
+}: QuestEditorProps) {
   const { toast } = useToast();
   const {
     questGraphs,
@@ -738,13 +780,13 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     {
       nodes: [],
       edges: [],
-    }
+    },
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<QuestNode>(
-    questData.nodes
+    questData.nodes,
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<QuestEdge>(
-    questData.edges
+    questData.edges,
   );
 
   // Track unsaved changes
@@ -780,7 +822,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     publishedAt?: string;
   } | null>(null);
   const [pendingLoadGraph, setPendingLoadGraph] = useState<QuestGraph | null>(
-    null
+    null,
   );
 
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -793,7 +835,9 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     useState<string>("");
   const [editingLessonKey, setEditingLessonKey] = useState<string>("");
   const [editingGoal, setEditingGoal] = useState<string>("");
-  const [editingLevel, setEditingLevel] = useState<"beginner" | "intermediate" | "advanced" | "">("");
+  const [editingLevel, setEditingLevel] = useState<
+    "beginner" | "intermediate" | "advanced" | ""
+  >("");
   const [editingSetupGuidance, setEditingSetupGuidance] = useState<string>("");
   const [editingEvaluationGuidance, setEditingEvaluationGuidance] =
     useState<string>("");
@@ -824,13 +868,16 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       setNodes(newNodes);
       setEdges(newEdges);
     },
-    [setQuestData, setNodes, setEdges]
+    [setQuestData, setNodes, setEdges],
   );
+
+  const isEmbedded = mode === "embedded";
+  const isVisible = isEmbedded ? isActive : open;
 
   // Load most recently saved graph when dialog opens
   useEffect(() => {
     if (
-      open &&
+      isVisible &&
       !isDbLoading &&
       !currentGraph &&
       questGraphs.length > 0 &&
@@ -843,7 +890,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       setHasUnsavedChanges(false);
     }
   }, [
-    open,
+    isVisible,
     isDbLoading,
     currentGraph,
     questGraphs,
@@ -879,7 +926,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           // Initialize lesson-specific fields
           setEditingLessonKey(node.data.lessonKey || "");
           setEditingGoal(node.data.goal || "");
-          setEditingLevel((node.data.level as "beginner" | "intermediate" | "advanced") || "beginner");
+          setEditingLevel(
+            (node.data.level as "beginner" | "intermediate" | "advanced") ||
+              "beginner",
+          );
           setEditingSetupGuidance(node.data.setupGuidance || "");
           setEditingEvaluationGuidance(node.data.evaluationGuidance || "");
           setEditingDifficultyGuidance(node.data.difficultyGuidance || "");
@@ -893,7 +943,9 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           setEditingTuneKey(node.data.tuneKey || "");
           setEditingMusicRef(node.data.musicRef || "");
           setEditingDescription(node.data.description || "");
-          setEditingLevel((node.data.level as "beginner" | "intermediate" | "advanced") || "");
+          setEditingLevel(
+            (node.data.level as "beginner" | "intermediate" | "advanced") || "",
+          );
           setEditingEvaluationGuidance(node.data.evaluationGuidance || "");
           // Clear other fields
           setEditingOrder("");
@@ -921,7 +973,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         }
       }
     },
-    [nodes]
+    [nodes],
   );
 
   // Helper function to get first available order number
@@ -930,7 +982,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     const usedOrders = trackNodes
       .map((n) => n.data.order)
       .filter(
-        (order): order is number => typeof order === "number" && order > 0
+        (order): order is number => typeof order === "number" && order > 0,
       )
       .sort((a, b) => a - b);
 
@@ -953,10 +1005,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         (n) =>
           n.data.type === "track" &&
           n.id !== excludeNodeId &&
-          n.data.order === order
+          n.data.order === order,
       );
     },
-    [nodes]
+    [nodes],
   );
 
   // Helper function to check if a skillKey is already in use
@@ -969,10 +1021,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         (n) =>
           n.data.type === "skill" &&
           n.id !== excludeNodeId &&
-          n.data.skillKey === skillKey.trim()
+          n.data.skillKey === skillKey.trim(),
       );
     },
-    [nodes]
+    [nodes],
   );
 
   // Helper function to check if a lessonKey is already in use
@@ -985,10 +1037,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         (n) =>
           n.data.type === "lesson" &&
           n.id !== excludeNodeId &&
-          n.data.lessonKey === lessonKey.trim()
+          n.data.lessonKey === lessonKey.trim(),
       );
     },
-    [nodes]
+    [nodes],
   );
 
   // Helper function to check if a trackKey is already in use
@@ -1001,10 +1053,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         (n) =>
           n.data.type === "track" &&
           n.id !== excludeNodeId &&
-          n.data.trackKey === trackKey.trim()
+          n.data.trackKey === trackKey.trim(),
       );
     },
-    [nodes]
+    [nodes],
   );
 
   // Helper function to check if a tuneKey is already in use
@@ -1017,10 +1069,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         (n) =>
           n.data.type === "tune" &&
           n.id !== excludeNodeId &&
-          n.data.tuneKey === tuneKey.trim()
+          n.data.tuneKey === tuneKey.trim(),
       );
     },
-    [nodes]
+    [nodes],
   );
 
   const handleSaveTitle = useCallback(() => {
@@ -1224,7 +1276,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           updatedData.musicRef = editingMusicRef.trim();
           updatedData.description = editingDescription || undefined;
           updatedData.level = editingLevel || undefined;
-          updatedData.evaluationGuidance = editingEvaluationGuidance || undefined;
+          updatedData.evaluationGuidance =
+            editingEvaluationGuidance || undefined;
         }
 
         return {
@@ -1305,12 +1358,12 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       source: QuestNode,
       target: QuestNode,
       sourceHandle: string | null | undefined,
-      targetHandle: string | null | undefined
+      targetHandle: string | null | undefined,
     ): { valid: boolean; reason?: string } => {
       // Track → Lesson (using track-out → lesson-in)
       if (source.data.type === "track" && target.data.type === "lesson") {
         const outgoingCount = edges.filter(
-          (e) => e.source === source.id && e.sourceHandle === "track-out"
+          (e) => e.source === source.id && e.sourceHandle === "track-out",
         ).length;
         if (outgoingCount >= 1) {
           return {
@@ -1333,7 +1386,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         if (sourceHandle === "lesson-out" && targetHandle === "lesson-in") {
           // Check if source already has lesson-out connection
           const sourceOutgoing = edges.filter(
-            (e) => e.source === source.id && e.sourceHandle === "lesson-out"
+            (e) => e.source === source.id && e.sourceHandle === "lesson-out",
           ).length;
           if (sourceOutgoing >= 1) {
             return {
@@ -1344,7 +1397,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           }
           // Check if target already has incoming connection
           const targetIncoming = edges.filter(
-            (e) => e.target === target.id && e.targetHandle === "lesson-in"
+            (e) => e.target === target.id && e.targetHandle === "lesson-in",
           ).length;
           if (targetIncoming >= 1) {
             return {
@@ -1355,7 +1408,10 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           return { valid: true };
         }
         // lesson-required → lesson-prerequisite (prerequisite lesson)
-        if (sourceHandle === "lesson-required" && targetHandle === "lesson-prerequisite") {
+        if (
+          sourceHandle === "lesson-required" &&
+          targetHandle === "lesson-prerequisite"
+        ) {
           return { valid: true };
         }
         return { valid: false, reason: "Invalid lesson-to-lesson connection" };
@@ -1365,7 +1421,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       if (source.data.type === "lesson" && target.data.type === "skill") {
         // Check if lesson already has outgoing connection to another lesson
         const lessonOutgoing = edges.filter(
-          (e) => e.source === source.id && e.sourceHandle === "lesson-out"
+          (e) => e.source === source.id && e.sourceHandle === "lesson-out",
         ).length;
         if (lessonOutgoing >= 1) {
           return {
@@ -1383,7 +1439,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             (e) =>
               e.target === target.id &&
               e.targetHandle === "skill-unlockable" &&
-              e.data?.type === "unlockable"
+              e.data?.type === "unlockable",
           );
           if (existingUnlockable) {
             return {
@@ -1398,7 +1454,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       // Track → Tune (using track-out → tune-in)
       if (source.data.type === "track" && target.data.type === "tune") {
         const outgoingCount = edges.filter(
-          (e) => e.source === source.id && e.sourceHandle === "track-out"
+          (e) => e.source === source.id && e.sourceHandle === "track-out",
         ).length;
         if (outgoingCount >= 1) {
           return {
@@ -1413,7 +1469,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       if (source.data.type === "lesson" && target.data.type === "tune") {
         if (sourceHandle === "lesson-out" && targetHandle === "tune-in") {
           const sourceOutgoing = edges.filter(
-            (e) => e.source === source.id && e.sourceHandle === "lesson-out"
+            (e) => e.source === source.id && e.sourceHandle === "lesson-out",
           ).length;
           if (sourceOutgoing >= 1) {
             return {
@@ -1422,7 +1478,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             };
           }
           const targetIncoming = edges.filter(
-            (e) => e.target === target.id && e.targetHandle === "tune-in"
+            (e) => e.target === target.id && e.targetHandle === "tune-in",
           ).length;
           if (targetIncoming >= 1) {
             return {
@@ -1439,7 +1495,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       if (source.data.type === "tune" && target.data.type === "tune") {
         if (sourceHandle === "tune-out" && targetHandle === "tune-in") {
           const sourceOutgoing = edges.filter(
-            (e) => e.source === source.id && e.sourceHandle === "tune-out"
+            (e) => e.source === source.id && e.sourceHandle === "tune-out",
           ).length;
           if (sourceOutgoing >= 1) {
             return {
@@ -1448,7 +1504,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             };
           }
           const targetIncoming = edges.filter(
-            (e) => e.target === target.id && e.targetHandle === "tune-in"
+            (e) => e.target === target.id && e.targetHandle === "tune-in",
           ).length;
           if (targetIncoming >= 1) {
             return {
@@ -1465,7 +1521,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       if (source.data.type === "tune" && target.data.type === "lesson") {
         if (sourceHandle === "tune-out" && targetHandle === "lesson-in") {
           const sourceOutgoing = edges.filter(
-            (e) => e.source === source.id && e.sourceHandle === "tune-out"
+            (e) => e.source === source.id && e.sourceHandle === "tune-out",
           ).length;
           if (sourceOutgoing >= 1) {
             return {
@@ -1474,7 +1530,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             };
           }
           const targetIncoming = edges.filter(
-            (e) => e.target === target.id && e.targetHandle === "lesson-in"
+            (e) => e.target === target.id && e.targetHandle === "lesson-in",
           ).length;
           if (targetIncoming >= 1) {
             return {
@@ -1498,7 +1554,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             (e) =>
               e.target === target.id &&
               e.targetHandle === "skill-unlockable" &&
-              e.data?.type === "unlockable"
+              e.data?.type === "unlockable",
           );
           if (existingUnlockable) {
             return {
@@ -1512,17 +1568,18 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
       return { valid: false, reason: "Invalid connection type" };
     },
-    [edges]
+    [edges],
   );
 
   // Determine edge type from handle IDs
   const determineEdgeType = useCallback(
     (
       sourceHandle: string | null | undefined,
-      targetHandle: string | null | undefined
+      targetHandle: string | null | undefined,
     ): QuestEdgeType => {
       if (
-        (sourceHandle === "lesson-unlockable" || sourceHandle === "tune-unlockable") &&
+        (sourceHandle === "lesson-unlockable" ||
+          sourceHandle === "tune-unlockable") &&
         targetHandle === "skill-unlockable"
       ) {
         return "unlockable";
@@ -1538,7 +1595,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       }
       return "default";
     },
-    []
+    [],
   );
 
   // Validate handle compatibility
@@ -1547,7 +1604,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       sourceHandle: string | null | undefined,
       targetHandle: string | null | undefined,
       sourceNode: QuestNode,
-      targetNode: QuestNode
+      targetNode: QuestNode,
     ): { valid: boolean; reason?: string } => {
       // Track → Lesson
       if (
@@ -1589,12 +1646,16 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         if (sourceHandle === "lesson-out" && targetHandle === "lesson-in") {
           return { valid: true };
         }
-        if (sourceHandle === "lesson-required" && targetHandle === "lesson-prerequisite") {
+        if (
+          sourceHandle === "lesson-required" &&
+          targetHandle === "lesson-prerequisite"
+        ) {
           return { valid: true };
         }
         return {
           valid: false,
-          reason: "Lesson must connect to Lesson using correct handles (Next→Prev or Requires→Prereq)",
+          reason:
+            "Lesson must connect to Lesson using correct handles (Next→Prev or Requires→Prereq)",
         };
       }
 
@@ -1625,10 +1686,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       }
 
       // Track → Tune
-      if (
-        sourceNode.data.type === "track" &&
-        targetNode.data.type === "tune"
-      ) {
+      if (sourceNode.data.type === "track" && targetNode.data.type === "tune") {
         if (sourceHandle !== "track-out" || targetHandle !== "tune-in") {
           return {
             valid: false,
@@ -1653,10 +1711,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       }
 
       // Tune → Tune
-      if (
-        sourceNode.data.type === "tune" &&
-        targetNode.data.type === "tune"
-      ) {
+      if (sourceNode.data.type === "tune" && targetNode.data.type === "tune") {
         if (sourceHandle === "tune-out" && targetHandle === "tune-in") {
           return { valid: true };
         }
@@ -1681,10 +1736,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       }
 
       // Tune → Skill
-      if (
-        sourceNode.data.type === "tune" &&
-        targetNode.data.type === "skill"
-      ) {
+      if (sourceNode.data.type === "tune" && targetNode.data.type === "skill") {
         // Tune "Unlocking" → Skill "Unlocked by"
         if (
           sourceHandle === "tune-unlockable" &&
@@ -1708,7 +1760,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
       return { valid: false, reason: "Invalid handle combination" };
     },
-    []
+    [],
   );
 
   const handleConnect = useCallback(
@@ -1725,7 +1777,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         connection.sourceHandle,
         connection.targetHandle,
         sourceNode,
-        targetNode
+        targetNode,
       );
 
       if (!handleValidation.valid) {
@@ -1740,7 +1792,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       // Determine edge type from handles
       const edgeType = determineEdgeType(
         connection.sourceHandle,
-        connection.targetHandle
+        connection.targetHandle,
       );
 
       // Validate node connection limits
@@ -1748,7 +1800,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         sourceNode,
         targetNode,
         connection.sourceHandle,
-        connection.targetHandle
+        connection.targetHandle,
       );
       if (!validation.valid) {
         toast({
@@ -1782,7 +1834,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       canConnect,
       toast,
       updateQuestData,
-    ]
+    ],
   );
 
   const addNode = useCallback(
@@ -1801,7 +1853,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       const newNodes = [...nodes, newNode];
       updateQuestData(newNodes, edges);
     },
-    [nodes, edges, updateQuestData, getFirstAvailableOrder]
+    [nodes, edges, updateQuestData, getFirstAvailableOrder],
   );
 
   const handleDownload = useCallback(async () => {
@@ -1939,7 +1991,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             questGraphId: currentGraph.id,
             mode: "dryRun",
           },
-        }
+        },
       );
 
       if (error) {
@@ -1984,32 +2036,45 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
 
   // Run validation when dialog opens
   useEffect(() => {
-    if (showPublishDialog && currentGraph && !validationResult && !isValidating) {
+    if (
+      showPublishDialog &&
+      currentGraph &&
+      !validationResult &&
+      !isValidating
+    ) {
       runValidation();
     }
-  }, [showPublishDialog, currentGraph, validationResult, isValidating, runValidation]);
+  }, [
+    showPublishDialog,
+    currentGraph,
+    validationResult,
+    isValidating,
+    runValidation,
+  ]);
 
   // Helper function to bundle tune assets for publishing (uses pre-loaded glob modules)
   const bundleTuneAssets = useCallback((): Record<string, TuneAssetBundle> => {
     const tuneAssets: Record<string, TuneAssetBundle> = {};
     const bundlingErrors: string[] = [];
-    
+
     // Find all tune nodes with musicRef
     const tuneNodes = nodes.filter(
-      (n) => n.data.type === "tune" && n.data.musicRef && n.data.tuneKey
+      (n) => n.data.type === "tune" && n.data.musicRef && n.data.tuneKey,
     );
-    
+
     for (const node of tuneNodes) {
       const musicRef = node.data.musicRef!;
       const tuneKey = node.data.tuneKey!;
-      
+
       try {
         // Load main files from pre-loaded glob modules
         const teacher = getTeacher(musicRef);
-        const noteSequence = getTuneNs(musicRef) as { notes?: unknown[] } | null;
+        const noteSequence = getTuneNs(musicRef) as {
+          notes?: unknown[];
+        } | null;
         const leftHand = getTuneLh(musicRef);
         const rightHand = getTuneRh(musicRef);
-        
+
         // VALIDATION: Check that noteSequence was loaded
         if (!noteSequence) {
           const errMsg = `Failed to load note sequence for tune "${tuneKey}" (musicRef: ${musicRef})`;
@@ -2017,22 +2082,34 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
           bundlingErrors.push(errMsg);
           continue;
         }
-        
+
         // VALIDATION: Check that noteSequence has notes
-        if (!noteSequence.notes || !Array.isArray(noteSequence.notes) || noteSequence.notes.length === 0) {
+        if (
+          !noteSequence.notes ||
+          !Array.isArray(noteSequence.notes) ||
+          noteSequence.notes.length === 0
+        ) {
           const errMsg = `Note sequence for tune "${tuneKey}" has no notes`;
           console.error(`[QuestEditor] CRITICAL: ${errMsg}`);
           bundlingErrors.push(errMsg);
           continue;
         }
-        
+
         // Load nugget note sequences from pre-loaded glob modules
-        let enrichedNuggets: TuneAssetBundle['nuggets'] = undefined;
-        const teacherNuggets = teacher?.nuggets as Array<{ id: string; label: string; location?: Record<string, unknown>; dependsOn?: string[]; modes?: string[] }> | undefined;
+        let enrichedNuggets: TuneAssetBundle["nuggets"] = undefined;
+        const teacherNuggets = teacher?.nuggets as
+          | Array<{
+              id: string;
+              label: string;
+              location?: Record<string, unknown>;
+              dependsOn?: string[];
+              modes?: string[];
+            }>
+          | undefined;
         if (teacherNuggets && Array.isArray(teacherNuggets)) {
           enrichedNuggets = teacherNuggets.map((nugget) => {
             const nuggetId = nugget.id;
-            
+
             return {
               id: nugget.id,
               label: nugget.label,
@@ -2042,24 +2119,37 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
               noteSequence: getNuggetNs(musicRef, nuggetId),
               leftHandSequence: getNuggetLh(musicRef, nuggetId),
               rightHandSequence: getNuggetRh(musicRef, nuggetId),
-            } as NonNullable<TuneAssetBundle['nuggets']>[number];
+            } as NonNullable<TuneAssetBundle["nuggets"]>[number];
           });
-          
+
           // VALIDATION: Check nugget count matches teacher.json
           const expectedNuggetCount = teacherNuggets.length;
-          const loadedNuggetCount = enrichedNuggets.filter(n => n.noteSequence).length;
+          const loadedNuggetCount = enrichedNuggets.filter(
+            (n) => n.noteSequence,
+          ).length;
           if (loadedNuggetCount !== expectedNuggetCount) {
-            console.warn(`[QuestEditor] Nugget count mismatch for ${tuneKey}: expected ${expectedNuggetCount}, got ${loadedNuggetCount} with note sequences`);
+            console.warn(
+              `[QuestEditor] Nugget count mismatch for ${tuneKey}: expected ${expectedNuggetCount}, got ${loadedNuggetCount} with note sequences`,
+            );
           }
         }
-        
+
         // Load assembly note sequences from pre-loaded glob modules
-        let enrichedAssemblies: TuneAssetBundle['assemblies'] = undefined;
-        const teacherAssemblies = teacher?.assemblies as Array<{ id: string; tier: number; label: string; nuggetIds: string[]; difficulty?: { level: number }; modes?: string[] }> | undefined;
+        let enrichedAssemblies: TuneAssetBundle["assemblies"] = undefined;
+        const teacherAssemblies = teacher?.assemblies as
+          | Array<{
+              id: string;
+              tier: number;
+              label: string;
+              nuggetIds: string[];
+              difficulty?: { level: number };
+              modes?: string[];
+            }>
+          | undefined;
         if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
           enrichedAssemblies = teacherAssemblies.map((assembly) => {
             const assemblyId = assembly.id;
-            
+
             return {
               id: assembly.id,
               tier: assembly.tier,
@@ -2070,29 +2160,40 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
               noteSequence: getAssemblyNs(musicRef, assemblyId),
               leftHandSequence: getAssemblyLh(musicRef, assemblyId),
               rightHandSequence: getAssemblyRh(musicRef, assemblyId),
-            } as NonNullable<TuneAssetBundle['assemblies']>[number];
+            } as NonNullable<TuneAssetBundle["assemblies"]>[number];
           });
-          
+
           // VALIDATION: Check assembly count matches teacher.json
           const expectedAssemblyCount = teacherAssemblies.length;
-          const loadedAssemblyCount = enrichedAssemblies.filter(a => a.noteSequence).length;
+          const loadedAssemblyCount = enrichedAssemblies.filter(
+            (a) => a.noteSequence,
+          ).length;
           if (loadedAssemblyCount !== expectedAssemblyCount) {
-            console.warn(`[QuestEditor] Assembly count mismatch for ${tuneKey}: expected ${expectedAssemblyCount}, got ${loadedAssemblyCount} with note sequences`);
+            console.warn(
+              `[QuestEditor] Assembly count mismatch for ${tuneKey}: expected ${expectedAssemblyCount}, got ${loadedAssemblyCount} with note sequences`,
+            );
           }
         }
-        
+
         tuneAssets[tuneKey] = {
           // Store the full teacher structure (v2 schema)
-          briefing: teacher ? {
-            schemaVersion: teacher.schemaVersion as string | undefined,
-            title: teacher.title as string | undefined,
-            pipelineSettings: teacher.pipelineSettings as Record<string, unknown> | undefined,
-            motifs: teacher.motifs as TuneAssetBundle['briefing']['motifs'],
-            motifOccurrences: teacher.motifOccurrences as Array<Record<string, unknown>> | undefined,
-            tuneHints: teacher.tuneHints as TuneAssetBundle['briefing']['tuneHints'],
-            teachingOrder: teacher.teachingOrder as string[] | undefined,
-            assemblyOrder: teacher.assemblyOrder as string[] | undefined,
-          } : undefined,
+          briefing: teacher
+            ? {
+                schemaVersion: teacher.schemaVersion as string | undefined,
+                title: teacher.title as string | undefined,
+                pipelineSettings: teacher.pipelineSettings as
+                  | Record<string, unknown>
+                  | undefined,
+                motifs: teacher.motifs as TuneAssetBundle["briefing"]["motifs"],
+                motifOccurrences: teacher.motifOccurrences as
+                  | Array<Record<string, unknown>>
+                  | undefined,
+                tuneHints:
+                  teacher.tuneHints as TuneAssetBundle["briefing"]["tuneHints"],
+                teachingOrder: teacher.teachingOrder as string[] | undefined,
+                assemblyOrder: teacher.assemblyOrder as string[] | undefined,
+              }
+            : undefined,
           nuggets: enrichedNuggets,
           assemblies: enrichedAssemblies,
           noteSequence,
@@ -2113,12 +2214,14 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         bundlingErrors.push(errMsg);
       }
     }
-    
+
     // If there were critical errors, throw to prevent publishing with missing assets
     if (bundlingErrors.length > 0) {
-      throw new Error(`Tune asset bundling failed:\n${bundlingErrors.join('\n')}`);
+      throw new Error(
+        `Tune asset bundling failed:\n${bundlingErrors.join("\n")}`,
+      );
     }
-    
+
     return tuneAssets;
   }, [nodes]);
 
@@ -2130,7 +2233,9 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     try {
       // Bundle tune assets before publishing (synchronous - uses pre-loaded globs)
       const tuneAssets = bundleTuneAssets();
-      console.log(`[QuestEditor] Publishing with ${Object.keys(tuneAssets).length} tune assets`);
+      console.log(
+        `[QuestEditor] Publishing with ${Object.keys(tuneAssets).length} tune assets`,
+      );
 
       const { data, error } = await supabase.functions.invoke(
         "curriculum-publish",
@@ -2141,7 +2246,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             mode: "publish",
             tuneAssets,
           },
-        }
+        },
       );
 
       if (error) {
@@ -2186,15 +2291,17 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function.";
         } else if (error.message.includes("non-2xx")) {
           // Try to extract more details from the response
-          errorMessage = "Edge Function returned an error. Check function logs for details.";
+          errorMessage =
+            "Edge Function returned an error. Check function logs for details.";
         }
-      } else if (
-        typeof error === "object" &&
-        error !== null
-      ) {
+      } else if (typeof error === "object" && error !== null) {
         // Handle FunctionsHttpError with context
         const errObj = error as Record<string, unknown>;
-        if ("context" in errObj && errObj.context && typeof errObj.context === "object") {
+        if (
+          "context" in errObj &&
+          errObj.context &&
+          typeof errObj.context === "object"
+        ) {
           const ctx = errObj.context as Record<string, unknown>;
           if (ctx.body && typeof ctx.body === "string") {
             try {
@@ -2235,8 +2342,12 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     }
   }, [currentGraph, publishDialogTitle, toast, bundleTuneAssets]);
 
-  const hasValidationErrors = validationResult?.errors && validationResult.errors.length > 0;
-  const canPublish = validationResult?.validated && !hasValidationErrors && !publishResult?.success;
+  const hasValidationErrors =
+    validationResult?.errors && validationResult.errors.length > 0;
+  const canPublish =
+    validationResult?.validated &&
+    !hasValidationErrors &&
+    !publishResult?.success;
 
   const handleExportSchema = useCallback(async () => {
     try {
@@ -2430,7 +2541,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
         setHasUnsavedChanges(false);
       }
     },
-    [hasUnsavedChanges, loadQuestGraph, updateQuestData]
+    [hasUnsavedChanges, loadQuestGraph, updateQuestData],
   );
 
   const confirmLoadPending = useCallback(() => {
@@ -2492,7 +2603,7 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
     const success = await updateQuestGraph(
       currentGraph.id,
       { nodes, edges },
-      renameDialogTitle.trim()
+      renameDialogTitle.trim(),
     );
 
     if (success) {
@@ -2508,628 +2619,690 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       const remainingEdges = edges.filter((e) => !deletedEdgeIds.has(e.id));
       updateQuestData(nodes, remainingEdges);
     },
-    [edges, nodes, updateQuestData]
+    [edges, nodes, updateQuestData],
+  );
+
+  const headerActions = useMemo(
+    () => (
+      <div className="flex gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Add Node</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => addNode("track")}>
+              Track
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addNode("lesson")}>
+              Lesson
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addNode("skill")}>
+              Skill
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addNode("tune")}>
+              Tune
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Menu className="h-4 w-4" />
+              Manage
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-48">
+            <DropdownMenuItem onClick={handleNew}>
+              <FilePlus className="h-4 w-4" />
+              New
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSave} disabled={isDbLoading}>
+              <Save className="h-4 w-4" />
+              Save
+              {hasUnsavedChanges && (
+                <span className="ml-auto text-xs text-muted-foreground">•</span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderOpen className="h-4 w-4" />
+                Open
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-56">
+                {questGraphs.length === 0 ? (
+                  <DropdownMenuItem disabled>No saved graphs</DropdownMenuItem>
+                ) : (
+                  questGraphs.map((graph) => (
+                    <DropdownMenuItem
+                      key={graph.id}
+                      onClick={() => handleLoadGraph(graph)}
+                    >
+                      {graph.title}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem
+              onClick={handleRename}
+              disabled={!currentGraph || isDbLoading}
+            >
+              <Pencil className="h-4 w-4" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleDelete}
+              disabled={!currentGraph || isDbLoading}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FileJson className="h-4 w-4" />
+                Export / Import
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Schema
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleExportSchema}>
+                  <Download className="h-4 w-4" />
+                  Export Schema
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImport}>
+                  <Upload className="h-4 w-4" />
+                  Import Schema
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Graph
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleDownload}>
+                  <Download className="h-4 w-4" />
+                  Export JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenFile}>
+                  <Upload className="h-4 w-4" />
+                  Import JSON
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handlePublish}
+              disabled={!currentGraph || isDbLoading}
+            >
+              <Rocket className="h-4 w-4" />
+              Publish
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    ),
+    [
+      addNode,
+      currentGraph,
+      handleDelete,
+      handleExportSchema,
+      handleImport,
+      handleLoadGraph,
+      handleNew,
+      handleOpenFile,
+      handlePublish,
+      handleRename,
+      handleSave,
+      handleDownload,
+      hasUnsavedChanges,
+      isDbLoading,
+      questGraphs,
+    ],
+  );
+
+  useEffect(() => {
+    if (!onHeaderActionsChange) {
+      return;
+    }
+    if (isEmbedded && isActive) {
+      onHeaderActionsChange(headerActions);
+      return;
+    }
+    onHeaderActionsChange(null);
+  }, [headerActions, isActive, isEmbedded, onHeaderActionsChange]);
+
+  const editorTitle = useMemo(() => {
+    const baseTitle = "Quest Editor";
+    if (currentGraph) {
+      return `${baseTitle} — ${currentGraph.title}${
+        hasUnsavedChanges ? " (unsaved)" : ""
+      }`;
+    }
+    if (hasUnsavedChanges) {
+      return `${baseTitle} — (unsaved)`;
+    }
+    return baseTitle;
+  }, [currentGraph, hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!onHeaderTitleChange) {
+      return;
+    }
+    if (isEmbedded && isActive) {
+      onHeaderTitleChange(editorTitle);
+      return;
+    }
+    onHeaderTitleChange(null);
+  }, [editorTitle, isActive, isEmbedded, onHeaderTitleChange]);
+
+  const editorContent = (
+    <>
+      {!isEmbedded && (
+        <div className="p-3 border-b h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DialogTitle>Quest Editor</DialogTitle>
+            {currentGraph && (
+              <span className="text-sm text-muted-foreground">
+                — {currentGraph.title}
+                {hasUnsavedChanges && " (unsaved)"}
+              </span>
+            )}
+            {!currentGraph && hasUnsavedChanges && (
+              <span className="text-sm text-muted-foreground">(unsaved)</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {headerActions}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange?.(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div
+        className="flex-1 relative"
+        style={isEmbedded ? undefined : { height: "calc(100vh - 64px)" }}
+      >
+        <style>{questControlsStyles}</style>
+        <ReactFlowProvider>
+          <QuestEditorFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onEdgesDelete={handleEdgesDelete}
+            onConnect={handleConnect}
+            onEditNode={handleEditNode}
+          />
+        </ReactFlowProvider>
+      </div>
+
+      <Sheet
+        open={editingNodeId !== null}
+        onOpenChange={(open) => {
+          if (!open) handleCancelEdit();
+        }}
+      >
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>
+              Edit{" "}
+              {editingNodeId &&
+                nodes.find((n) => n.id === editingNodeId)?.data.type}
+            </SheetTitle>
+            <SheetDescription>Node ID: {editingNodeId}</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={editingTitle}
+                onChange={(e) => setEditingTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSaveTitle();
+                  } else if (e.key === "Escape") {
+                    handleCancelEdit();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            {editingNodeId &&
+              nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                "track" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="trackKey">Track Key</Label>
+                    <Input
+                      id="trackKey"
+                      type="text"
+                      value={editingTrackKey}
+                      onChange={(e) => setEditingTrackKey(e.target.value)}
+                      aria-invalid={
+                        editingTrackKey &&
+                        (editingTrackKey.trim() === "" ||
+                          editingTrackKey.includes(" ") ||
+                          isTrackKeyInUse(
+                            editingTrackKey.trim(),
+                            editingNodeId,
+                          ))
+                          ? "true"
+                          : "false"
+                      }
+                      className={
+                        editingTrackKey &&
+                        (editingTrackKey.trim() === "" ||
+                          editingTrackKey.includes(" ") ||
+                          isTrackKeyInUse(
+                            editingTrackKey.trim(),
+                            editingNodeId,
+                          ))
+                          ? "border-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
+                      placeholder="e.g., beginner-piano"
+                    />
+                    {editingTrackKey &&
+                      (editingTrackKey.trim() === "" ||
+                        editingTrackKey.includes(" ") ||
+                        isTrackKeyInUse(
+                          editingTrackKey.trim(),
+                          editingNodeId,
+                        )) && (
+                        <p className="text-sm text-destructive">
+                          {editingTrackKey.trim() === ""
+                            ? "Track key cannot be empty"
+                            : editingTrackKey.includes(" ")
+                              ? "Track key cannot contain spaces"
+                              : "This track key is already in use"}
+                        </p>
+                      )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="order">Order</Label>
+                    <Input
+                      id="order"
+                      type="number"
+                      min="1"
+                      value={editingOrder}
+                      onChange={(e) => setEditingOrder(e.target.value)}
+                      aria-invalid={
+                        editingOrder &&
+                        (isNaN(parseInt(editingOrder, 10)) ||
+                          parseInt(editingOrder, 10) <= 0 ||
+                          !Number.isInteger(parseFloat(editingOrder)) ||
+                          isOrderInUse(
+                            parseInt(editingOrder, 10),
+                            editingNodeId,
+                          ))
+                          ? "true"
+                          : "false"
+                      }
+                      className={
+                        editingOrder &&
+                        (isNaN(parseInt(editingOrder, 10)) ||
+                          parseInt(editingOrder, 10) <= 0 ||
+                          !Number.isInteger(parseFloat(editingOrder)) ||
+                          isOrderInUse(
+                            parseInt(editingOrder, 10),
+                            editingNodeId,
+                          ))
+                          ? "border-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
+                    />
+                    {editingOrder &&
+                      (isNaN(parseInt(editingOrder, 10)) ||
+                        parseInt(editingOrder, 10) <= 0 ||
+                        !Number.isInteger(parseFloat(editingOrder)) ||
+                        isOrderInUse(
+                          parseInt(editingOrder, 10),
+                          editingNodeId,
+                        )) && (
+                        <p className="text-sm text-destructive">
+                          {isOrderInUse(
+                            parseInt(editingOrder, 10),
+                            editingNodeId,
+                          )
+                            ? "This order number is already in use"
+                            : "Order must be a positive integer greater than 0"}
+                        </p>
+                      )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={editingDescription}
+                      onChange={(e) => setEditingDescription(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                </>
+              )}
+            {editingNodeId &&
+              nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                "skill" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="skillKey">Skill Key</Label>
+                    <Input
+                      id="skillKey"
+                      type="text"
+                      value={editingSkillKey}
+                      onChange={(e) => setEditingSkillKey(e.target.value)}
+                      aria-invalid={
+                        editingSkillKey &&
+                        (editingSkillKey.trim() === "" ||
+                          editingSkillKey.includes(" ") ||
+                          isSkillKeyInUse(
+                            editingSkillKey.trim(),
+                            editingNodeId,
+                          ))
+                          ? "true"
+                          : "false"
+                      }
+                      className={
+                        editingSkillKey &&
+                        (editingSkillKey.trim() === "" ||
+                          editingSkillKey.includes(" ") ||
+                          isSkillKeyInUse(
+                            editingSkillKey.trim(),
+                            editingNodeId,
+                          ))
+                          ? "border-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
+                      placeholder="e.g., piano_basics"
+                    />
+                    {editingSkillKey &&
+                      (editingSkillKey.trim() === "" ||
+                        editingSkillKey.includes(" ") ||
+                        isSkillKeyInUse(
+                          editingSkillKey.trim(),
+                          editingNodeId,
+                        )) && (
+                        <p className="text-sm text-destructive">
+                          {editingSkillKey.trim() === ""
+                            ? "Skill key cannot be empty"
+                            : editingSkillKey.includes(" ")
+                              ? "Skill key cannot contain spaces"
+                              : "This skill key is already in use"}
+                        </p>
+                      )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={editingDescription}
+                      onChange={(e) => setEditingDescription(e.target.value)}
+                      rows={4}
+                      autoResize
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unlockGuidance">Unlock Guidance</Label>
+                    <Textarea
+                      id="unlockGuidance"
+                      value={editingUnlockGuidance}
+                      onChange={(e) => setEditingUnlockGuidance(e.target.value)}
+                      rows={4}
+                      autoResize
+                    />
+                  </div>
+                </>
+              )}
+            {editingNodeId &&
+              nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                "lesson" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="lessonKey">Lesson Key</Label>
+                    <Input
+                      id="lessonKey"
+                      type="text"
+                      value={editingLessonKey}
+                      onChange={(e) => setEditingLessonKey(e.target.value)}
+                      aria-invalid={
+                        editingLessonKey &&
+                        (editingLessonKey.trim() === "" ||
+                          editingLessonKey.includes(" ") ||
+                          isLessonKeyInUse(
+                            editingLessonKey.trim(),
+                            editingNodeId,
+                          ))
+                          ? "true"
+                          : "false"
+                      }
+                      className={
+                        editingLessonKey &&
+                        (editingLessonKey.trim() === "" ||
+                          editingLessonKey.includes(" ") ||
+                          isLessonKeyInUse(
+                            editingLessonKey.trim(),
+                            editingNodeId,
+                          ))
+                          ? "border-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
+                      placeholder="e.g., A1.1"
+                    />
+                    {editingLessonKey &&
+                      (editingLessonKey.trim() === "" ||
+                        editingLessonKey.includes(" ") ||
+                        isLessonKeyInUse(
+                          editingLessonKey.trim(),
+                          editingNodeId,
+                        )) && (
+                        <p className="text-sm text-destructive">
+                          {editingLessonKey.trim() === ""
+                            ? "Lesson key cannot be empty"
+                            : editingLessonKey.includes(" ")
+                              ? "Lesson key cannot contain spaces"
+                              : "This lesson key is already in use"}
+                        </p>
+                      )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="goal">Goal</Label>
+                    <Textarea
+                      id="goal"
+                      value={editingGoal}
+                      onChange={(e) => setEditingGoal(e.target.value)}
+                      placeholder="e.g., Lock steady quarter notes to the metronome"
+                      autoResize
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="level">Level</Label>
+                    <Select
+                      value={editingLevel}
+                      onValueChange={(value) =>
+                        setEditingLevel(
+                          value as "beginner" | "intermediate" | "advanced",
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">
+                          Intermediate
+                        </SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="setupGuidance">Setup Guidance</Label>
+                    <Textarea
+                      id="setupGuidance"
+                      value={editingSetupGuidance}
+                      onChange={(e) => setEditingSetupGuidance(e.target.value)}
+                      rows={4}
+                      autoResize
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="evaluationGuidance">
+                      Evaluation Guidance
+                    </Label>
+                    <Textarea
+                      id="evaluationGuidance"
+                      value={editingEvaluationGuidance}
+                      onChange={(e) =>
+                        setEditingEvaluationGuidance(e.target.value)
+                      }
+                      rows={4}
+                      autoResize
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="difficultyGuidance">
+                      Difficulty Guidance
+                    </Label>
+                    <Textarea
+                      id="difficultyGuidance"
+                      value={editingDifficultyGuidance}
+                      onChange={(e) =>
+                        setEditingDifficultyGuidance(e.target.value)
+                      }
+                      rows={4}
+                      autoResize
+                    />
+                  </div>
+                </>
+              )}
+            {editingNodeId &&
+              nodes.find((n) => n.id === editingNodeId)?.data.type ===
+                "tune" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="tuneKey">Tune Key</Label>
+                    <Input
+                      id="tuneKey"
+                      type="text"
+                      value={editingTuneKey}
+                      onChange={(e) => setEditingTuneKey(e.target.value)}
+                      placeholder="e.g., st-louis-blues"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="musicRef">Music Reference</Label>
+                    <Select
+                      value={editingMusicRef}
+                      onValueChange={setEditingMusicRef}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a tune folder..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTunes.map((tune) => (
+                          <SelectItem key={tune.key} value={tune.key}>
+                            {tune.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Select a folder from src/music/
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="level">Level</Label>
+                    <Select
+                      value={editingLevel}
+                      onValueChange={(value) =>
+                        setEditingLevel(
+                          value as "beginner" | "intermediate" | "advanced",
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">
+                          Intermediate
+                        </SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={editingDescription}
+                      onChange={(e) => setEditingDescription(e.target.value)}
+                      rows={4}
+                      autoResize
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="evaluationGuidance">
+                      Evaluation Guidance
+                    </Label>
+                    <Textarea
+                      id="evaluationGuidance"
+                      value={editingEvaluationGuidance}
+                      onChange={(e) =>
+                        setEditingEvaluationGuidance(e.target.value)
+                      }
+                      rows={4}
+                      autoResize
+                      placeholder="Guide the AI on what to focus on when evaluating performances..."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Optional: Helps the AI understand tune-specific evaluation
+                      criteria
+                    </p>
+                  </div>
+                </>
+              )}
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={handleCancelEdit}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveTitle}>Save</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
-          <DialogHeader className="p-3 border-b h-16">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DialogTitle>Quest Editor</DialogTitle>
-                {currentGraph && (
-                  <span className="text-sm text-muted-foreground">
-                    — {currentGraph.title}
-                    {hasUnsavedChanges && " (unsaved)"}
-                  </span>
-                )}
-                {!currentGraph && hasUnsavedChanges && (
-                  <span className="text-sm text-muted-foreground">
-                    (unsaved)
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4" />
-                      Add
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuLabel>Add Node</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => addNode("track")}>
-                      Track
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addNode("lesson")}>
-                      Lesson
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addNode("skill")}>
-                      Skill
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addNode("tune")}>
-                      Tune
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48">
-                    <DropdownMenuItem onClick={handleNew}>
-                      <FilePlus className="h-4 w-4" />
-                      New
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleSave}
-                      disabled={isDbLoading}
-                    >
-                      <Save className="h-4 w-4" />
-                      Save
-                      {hasUnsavedChanges && (
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          •
-                        </span>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <FolderOpen className="h-4 w-4" />
-                        Open
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-56">
-                        {questGraphs.length === 0 ? (
-                          <DropdownMenuItem disabled>
-                            No saved graphs
-                          </DropdownMenuItem>
-                        ) : (
-                          questGraphs.map((graph) => (
-                            <DropdownMenuItem
-                              key={graph.id}
-                              onClick={() => handleLoadGraph(graph)}
-                            >
-                              {graph.title}
-                            </DropdownMenuItem>
-                          ))
-                        )}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuItem
-                      onClick={handleRename}
-                      disabled={!currentGraph || isDbLoading}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleDelete}
-                      disabled={!currentGraph || isDbLoading}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <FileJson className="h-4 w-4" />
-                        Export / Import
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-48">
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          Schema
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem onClick={handleExportSchema}>
-                          <Download className="h-4 w-4" />
-                          Export Schema
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleImport}>
-                          <Upload className="h-4 w-4" />
-                          Import Schema
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          Graph
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem onClick={handleDownload}>
-                          <Download className="h-4 w-4" />
-                          Export JSON
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleOpenFile}>
-                          <Upload className="h-4 w-4" />
-                          Import JSON
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handlePublish}
-                      disabled={!currentGraph || isDbLoading}
-                    >
-                      <Rocket className="h-4 w-4" />
-                      Publish
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onOpenChange(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div
-            className="flex-1 relative"
-            style={{ height: "calc(100vh - 64px)" }}
-          >
-            <style>{questControlsStyles}</style>
-            <ReactFlowProvider>
-              <QuestEditorFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onEdgesDelete={handleEdgesDelete}
-                onConnect={handleConnect}
-                onEditNode={handleEditNode}
-              />
-            </ReactFlowProvider>
-          </div>
-
-          <Sheet
-            open={editingNodeId !== null}
-            onOpenChange={(open) => {
-              if (!open) handleCancelEdit();
-            }}
-          >
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>
-                  Edit{" "}
-                  {editingNodeId &&
-                    nodes.find((n) => n.id === editingNodeId)?.data.type}
-                </SheetTitle>
-                <SheetDescription>Node ID: {editingNodeId}</SheetDescription>
-              </SheetHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={editingTitle}
-                    onChange={(e) => setEditingTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSaveTitle();
-                      } else if (e.key === "Escape") {
-                        handleCancelEdit();
-                      }
-                    }}
-                    autoFocus
-                  />
-                </div>
-                {editingNodeId &&
-                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
-                    "track" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="trackKey">Track Key</Label>
-                        <Input
-                          id="trackKey"
-                          type="text"
-                          value={editingTrackKey}
-                          onChange={(e) => setEditingTrackKey(e.target.value)}
-                          aria-invalid={
-                            editingTrackKey &&
-                            (editingTrackKey.trim() === "" ||
-                              editingTrackKey.includes(" ") ||
-                              isTrackKeyInUse(
-                                editingTrackKey.trim(),
-                                editingNodeId
-                              ))
-                              ? "true"
-                              : "false"
-                          }
-                          className={
-                            editingTrackKey &&
-                            (editingTrackKey.trim() === "" ||
-                              editingTrackKey.includes(" ") ||
-                              isTrackKeyInUse(
-                                editingTrackKey.trim(),
-                                editingNodeId
-                              ))
-                              ? "border-destructive focus-visible:ring-destructive"
-                              : ""
-                          }
-                          placeholder="e.g., beginner-piano"
-                        />
-                        {editingTrackKey &&
-                          (editingTrackKey.trim() === "" ||
-                            editingTrackKey.includes(" ") ||
-                            isTrackKeyInUse(
-                              editingTrackKey.trim(),
-                              editingNodeId
-                            )) && (
-                            <p className="text-sm text-destructive">
-                              {editingTrackKey.trim() === ""
-                                ? "Track key cannot be empty"
-                                : editingTrackKey.includes(" ")
-                                ? "Track key cannot contain spaces"
-                                : "This track key is already in use"}
-                            </p>
-                          )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="order">Order</Label>
-                        <Input
-                          id="order"
-                          type="number"
-                          min="1"
-                          value={editingOrder}
-                          onChange={(e) => setEditingOrder(e.target.value)}
-                          aria-invalid={
-                            editingOrder &&
-                            (isNaN(parseInt(editingOrder, 10)) ||
-                              parseInt(editingOrder, 10) <= 0 ||
-                              !Number.isInteger(parseFloat(editingOrder)) ||
-                              isOrderInUse(
-                                parseInt(editingOrder, 10),
-                                editingNodeId
-                              ))
-                              ? "true"
-                              : "false"
-                          }
-                          className={
-                            editingOrder &&
-                            (isNaN(parseInt(editingOrder, 10)) ||
-                              parseInt(editingOrder, 10) <= 0 ||
-                              !Number.isInteger(parseFloat(editingOrder)) ||
-                              isOrderInUse(
-                                parseInt(editingOrder, 10),
-                                editingNodeId
-                              ))
-                              ? "border-destructive focus-visible:ring-destructive"
-                              : ""
-                          }
-                        />
-                        {editingOrder &&
-                          (isNaN(parseInt(editingOrder, 10)) ||
-                            parseInt(editingOrder, 10) <= 0 ||
-                            !Number.isInteger(parseFloat(editingOrder)) ||
-                            isOrderInUse(
-                              parseInt(editingOrder, 10),
-                              editingNodeId
-                            )) && (
-                            <p className="text-sm text-destructive">
-                              {isOrderInUse(
-                                parseInt(editingOrder, 10),
-                                editingNodeId
-                              )
-                                ? "This order number is already in use"
-                                : "Order must be a positive integer greater than 0"}
-                            </p>
-                          )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          value={editingDescription}
-                          onChange={(e) =>
-                            setEditingDescription(e.target.value)
-                          }
-                          rows={4}
-                        />
-                      </div>
-                    </>
-                  )}
-                {editingNodeId &&
-                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
-                    "skill" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="skillKey">Skill Key</Label>
-                        <Input
-                          id="skillKey"
-                          type="text"
-                          value={editingSkillKey}
-                          onChange={(e) => setEditingSkillKey(e.target.value)}
-                          aria-invalid={
-                            editingSkillKey &&
-                            (editingSkillKey.trim() === "" ||
-                              editingSkillKey.includes(" ") ||
-                              isSkillKeyInUse(
-                                editingSkillKey.trim(),
-                                editingNodeId
-                              ))
-                              ? "true"
-                              : "false"
-                          }
-                          className={
-                            editingSkillKey &&
-                            (editingSkillKey.trim() === "" ||
-                              editingSkillKey.includes(" ") ||
-                              isSkillKeyInUse(
-                                editingSkillKey.trim(),
-                                editingNodeId
-                              ))
-                              ? "border-destructive focus-visible:ring-destructive"
-                              : ""
-                          }
-                          placeholder="e.g., piano_basics"
-                        />
-                        {editingSkillKey &&
-                          (editingSkillKey.trim() === "" ||
-                            editingSkillKey.includes(" ") ||
-                            isSkillKeyInUse(
-                              editingSkillKey.trim(),
-                              editingNodeId
-                            )) && (
-                            <p className="text-sm text-destructive">
-                              {editingSkillKey.trim() === ""
-                                ? "Skill key cannot be empty"
-                                : editingSkillKey.includes(" ")
-                                ? "Skill key cannot contain spaces"
-                                : "This skill key is already in use"}
-                            </p>
-                          )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          value={editingDescription}
-                          onChange={(e) =>
-                            setEditingDescription(e.target.value)
-                          }
-                          rows={4}
-                          autoResize
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="unlockGuidance">Unlock Guidance</Label>
-                        <Textarea
-                          id="unlockGuidance"
-                          value={editingUnlockGuidance}
-                          onChange={(e) =>
-                            setEditingUnlockGuidance(e.target.value)
-                          }
-                          rows={4}
-                          autoResize
-                        />
-                      </div>
-                    </>
-                  )}
-                {editingNodeId &&
-                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
-                    "lesson" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="lessonKey">Lesson Key</Label>
-                        <Input
-                          id="lessonKey"
-                          type="text"
-                          value={editingLessonKey}
-                          onChange={(e) => setEditingLessonKey(e.target.value)}
-                          aria-invalid={
-                            editingLessonKey &&
-                            (editingLessonKey.trim() === "" ||
-                              editingLessonKey.includes(" ") ||
-                              isLessonKeyInUse(
-                                editingLessonKey.trim(),
-                                editingNodeId
-                              ))
-                              ? "true"
-                              : "false"
-                          }
-                          className={
-                            editingLessonKey &&
-                            (editingLessonKey.trim() === "" ||
-                              editingLessonKey.includes(" ") ||
-                              isLessonKeyInUse(
-                                editingLessonKey.trim(),
-                                editingNodeId
-                              ))
-                              ? "border-destructive focus-visible:ring-destructive"
-                              : ""
-                          }
-                          placeholder="e.g., A1.1"
-                        />
-                        {editingLessonKey &&
-                          (editingLessonKey.trim() === "" ||
-                            editingLessonKey.includes(" ") ||
-                            isLessonKeyInUse(
-                              editingLessonKey.trim(),
-                              editingNodeId
-                            )) && (
-                            <p className="text-sm text-destructive">
-                              {editingLessonKey.trim() === ""
-                                ? "Lesson key cannot be empty"
-                                : editingLessonKey.includes(" ")
-                                ? "Lesson key cannot contain spaces"
-                                : "This lesson key is already in use"}
-                            </p>
-                          )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="goal">Goal</Label>
-                        <Textarea
-                          id="goal"
-                          value={editingGoal}
-                          onChange={(e) => setEditingGoal(e.target.value)}
-                          placeholder="e.g., Lock steady quarter notes to the metronome"
-                          autoResize
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="level">Level</Label>
-                        <Select
-                          value={editingLevel}
-                          onValueChange={(value) =>
-                            setEditingLevel(value as "beginner" | "intermediate" | "advanced")
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="beginner">Beginner</SelectItem>
-                            <SelectItem value="intermediate">Intermediate</SelectItem>
-                            <SelectItem value="advanced">Advanced</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="setupGuidance">Setup Guidance</Label>
-                        <Textarea
-                          id="setupGuidance"
-                          value={editingSetupGuidance}
-                          onChange={(e) =>
-                            setEditingSetupGuidance(e.target.value)
-                          }
-                          rows={4}
-                          autoResize
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="evaluationGuidance">
-                          Evaluation Guidance
-                        </Label>
-                        <Textarea
-                          id="evaluationGuidance"
-                          value={editingEvaluationGuidance}
-                          onChange={(e) =>
-                            setEditingEvaluationGuidance(e.target.value)
-                          }
-                          rows={4}
-                          autoResize
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="difficultyGuidance">
-                          Difficulty Guidance
-                        </Label>
-                        <Textarea
-                          id="difficultyGuidance"
-                          value={editingDifficultyGuidance}
-                          onChange={(e) =>
-                            setEditingDifficultyGuidance(e.target.value)
-                          }
-                          rows={4}
-                          autoResize
-                        />
-                      </div>
-                    </>
-                  )}
-                {editingNodeId &&
-                  nodes.find((n) => n.id === editingNodeId)?.data.type ===
-                    "tune" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="tuneKey">Tune Key</Label>
-                        <Input
-                          id="tuneKey"
-                          type="text"
-                          value={editingTuneKey}
-                          onChange={(e) => setEditingTuneKey(e.target.value)}
-                          placeholder="e.g., st-louis-blues"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="musicRef">Music Reference</Label>
-                        <Select
-                          value={editingMusicRef}
-                          onValueChange={setEditingMusicRef}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a tune folder..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableTunes.map((tune) => (
-                              <SelectItem key={tune.key} value={tune.key}>
-                                {tune.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          Select a folder from src/music/
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="level">Level</Label>
-                        <Select
-                          value={editingLevel}
-                          onValueChange={(value) =>
-                            setEditingLevel(value as "beginner" | "intermediate" | "advanced")
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="beginner">Beginner</SelectItem>
-                            <SelectItem value="intermediate">Intermediate</SelectItem>
-                            <SelectItem value="advanced">Advanced</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          value={editingDescription}
-                          onChange={(e) =>
-                            setEditingDescription(e.target.value)
-                          }
-                          rows={4}
-                          autoResize
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="evaluationGuidance">
-                          Evaluation Guidance
-                        </Label>
-                        <Textarea
-                          id="evaluationGuidance"
-                          value={editingEvaluationGuidance}
-                          onChange={(e) =>
-                            setEditingEvaluationGuidance(e.target.value)
-                          }
-                          rows={4}
-                          autoResize
-                          placeholder="Guide the AI on what to focus on when evaluating performances..."
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Optional: Helps the AI understand tune-specific evaluation criteria
-                        </p>
-                      </div>
-                    </>
-                  )}
-              </div>
-              <SheetFooter>
-                <Button variant="outline" onClick={handleCancelEdit}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveTitle}>Save</Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </DialogContent>
-      </Dialog>
+      {isEmbedded ? (
+        <div className="flex flex-col flex-1 w-full min-h-[calc(100dvh-4rem)]">
+          {editorContent}
+        </div>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-none w-screen h-screen m-0 p-0 gap-0 rounded-none translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
+            {editorContent}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Save Dialog */}
       <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
@@ -3188,13 +3361,16 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
       </AlertDialog>
 
       {/* Publish Dialog */}
-      <Dialog open={showPublishDialog} onOpenChange={(open) => {
-        setShowPublishDialog(open);
-        if (!open) {
-          setValidationResult(null);
-          setPublishResult(null);
-        }
-      }}>
+      <Dialog
+        open={showPublishDialog}
+        onOpenChange={(open) => {
+          setShowPublishDialog(open);
+          if (!open) {
+            setValidationResult(null);
+            setPublishResult(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Publish Curriculum</DialogTitle>
@@ -3208,7 +3384,9 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                 value={publishDialogTitle}
                 onChange={(e) => setPublishDialogTitle(e.target.value)}
                 placeholder="Enter version title (optional)"
-                disabled={isValidating || isPublishing || publishResult?.success}
+                disabled={
+                  isValidating || isPublishing || publishResult?.success
+                }
               />
             </div>
 
@@ -3216,7 +3394,9 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             {isValidating && (
               <div className="p-4 bg-muted rounded-md flex items-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                <span className="text-sm text-muted-foreground">Validating graph...</span>
+                <span className="text-sm text-muted-foreground">
+                  Validating graph...
+                </span>
               </div>
             )}
 
@@ -3252,27 +3432,32 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
             )}
 
             {/* Warnings */}
-            {validationResult?.warnings && validationResult.warnings.length > 0 && (
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
-                  ⚠️ Warnings ({validationResult.warnings.length})
-                </h4>
-                <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
-                  Non-blocking issues - you can still publish
-                </p>
-                <ul className="list-disc list-inside text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-                  {validationResult.warnings.map((warning, idx) => (
-                    <li key={idx}>{warning}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {validationResult?.warnings &&
+              validationResult.warnings.length > 0 && (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                    ⚠️ Warnings ({validationResult.warnings.length})
+                  </h4>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
+                    Non-blocking issues - you can still publish
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
+                    {validationResult.warnings.map((warning, idx) => (
+                      <li key={idx}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
             {/* Stats */}
             {validationResult?.counts && !publishResult?.success && (
               <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
                 <span className="font-medium">Stats:</span>{" "}
-                {validationResult.counts.nodes} nodes ({validationResult.counts.tracks} tracks, {validationResult.counts.lessons} lessons, {validationResult.counts.skills} skills), {validationResult.counts.edges} edges
+                {validationResult.counts.nodes} nodes (
+                {validationResult.counts.tracks} tracks,{" "}
+                {validationResult.counts.lessons} lessons,{" "}
+                {validationResult.counts.skills} skills),{" "}
+                {validationResult.counts.edges} edges
               </div>
             )}
 
@@ -3290,8 +3475,8 @@ export function QuestEditor({ open, onOpenChange }: QuestEditorProps) {
                 {publishResult?.success ? "Close" : "Cancel"}
               </Button>
               {!publishResult?.success && (
-                <Button 
-                  onClick={confirmPublish} 
+                <Button
+                  onClick={confirmPublish}
                   disabled={isValidating || isPublishing || !canPublish}
                 >
                   {isPublishing ? "Publishing..." : "Publish"}

@@ -25,7 +25,8 @@
   },
   "tabs": {
     "play": "Jouer",
-    "learn": "Apprendre"
+    "learn": "Apprendre",
+    "quest": "Quête"
   },
   "piano": {
     "sound": "Son du piano",
