@@ -186,6 +186,7 @@ const Index = () => {
   const [whistleSheetOpen, setWhistleSheetOpen] = useState(false);
   const [questHeaderActions, setQuestHeaderActions] =
     useState<ReactNode>(null);
+  const [questHeaderTitle, setQuestHeaderTitle] = useState<string | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
@@ -1649,6 +1650,11 @@ const Index = () => {
                 <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
                 <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
               </TabsList>
+              {activeMode === "quest" && questHeaderTitle && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  {questHeaderTitle}
+                </span>
+              )}
               </div>
               <div className="flex items-center gap-2">
               {activeMode === "play" && (
@@ -2133,6 +2139,7 @@ const Index = () => {
                   mode="embedded"
                   isActive={activeMode === "quest"}
                   onHeaderActionsChange={setQuestHeaderActions}
+                  onHeaderTitleChange={setQuestHeaderTitle}
                 />
               </TabsContent>
             </div>

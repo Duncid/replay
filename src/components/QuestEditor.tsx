@@ -332,6 +332,7 @@ interface QuestEditorProps {
   mode?: "modal" | "embedded";
   isActive?: boolean;
   onHeaderActionsChange?: (actions: React.ReactNode) => void;
+  onHeaderTitleChange?: (title: string | null) => void;
 }
 
 // Node variation configuration
@@ -736,6 +737,7 @@ export function QuestEditor({
   mode = "modal",
   isActive = true,
   onHeaderActionsChange,
+  onHeaderTitleChange,
 }: QuestEditorProps) {
   const { toast } = useToast();
   const {
@@ -2688,30 +2690,46 @@ export function QuestEditor({
     onHeaderActionsChange(null);
   }, [headerActions, isActive, isEmbedded, onHeaderActionsChange]);
 
-  const editorTitle = isEmbedded ? (
-    <h2 className="text-lg font-semibold leading-none tracking-tight">
-      Quest Editor
-    </h2>
-  ) : (
-    <DialogTitle>Quest Editor</DialogTitle>
-  );
+  const editorTitle = useMemo(() => {
+    const baseTitle = "Quest Editor";
+    if (currentGraph) {
+      return `${baseTitle} — ${currentGraph.title}${
+        hasUnsavedChanges ? " (unsaved)" : ""
+      }`;
+    }
+    if (hasUnsavedChanges) {
+      return `${baseTitle} — (unsaved)`;
+    }
+    return baseTitle;
+  }, [currentGraph, hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!onHeaderTitleChange) {
+      return;
+    }
+    if (isEmbedded && isActive) {
+      onHeaderTitleChange(editorTitle);
+      return;
+    }
+    onHeaderTitleChange(null);
+  }, [editorTitle, isActive, isEmbedded, onHeaderTitleChange]);
 
   const editorContent = (
     <>
-      <div className="p-3 border-b h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {editorTitle}
-          {currentGraph && (
-            <span className="text-sm text-muted-foreground">
-              — {currentGraph.title}
-              {hasUnsavedChanges && " (unsaved)"}
-            </span>
-          )}
-          {!currentGraph && hasUnsavedChanges && (
-            <span className="text-sm text-muted-foreground">(unsaved)</span>
-          )}
-        </div>
-        {!isEmbedded && (
+      {!isEmbedded && (
+        <div className="p-3 border-b h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DialogTitle>Quest Editor</DialogTitle>
+            {currentGraph && (
+              <span className="text-sm text-muted-foreground">
+                — {currentGraph.title}
+                {hasUnsavedChanges && " (unsaved)"}
+              </span>
+            )}
+            {!currentGraph && hasUnsavedChanges && (
+              <span className="text-sm text-muted-foreground">(unsaved)</span>
+            )}
+          </div>
           <div className="flex gap-2">
             {headerActions}
             <Button
@@ -2722,8 +2740,8 @@ export function QuestEditor({
               <X className="h-4 w-4" />
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div
         className="flex-1 relative"
