@@ -2214,7 +2214,7 @@ const Index = () => {
         </div>
       </Tabs>
 
-      {activeMode !== "quest" && activeMode !== "lab" && (
+      {activeMode !== "quest" && (
         <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
           {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
           <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
@@ -2295,7 +2295,7 @@ const Index = () => {
               appState === "waiting_for_ai"
             }
             soundType={pianoSoundType}
-            hasColor={isInTuneMode}
+            hasColor={isInTuneMode || activeMode === "lab"}
             language={language}
             notationPreference={musicNotation}
             onNoteStart={handleNoteStart}
