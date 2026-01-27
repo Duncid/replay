@@ -1,5 +1,3 @@
-import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
-import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
 import labSequenceSource from "@/music/intro/output/tune.ns.json";
 import type { NoteSequence } from "@/types/noteSequence";
@@ -7,6 +5,7 @@ import { getTuneXml } from "@/utils/tuneAssetGlobs";
 import { Pause, Play } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import { useCallback, useEffect, useRef } from "react";
+import { OpenSheetMusicDisplayView } from "../OpenSheetMusicDisplayView";
 
 interface LabModeProps {
   onPlaySequence?: (sequence: NoteSequence) => void;
@@ -122,8 +121,8 @@ export const LabMode = ({
   }, [clearCursorTimers]);
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-start p-4 overflow-auto">
-      <div className="w-full max-w-[800px] flex justify-end mb-3">
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="w-full flex justify-end mb-3">
         <Button
           variant="outline"
           size="sm"
@@ -150,16 +149,6 @@ export const LabMode = ({
         className="relative w-full"
         onOsmdReady={handleOsmdReady}
       />
-      <div className="w-full flex justify-center mt-4">
-        <SheetMusic
-          sequence={labSequence}
-          compact
-          noTitle
-          noControls
-          hasColor
-          scale={1.1}
-        />
-      </div>
     </div>
   );
 };
