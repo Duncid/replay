@@ -1,7 +1,7 @@
 import { getNoteColorForNoteName } from "@/constants/noteColors";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
-import { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
-import { useEffect, useRef } from "react";
+import { CursorType, OpenSheetMusicDisplay } from "opensheetmusicdisplay";
+import { useCallback, useEffect, useRef } from "react";
 
 type Compactness =
   | "default"
@@ -14,6 +14,8 @@ interface OpenSheetMusicDisplayViewProps {
   xml: string | null;
   compactness?: Compactness;
   hasColor?: boolean;
+  onOsmdReady?: (osmd: OpenSheetMusicDisplay) => void;
+  cursorColor?: string;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -83,6 +85,8 @@ export const OpenSheetMusicDisplayView = ({
   xml,
   compactness = "compactlight",
   hasColor = false,
+  onOsmdReady,
+  cursorColor,
   className,
   style,
 }: OpenSheetMusicDisplayViewProps) => {
@@ -92,25 +96,74 @@ export const OpenSheetMusicDisplayView = ({
     null,
   );
 
+  const resolveThemeColors = useCallback((host: HTMLDivElement) => {
+    const probe = document.createElement("div");
+    probe.className = "bg-background text-foreground";
+    // probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    probe.style.pointerEvents = "none";
+    host.appendChild(probe);
+    const styles = getComputedStyle(probe);
+    const background = styles.backgroundColor;
+    const accent = styles.color;
+    probe.remove();
+    return { background, accent };
+  }, []);
+
+  const applyCursorStyle = useCallback(() => {
+    const cursor = osmdRef.current?.cursor as
+      | unknown
+      | {
+          cursorElement?: HTMLImageElement;
+          wantedZIndex?: string;
+          CursorOptions?: {
+            type?: CursorType;
+            color?: string;
+            alpha?: number;
+            follow?: boolean;
+          };
+        };
+    if (cursor && typeof cursor === "object") {
+      (cursor as { wantedZIndex?: string }).wantedZIndex = "10";
+    }
+    const cursorElement = (cursor as { cursorElement?: HTMLImageElement })
+      ?.cursorElement as HTMLImageElement | undefined;
+    if (!cursorElement) return;
+    if (!themeColorsRef.current && containerRef.current) {
+      themeColorsRef.current = resolveThemeColors(containerRef.current);
+    }
+    const accent = themeColorsRef.current?.accent ?? "currentColor";
+    const resolvedCursorColor = cursorColor ?? accent;
+    if (cursor && typeof cursor === "object") {
+      const currentOptions = (cursor as { CursorOptions?: object })
+        .CursorOptions;
+      (cursor as { CursorOptions?: object }).CursorOptions = {
+        ...(currentOptions ?? {}),
+        type: CursorType.ThinLeft,
+        color: resolvedCursorColor,
+        alpha: 1,
+      };
+    }
+    const baseStyle: React.CSSProperties = {
+      backgroundColor: resolvedCursorColor,
+      border: `0px solid ${resolvedCursorColor}`,
+      borderRadius: "4px",
+      height: "100%",
+      opacity: 0.6,
+      transform: "translateY(-25%)",
+      pointerEvents: "none",
+      zIndex: 10,
+    };
+    cursorElement.style.backgroundImage = "none";
+    cursorElement.style.zIndex = "10";
+    Object.assign(cursorElement.style, baseStyle);
+  }, [resolveThemeColors, cursorColor]);
+
   useEffect(() => {
     let observer: MutationObserver | null = null;
 
     if (!xml || !containerRef.current) return undefined;
     const container = containerRef.current;
-
-    const resolveThemeColors = (host: HTMLDivElement) => {
-      const probe = document.createElement("div");
-      probe.className = "bg-background text-foreground";
-      probe.style.position = "absolute";
-      probe.style.visibility = "hidden";
-      probe.style.pointerEvents = "none";
-      host.appendChild(probe);
-      const styles = getComputedStyle(probe);
-      const background = styles.backgroundColor;
-      const accent = styles.color;
-      probe.remove();
-      return { background, accent };
-    };
 
     const applyThemeColors = (
       svg: SVGSVGElement,
@@ -320,15 +373,18 @@ export const OpenSheetMusicDisplayView = ({
         if (svgRoot && themeColorsRef.current) {
           applyThemeColors(svgRoot, themeColorsRef.current);
         }
+        applyCursorStyle();
 
         observer = new MutationObserver(() => {
           const currentSvg = container.querySelector("svg");
           if (currentSvg && themeColorsRef.current) {
             applyThemeColors(currentSvg, themeColorsRef.current);
           }
+          applyCursorStyle();
         });
         observer.observe(container, { childList: true, subtree: true });
         osmdRef.current = osmd;
+        onOsmdReady?.(osmd);
       } catch (error) {
         console.error("[OpenSheetMusicDisplayView] OSMD error:", error);
       }
@@ -340,7 +396,18 @@ export const OpenSheetMusicDisplayView = ({
       if (observer) observer.disconnect();
       osmdRef.current = null;
     };
-  }, [xml, compactness, hasColor]);
+  }, [
+    xml,
+    compactness,
+    hasColor,
+    onOsmdReady,
+    applyCursorStyle,
+    resolveThemeColors,
+  ]);
+
+  useEffect(() => {
+    applyCursorStyle();
+  }, [applyCursorStyle]);
 
   if (!xml) return null;
 

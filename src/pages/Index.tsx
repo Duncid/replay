@@ -665,6 +665,17 @@ const Index = () => {
     [],
   );
 
+  const handleLabPlaySequence = useCallback(
+    (sequence: NoteSequence) => {
+      if (isPlayingRef.current) {
+        stopAiPlayback();
+      }
+      pianoRef.current?.ensureAudioReady();
+      setTimeout(() => playSequence(sequence, undefined, true), 50);
+    },
+    [playSequence, stopAiPlayback],
+  );
+
   function handleReplaySequence(sequence: NoteSequence) {
     if (isPlayingRef.current) return;
 
@@ -2209,7 +2220,11 @@ const Index = () => {
             value="lab"
             className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
           >
-            <LabMode />
+            <LabMode
+              onPlaySequence={handleLabPlaySequence}
+              onStopPlayback={stopAiPlayback}
+              isPlaying={isPlaying}
+            />
           </TabsContent>
         </div>
       </Tabs>
