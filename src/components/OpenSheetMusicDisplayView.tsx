@@ -95,6 +95,7 @@ export const OpenSheetMusicDisplayView = ({
   const themeColorsRef = useRef<{ background: string; accent: string } | null>(
     null,
   );
+  const cursorStyleRetryRef = useRef<number | null>(null);
 
   const resolveThemeColors = useCallback((host: HTMLDivElement) => {
     const probe = document.createElement("div");
@@ -128,7 +129,19 @@ export const OpenSheetMusicDisplayView = ({
     }
     const cursorElement = (cursor as { cursorElement?: HTMLImageElement })
       ?.cursorElement as HTMLImageElement | undefined;
-    if (!cursorElement) return;
+    if (!cursorElement) {
+      if (cursorStyleRetryRef.current === null) {
+        cursorStyleRetryRef.current = window.requestAnimationFrame(() => {
+          cursorStyleRetryRef.current = null;
+          applyCursorStyle();
+        });
+      }
+      return;
+    }
+    if (cursorStyleRetryRef.current !== null) {
+      window.cancelAnimationFrame(cursorStyleRetryRef.current);
+      cursorStyleRetryRef.current = null;
+    }
     if (!themeColorsRef.current && containerRef.current) {
       themeColorsRef.current = resolveThemeColors(containerRef.current);
     }

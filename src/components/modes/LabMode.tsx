@@ -28,6 +28,8 @@ export const LabMode = ({
   const expectedGroupIndexRef = useRef(0);
   const remainingPitchCountsRef = useRef<Map<number, number>>(new Map());
   const wasPlayingRef = useRef(false);
+  const cursorTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const cursorEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const expectedGroups = useMemo(() => {
     if (!labSequence.notes.length) return [];
@@ -70,6 +72,15 @@ export const LabMode = ({
     cursorInitializedRef.current = false;
   }, []);
 
+  const clearCursorTimers = useCallback(() => {
+    cursorTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+    cursorTimeoutsRef.current = [];
+    if (cursorEndTimeoutRef.current) {
+      clearTimeout(cursorEndTimeoutRef.current);
+      cursorEndTimeoutRef.current = null;
+    }
+  }, []);
+
   const showCursorAtStart = useCallback(() => {
     const osmd = osmdRef.current;
     if (!osmd?.cursor) return;
@@ -89,6 +100,61 @@ export const LabMode = ({
       cursorInitializedRef.current = true;
     }
   }, []);
+
+  const scheduleCursorPlayback = useCallback(() => {
+    const osmd = osmdRef.current;
+    if (!osmd?.cursor || labSequence.notes.length === 0) return;
+
+    clearCursorTimers();
+    resetExpectedTracking();
+    showCursorAtStart();
+
+    const minStartTime = Math.min(
+      ...labSequence.notes.map((note) => note.startTime),
+    );
+    const normalizedNotes = labSequence.notes.map((note) => ({
+      ...note,
+      startTime: note.startTime - minStartTime,
+      endTime: note.endTime - minStartTime,
+    }));
+    const normalizedTotalTime =
+      labSequence.totalTime > 0
+        ? labSequence.totalTime - minStartTime
+        : Math.max(...normalizedNotes.map((note) => note.endTime), 0);
+
+    const startTimes = Array.from(
+      new Set(normalizedNotes.map((note) => note.startTime)),
+    ).sort((a, b) => a - b);
+
+    startTimes.slice(1).forEach((startTime, index) => {
+      const targetIndex = index + 1;
+      const timeout = setTimeout(() => {
+        const cursor = osmdRef.current?.cursor;
+        if (!cursor) return;
+        if (expectedGroupIndexRef.current >= targetIndex) return;
+        expectedGroupIndexRef.current = targetIndex;
+        remainingPitchCountsRef.current = buildPitchCounts(
+          expectedGroups[targetIndex]?.pitches ?? [],
+        );
+        cursor.next();
+        cursor.update();
+      }, startTime * 1000);
+      cursorTimeoutsRef.current.push(timeout);
+    });
+
+    cursorEndTimeoutRef.current = setTimeout(() => {
+      resetCursor();
+      resetExpectedTracking();
+    }, normalizedTotalTime * 1000);
+  }, [
+    buildPitchCounts,
+    clearCursorTimers,
+    expectedGroups,
+    labSequence,
+    resetCursor,
+    resetExpectedTracking,
+    showCursorAtStart,
+  ]);
 
   const handleUserNote = useCallback(
     (noteKey: string) => {
@@ -135,20 +201,24 @@ export const LabMode = ({
   const handlePlayToggle = useCallback(() => {
     if (isPlaying) {
       onStopPlayback?.();
+      clearCursorTimers();
       resetCursor();
       resetExpectedTracking();
       return;
     }
 
     if (!onPlaySequence || labSequence.notes.length === 0) return;
+    scheduleCursorPlayback();
     onPlaySequence(labSequence);
   }, [
+    clearCursorTimers,
     isPlaying,
     labSequence,
     onPlaySequence,
     onStopPlayback,
     resetCursor,
     resetExpectedTracking,
+    scheduleCursorPlayback,
   ]);
 
   const handleOsmdReady = useCallback(
@@ -162,11 +232,12 @@ export const LabMode = ({
 
   useEffect(() => {
     if (wasPlayingRef.current && !isPlaying) {
+      clearCursorTimers();
       resetCursor();
       resetExpectedTracking();
     }
     wasPlayingRef.current = isPlaying;
-  }, [isPlaying, resetCursor, resetExpectedTracking]);
+  }, [clearCursorTimers, isPlaying, resetCursor, resetExpectedTracking]);
 
   useEffect(() => {
     resetExpectedTracking();
@@ -178,6 +249,12 @@ export const LabMode = ({
       onRegisterNoteHandler?.(null);
     };
   }, [handleUserNote, onRegisterNoteHandler]);
+
+  useEffect(() => {
+    return () => {
+      clearCursorTimers();
+    };
+  }, [clearCursorTimers]);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
