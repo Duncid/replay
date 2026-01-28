@@ -1,124 +1,183 @@
 import { Button } from "@/components/ui/button";
 import labSequenceSource from "@/music/intro/output/tune.ns.json";
 import type { NoteSequence } from "@/types/noteSequence";
+import { noteNameToMidi } from "@/utils/noteSequenceUtils";
 import { getTuneXml } from "@/utils/tuneAssetGlobs";
 import { Pause, Play } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { OpenSheetMusicDisplayView } from "../OpenSheetMusicDisplayView";
 
 interface LabModeProps {
   onPlaySequence?: (sequence: NoteSequence) => void;
   onStopPlayback?: () => void;
   isPlaying?: boolean;
+  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
 }
 
 export const LabMode = ({
   onPlaySequence,
   onStopPlayback,
   isPlaying = false,
+  onRegisterNoteHandler,
 }: LabModeProps) => {
   const labSequence = labSequenceSource as NoteSequence;
   const xml = getTuneXml("intro");
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
-  const cursorTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
-  const cursorEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cursorInitializedRef = useRef(false);
+  const expectedGroupIndexRef = useRef(0);
+  const remainingPitchCountsRef = useRef<Map<number, number>>(new Map());
+  const wasPlayingRef = useRef(false);
 
-  const clearCursorTimers = useCallback(() => {
-    cursorTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-    cursorTimeoutsRef.current = [];
-    if (cursorEndTimeoutRef.current) {
-      clearTimeout(cursorEndTimeoutRef.current);
-      cursorEndTimeoutRef.current = null;
-    }
+  const expectedGroups = useMemo(() => {
+    if (!labSequence.notes.length) return [];
+    const grouped = new Map<number, { startTime: number; pitches: number[] }>();
+    labSequence.notes.forEach((note) => {
+      const key = Math.round(note.startTime * 1000);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.pitches.push(note.pitch);
+        existing.startTime = Math.min(existing.startTime, note.startTime);
+      } else {
+        grouped.set(key, { startTime: note.startTime, pitches: [note.pitch] });
+      }
+    });
+    return Array.from(grouped.values()).sort(
+      (a, b) => a.startTime - b.startTime,
+    );
+  }, [labSequence.notes]);
+
+  const buildPitchCounts = useCallback((pitches: number[]) => {
+    const counts = new Map<number, number>();
+    pitches.forEach((pitch) => {
+      counts.set(pitch, (counts.get(pitch) ?? 0) + 1);
+    });
+    return counts;
   }, []);
+
+  const resetExpectedTracking = useCallback(() => {
+    expectedGroupIndexRef.current = 0;
+    remainingPitchCountsRef.current = buildPitchCounts(
+      expectedGroups[0]?.pitches ?? [],
+    );
+  }, [buildPitchCounts, expectedGroups]);
 
   const resetCursor = useCallback(() => {
     const osmd = osmdRef.current;
     if (!osmd?.cursor) return;
     osmd.cursor.reset();
     osmd.cursor.hide();
+    cursorInitializedRef.current = false;
   }, []);
 
-  const scheduleCursor = useCallback(() => {
+  const showCursorAtStart = useCallback(() => {
     const osmd = osmdRef.current;
-    if (!osmd?.cursor || labSequence.notes.length === 0) return;
-
-    osmd.cursor.show();
+    if (!osmd?.cursor) return;
     osmd.cursor.reset();
+    osmd.cursor.show();
     osmd.cursor.update();
+    cursorInitializedRef.current = true;
+  }, []);
 
-    const minStartTime = Math.min(
-      ...labSequence.notes.map((note) => note.startTime),
-    );
-    const normalizedNotes = labSequence.notes.map((note) => ({
-      ...note,
-      startTime: note.startTime - minStartTime,
-      endTime: note.endTime - minStartTime,
-    }));
-    const normalizedTotalTime =
-      labSequence.totalTime > 0
-        ? labSequence.totalTime - minStartTime
-        : Math.max(...normalizedNotes.map((note) => note.endTime), 0);
+  const ensureCursorInitialized = useCallback(() => {
+    const osmd = osmdRef.current;
+    if (!osmd?.cursor) return;
+    if (!cursorInitializedRef.current) {
+      osmd.cursor.reset();
+      osmd.cursor.show();
+      osmd.cursor.update();
+      cursorInitializedRef.current = true;
+    }
+  }, []);
 
-    const startTimes = Array.from(
-      new Set(normalizedNotes.map((note) => note.startTime)),
-    ).sort((a, b) => a - b);
+  const handleUserNote = useCallback(
+    (noteKey: string) => {
+      const osmd = osmdRef.current;
+      if (!osmd?.cursor || expectedGroups.length === 0) return;
 
-    // Cursor starts at first note after reset; only advance on subsequent notes.
-    startTimes.slice(1).forEach((startTime) => {
-      const timeout = setTimeout(() => {
-        const cursor = osmdRef.current?.cursor;
-        if (!cursor) return;
-        cursor.next();
-        cursor.update();
-      }, startTime * 1000);
-      cursorTimeoutsRef.current.push(timeout);
-    });
+      const pitch = noteNameToMidi(noteKey);
+      const remaining = remainingPitchCountsRef.current;
+      const remainingCount = remaining.get(pitch);
+      if (!remainingCount) return;
 
-    cursorEndTimeoutRef.current = setTimeout(() => {
-      resetCursor();
-    }, normalizedTotalTime * 1000);
-  }, [labSequence, resetCursor]);
+      ensureCursorInitialized();
+      if (remainingCount === 1) {
+        remaining.delete(pitch);
+      } else {
+        remaining.set(pitch, remainingCount - 1);
+      }
+
+      if (remaining.size > 0) return;
+
+      const nextIndex = expectedGroupIndexRef.current + 1;
+      if (nextIndex >= expectedGroups.length) {
+        resetCursor();
+        resetExpectedTracking();
+        return;
+      }
+
+      expectedGroupIndexRef.current = nextIndex;
+      remainingPitchCountsRef.current = buildPitchCounts(
+        expectedGroups[nextIndex].pitches,
+      );
+      osmd.cursor.next();
+      osmd.cursor.update();
+    },
+    [
+      buildPitchCounts,
+      ensureCursorInitialized,
+      expectedGroups,
+      resetCursor,
+      resetExpectedTracking,
+    ],
+  );
 
   const handlePlayToggle = useCallback(() => {
     if (isPlaying) {
       onStopPlayback?.();
-      clearCursorTimers();
       resetCursor();
+      resetExpectedTracking();
       return;
     }
 
     if (!onPlaySequence || labSequence.notes.length === 0) return;
-    clearCursorTimers();
-    scheduleCursor();
     onPlaySequence(labSequence);
   }, [
-    clearCursorTimers,
     isPlaying,
     labSequence,
     onPlaySequence,
     onStopPlayback,
     resetCursor,
-    scheduleCursor,
+    resetExpectedTracking,
   ]);
 
-  const handleOsmdReady = useCallback((osmd: OpenSheetMusicDisplay) => {
-    osmdRef.current = osmd;
-  }, []);
+  const handleOsmdReady = useCallback(
+    (osmd: OpenSheetMusicDisplay) => {
+      osmdRef.current = osmd;
+      resetExpectedTracking();
+      showCursorAtStart();
+    },
+    [resetExpectedTracking, showCursorAtStart],
+  );
 
   useEffect(() => {
-    if (!isPlaying) {
-      clearCursorTimers();
+    if (wasPlayingRef.current && !isPlaying) {
       resetCursor();
+      resetExpectedTracking();
     }
-  }, [clearCursorTimers, isPlaying, resetCursor]);
+    wasPlayingRef.current = isPlaying;
+  }, [isPlaying, resetCursor, resetExpectedTracking]);
 
   useEffect(() => {
+    resetExpectedTracking();
+  }, [resetExpectedTracking]);
+
+  useEffect(() => {
+    onRegisterNoteHandler?.(handleUserNote);
     return () => {
-      clearCursorTimers();
+      onRegisterNoteHandler?.(null);
     };
-  }, [clearCursorTimers]);
+  }, [handleUserNote, onRegisterNoteHandler]);
 
   return (
     <div className="w-full max-w-3xl mx-auto">

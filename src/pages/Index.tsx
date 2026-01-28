@@ -343,6 +343,7 @@ const Index = () => {
   const isPlayingRef = useRef<boolean>(false);
   const midiPressedKeysRef = useRef<Set<string>>(new Set());
   const pendingUserSequenceRef = useRef<NoteSequence | null>(null);
+  const labNoteHandlerRef = useRef<((noteKey: string) => void) | null>(null);
 
   const MIN_WAIT_TIME_MS = 1000;
 
@@ -439,6 +440,13 @@ const Index = () => {
     recordingManager.cancelRecording();
     setActiveMode(newMode);
   };
+
+  const registerLabNoteHandler = useCallback(
+    (handler: ((noteKey: string) => void) | null) => {
+      labNoteHandlerRef.current = handler;
+    },
+    [],
+  );
 
   // MIDI note handlers - memoized to ensure stable references for useMidiInput
   const handleMidiNoteOn = useCallback(
@@ -1467,6 +1475,10 @@ const Index = () => {
         setAppState("user_playing");
       }
 
+      if (activeMode === "lab") {
+        labNoteHandlerRef.current?.(noteKey);
+      }
+
       if (activeMode === "play") {
         recordingManager.addNoteStart(noteKey, velocity);
       } else if (activeMode === "learn") {
@@ -2224,6 +2236,7 @@ const Index = () => {
               onPlaySequence={handleLabPlaySequence}
               onStopPlayback={stopAiPlayback}
               isPlaying={isPlaying}
+              onRegisterNoteHandler={registerLabNoteHandler}
             />
           </TabsContent>
         </div>
