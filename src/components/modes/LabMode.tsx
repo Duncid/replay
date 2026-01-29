@@ -34,7 +34,9 @@ export const LabMode = ({
   const wasPlayingRef = useRef(false);
   const cursorTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const cursorEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initCursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const osmdViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
+  const initStyleAppliedRef = useRef(false);
 
   const expectedGroups = useMemo(() => {
     if (!labSequence.notes.length) return [];
@@ -96,6 +98,10 @@ export const LabMode = ({
     if (cursorEndTimeoutRef.current) {
       clearTimeout(cursorEndTimeoutRef.current);
       cursorEndTimeoutRef.current = null;
+    }
+    if (initCursorTimeoutRef.current) {
+      clearTimeout(initCursorTimeoutRef.current);
+      initCursorTimeoutRef.current = null;
     }
   }, []);
 
@@ -163,7 +169,7 @@ export const LabMode = ({
     });
 
     cursorEndTimeoutRef.current = setTimeout(() => {
-      resetCursor();
+      showCursorAtStart();
       resetExpectedTracking();
     }, normalizedTotalTime * 1000);
   }, [
@@ -171,7 +177,6 @@ export const LabMode = ({
     clearCursorTimers,
     expectedGroups,
     labSequence,
-    resetCursor,
     resetExpectedTracking,
     setCursorColorForGroup,
     showCursorAtStart,
@@ -225,7 +230,7 @@ export const LabMode = ({
     if (isPlaying) {
       onStopPlayback?.();
       clearCursorTimers();
-      resetCursor();
+      showCursorAtStart();
       resetExpectedTracking();
       return;
     }
@@ -239,28 +244,49 @@ export const LabMode = ({
     labSequence,
     onPlaySequence,
     onStopPlayback,
-    resetCursor,
     resetExpectedTracking,
     scheduleCursorPlayback,
+    showCursorAtStart,
   ]);
 
   const handleOsmdReady = useCallback(
     (osmd: OpenSheetMusicDisplay) => {
       osmdRef.current = osmd;
       resetExpectedTracking();
-      showCursorAtStart();
+      initStyleAppliedRef.current = false;
+      if (initCursorTimeoutRef.current) {
+        clearTimeout(initCursorTimeoutRef.current);
+      }
+      initCursorTimeoutRef.current = setTimeout(() => {
+        showCursorAtStart();
+        setCursorColorForGroup(0);
+        initCursorTimeoutRef.current = null;
+      }, 500);
     },
-    [resetExpectedTracking, showCursorAtStart],
+    [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
+  );
+
+  const handleCursorElementReady = useCallback(
+    (cursorElement: HTMLImageElement | null) => {
+      if (!cursorElement) {
+        initStyleAppliedRef.current = false;
+        return;
+      }
+      if (initStyleAppliedRef.current) return;
+      setCursorColorForGroup(0);
+      initStyleAppliedRef.current = true;
+    },
+    [setCursorColorForGroup],
   );
 
   useEffect(() => {
     if (wasPlayingRef.current && !isPlaying) {
       clearCursorTimers();
-      resetCursor();
+      showCursorAtStart();
       resetExpectedTracking();
     }
     wasPlayingRef.current = isPlaying;
-  }, [clearCursorTimers, isPlaying, resetCursor, resetExpectedTracking]);
+  }, [clearCursorTimers, isPlaying, resetExpectedTracking, showCursorAtStart]);
 
   useEffect(() => {
     resetExpectedTracking();
@@ -308,6 +334,7 @@ export const LabMode = ({
         hasColor
         className="relative w-full"
         onOsmdReady={handleOsmdReady}
+        onCursorElementReady={handleCursorElementReady}
       />
     </div>
   );
