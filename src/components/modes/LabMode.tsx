@@ -1,12 +1,16 @@
 import { Button } from "@/components/ui/button";
+import { getNoteColorForNoteName } from "@/constants/noteColors";
 import labSequenceSource from "@/music/intro/output/tune.ns.json";
 import type { NoteSequence } from "@/types/noteSequence";
-import { noteNameToMidi } from "@/utils/noteSequenceUtils";
+import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
 import { getTuneXml } from "@/utils/tuneAssetGlobs";
 import { Pause, Play } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { OpenSheetMusicDisplayView } from "../OpenSheetMusicDisplayView";
+import {
+  OpenSheetMusicDisplayView,
+  type OpenSheetMusicDisplayViewHandle,
+} from "../OpenSheetMusicDisplayView";
 
 interface LabModeProps {
   onPlaySequence?: (sequence: NoteSequence) => void;
@@ -30,6 +34,7 @@ export const LabMode = ({
   const wasPlayingRef = useRef(false);
   const cursorTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const cursorEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const osmdViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
 
   const expectedGroups = useMemo(() => {
     if (!labSequence.notes.length) return [];
@@ -64,6 +69,19 @@ export const LabMode = ({
     );
   }, [buildPitchCounts, expectedGroups]);
 
+  const setCursorColorForGroup = useCallback(
+    (groupIndex: number) => {
+      const pitches = expectedGroups[groupIndex]?.pitches;
+      if (!pitches?.length) return;
+      const noteName = midiToNoteName(pitches[0]);
+      const noteColor = getNoteColorForNoteName(noteName);
+      if (noteColor) {
+        osmdViewRef.current?.setCursorColor(noteColor);
+      }
+    },
+    [expectedGroups],
+  );
+
   const resetCursor = useCallback(() => {
     const osmd = osmdRef.current;
     if (!osmd?.cursor) return;
@@ -88,7 +106,8 @@ export const LabMode = ({
     osmd.cursor.show();
     osmd.cursor.update();
     cursorInitializedRef.current = true;
-  }, []);
+    setCursorColorForGroup(0);
+  }, [setCursorColorForGroup]);
 
   const ensureCursorInitialized = useCallback(() => {
     const osmd = osmdRef.current;
@@ -136,6 +155,7 @@ export const LabMode = ({
         remainingPitchCountsRef.current = buildPitchCounts(
           expectedGroups[targetIndex]?.pitches ?? [],
         );
+        setCursorColorForGroup(targetIndex);
         cursor.next();
         cursor.update();
       }, startTime * 1000);
@@ -153,6 +173,7 @@ export const LabMode = ({
     labSequence,
     resetCursor,
     resetExpectedTracking,
+    setCursorColorForGroup,
     showCursorAtStart,
   ]);
 
@@ -186,6 +207,7 @@ export const LabMode = ({
       remainingPitchCountsRef.current = buildPitchCounts(
         expectedGroups[nextIndex].pitches,
       );
+      setCursorColorForGroup(nextIndex);
       osmd.cursor.next();
       osmd.cursor.update();
     },
@@ -195,6 +217,7 @@ export const LabMode = ({
       expectedGroups,
       resetCursor,
       resetExpectedTracking,
+      setCursorColorForGroup,
     ],
   );
 
@@ -279,6 +302,7 @@ export const LabMode = ({
         </Button>
       </div>
       <OpenSheetMusicDisplayView
+        ref={osmdViewRef}
         xml={xml}
         compactness="compacttight"
         hasColor
