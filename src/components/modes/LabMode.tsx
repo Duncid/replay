@@ -261,7 +261,7 @@ export const LabMode = ({
         showCursorAtStart();
         setCursorColorForGroup(0);
         initCursorTimeoutRef.current = null;
-      }, 500);
+      }, 300);
     },
     [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
   );
@@ -273,10 +273,17 @@ export const LabMode = ({
         return;
       }
       if (initStyleAppliedRef.current) return;
-      setCursorColorForGroup(0);
-      initStyleAppliedRef.current = true;
+      if (initCursorTimeoutRef.current) {
+        clearTimeout(initCursorTimeoutRef.current);
+      }
+      initCursorTimeoutRef.current = setTimeout(() => {
+        showCursorAtStart();
+        setCursorColorForGroup(0);
+        initStyleAppliedRef.current = true;
+        initCursorTimeoutRef.current = null;
+      }, 300);
     },
-    [setCursorColorForGroup],
+    [setCursorColorForGroup, showCursorAtStart],
   );
 
   useEffect(() => {
