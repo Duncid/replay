@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { getNoteColorForNoteName } from "@/constants/noteColors";
-import labSequenceSource from "@/music/intro/output/tune.ns.json";
+import stLouisBluesFullSequence from "@/music/st-louis-blues/output/tune.ns.json";
+import stLouisBluesTeacher from "@/music/st-louis-blues/teacher.json";
 import type { NoteSequence } from "@/types/noteSequence";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { getTuneXml } from "@/utils/tuneAssetGlobs";
 import { Pause, Play } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   OpenSheetMusicDisplayView,
   type OpenSheetMusicDisplayViewHandle,
@@ -19,14 +19,46 @@ interface LabModeProps {
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
 }
 
+const assemblyNsModules = import.meta.glob<{ default: NoteSequence }>(
+  "/src/music/st-louis-blues/output/assemblies/*.ns.json",
+  { eager: true },
+);
+const assemblyXmlModules = import.meta.glob<string>(
+  "/src/music/st-louis-blues/output/assemblies/*.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const getAssemblyNs = (assemblyId: string) =>
+  assemblyNsModules[
+    `/src/music/st-louis-blues/output/assemblies/${assemblyId}.ns.json`
+  ]?.default ?? null;
+
+const getAssemblyXml = (assemblyId: string) =>
+  assemblyXmlModules[
+    `/src/music/st-louis-blues/output/assemblies/${assemblyId}.xml`
+  ] ?? null;
+
 export const LabMode = ({
   onPlaySequence,
   onStopPlayback,
   isPlaying = false,
   onRegisterNoteHandler,
 }: LabModeProps) => {
-  const labSequence = labSequenceSource as NoteSequence;
-  const xml = getTuneXml("intro");
+  const assemblyOrder =
+    (stLouisBluesTeacher as { assemblyOrder?: string[] }).assemblyOrder ?? [];
+  const [selectedAssemblyId, setSelectedAssemblyId] = useState<string>(
+    assemblyOrder[0] ?? "A1",
+  );
+  const labSequence = useMemo(
+    () =>
+      getAssemblyNs(selectedAssemblyId) ??
+      (stLouisBluesFullSequence as NoteSequence),
+    [selectedAssemblyId],
+  );
+  const xml = useMemo(
+    () => getAssemblyXml(selectedAssemblyId),
+    [selectedAssemblyId],
+  );
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
   const cursorInitializedRef = useRef(false);
   const expectedGroupIndexRef = useRef(0);
@@ -312,6 +344,19 @@ export const LabMode = ({
     };
   }, [clearCursorTimers]);
 
+  useEffect(() => {
+    clearCursorTimers();
+    resetExpectedTracking();
+    if (osmdRef.current?.cursor) {
+      showCursorAtStart();
+    }
+  }, [
+    clearCursorTimers,
+    resetExpectedTracking,
+    showCursorAtStart,
+    selectedAssemblyId,
+  ]);
+
   return (
     <div className="w-full max-w-3xl mx-auto">
       <div className="w-full flex justify-end mb-3">
@@ -333,6 +378,17 @@ export const LabMode = ({
             </>
           )}
         </Button>
+        <select
+          className="ml-2 h-8 rounded-md border border-input bg-background px-2 text-sm"
+          value={selectedAssemblyId}
+          onChange={(event) => setSelectedAssemblyId(event.target.value)}
+        >
+          {assemblyOrder.map((assemblyId) => (
+            <option key={assemblyId} value={assemblyId}>
+              {assemblyId}
+            </option>
+          ))}
+        </select>
       </div>
       <OpenSheetMusicDisplayView
         ref={osmdViewRef}
