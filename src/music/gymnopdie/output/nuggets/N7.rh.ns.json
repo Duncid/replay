@@ -1,6 +1,17 @@
 {
   "notes": [],
   "totalTime": 4.0,
-  "tempos": [],
-  "timeSignatures": []
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    }
+  ]
 }

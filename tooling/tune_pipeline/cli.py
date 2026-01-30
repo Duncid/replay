@@ -12,7 +12,7 @@ from tune_pipeline.midi_to_ns import midi_to_note_sequence
 from tune_pipeline.nuggets_extract import extract_nuggets, extract_assemblies
 from tune_pipeline.validate_teacher import validate_teacher
 from tune_pipeline.xml_split_hands import HandSplitResult, split_by_staff
-from tune_pipeline.xml_simplify import score_from_ns_for_dsp, simplify_part_for_dsp2
+from tune_pipeline.xml_simplify import simplify_part_for_dsp2
 from tune_pipeline.xml_to_midi import write_midi
 
 
@@ -304,13 +304,7 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         combined_part_for_nuggets = combined_part
         metadata = settings.get("metadata", {})
 
-        # DSP XML (from NS)
-        for track_name, ns in note_sequences.items():
-            suffix = "" if track_name == "full" else f".{track_name}"
-            dsp_score = score_from_ns_for_dsp(ns, metadata, grid)
-            _write_musicxml(dsp_score, output_dir / f"dsp{suffix}.xml")
-
-        # DSP2 XML (cleaned from XML)
+        # DSP XML (cleaned from XML)
         for track_name, part in parts_by_track.items():
             suffix = "" if track_name == "full" else f".{track_name}"
             chord_keep = "lowest" if track_name == "lh" else "highest"
@@ -320,9 +314,7 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
                 chord_cap=chord_cap,
                 chord_keep=chord_keep,
             )
-            dsp2_score = stream.Score()
-            dsp2_score.insert(0, dsp2_part)
-            _write_musicxml(dsp2_score, output_dir / f"dsp2{suffix}.xml")
+            _write_musicxml(dsp2_part, output_dir / f"dsp{suffix}.xml")
 
     elif tune_ns_candidates:
         # --- NS PATH ---
@@ -368,20 +360,14 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         combined_part_for_nuggets = score.parts[0]
         parts_by_track = {"full": score.parts[0]}
 
-        # DSP XML (from NS)
-        dsp_score = score_from_ns_for_dsp(source_ns_data, metadata, grid)
-        _write_musicxml(dsp_score, output_dir / "dsp.xml")
-
-        # DSP2 XML (cleaned from XML)
+        # DSP XML (cleaned from XML)
         dsp2_part = simplify_part_for_dsp2(
             score.parts[0],
             grid,
             chord_cap=chord_cap,
             chord_keep="highest",
         )
-        dsp2_score = stream.Score()
-        dsp2_score.insert(0, dsp2_part)
-        _write_musicxml(dsp2_score, output_dir / "dsp2.xml")
+        _write_musicxml(dsp2_part, output_dir / "dsp.xml")
         
     else:
          raise PipelineError(f"Missing input file: expected tune.xml or *.ns.json in {tune_folder}")

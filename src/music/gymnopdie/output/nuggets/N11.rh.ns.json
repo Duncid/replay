@@ -4,10 +4,21 @@
       "pitch": 78,
       "startTime": 2.666661000000005,
       "endTime": 5.999994000000008,
-      "velocity": 63.0
+      "velocity": 0.49606299212598426
     }
   ],
-  "totalTime": 4.0,
-  "tempos": [],
-  "timeSignatures": []
+  "totalTime": 5.999994000000008,
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    }
+  ]
 }

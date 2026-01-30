@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Dict, Iterable, Optional
+from typing import Iterable, Optional
 
 from music21 import chord, instrument, key, meter, note, pitch, stream, tempo
 
@@ -129,19 +129,6 @@ def _build_pitch_only_part(
     return part
 
 
-def _events_from_ns(
-    ns: Dict[str, object],
-    grid: float,
-) -> list[list[int]]:
-    buckets: dict[float, list[int]] = {}
-    for note_data in ns.get("notes", []):
-        start_time = float(note_data.get("startTime", 0.0))
-        pitch_value = int(note_data.get("pitch", 60))
-        bucket_time = _quantize_value(start_time, grid)
-        buckets.setdefault(bucket_time, []).append(pitch_value)
-    return [buckets[key] for key in sorted(buckets.keys())]
-
-
 def _events_from_part(
     part: stream.Part,
     grid: float,
@@ -159,55 +146,6 @@ def _events_from_part(
     return [buckets[key] for key in sorted(buckets.keys())]
 
 
-def quantize_part(
-    part: stream.Part,
-    grid: float,
-    chord_cap: Optional[int] = None,
-    chord_keep: str = "highest",
-) -> stream.Part:
-    new_part = stream.Part()
-    _copy_part_headers(part, new_part, grid)
-
-    for element in part.flat.notesAndRests:
-        if _is_grace(element):
-            continue
-        offset = _quantize_value(float(element.offset), grid)
-        duration = _quantize_duration(float(element.duration.quarterLength), grid)
-
-        if isinstance(element, chord.Chord):
-            pitches = _cap_chord_pitches(element.pitches, chord_cap, chord_keep)
-            if not pitches:
-                continue
-            new_elem = chord.Chord(pitches)
-        elif isinstance(element, note.Note):
-            new_elem = note.Note(element.pitch)
-        elif isinstance(element, note.Rest):
-            new_elem = note.Rest()
-        else:
-            continue
-
-        new_elem.duration.quarterLength = duration
-        new_part.insert(offset, new_elem)
-
-    _merge_overlapping_notes_only(new_part)
-    return new_part
-
-
-def score_from_ns_for_dsp(
-    ns: Dict[str, object],
-    metadata: Dict[str, object],
-    grid: float,
-) -> stream.Score:
-    events = _events_from_ns(ns, grid)
-    quantized_part = _build_pitch_only_part(
-        events,
-        fixed_duration_ql=1.0,
-        keep_chords=True,
-    )
-    score = stream.Score()
-    score.insert(0, quantized_part)
-    # Avoid makeMeasures to prevent ties being reintroduced at barlines.
-    return score
 
 
 def simplify_part_for_dsp2(
@@ -227,7 +165,7 @@ def simplify_part_for_dsp2(
         part_copy.stripTies(inPlace=True)
     except Exception:
         pass
-    cleaned_part = quantize_part(
+    cleaned_part = _clean_part_for_dsp(
         part_copy,
         grid,
         chord_cap=chord_cap,
@@ -262,3 +200,37 @@ def simplify_score_for_dsp2(
         new_score.insert(0, new_part)
     # Avoid makeMeasures to prevent ties being reintroduced at barlines.
     return new_score
+
+
+def _clean_part_for_dsp(
+    part: stream.Part,
+    grid: float,
+    chord_cap: Optional[int] = None,
+    chord_keep: str = "highest",
+) -> stream.Part:
+    new_part = stream.Part()
+    _copy_part_headers(part, new_part, grid)
+
+    for element in part.flat.notesAndRests:
+        if _is_grace(element):
+            continue
+        offset = _quantize_value(float(element.offset), grid)
+        duration = _quantize_duration(float(element.duration.quarterLength), grid)
+
+        if isinstance(element, chord.Chord):
+            pitches = _cap_chord_pitches(element.pitches, chord_cap, chord_keep)
+            if not pitches:
+                continue
+            new_elem = chord.Chord(pitches)
+        elif isinstance(element, note.Note):
+            new_elem = note.Note(element.pitch)
+        elif isinstance(element, note.Rest):
+            new_elem = note.Rest()
+        else:
+            continue
+
+        new_elem.duration.quarterLength = duration
+        new_part.insert(offset, new_elem)
+
+    _merge_overlapping_notes_only(new_part)
+    return new_part

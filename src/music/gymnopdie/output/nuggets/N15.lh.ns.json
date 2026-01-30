@@ -4,70 +4,81 @@
       "pitch": 38,
       "startTime": 0.16665900000000988,
       "endTime": 3.499992000000006,
-      "velocity": 63.0
+      "velocity": 0.49606299212598426
     },
     {
       "pitch": 50,
       "startTime": 1.2777700000000038,
       "endTime": 3.499992000000006,
-      "velocity": 63.0
+      "velocity": 0.49606299212598426
     },
     {
       "pitch": 55,
       "startTime": 1.2777700000000038,
       "endTime": 3.499992000000006,
-      "velocity": 63.0
+      "velocity": 0.49606299212598426
     },
     {
       "pitch": 59,
       "startTime": 1.2777700000000038,
       "endTime": 3.499992000000006,
-      "velocity": 63.0
+      "velocity": 0.49606299212598426
     },
     {
       "pitch": 64,
       "startTime": 1.2777700000000038,
       "endTime": 3.499992000000006,
-      "velocity": 63.0
+      "velocity": 0.49606299212598426
     },
     {
       "pitch": 38,
       "startTime": 3.499992000000006,
       "endTime": 6.833325000000002,
-      "velocity": 81.0
+      "velocity": 0.6377952755905512
     },
     {
       "pitch": 48,
       "startTime": 4.611103,
       "endTime": 6.833325000000002,
-      "velocity": 81.0
+      "velocity": 0.6377952755905512
     },
     {
       "pitch": 52,
       "startTime": 4.611103,
       "endTime": 6.833325000000002,
-      "velocity": 81.0
+      "velocity": 0.6377952755905512
     },
     {
       "pitch": 57,
       "startTime": 4.611103,
       "endTime": 6.833325000000002,
-      "velocity": 81.0
+      "velocity": 0.6377952755905512
     },
     {
       "pitch": 62,
       "startTime": 4.611103,
       "endTime": 6.833325000000002,
-      "velocity": 81.0
+      "velocity": 0.6377952755905512
     },
     {
       "pitch": 38,
       "startTime": 6.833325000000002,
       "endTime": 10.166658000000012,
-      "velocity": 81.0
+      "velocity": 0.6377952755905512
     }
   ],
-  "totalTime": 7.0,
-  "tempos": [],
-  "timeSignatures": []
+  "totalTime": 10.166658000000012,
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    }
+  ]
 }

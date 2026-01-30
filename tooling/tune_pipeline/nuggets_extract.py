@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 import copy
 
-from tune_pipeline.xml_simplify import score_from_ns_for_dsp, simplify_part_for_dsp2
+from tune_pipeline.xml_simplify import simplify_part_for_dsp2
 
 class NuggetExtractError(RuntimeError):
     pass
@@ -328,10 +328,6 @@ def extract_nuggets(
             with open(nuggets_dir / filename, 'w') as f:
                 json.dump(extracted_ns, f, indent=2)
 
-            dsp_score = score_from_ns_for_dsp(extracted_ns, metadata, grid)
-            dsp_filename = f"{nugget_id}{suffix}.dsp.xml"
-            _write_musicxml(dsp_score.parts[0], nuggets_dir / dsp_filename)
-
             part = parts_by_track.get(track_name)
             if part is not None:
                 sliced_part = _slice_part_by_offset(part, start_offset, end_offset)
@@ -345,8 +341,8 @@ def extract_nuggets(
                     chord_cap=chord_cap,
                     chord_keep=chord_keep,
                 )
-                dsp2_filename = f"{nugget_id}{suffix}.dsp2.xml"
-                _write_musicxml(dsp2_part, nuggets_dir / dsp2_filename)
+                dsp_filename = f"{nugget_id}{suffix}.dsp.xml"
+                _write_musicxml(dsp2_part, nuggets_dir / dsp_filename)
 
 
 def extract_assemblies(
@@ -469,10 +465,6 @@ def extract_assemblies(
             with open(assemblies_dir / filename, 'w') as f:
                 json.dump(extracted_ns, f, indent=2)
 
-            dsp_score = score_from_ns_for_dsp(extracted_ns, metadata, grid)
-            dsp_filename = f"{assembly_id}{suffix}.dsp.xml"
-            _write_musicxml(dsp_score.parts[0], assemblies_dir / dsp_filename)
-
             part = parts_by_track.get(track_name)
             if part is not None:
                 sliced_part = _slice_part_by_offset(part, start_offset, end_offset)
@@ -486,7 +478,7 @@ def extract_assemblies(
                     chord_cap=chord_cap,
                     chord_keep=chord_keep,
                 )
-                dsp2_filename = f"{assembly_id}{suffix}.dsp2.xml"
-                _write_musicxml(dsp2_part, assemblies_dir / dsp2_filename)
+                dsp_filename = f"{assembly_id}{suffix}.dsp.xml"
+                _write_musicxml(dsp2_part, assemblies_dir / dsp_filename)
         
         print(f"Extracted assembly {assembly_id}: {len(sliced_notes)} notes, {total_duration:.2f}s")
