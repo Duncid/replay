@@ -2230,7 +2230,7 @@ const Index = () => {
           </TabsContent>
           <TabsContent
             value="lab"
-            className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
+            className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
           >
             <LabMode
               onPlaySequence={handleLabPlaySequence}

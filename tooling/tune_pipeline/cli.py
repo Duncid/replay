@@ -12,6 +12,7 @@ from tune_pipeline.midi_to_ns import midi_to_note_sequence
 from tune_pipeline.nuggets_extract import extract_nuggets, extract_assemblies
 from tune_pipeline.validate_teacher import validate_teacher
 from tune_pipeline.xml_split_hands import HandSplitResult, split_by_staff
+from tune_pipeline.xml_simplify import simplify_part_for_dsp2
 from tune_pipeline.xml_to_midi import write_midi
 
 
@@ -248,6 +249,12 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     tune_xml = tune_folder / "tune.xml"
     tune_ns_candidates = list(tune_folder.glob("*.ns.json"))
     
+    settings = teacher.get("pipelineSettings", {})
+    dsp_settings = settings.get("dsp", {})
+    grid = float(dsp_settings.get("gridQuarterLength", 0.25))
+    chord_cap_value = dsp_settings.get("chordCap", 6)
+    chord_cap = int(chord_cap_value) if chord_cap_value is not None else None
+
     # Priority: XML -> NS
     if tune_xml.exists():
         # --- XML PATH ---
@@ -268,7 +275,6 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         parts_to_process = [("", combined_part)]
         parts_by_track: Dict[str, stream.Part] = {"full": combined_part}
         
-        settings = teacher.get("pipelineSettings", {})
         hand_policy = settings.get("handSplitPolicy", {})
         mode = hand_policy.get("mode", "none")
         split_info = "not requested"
@@ -296,6 +302,19 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
             _process_track(output_dir, base_name, suffix, part, note_sequences, tracks)
             
         combined_part_for_nuggets = combined_part
+        metadata = settings.get("metadata", {})
+
+        # DSP XML (cleaned from XML)
+        for track_name, part in parts_by_track.items():
+            suffix = "" if track_name == "full" else f".{track_name}"
+            chord_keep = "lowest" if track_name == "lh" else "highest"
+            dsp2_part = simplify_part_for_dsp2(
+                part,
+                grid,
+                chord_cap=chord_cap,
+                chord_keep=chord_keep,
+            )
+            _write_musicxml(dsp2_part, output_dir / f"dsp{suffix}.xml")
 
     elif tune_ns_candidates:
         # --- NS PATH ---
@@ -331,7 +350,6 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         parts_by_track = {}
         
         # Build score from NS and use as XML input
-        settings = teacher.get("pipelineSettings", {})
         metadata = settings.get("metadata", {})
         
         if not metadata:
@@ -341,6 +359,15 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         _write_musicxml(score, output_dir / "tune.xml")
         combined_part_for_nuggets = score.parts[0]
         parts_by_track = {"full": score.parts[0]}
+
+        # DSP XML (cleaned from XML)
+        dsp2_part = simplify_part_for_dsp2(
+            score.parts[0],
+            grid,
+            chord_cap=chord_cap,
+            chord_keep="highest",
+        )
+        _write_musicxml(dsp2_part, output_dir / "dsp.xml")
         
     else:
          raise PipelineError(f"Missing input file: expected tune.xml or *.ns.json in {tune_folder}")
@@ -353,7 +380,10 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
             output_dir,
             teacher["nuggets"],
             note_sequences,
-            parts_by_track=parts_by_track
+            parts_by_track=parts_by_track,
+            metadata=settings.get("metadata", {}),
+            grid=grid,
+            chord_cap=chord_cap,
         )
     
     # 7. Assembly Extraction
@@ -365,7 +395,10 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
             teacher["assemblies"],
             teacher["nuggets"],
             note_sequences,
-            parts_by_track=parts_by_track
+            parts_by_track=parts_by_track,
+            metadata=settings.get("metadata", {}),
+            grid=grid,
+            chord_cap=chord_cap,
         )
 
     summary = {

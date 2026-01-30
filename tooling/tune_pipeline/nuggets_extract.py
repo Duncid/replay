@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 import copy
 
+from tune_pipeline.xml_simplify import simplify_part_for_dsp2
 
 class NuggetExtractError(RuntimeError):
     pass
@@ -244,10 +245,14 @@ def extract_nuggets(
     output_dir: Path,
     nuggets: List[Dict[str, Any]],
     note_sequences: Dict[str, Dict[str, Any]],
-    parts_by_track: Optional[Dict[str, stream.Part]] = None
+    parts_by_track: Optional[Dict[str, stream.Part]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    grid: float = 0.25,
+    chord_cap: Optional[int] = None,
 ) -> None:
     boundaries = _tempo_boundaries(score)
     parts_by_track = parts_by_track or {}
+    metadata = metadata or {}
     
     # Create nuggets directory
     nuggets_dir = output_dir / "nuggets"
@@ -329,6 +334,16 @@ def extract_nuggets(
                 xml_filename = f"{nugget_id}{suffix}.xml"
                 _write_musicxml(sliced_part, nuggets_dir / xml_filename)
 
+                chord_keep = "lowest" if track_name == "lh" else "highest"
+                dsp2_part = simplify_part_for_dsp2(
+                    sliced_part,
+                    grid,
+                    chord_cap=chord_cap,
+                    chord_keep=chord_keep,
+                )
+                dsp_filename = f"{nugget_id}{suffix}.dsp.xml"
+                _write_musicxml(dsp2_part, nuggets_dir / dsp_filename)
+
 
 def extract_assemblies(
     score: stream.Score,
@@ -337,7 +352,10 @@ def extract_assemblies(
     assemblies: List[Dict[str, Any]],
     nuggets: List[Dict[str, Any]],
     note_sequences: Dict[str, Dict[str, Any]],
-    parts_by_track: Optional[Dict[str, stream.Part]] = None
+    parts_by_track: Optional[Dict[str, stream.Part]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    grid: float = 0.25,
+    chord_cap: Optional[int] = None,
 ) -> None:
     """Extract assemblies by combining nugget ranges.
     
@@ -346,6 +364,7 @@ def extract_assemblies(
     """
     boundaries = _tempo_boundaries(score)
     parts_by_track = parts_by_track or {}
+    metadata = metadata or {}
     
     # Create assemblies directory
     assemblies_dir = output_dir / "assemblies"
@@ -451,5 +470,15 @@ def extract_assemblies(
                 sliced_part = _slice_part_by_offset(part, start_offset, end_offset)
                 xml_filename = f"{assembly_id}{suffix}.xml"
                 _write_musicxml(sliced_part, assemblies_dir / xml_filename)
+
+                chord_keep = "lowest" if track_name == "lh" else "highest"
+                dsp2_part = simplify_part_for_dsp2(
+                    sliced_part,
+                    grid,
+                    chord_cap=chord_cap,
+                    chord_keep=chord_keep,
+                )
+                dsp_filename = f"{assembly_id}{suffix}.dsp.xml"
+                _write_musicxml(dsp2_part, assemblies_dir / dsp_filename)
         
         print(f"Extracted assembly {assembly_id}: {len(sliced_notes)} notes, {total_duration:.2f}s")

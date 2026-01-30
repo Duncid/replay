@@ -1,12 +1,19 @@
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getNoteColorForNoteName } from "@/constants/noteColors";
-import labSequenceSource from "@/music/intro/output/tune.ns.json";
 import type { NoteSequence } from "@/types/noteSequence";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { getTuneXml } from "@/utils/tuneAssetGlobs";
 import { Pause, Play } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   OpenSheetMusicDisplayView,
   type OpenSheetMusicDisplayViewHandle,
@@ -19,15 +26,183 @@ interface LabModeProps {
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
 }
 
+const teacherModules = import.meta.glob<{
+  default: {
+    nuggets?: Array<{ id: string }>;
+    assemblies?: Array<{ id: string }>;
+    assemblyOrder?: string[];
+  };
+}>("/src/music/*/teacher.json", { eager: true });
+
+const tuneNsModules = import.meta.glob<{ default: NoteSequence }>(
+  "/src/music/*/output/tune.ns.json",
+  { eager: true },
+);
+const tuneXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/tune.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+const tuneDspXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const assemblyNsModules = import.meta.glob<{ default: NoteSequence }>(
+  "/src/music/*/output/assemblies/*.ns.json",
+  { eager: true },
+);
+const assemblyXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/assemblies/*.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+const assemblyDspXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/assemblies/*.dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const nuggetNsModules = import.meta.glob<{ default: NoteSequence }>(
+  "/src/music/*/output/nuggets/*.ns.json",
+  { eager: true },
+);
+const nuggetXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/nuggets/*.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+const nuggetDspXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/nuggets/*.dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const getTeacher = (musicRef: string) =>
+  teacherModules[`/src/music/${musicRef}/teacher.json`]?.default ?? null;
+
+const getTuneNs = (musicRef: string) =>
+  tuneNsModules[`/src/music/${musicRef}/output/tune.ns.json`]?.default ?? null;
+const getTuneXml = (musicRef: string) =>
+  tuneXmlModules[`/src/music/${musicRef}/output/tune.xml`] ?? null;
+const getTuneDspXml = (musicRef: string) =>
+  tuneDspXmlModules[`/src/music/${musicRef}/output/dsp.xml`] ?? null;
+
+const getAssemblyNs = (musicRef: string, assemblyId: string) =>
+  assemblyNsModules[
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`
+  ]?.default ?? null;
+
+const getAssemblyXml = (musicRef: string, assemblyId: string) =>
+  assemblyXmlModules[
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.xml`
+  ] ?? null;
+const getAssemblyDspXml = (musicRef: string, assemblyId: string) =>
+  assemblyDspXmlModules[
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.dsp.xml`
+  ] ?? null;
+
+const getNuggetNs = (musicRef: string, nuggetId: string) =>
+  nuggetNsModules[`/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`]
+    ?.default ?? null;
+const getNuggetXml = (musicRef: string, nuggetId: string) =>
+  nuggetXmlModules[`/src/music/${musicRef}/output/nuggets/${nuggetId}.xml`] ??
+  null;
+const getNuggetDspXml = (musicRef: string, nuggetId: string) =>
+  nuggetDspXmlModules[
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.dsp.xml`
+  ] ?? null;
+
+const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
+
 export const LabMode = ({
   onPlaySequence,
   onStopPlayback,
   isPlaying = false,
   onRegisterNoteHandler,
 }: LabModeProps) => {
-  const labSequence = labSequenceSource as NoteSequence;
-  const xml = getTuneXml("intro");
+  const tuneOptions = ["intro", "gymnopdie", "st-louis-blues"] as const;
+  const targetOptions = ["full", "nuggets", "assemblies"] as const;
+
+  const [selectedTune, setSelectedTune] =
+    useState<(typeof tuneOptions)[number]>("st-louis-blues");
+  const [selectedTarget, setSelectedTarget] =
+    useState<(typeof targetOptions)[number]>("assemblies");
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
+
+  const teacher = useMemo(() => getTeacher(selectedTune), [selectedTune]);
+  const assemblyIds = useMemo(() => {
+    if (!teacher) return [];
+    if (teacher.assemblyOrder?.length) return teacher.assemblyOrder;
+    return teacher.assemblies?.map((assembly) => assembly.id) ?? [];
+  }, [teacher]);
+  const nuggetIds = useMemo(
+    () => teacher?.nuggets?.map((nugget) => nugget.id) ?? [],
+    [teacher],
+  );
+
+  const getNuggetIdsForTune = useCallback((musicRef: string) => {
+    const tuneTeacher = getTeacher(musicRef);
+    return tuneTeacher?.nuggets?.map((nugget) => nugget.id) ?? [];
+  }, []);
+
+  const getAssemblyIdsForTune = useCallback((musicRef: string) => {
+    const tuneTeacher = getTeacher(musicRef);
+    if (tuneTeacher?.assemblyOrder?.length) return tuneTeacher.assemblyOrder;
+    return tuneTeacher?.assemblies?.map((assembly) => assembly.id) ?? [];
+  }, []);
+
+  useEffect(() => {
+    if (selectedTarget === "full") {
+      if (selectedItemId) setSelectedItemId("");
+      return;
+    }
+    const options = selectedTarget === "assemblies" ? assemblyIds : nuggetIds;
+    if (!options.length) {
+      if (selectedItemId) setSelectedItemId("");
+      return;
+    }
+    if (!selectedItemId || !options.includes(selectedItemId)) {
+      setSelectedItemId(options[0]);
+    }
+  }, [assemblyIds, nuggetIds, selectedItemId, selectedTarget]);
+
+  const labSequence = useMemo(() => {
+    if (selectedTarget === "full") {
+      return getTuneNs(selectedTune) ?? EMPTY_SEQUENCE;
+    }
+    if (selectedTarget === "assemblies") {
+      return getAssemblyNs(selectedTune, selectedItemId) ?? EMPTY_SEQUENCE;
+    }
+    return getNuggetNs(selectedTune, selectedItemId) ?? EMPTY_SEQUENCE;
+  }, [selectedItemId, selectedTarget, selectedTune]);
+
+  const xmlFull = useMemo(() => {
+    if (selectedTarget === "full") {
+      return getTuneXml(selectedTune);
+    }
+    if (selectedTarget === "assemblies") {
+      return getAssemblyXml(selectedTune, selectedItemId);
+    }
+    return getNuggetXml(selectedTune, selectedItemId);
+  }, [selectedItemId, selectedTarget, selectedTune]);
+
+  const xmlDsp = useMemo(() => {
+    if (selectedTarget === "full") {
+      return getTuneDspXml(selectedTune);
+    }
+    if (selectedTarget === "assemblies") {
+      return getAssemblyDspXml(selectedTune, selectedItemId);
+    }
+    return getNuggetDspXml(selectedTune, selectedItemId);
+  }, [selectedItemId, selectedTarget, selectedTune]);
+
+  const selectionLabel = useMemo(() => {
+    if (selectedTarget === "full") {
+      return `${selectedTune} / full`;
+    }
+    if (!selectedItemId) {
+      return `${selectedTune} / ${selectedTarget}`;
+    }
+    return `${selectedTune} / ${selectedTarget} / ${selectedItemId}`;
+  }, [selectedItemId, selectedTarget, selectedTune]);
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
+  const osmdDspRef = useRef<OpenSheetMusicDisplay | null>(null);
   const cursorInitializedRef = useRef(false);
   const expectedGroupIndexRef = useRef(0);
   const remainingPitchCountsRef = useRef<Map<number, number>>(new Map());
@@ -36,6 +211,7 @@ export const LabMode = ({
   const cursorEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initCursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const osmdViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
+  const osmdDspViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
   const initStyleAppliedRef = useRef(false);
 
   const expectedGroups = useMemo(() => {
@@ -78,17 +254,18 @@ export const LabMode = ({
       const noteName = midiToNoteName(pitches[0]);
       const noteColor = getNoteColorForNoteName(noteName);
       if (noteColor) {
-        osmdViewRef.current?.setCursorColor(noteColor);
+        osmdDspViewRef.current?.setCursorColor(noteColor);
       }
     },
     [expectedGroups],
   );
 
   const resetCursor = useCallback(() => {
-    const osmd = osmdRef.current;
-    if (!osmd?.cursor) return;
-    osmd.cursor.reset();
-    osmd.cursor.hide();
+    const osmd = osmdDspRef.current;
+    if (osmd?.cursor) {
+      osmd.cursor.reset();
+      osmd.cursor.hide();
+    }
     cursorInitializedRef.current = false;
   }, []);
 
@@ -106,28 +283,67 @@ export const LabMode = ({
   }, []);
 
   const showCursorAtStart = useCallback(() => {
-    const osmd = osmdRef.current;
-    if (!osmd?.cursor) return;
-    osmd.cursor.reset();
-    osmd.cursor.show();
-    osmd.cursor.update();
+    const osmd = osmdDspRef.current;
+    if (osmd?.cursor) {
+      osmd.cursor.reset();
+      osmd.cursor.show();
+      osmd.cursor.update();
+    }
     cursorInitializedRef.current = true;
     setCursorColorForGroup(0);
   }, [setCursorColorForGroup]);
 
   const ensureCursorInitialized = useCallback(() => {
-    const osmd = osmdRef.current;
-    if (!osmd?.cursor) return;
     if (!cursorInitializedRef.current) {
-      osmd.cursor.reset();
-      osmd.cursor.show();
-      osmd.cursor.update();
+      const osmd = osmdDspRef.current;
+      if (osmd?.cursor) {
+        osmd.cursor.reset();
+        osmd.cursor.show();
+        osmd.cursor.update();
+      }
       cursorInitializedRef.current = true;
     }
   }, []);
 
+  const advanceCursorToNextPlayableNote = useCallback(() => {
+    const cursor = osmdDspRef.current?.cursor;
+    if (!cursor) return;
+    const getNotesUnderCursor = cursor.NotesUnderCursor?.bind(cursor);
+    if (!getNotesUnderCursor) {
+      cursor.next();
+      cursor.update();
+      return;
+    }
+    let steps = 0;
+    const maxSteps = 128;
+    do {
+      cursor.next();
+      steps += 1;
+      if (cursor.iterator?.EndReached) break;
+      const notes = getNotesUnderCursor() ?? [];
+      const hasPlayableNote = notes.some((note) => {
+        const typedNote = note as {
+          isRest?: boolean | (() => boolean);
+          IsCueNote?: boolean;
+          IsGraceNote?: boolean;
+          isCueNote?: boolean;
+          isGraceNote?: boolean;
+        };
+        const isRest =
+          typeof typedNote.isRest === "function"
+            ? typedNote.isRest()
+            : typedNote.isRest;
+        const isCue = typedNote.IsCueNote ?? typedNote.isCueNote;
+        const isGrace = typedNote.IsGraceNote ?? typedNote.isGraceNote;
+        return !isRest && !isCue && !isGrace;
+      });
+      if (hasPlayableNote) break;
+    } while (steps < maxSteps);
+    cursor.update();
+  }, []);
+
   const scheduleCursorPlayback = useCallback(() => {
-    const osmd = osmdRef.current;
+    const osmd = osmdDspRef.current;
     if (!osmd?.cursor || labSequence.notes.length === 0) return;
 
     clearCursorTimers();
@@ -162,8 +378,7 @@ export const LabMode = ({
           expectedGroups[targetIndex]?.pitches ?? [],
         );
         setCursorColorForGroup(targetIndex);
-        cursor.next();
-        cursor.update();
+        advanceCursorToNextPlayableNote();
       }, startTime * 1000);
       cursorTimeoutsRef.current.push(timeout);
     });
@@ -173,6 +388,7 @@ export const LabMode = ({
       resetExpectedTracking();
     }, normalizedTotalTime * 1000);
   }, [
+    advanceCursorToNextPlayableNote,
     buildPitchCounts,
     clearCursorTimers,
     expectedGroups,
@@ -184,7 +400,7 @@ export const LabMode = ({
 
   const handleUserNote = useCallback(
     (noteKey: string) => {
-      const osmd = osmdRef.current;
+      const osmd = osmdDspRef.current;
       if (!osmd?.cursor || expectedGroups.length === 0) return;
 
       const pitch = noteNameToMidi(noteKey);
@@ -213,10 +429,10 @@ export const LabMode = ({
         expectedGroups[nextIndex].pitches,
       );
       setCursorColorForGroup(nextIndex);
-      osmd.cursor.next();
-      osmd.cursor.update();
+      advanceCursorToNextPlayableNote();
     },
     [
+      advanceCursorToNextPlayableNote,
       buildPitchCounts,
       ensureCursorInitialized,
       expectedGroups,
@@ -249,9 +465,16 @@ export const LabMode = ({
     showCursorAtStart,
   ]);
 
-  const handleOsmdReady = useCallback(
+  const handleOsmdReady = useCallback((osmd: OpenSheetMusicDisplay) => {
+    osmdRef.current = osmd;
+    if (osmd.cursor) {
+      osmd.cursor.hide();
+    }
+  }, []);
+
+  const handleOsmdDspReady = useCallback(
     (osmd: OpenSheetMusicDisplay) => {
-      osmdRef.current = osmd;
+      osmdDspRef.current = osmd;
       resetExpectedTracking();
       initStyleAppliedRef.current = false;
       if (initCursorTimeoutRef.current) {
@@ -266,7 +489,7 @@ export const LabMode = ({
     [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
   );
 
-  const handleCursorElementReady = useCallback(
+  const handleCursorElementReadyDsp = useCallback(
     (cursorElement: HTMLImageElement | null) => {
       if (!cursorElement) {
         initStyleAppliedRef.current = false;
@@ -312,9 +535,24 @@ export const LabMode = ({
     };
   }, [clearCursorTimers]);
 
+  useEffect(() => {
+    clearCursorTimers();
+    resetExpectedTracking();
+    if (osmdDspRef.current?.cursor) {
+      showCursorAtStart();
+    }
+  }, [
+    clearCursorTimers,
+    resetExpectedTracking,
+    showCursorAtStart,
+    selectedItemId,
+    selectedTarget,
+    selectedTune,
+  ]);
+
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <div className="w-full flex justify-end mb-3">
+    <div className="w-full h-full max-w-3xl mx-auto flex flex-col flex-1 items-center justify-center">
+      <div className="w-full flex flex-wrap justify-end gap-2 mb-3">
         <Button
           variant="outline"
           size="sm"
@@ -333,16 +571,111 @@ export const LabMode = ({
             </>
           )}
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              {selectionLabel}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 bg-popover">
+            {tuneOptions.map((tune) => {
+              const tuneNuggets = getNuggetIdsForTune(tune);
+              const tuneAssemblies = getAssemblyIdsForTune(tune);
+              return (
+                <DropdownMenuSub key={tune}>
+                  <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedTune(tune);
+                        setSelectedTarget("full");
+                        setSelectedItemId("");
+                      }}
+                    >
+                      Full
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Nugget</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-popover">
+                        {tuneNuggets.length ? (
+                          tuneNuggets.map((id) => (
+                            <DropdownMenuItem
+                              key={id}
+                              onClick={() => {
+                                setSelectedTune(tune);
+                                setSelectedTarget("nuggets");
+                                setSelectedItemId(id);
+                              }}
+                            >
+                              {id}
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          <DropdownMenuItem disabled>
+                            No nuggets
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Assemble</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-popover">
+                        {tuneAssemblies.length ? (
+                          tuneAssemblies.map((id) => (
+                            <DropdownMenuItem
+                              key={id}
+                              onClick={() => {
+                                setSelectedTune(tune);
+                                setSelectedTarget("assemblies");
+                                setSelectedItemId(id);
+                              }}
+                            >
+                              {id}
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          <DropdownMenuItem disabled>
+                            No assemblies
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <OpenSheetMusicDisplayView
-        ref={osmdViewRef}
-        xml={xml}
-        compactness="compacttight"
-        hasColor
-        className="relative w-full"
-        onOsmdReady={handleOsmdReady}
-        onCursorElementReady={handleCursorElementReady}
-      />
+      <div className="w-full space-y-6">
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            Full xml
+          </div>
+          <OpenSheetMusicDisplayView
+            ref={osmdViewRef}
+            xml={xmlFull}
+            compactness="compacttight"
+            hasColor
+            className="relative w-full"
+            onOsmdReady={handleOsmdReady}
+          />
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            Simplified xml
+          </div>
+          <OpenSheetMusicDisplayView
+            ref={osmdDspViewRef}
+            xml={xmlDsp}
+            compactness="compacttight"
+            hasColor
+            className="relative w-full"
+            onOsmdReady={handleOsmdDspReady}
+            onCursorElementReady={handleCursorElementReadyDsp}
+          />
+        </div>
+      </div>
     </div>
   );
 };
