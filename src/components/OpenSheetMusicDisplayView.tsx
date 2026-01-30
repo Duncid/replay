@@ -316,7 +316,9 @@ export const OpenSheetMusicDisplayView = forwardRef<
           Boolean(
             element.closest("g.vf-stavenote, g.vf-note") ||
             (element.getAttribute("class") ?? "").includes("vf-notehead") ||
-            (element.getAttribute("class") ?? "").includes("vf-stem"),
+            (element.getAttribute("class") ?? "").includes("vf-stem") ||
+            (element.getAttribute("class") ?? "").includes("vf-flag") ||
+            element.closest("g.vf-flag"),
           );
 
         const isStemElement = (element: Element) =>

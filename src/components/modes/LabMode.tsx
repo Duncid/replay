@@ -27,6 +27,14 @@ const assemblyXmlModules = import.meta.glob<string>(
   "/src/music/st-louis-blues/output/assemblies/*.xml",
   { eager: true, query: "?raw", import: "default" },
 );
+const assemblyDspXmlModules = import.meta.glob<string>(
+  "/src/music/st-louis-blues/output/assemblies/*.dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+const assemblyDsp2XmlModules = import.meta.glob<string>(
+  "/src/music/st-louis-blues/output/assemblies/*.dsp2.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
 
 const getAssemblyNs = (assemblyId: string) =>
   assemblyNsModules[
@@ -36,6 +44,14 @@ const getAssemblyNs = (assemblyId: string) =>
 const getAssemblyXml = (assemblyId: string) =>
   assemblyXmlModules[
     `/src/music/st-louis-blues/output/assemblies/${assemblyId}.xml`
+  ] ?? null;
+const getAssemblyDspXml = (assemblyId: string) =>
+  assemblyDspXmlModules[
+    `/src/music/st-louis-blues/output/assemblies/${assemblyId}.dsp.xml`
+  ] ?? null;
+const getAssemblyDsp2Xml = (assemblyId: string) =>
+  assemblyDsp2XmlModules[
+    `/src/music/st-louis-blues/output/assemblies/${assemblyId}.dsp2.xml`
   ] ?? null;
 
 export const LabMode = ({
@@ -55,11 +71,21 @@ export const LabMode = ({
       (stLouisBluesFullSequence as NoteSequence),
     [selectedAssemblyId],
   );
-  const xml = useMemo(
+  const xmlFull = useMemo(
     () => getAssemblyXml(selectedAssemblyId),
     [selectedAssemblyId],
   );
+  const xmlDsp = useMemo(
+    () => getAssemblyDspXml(selectedAssemblyId),
+    [selectedAssemblyId],
+  );
+  const xmlDsp2 = useMemo(
+    () => getAssemblyDsp2Xml(selectedAssemblyId),
+    [selectedAssemblyId],
+  );
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
+  const osmdDspRef = useRef<OpenSheetMusicDisplay | null>(null);
+  const osmdDsp2Ref = useRef<OpenSheetMusicDisplay | null>(null);
   const cursorInitializedRef = useRef(false);
   const expectedGroupIndexRef = useRef(0);
   const remainingPitchCountsRef = useRef<Map<number, number>>(new Map());
@@ -68,6 +94,8 @@ export const LabMode = ({
   const cursorEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initCursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const osmdViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
+  const osmdDspViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
+  const osmdDsp2ViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
   const initStyleAppliedRef = useRef(false);
 
   const expectedGroups = useMemo(() => {
@@ -111,16 +139,20 @@ export const LabMode = ({
       const noteColor = getNoteColorForNoteName(noteName);
       if (noteColor) {
         osmdViewRef.current?.setCursorColor(noteColor);
+        osmdDspViewRef.current?.setCursorColor(noteColor);
+        osmdDsp2ViewRef.current?.setCursorColor(noteColor);
       }
     },
     [expectedGroups],
   );
 
   const resetCursor = useCallback(() => {
-    const osmd = osmdRef.current;
-    if (!osmd?.cursor) return;
-    osmd.cursor.reset();
-    osmd.cursor.hide();
+    [osmdRef, osmdDspRef, osmdDsp2Ref].forEach((ref) => {
+      const osmd = ref.current;
+      if (!osmd?.cursor) return;
+      osmd.cursor.reset();
+      osmd.cursor.hide();
+    });
     cursorInitializedRef.current = false;
   }, []);
 
@@ -138,24 +170,75 @@ export const LabMode = ({
   }, []);
 
   const showCursorAtStart = useCallback(() => {
-    const osmd = osmdRef.current;
-    if (!osmd?.cursor) return;
-    osmd.cursor.reset();
-    osmd.cursor.show();
-    osmd.cursor.update();
+    [osmdRef, osmdDspRef, osmdDsp2Ref].forEach((ref) => {
+      const osmd = ref.current;
+      if (!osmd?.cursor) return;
+      osmd.cursor.reset();
+      osmd.cursor.show();
+      osmd.cursor.update();
+    });
     cursorInitializedRef.current = true;
     setCursorColorForGroup(0);
   }, [setCursorColorForGroup]);
 
   const ensureCursorInitialized = useCallback(() => {
-    const osmd = osmdRef.current;
-    if (!osmd?.cursor) return;
     if (!cursorInitializedRef.current) {
-      osmd.cursor.reset();
-      osmd.cursor.show();
-      osmd.cursor.update();
+      [osmdRef, osmdDspRef, osmdDsp2Ref].forEach((ref) => {
+        const osmd = ref.current;
+        if (!osmd?.cursor) return;
+        osmd.cursor.reset();
+        osmd.cursor.show();
+        osmd.cursor.update();
+      });
       cursorInitializedRef.current = true;
     }
+  }, []);
+
+  const advanceCursorToNextPlayableNote = useCallback(() => {
+    const cursorTargets = [osmdRef, osmdDspRef, osmdDsp2Ref]
+      .map((ref) => ref.current?.cursor)
+      .filter(Boolean) as Array<{
+      next: () => void;
+      update: () => void;
+      NotesUnderCursor?: () => unknown[];
+      iterator?: { EndReached?: boolean };
+    }>;
+    if (cursorTargets.length === 0) return;
+
+    cursorTargets.forEach((cursor) => {
+      const getNotesUnderCursor = cursor.NotesUnderCursor?.bind(cursor);
+      if (!getNotesUnderCursor) {
+        cursor.next();
+        cursor.update();
+        return;
+      }
+      let steps = 0;
+      const maxSteps = 128;
+      do {
+        cursor.next();
+        steps += 1;
+        if (cursor.iterator?.EndReached) break;
+        const notes = getNotesUnderCursor() ?? [];
+        const hasPlayableNote = notes.some((note) => {
+          const typedNote = note as {
+            isRest?: boolean | (() => boolean);
+            IsCueNote?: boolean;
+            IsGraceNote?: boolean;
+            isCueNote?: boolean;
+            isGraceNote?: boolean;
+          };
+          const isRest =
+            typeof typedNote.isRest === "function"
+              ? typedNote.isRest()
+              : typedNote.isRest;
+          const isCue = typedNote.IsCueNote ?? typedNote.isCueNote;
+          const isGrace = typedNote.IsGraceNote ?? typedNote.isGraceNote;
+          return !isRest && !isCue && !isGrace;
+        });
+        if (hasPlayableNote) break;
+      } while (steps < maxSteps);
+      cursor.update();
+    });
   }, []);
 
   const scheduleCursorPlayback = useCallback(() => {
@@ -194,8 +277,7 @@ export const LabMode = ({
           expectedGroups[targetIndex]?.pitches ?? [],
         );
         setCursorColorForGroup(targetIndex);
-        cursor.next();
-        cursor.update();
+        advanceCursorToNextPlayableNote();
       }, startTime * 1000);
       cursorTimeoutsRef.current.push(timeout);
     });
@@ -205,6 +287,7 @@ export const LabMode = ({
       resetExpectedTracking();
     }, normalizedTotalTime * 1000);
   }, [
+    advanceCursorToNextPlayableNote,
     buildPitchCounts,
     clearCursorTimers,
     expectedGroups,
@@ -245,10 +328,10 @@ export const LabMode = ({
         expectedGroups[nextIndex].pitches,
       );
       setCursorColorForGroup(nextIndex);
-      osmd.cursor.next();
-      osmd.cursor.update();
+      advanceCursorToNextPlayableNote();
     },
     [
+      advanceCursorToNextPlayableNote,
       buildPitchCounts,
       ensureCursorInitialized,
       expectedGroups,
@@ -298,7 +381,81 @@ export const LabMode = ({
     [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
   );
 
+  const handleOsmdDspReady = useCallback(
+    (osmd: OpenSheetMusicDisplay) => {
+      osmdDspRef.current = osmd;
+      resetExpectedTracking();
+      initStyleAppliedRef.current = false;
+      if (initCursorTimeoutRef.current) {
+        clearTimeout(initCursorTimeoutRef.current);
+      }
+      initCursorTimeoutRef.current = setTimeout(() => {
+        showCursorAtStart();
+        setCursorColorForGroup(0);
+        initCursorTimeoutRef.current = null;
+      }, 300);
+    },
+    [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
+  );
+
+  const handleOsmdDsp2Ready = useCallback(
+    (osmd: OpenSheetMusicDisplay) => {
+      osmdDsp2Ref.current = osmd;
+      resetExpectedTracking();
+      initStyleAppliedRef.current = false;
+      if (initCursorTimeoutRef.current) {
+        clearTimeout(initCursorTimeoutRef.current);
+      }
+      initCursorTimeoutRef.current = setTimeout(() => {
+        showCursorAtStart();
+        setCursorColorForGroup(0);
+        initCursorTimeoutRef.current = null;
+      }, 300);
+    },
+    [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
+  );
+
   const handleCursorElementReady = useCallback(
+    (cursorElement: HTMLImageElement | null) => {
+      if (!cursorElement) {
+        initStyleAppliedRef.current = false;
+        return;
+      }
+      if (initStyleAppliedRef.current) return;
+      if (initCursorTimeoutRef.current) {
+        clearTimeout(initCursorTimeoutRef.current);
+      }
+      initCursorTimeoutRef.current = setTimeout(() => {
+        showCursorAtStart();
+        setCursorColorForGroup(0);
+        initStyleAppliedRef.current = true;
+        initCursorTimeoutRef.current = null;
+      }, 300);
+    },
+    [setCursorColorForGroup, showCursorAtStart],
+  );
+
+  const handleCursorElementReadyDsp = useCallback(
+    (cursorElement: HTMLImageElement | null) => {
+      if (!cursorElement) {
+        initStyleAppliedRef.current = false;
+        return;
+      }
+      if (initStyleAppliedRef.current) return;
+      if (initCursorTimeoutRef.current) {
+        clearTimeout(initCursorTimeoutRef.current);
+      }
+      initCursorTimeoutRef.current = setTimeout(() => {
+        showCursorAtStart();
+        setCursorColorForGroup(0);
+        initStyleAppliedRef.current = true;
+        initCursorTimeoutRef.current = null;
+      }, 300);
+    },
+    [setCursorColorForGroup, showCursorAtStart],
+  );
+
+  const handleCursorElementReadyDsp2 = useCallback(
     (cursorElement: HTMLImageElement | null) => {
       if (!cursorElement) {
         initStyleAppliedRef.current = false;
@@ -358,7 +515,7 @@ export const LabMode = ({
   ]);
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full h-full max-w-3xl mx-auto flex flex-col flex-1 items-center justify-center">
       <div className="w-full flex justify-end mb-3">
         <Button
           variant="outline"
@@ -390,15 +547,50 @@ export const LabMode = ({
           ))}
         </select>
       </div>
-      <OpenSheetMusicDisplayView
-        ref={osmdViewRef}
-        xml={xml}
-        compactness="compacttight"
-        hasColor
-        className="relative w-full"
-        onOsmdReady={handleOsmdReady}
-        onCursorElementReady={handleCursorElementReady}
-      />
+      <div className="w-full space-y-6">
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            Full xml
+          </div>
+          <OpenSheetMusicDisplayView
+            ref={osmdViewRef}
+            xml={xmlFull}
+            compactness="compacttight"
+            hasColor
+            className="relative w-full"
+            onOsmdReady={handleOsmdReady}
+            onCursorElementReady={handleCursorElementReady}
+          />
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            Display from NS
+          </div>
+          <OpenSheetMusicDisplayView
+            ref={osmdDspViewRef}
+            xml={xmlDsp}
+            compactness="compacttight"
+            hasColor
+            className="relative w-full"
+            onOsmdReady={handleOsmdDspReady}
+            onCursorElementReady={handleCursorElementReadyDsp}
+          />
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            Display from Music21
+          </div>
+          <OpenSheetMusicDisplayView
+            ref={osmdDsp2ViewRef}
+            xml={xmlDsp2}
+            compactness="compacttight"
+            hasColor
+            className="relative w-full"
+            onOsmdReady={handleOsmdDsp2Ready}
+            onCursorElementReady={handleCursorElementReadyDsp2}
+          />
+        </div>
+      </div>
     </div>
   );
 };
