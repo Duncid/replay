@@ -252,7 +252,7 @@ export const OpenSheetMusicDisplayView = forwardRef<
       };
       cursorElement.style.setProperty(
         "--osmd-cursor-ring-color",
-        withAlpha(resolvedCursorColor, 0.6),
+        withAlpha(resolvedCursorColor, 0.7),
       );
       cursorElement.style.animation = "osmdCursorPulse 2s ease-in-out infinite";
       cursorElement.style.boxShadow = "0 0 0 1px var(--osmd-cursor-ring-color)";
