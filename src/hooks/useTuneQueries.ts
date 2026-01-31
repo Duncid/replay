@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { TuneCoachResponse, TuneEvaluationResponse } from "@/types/tunePractice";
+import type { TuneAssetData, TuneBriefing } from "@/types/tuneAssets";
 
 interface StartTunePracticeParams {
   tuneKey: string;
@@ -67,14 +68,23 @@ export function useEvaluateTuneAttempt() {
 export function useTuneAssets(tuneKey: string | null) {
   return useQuery({
     queryKey: ["tune-assets", tuneKey],
-    queryFn: async () => {
+    queryFn: async (): Promise<TuneAssetData | null> => {
       if (!tuneKey) return null;
 
+      // Query tune_assets joined with curriculum_versions
+      // to get the most recently published version
       const { data, error } = await supabase
         .from("tune_assets")
-        .select("*")
+        .select(`
+          *,
+          curriculum_versions!inner (
+            status,
+            published_at
+          )
+        `)
         .eq("tune_key", tuneKey)
-        .order("created_at", { ascending: false })
+        .eq("curriculum_versions.status", "published")
+        .order("curriculum_versions(published_at)", { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -82,8 +92,46 @@ export function useTuneAssets(tuneKey: string | null) {
         throw new Error(error.message);
       }
 
-      return data;
+      return data as unknown as TuneAssetData | null;
     },
     enabled: !!tuneKey,
+  });
+}
+
+interface PublishedTuneInfo {
+  tune_key: string;
+  briefing: TuneBriefing | null;
+}
+
+export function usePublishedTuneKeys() {
+  return useQuery({
+    queryKey: ["published-tune-keys"],
+    queryFn: async (): Promise<PublishedTuneInfo[]> => {
+      const { data, error } = await supabase
+        .from("tune_assets")
+        .select(`
+          tune_key,
+          briefing,
+          curriculum_versions!inner (
+            status,
+            published_at
+          )
+        `)
+        .eq("curriculum_versions.status", "published")
+        .order("curriculum_versions(published_at)", { ascending: false });
+
+      if (error) throw new Error(error.message);
+
+      // Dedupe by tune_key (take the most recent published)
+      const seen = new Set<string>();
+      return (data ?? []).filter(item => {
+        if (seen.has(item.tune_key)) return false;
+        seen.add(item.tune_key);
+        return true;
+      }).map(item => ({
+        tune_key: item.tune_key,
+        briefing: item.briefing as TuneBriefing | null,
+      }));
+    },
   });
 }
