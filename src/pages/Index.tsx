@@ -1316,7 +1316,7 @@ const Index = () => {
         : false,
     metronomeStartTime:
       activeMode === "learn" && learnModeType === "curriculum"
-        ? (metronomeStartTime ?? undefined)
+        ? metronomeStartTime ?? undefined
         : undefined,
   });
 
@@ -1337,7 +1337,7 @@ const Index = () => {
         : false,
     metronomeStartTime:
       activeMode === "learn" && learnModeType === "free-practice"
-        ? (metronomeStartTime ?? undefined)
+        ? metronomeStartTime ?? undefined
         : undefined,
   });
 
@@ -1722,7 +1722,7 @@ const Index = () => {
         onValueChange={(v) => handleModeChange(v as ActiveMode)}
         className="w-full flex-1 flex flex-col"
       >
-        <div className="sticky top-0 z-30 w-full bg-background border-b">
+        <div className="sticky top-0 z-30 w-full bg-background">
           <div className="flex items-center justify-between p-2">
             <div className="flex items-center gap-2">
               <UserMenu
@@ -2243,7 +2243,7 @@ const Index = () => {
       </Tabs>
 
       {activeMode !== "quest" && (
-        <div className="w-full h-[380px] z-30 bg-background border-t flex flex-col">
+        <div className="w-full h-[380px] z-30 bg-background border-t rounded-t-2xl flex flex-col">
           {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
           <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
             <div className="flex items-center gap-2">

@@ -28,32 +28,34 @@ import {
 } from "@/components/ui/select";
 import { getNoteColorForNoteName } from "@/constants/noteColors";
 import { useToast } from "@/hooks/use-toast";
-import { useTuneAssets, usePublishedTuneKeys } from "@/hooks/useTuneQueries";
+import { usePublishedTuneKeys, useTuneAssets } from "@/hooks/useTuneQueries";
 import { supabase } from "@/integrations/supabase/client";
 import type { NoteSequence } from "@/types/noteSequence";
-import type { TuneAssembly, TuneBriefing, TuneNugget } from "@/types/tuneAssets";
+import type {
+  TuneAssembly,
+  TuneBriefing,
+  TuneNugget,
+} from "@/types/tuneAssets";
+import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
 import {
   bundleSingleTuneAssets,
   getAssemblyDspXml,
+  getAssemblyNs,
   getAssemblyXml,
   getLocalAssemblyIds,
-  getLocalBriefing,
   getLocalNuggetIds,
   getLocalTuneKeys,
   getNuggetDspXml,
+  getNuggetNs,
   getNuggetXml,
   getTuneDspXml,
   getTuneNs,
   getTuneXml,
-  getAssemblyNs,
-  getNuggetNs,
-  validateTuneForPublishing,
 } from "@/utils/tuneAssetBundler";
-import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { Pause, Pencil, Play, Trash2, Upload } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Pause, Play, Upload } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   OpenSheetMusicDisplayView,
   type OpenSheetMusicDisplayViewHandle,
@@ -83,7 +85,8 @@ export const LabMode = ({
   // Selection state
   const [selectedSource, setSelectedSource] = useState<TuneSource>("published");
   const [selectedTune, setSelectedTune] = useState<string>("");
-  const [selectedTarget, setSelectedTarget] = useState<TargetType>("assemblies");
+  const [selectedTarget, setSelectedTarget] =
+    useState<TargetType>("assemblies");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
 
   // Publish dialog state
@@ -92,29 +95,18 @@ export const LabMode = ({
   const [newTuneTitle, setNewTuneTitle] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Rename dialog state
-  const [showRenameDialog, setShowRenameDialog] = useState(false);
-  const [renameTargetKey, setRenameTargetKey] = useState<string>("");
-  const [renameNewTitle, setRenameNewTitle] = useState("");
-  const [isRenaming, setIsRenaming] = useState(false);
-
-  // Delete dialog state
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteTargetKey, setDeleteTargetKey] = useState<string>("");
-  const [isDeleting, setIsDeleting] = useState(false);
-
   // Fetch published tune keys from database
   const { data: tuneList, isLoading: isLoadingList } = usePublishedTuneKeys();
   const publishedTuneKeys = useMemo(
     () => new Set(tuneList?.map((t) => t.tune_key) ?? []),
-    [tuneList]
+    [tuneList],
   );
 
   // Get local tune keys from file system
   const localTuneKeys = useMemo(() => getLocalTuneKeys(), []);
   const unpublishedTuneKeys = useMemo(
     () => localTuneKeys.filter((key) => !publishedTuneKeys.has(key)),
-    [localTuneKeys, publishedTuneKeys]
+    [localTuneKeys, publishedTuneKeys],
   );
 
   // Auto-select first tune when list loads
@@ -133,7 +125,7 @@ export const LabMode = ({
 
   // Fetch tune assets from database (only when published source)
   const { data: tuneAssets, isLoading: isLoadingAssets } = useTuneAssets(
-    selectedSource === "published" ? selectedTune : null
+    selectedSource === "published" ? selectedTune : null,
   );
 
   // Derive nugget/assembly IDs based on source
@@ -162,7 +154,7 @@ export const LabMode = ({
       }
       return getLocalNuggetIds(tuneKey);
     },
-    [tuneList]
+    [tuneList],
   );
 
   const getAssemblyIdsForTune = useCallback(
@@ -173,7 +165,7 @@ export const LabMode = ({
       }
       return getLocalAssemblyIds(tuneKey);
     },
-    [tuneList]
+    [tuneList],
   );
 
   // Reset item selection when tune or target changes
@@ -215,10 +207,22 @@ export const LabMode = ({
       return (getTuneNs(selectedTune) as NoteSequence) ?? EMPTY_SEQUENCE;
     }
     if (selectedTarget === "assemblies") {
-      return (getAssemblyNs(selectedTune, selectedItemId) as NoteSequence) ?? EMPTY_SEQUENCE;
+      return (
+        (getAssemblyNs(selectedTune, selectedItemId) as NoteSequence) ??
+        EMPTY_SEQUENCE
+      );
     }
-    return (getNuggetNs(selectedTune, selectedItemId) as NoteSequence) ?? EMPTY_SEQUENCE;
-  }, [selectedSource, tuneAssets, selectedTarget, selectedItemId, selectedTune]);
+    return (
+      (getNuggetNs(selectedTune, selectedItemId) as NoteSequence) ??
+      EMPTY_SEQUENCE
+    );
+  }, [
+    selectedSource,
+    tuneAssets,
+    selectedTarget,
+    selectedItemId,
+    selectedTune,
+  ]);
 
   // Derive full XMLs based on source
   const xmlFull = useMemo(() => {
@@ -240,7 +244,13 @@ export const LabMode = ({
       return getAssemblyXml(selectedTune, selectedItemId);
     }
     return getNuggetXml(selectedTune, selectedItemId);
-  }, [selectedSource, tuneAssets, selectedTarget, selectedItemId, selectedTune]);
+  }, [
+    selectedSource,
+    tuneAssets,
+    selectedTarget,
+    selectedItemId,
+    selectedTune,
+  ]);
 
   // Derive DSP XMLs based on source
   const xmlDsp = useMemo(() => {
@@ -248,7 +258,10 @@ export const LabMode = ({
       if (!tuneAssets) return null;
       if (selectedTarget === "full") return tuneAssets.tune_dsp_xml;
       if (selectedTarget === "assemblies") {
-        const xmls = tuneAssets.assembly_dsp_xmls as Record<string, string> | null;
+        const xmls = tuneAssets.assembly_dsp_xmls as Record<
+          string,
+          string
+        > | null;
         return xmls?.[selectedItemId] ?? null;
       }
       const xmls = tuneAssets.nugget_dsp_xmls as Record<string, string> | null;
@@ -262,19 +275,24 @@ export const LabMode = ({
       return getAssemblyDspXml(selectedTune, selectedItemId);
     }
     return getNuggetDspXml(selectedTune, selectedItemId);
-  }, [selectedSource, tuneAssets, selectedTarget, selectedItemId, selectedTune]);
+  }, [
+    selectedSource,
+    tuneAssets,
+    selectedTarget,
+    selectedItemId,
+    selectedTune,
+  ]);
 
   const selectionLabel = useMemo(() => {
     if (!selectedTune) return "Select tune...";
-    const sourcePrefix = selectedSource === "local" ? "📁 " : "☁️ ";
     if (selectedTarget === "full") {
-      return `${sourcePrefix}${selectedTune} / full`;
+      return `${selectedTune} / full`;
     }
     if (!selectedItemId) {
-      return `${sourcePrefix}${selectedTune} / ${selectedTarget}`;
+      return `${selectedTune} / ${selectedTarget}`;
     }
-    return `${sourcePrefix}${selectedTune} / ${selectedTarget} / ${selectedItemId}`;
-  }, [selectedItemId, selectedTarget, selectedTune, selectedSource]);
+    return `${selectedTune} / ${selectedTarget} / ${selectedItemId}`;
+  }, [selectedItemId, selectedTarget, selectedTune]);
 
   // Selection handler
   const selectTune = useCallback(
@@ -284,27 +302,12 @@ export const LabMode = ({
       setSelectedTarget(target);
       setSelectedItemId(itemId);
     },
-    []
+    [],
   );
 
   // Publish handler
   const handlePublish = useCallback(async () => {
     if (!selectedTune || selectedSource !== "local") return;
-
-    // Validate before publishing
-    const validation = validateTuneForPublishing(selectedTune);
-    if (!validation.isValid) {
-      toast({
-        title: "Cannot publish",
-        description: validation.errors.join(", "),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (validation.warnings.length > 0) {
-      console.warn("[LabMode] Publish warnings:", validation.warnings);
-    }
 
     setIsPublishing(true);
     try {
@@ -319,7 +322,8 @@ export const LabMode = ({
       const { data, error } = await supabase.functions.invoke("tune-publish", {
         body: {
           tuneKey: selectedTune,
-          title: publishMode === "create" ? newTuneTitle || selectedTune : undefined,
+          title:
+            publishMode === "create" ? newTuneTitle || selectedTune : undefined,
           tuneAssets,
           mode: publishMode === "create" ? "create" : "update",
           existingTuneKey: publishMode !== "create" ? publishMode : undefined,
@@ -366,89 +370,6 @@ export const LabMode = ({
     queryClient,
   ]);
 
-  // Rename handlers
-  const openRenameDialog = useCallback(
-    (tuneKey: string) => {
-      const tuneInfo = tuneList?.find((t) => t.tune_key === tuneKey);
-      setRenameTargetKey(tuneKey);
-      setRenameNewTitle(tuneInfo?.briefing?.title || tuneKey);
-      setShowRenameDialog(true);
-    },
-    [tuneList]
-  );
-
-  const handleRename = useCallback(async () => {
-    if (!renameTargetKey || !renameNewTitle.trim()) return;
-
-    setIsRenaming(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("tune-manage", {
-        body: {
-          action: "rename",
-          tuneKey: renameTargetKey,
-          newTitle: renameNewTitle.trim(),
-        },
-      });
-
-      if (error) throw error;
-
-      toast({ title: "Tune renamed successfully" });
-      setShowRenameDialog(false);
-      queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
-      queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
-    } catch (error) {
-      toast({
-        title: "Rename failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRenaming(false);
-    }
-  }, [renameTargetKey, renameNewTitle, toast, queryClient]);
-
-  // Delete handlers
-  const openDeleteDialog = useCallback((tuneKey: string) => {
-    setDeleteTargetKey(tuneKey);
-    setShowDeleteDialog(true);
-  }, []);
-
-  const handleDelete = useCallback(async () => {
-    if (!deleteTargetKey) return;
-
-    setIsDeleting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("tune-manage", {
-        body: {
-          action: "delete",
-          tuneKey: deleteTargetKey,
-        },
-      });
-
-      if (error) throw error;
-
-      toast({ title: "Tune deleted successfully" });
-      setShowDeleteDialog(false);
-
-      // If deleted tune was selected, reset selection
-      if (selectedTune === deleteTargetKey && selectedSource === "published") {
-        setSelectedTune("");
-        setSelectedSource("published");
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
-      queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
-    } catch (error) {
-      toast({
-        title: "Delete failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [deleteTargetKey, selectedTune, selectedSource, toast, queryClient]);
-
   // Cursor and playback refs
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
   const osmdDspRef = useRef<OpenSheetMusicDisplay | null>(null);
@@ -477,7 +398,7 @@ export const LabMode = ({
       }
     });
     return Array.from(grouped.values()).sort(
-      (a, b) => a.startTime - b.startTime
+      (a, b) => a.startTime - b.startTime,
     );
   }, [labSequence.notes]);
 
@@ -492,7 +413,7 @@ export const LabMode = ({
   const resetExpectedTracking = useCallback(() => {
     expectedGroupIndexRef.current = 0;
     remainingPitchCountsRef.current = buildPitchCounts(
-      expectedGroups[0]?.pitches ?? []
+      expectedGroups[0]?.pitches ?? [],
     );
   }, [buildPitchCounts, expectedGroups]);
 
@@ -506,7 +427,7 @@ export const LabMode = ({
         osmdDspViewRef.current?.setCursorColor(noteColor);
       }
     },
-    [expectedGroups]
+    [expectedGroups],
   );
 
   const resetCursor = useCallback(() => {
@@ -600,7 +521,7 @@ export const LabMode = ({
     showCursorAtStart();
 
     const minStartTime = Math.min(
-      ...labSequence.notes.map((note) => note.startTime)
+      ...labSequence.notes.map((note) => note.startTime),
     );
     const normalizedNotes = labSequence.notes.map((note) => ({
       ...note,
@@ -613,7 +534,7 @@ export const LabMode = ({
         : Math.max(...normalizedNotes.map((note) => note.endTime), 0);
 
     const startTimes = Array.from(
-      new Set(normalizedNotes.map((note) => note.startTime))
+      new Set(normalizedNotes.map((note) => note.startTime)),
     ).sort((a, b) => a - b);
 
     startTimes.slice(1).forEach((startTime, index) => {
@@ -624,7 +545,7 @@ export const LabMode = ({
         if (expectedGroupIndexRef.current >= targetIndex) return;
         expectedGroupIndexRef.current = targetIndex;
         remainingPitchCountsRef.current = buildPitchCounts(
-          expectedGroups[targetIndex]?.pitches ?? []
+          expectedGroups[targetIndex]?.pitches ?? [],
         );
         setCursorColorForGroup(targetIndex);
         advanceCursorToNextPlayableNote();
@@ -675,7 +596,7 @@ export const LabMode = ({
 
       expectedGroupIndexRef.current = nextIndex;
       remainingPitchCountsRef.current = buildPitchCounts(
-        expectedGroups[nextIndex].pitches
+        expectedGroups[nextIndex].pitches,
       );
       setCursorColorForGroup(nextIndex);
       advanceCursorToNextPlayableNote();
@@ -688,7 +609,7 @@ export const LabMode = ({
       resetCursor,
       resetExpectedTracking,
       setCursorColorForGroup,
-    ]
+    ],
   );
 
   const handlePlayToggle = useCallback(() => {
@@ -735,7 +656,7 @@ export const LabMode = ({
         initCursorTimeoutRef.current = null;
       }, 300);
     },
-    [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart]
+    [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
   );
 
   const handleCursorElementReadyDsp = useCallback(
@@ -755,7 +676,7 @@ export const LabMode = ({
         initCursorTimeoutRef.current = null;
       }, 300);
     },
-    [setCursorColorForGroup, showCursorAtStart]
+    [setCursorColorForGroup, showCursorAtStart],
   );
 
   useEffect(() => {
@@ -826,7 +747,10 @@ export const LabMode = ({
           variant="outline"
           size="sm"
           onClick={handlePlayToggle}
-          disabled={!labSequence.notes.length || (selectedSource === "published" && isLoadingAssets)}
+          disabled={
+            !labSequence.notes.length ||
+            (selectedSource === "published" && isLoadingAssets)
+          }
         >
           {isPlaying ? (
             <>
@@ -869,21 +793,28 @@ export const LabMode = ({
             {/* Published tunes section */}
             {publishedTuneKeys.size > 0 && (
               <>
-                <DropdownMenuLabel>☁️ Published</DropdownMenuLabel>
+                <DropdownMenuLabel>Published</DropdownMenuLabel>
                 {Array.from(publishedTuneKeys).map((tune) => {
                   const tuneNuggets = getNuggetIdsForTune(tune, "published");
-                  const tuneAssemblies = getAssemblyIdsForTune(tune, "published");
+                  const tuneAssemblies = getAssemblyIdsForTune(
+                    tune,
+                    "published",
+                  );
                   return (
                     <DropdownMenuSub key={`published-${tune}`}>
                       <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-popover">
                         <DropdownMenuItem
-                          onClick={() => selectTune("published", tune, "full", "")}
+                          onClick={() =>
+                            selectTune("published", tune, "full", "")
+                          }
                         >
                           Full
                         </DropdownMenuItem>
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
+                          <DropdownMenuSubTrigger>
+                            Nuggets
+                          </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent className="bg-popover">
                             {tuneNuggets.length ? (
                               tuneNuggets.map((id) => (
@@ -904,14 +835,21 @@ export const LabMode = ({
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
+                          <DropdownMenuSubTrigger>
+                            Assemblies
+                          </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent className="bg-popover">
                             {tuneAssemblies.length ? (
                               tuneAssemblies.map((id) => (
                                 <DropdownMenuItem
                                   key={id}
                                   onClick={() =>
-                                    selectTune("published", tune, "assemblies", id)
+                                    selectTune(
+                                      "published",
+                                      tune,
+                                      "assemblies",
+                                      id,
+                                    )
                                   }
                                 >
                                   {id}
@@ -924,21 +862,6 @@ export const LabMode = ({
                             )}
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
-
-                        <DropdownMenuSeparator />
-
-                        {/* Edit Actions */}
-                        <DropdownMenuItem onClick={() => openRenameDialog(tune)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => openDeleteDialog(tune)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
                   );
@@ -954,7 +877,7 @@ export const LabMode = ({
             {/* Unpublished tunes section */}
             {unpublishedTuneKeys.length > 0 && (
               <>
-                <DropdownMenuLabel>📁 Un-Published</DropdownMenuLabel>
+                <DropdownMenuLabel>Un-Published</DropdownMenuLabel>
                 {unpublishedTuneKeys.map((tune) => {
                   const tuneNuggets = getNuggetIdsForTune(tune, "local");
                   const tuneAssemblies = getAssemblyIdsForTune(tune, "local");
@@ -968,7 +891,9 @@ export const LabMode = ({
                           Full
                         </DropdownMenuItem>
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
+                          <DropdownMenuSubTrigger>
+                            Nuggets
+                          </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent className="bg-popover">
                             {tuneNuggets.length ? (
                               tuneNuggets.map((id) => (
@@ -989,7 +914,9 @@ export const LabMode = ({
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
+                          <DropdownMenuSubTrigger>
+                            Assemblies
+                          </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent className="bg-popover">
                             {tuneAssemblies.length ? (
                               tuneAssemblies.map((id) => (
@@ -1114,74 +1041,6 @@ export const LabMode = ({
             </Button>
             <Button onClick={handlePublish} disabled={isPublishing}>
               {isPublishing ? "Publishing..." : "Publish"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Rename Dialog */}
-      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename Tune</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Tune key: <strong>{renameTargetKey}</strong>
-            </p>
-            <div className="space-y-2">
-              <Label>New Title</Label>
-              <Input
-                value={renameNewTitle}
-                onChange={(e) => setRenameNewTitle(e.target.value)}
-                placeholder="Enter new title..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowRenameDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRename}
-              disabled={isRenaming || !renameNewTitle.trim()}
-            >
-              {isRenaming ? "Renaming..." : "Rename"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Tune</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete <strong>{deleteTargetKey}</strong>?
-            </p>
-            <p className="text-sm text-destructive mt-2">
-              This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
