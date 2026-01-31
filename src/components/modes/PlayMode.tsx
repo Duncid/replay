@@ -1,10 +1,43 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { NoteSequence, Note, PlaybackSegment } from "@/types/noteSequence";
 import { beatsToSeconds } from "@/utils/noteSequenceUtils";
+import { STORAGE_KEYS } from "@/utils/storageKeys";
 import { TrackContainer } from "@/components/TrackContainer";
 import { TrackItem } from "@/components/TrackItem";
 import { TrackLoadingItem } from "@/components/TrackLoadingItem";
 import { MergeSessionDialog } from "@/components/MergeSessionDialog";
+import { CompositionSubmenu } from "@/components/CompositionSubmenu";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { TabsContent } from "@/components/ui/tabs";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
     DndContext,
     closestCenter,
@@ -19,6 +52,22 @@ import {
     arrayMove,
     horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import {
+    ChevronDown,
+    Download,
+    FilePlus,
+    Mic,
+    MoreHorizontal,
+    Music,
+    PencilLine,
+    Play,
+    Save,
+    Square,
+    Trash2,
+    Upload,
+} from "lucide-react";
+import type { Composition } from "@/hooks/useCompositions";
+import type { TFunction } from "i18next";
 
 // Unified entry model
 export interface PlayEntry {
@@ -408,4 +457,392 @@ export function PlayMode({
         onPlayAll,
         render,
     };
+}
+
+export type PlayModeController = ReturnType<typeof PlayMode>;
+
+type TranslationFn = TFunction;
+
+type AIModels = {
+    llm: ReadonlyArray<{ value: string; label: string }>;
+    magenta: ReadonlyArray<{ value: string; label: string }>;
+};
+
+interface PlayModeActionBarProps {
+    t: TranslationFn;
+    appState: "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
+    isAutoreplyActive: boolean;
+    setIsAutoreplyActive: (value: boolean) => void;
+    selectedModel: string;
+    setSelectedModel: (value: string) => void;
+    aiModels: AIModels;
+    magentaTemperature: number;
+    setMagentaTemperature: (value: number) => void;
+    isMagentaModel: (value: string) => boolean;
+    playMode: PlayModeController;
+    isMusicXmlImporting: boolean;
+    compositions: Composition[];
+    compositionsLoading: boolean;
+    currentComposition: Composition | null;
+    onUploadAbc: () => void;
+    onUploadMusicXml: () => void;
+    onUploadMidi: () => void;
+    onUploadNoteSequence: () => void;
+    onWriteAbc: () => void;
+    onWhistleImport: () => void;
+    onWriteNoteSequence: () => void;
+    onCreateNew: () => void;
+    onSave: () => void;
+    onSaveAs: () => void;
+    onCopyNoteSequence: () => void;
+    onSelectComposition: (composition: Composition) => void;
+    onDeleteComposition: () => void;
+}
+
+export function PlayModeActionBar({
+    t,
+    appState,
+    isAutoreplyActive,
+    setIsAutoreplyActive,
+    selectedModel,
+    setSelectedModel,
+    aiModels,
+    magentaTemperature,
+    setMagentaTemperature,
+    isMagentaModel,
+    playMode,
+    isMusicXmlImporting,
+    compositions,
+    compositionsLoading,
+    currentComposition,
+    onUploadAbc,
+    onUploadMusicXml,
+    onUploadMidi,
+    onUploadNoteSequence,
+    onWriteAbc,
+    onWhistleImport,
+    onWriteNoteSequence,
+    onCreateNew,
+    onSave,
+    onSaveAs,
+    onCopyNoteSequence,
+    onSelectComposition,
+    onDeleteComposition,
+}: PlayModeActionBarProps) {
+    return (
+        <>
+            <div className="flex items-center gap-2">
+                <Switch
+                    id="autoreply-mode"
+                    checked={isAutoreplyActive}
+                    onCheckedChange={setIsAutoreplyActive}
+                    disabled={appState !== "idle" && appState !== "user_playing"}
+                />
+                <Label htmlFor="autoreply-mode" className="cursor-pointer">
+                    {t("controls.autoreply")}
+                </Label>
+                {isAutoreplyActive && (
+                    <>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="justify-between"
+                                >
+                                    {aiModels.llm.find((m) => m.value === selectedModel)
+                                        ?.label ||
+                                        aiModels.magenta.find(
+                                            (m) => m.value === selectedModel,
+                                        )?.label ||
+                                        selectedModel}
+                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                {aiModels.llm.map((model) => (
+                                    <DropdownMenuItem
+                                        key={model.value}
+                                        onClick={() => setSelectedModel(model.value)}
+                                    >
+                                        {model.label}
+                                    </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>Magenta</DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent>
+                                        {aiModels.magenta.map((model) => (
+                                            <DropdownMenuItem
+                                                key={model.value}
+                                                onClick={() => setSelectedModel(model.value)}
+                                            >
+                                                {model.label}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        {isMagentaModel(selectedModel) && (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        Creativity: {magentaTemperature}%
+                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h4 className="font-medium text-sm mb-1">
+                                                Creativity
+                                            </h4>
+                                            <p className="text-xs text-muted-foreground">
+                                                0 = predictable, 100 = surprising
+                                            </p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Slider
+                                                value={[magentaTemperature]}
+                                                onValueChange={(values) => {
+                                                    const newValue = values[0];
+                                                    console.log(
+                                                        `[Creativity] Slider changed to: ${newValue}`,
+                                                    );
+                                                    setMagentaTemperature(newValue);
+                                                    setTimeout(() => {
+                                                        const saved = window.localStorage.getItem(
+                                                            STORAGE_KEYS.MAGENTA_TEMPERATURE,
+                                                        );
+                                                        console.log(
+                                                            `[Creativity] Saved to localStorage: ${saved}`,
+                                                        );
+                                                    }, 0);
+                                                }}
+                                                min={0}
+                                                max={100}
+                                                step={1}
+                                                className="w-full"
+                                            />
+                                            <div className="flex justify-between text-xs text-muted-foreground">
+                                                <span>0</span>
+                                                <span className="font-medium">
+                                                    {magentaTemperature}
+                                                </span>
+                                                <span>100</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                    </>
+                )}
+            </div>
+            <div className="flex items-center gap-2">
+                {playMode.history.length > 0 && (
+                    <Button
+                        onClick={() => {
+                            if (playMode.isPlaying) {
+                                playMode.onStopPlayback();
+                            } else {
+                                const seq = playMode.getCombinedSequence();
+                                if (seq?.sequence) {
+                                    playMode.onPlayAll(seq.sequence, seq.segments);
+                                }
+                            }
+                        }}
+                        variant="outline"
+                        size="sm"
+                    >
+                        {playMode.isPlaying ? (
+                            <Square className="h-4 w-4" fill="currentColor" />
+                        ) : (
+                            <Play className="h-4 w-4" fill="currentColor" />
+                        )}
+                        {playMode.isPlayingAll ? t("controls.stop") : t("controls.play")}
+                    </Button>
+                )}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        {/* Insert submenu */}
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <FilePlus className="h-4 w-4 mr-2" />
+                                {t("menus.insert")}
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={onUploadAbc}>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    {t("menus.uploadAbc")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={onUploadMusicXml}
+                                    disabled={isMusicXmlImporting}
+                                >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    {t("menus.uploadMusicXml")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onUploadMidi}>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    {t("menus.uploadMidi")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onUploadNoteSequence}>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    {t("menus.uploadNoteSequence")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onWriteAbc}>
+                                    <PencilLine className="h-4 w-4 mr-2" />
+                                    {t("menus.writeAbc")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onWhistleImport}>
+                                    <Mic className="h-4 w-4 mr-2" />
+                                    {t("menus.whistleImport")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onWriteNoteSequence}>
+                                    <Music className="h-4 w-4 mr-2" />
+                                    {t("menus.writeNoteSequence")}
+                                </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+
+                        {/* New */}
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem
+                                    onSelect={(e) => e.preventDefault()}
+                                    disabled={playMode.history.length === 0}
+                                >
+                                    <FilePlus className="h-4 w-4 mr-2" />
+                                    {t("menus.new")}
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                        {t("menus.startNewTitle")}
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        {t("menus.startNewDescription")}
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                        {t("menus.cancel")}
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction onClick={onCreateNew}>
+                                        {t("menus.new")}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+
+                        {/* Save */}
+                        <DropdownMenuItem
+                            onClick={onSave}
+                            disabled={playMode.history.length === 0 || compositionsLoading}
+                        >
+                            <Save className="h-4 w-4 mr-2" />
+                            {t("menus.save")}
+                        </DropdownMenuItem>
+
+                        {/* Save as */}
+                        <DropdownMenuItem
+                            onClick={onSaveAs}
+                            disabled={playMode.history.length === 0}
+                        >
+                            <Save className="h-4 w-4 mr-2" />
+                            {t("menus.saveAs")}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        {/* Export submenu */}
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger
+                                disabled={playMode.history.length === 0}
+                            >
+                                <Download className="h-4 w-4 mr-2" />
+                                {t("menus.export")}
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={onCopyNoteSequence}>
+                                    Note Sequence
+                                </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+
+                        {/* Open submenu */}
+                        <CompositionSubmenu
+                            compositions={compositions}
+                            onSelect={onSelectComposition}
+                            isLoading={compositionsLoading}
+                        />
+
+                        {/* Delete - only when composition loaded */}
+                        {currentComposition && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem
+                                            onSelect={(e) => e.preventDefault()}
+                                            className="text-destructive focus:text-destructive"
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>
+                                                Delete composition?
+                                            </AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete "
+                                                {currentComposition.title}" from the
+                                                cloud. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>
+                                                {t("menus.cancel")}
+                                            </AlertDialogCancel>
+                                            <AlertDialogAction onClick={onDeleteComposition}>
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </>
+    );
+}
+
+interface PlayModeTabContentProps {
+    playMode: PlayModeController;
+}
+
+export function PlayModeTabContent({ playMode }: PlayModeTabContentProps) {
+    return (
+        <TabsContent
+            value="play"
+            className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
+        >
+            {playMode.render()}
+        </TabsContent>
+    );
 }

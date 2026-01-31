@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -26,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TabsContent } from "@/components/ui/tabs";
 import { getNoteColorForNoteName } from "@/constants/noteColors";
 import { useToast } from "@/hooks/use-toast";
 import { usePublishedTuneKeys, useTuneAssets } from "@/hooks/useTuneQueries";
@@ -53,16 +53,32 @@ import {
   getTuneXml,
 } from "@/utils/tuneAssetBundler";
 import { useQueryClient } from "@tanstack/react-query";
-import { Pause, Pencil, Play, Trash2, Upload } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Pause,
+  Pencil,
+  Play,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
-import { Check } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   OpenSheetMusicDisplayView,
   type OpenSheetMusicDisplayViewHandle,
 } from "../OpenSheetMusicDisplayView";
 
-interface LabModeProps {
+interface TuneManagementProps {
   onPlaySequence?: (sequence: NoteSequence) => void;
   onStopPlayback?: () => void;
   isPlaying?: boolean;
@@ -74,12 +90,73 @@ const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
 type TuneSource = "published" | "local";
 type TargetType = "full" | "nuggets" | "assemblies";
 
-export const LabMode = ({
-  onPlaySequence,
-  onStopPlayback,
-  isPlaying = false,
-  onRegisterNoteHandler,
-}: LabModeProps) => {
+type TuneManagementContextValue = {
+  selectedSource: TuneSource;
+  setSelectedSource: React.Dispatch<React.SetStateAction<TuneSource>>;
+  selectedTune: string;
+  setSelectedTune: React.Dispatch<React.SetStateAction<string>>;
+  selectedTarget: TargetType;
+  setSelectedTarget: React.Dispatch<React.SetStateAction<TargetType>>;
+  selectedItemId: string;
+  setSelectedItemId: React.Dispatch<React.SetStateAction<string>>;
+  showPublishDialog: boolean;
+  setShowPublishDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  publishMode: "create" | string;
+  setPublishMode: React.Dispatch<React.SetStateAction<"create" | string>>;
+  newTuneTitle: string;
+  setNewTuneTitle: React.Dispatch<React.SetStateAction<string>>;
+  isPublishing: boolean;
+  publishedFilter: string;
+  setPublishedFilter: React.Dispatch<React.SetStateAction<string>>;
+  unpublishedFilter: string;
+  setUnpublishedFilter: React.Dispatch<React.SetStateAction<string>>;
+  showRenameDialog: boolean;
+  setShowRenameDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  renameTarget: string;
+  newName: string;
+  setNewName: React.Dispatch<React.SetStateAction<string>>;
+  isRenaming: boolean;
+  showDeleteDialog: boolean;
+  setShowDeleteDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  deleteTarget: string;
+  isDeleting: boolean;
+  isLoadingList: boolean;
+  publishedTuneKeys: Set<string>;
+  unpublishedTuneKeys: string[];
+  filteredPublishedKeys: string[];
+  filteredUnpublishedKeys: string[];
+  tuneAssets: ReturnType<typeof useTuneAssets>["data"];
+  isLoadingAssets: boolean;
+  labSequence: NoteSequence;
+  nuggetIds: string[];
+  assemblyIds: string[];
+  xmlFull: string | null;
+  xmlDsp: string | null;
+  selectionLabel: string;
+  targetLabel: string;
+  selectTune: (source: TuneSource, tune: string) => void;
+  openRenameDialog: (tuneKey: string) => void;
+  handleRename: () => Promise<void>;
+  openDeleteDialog: (tuneKey: string) => void;
+  handleDelete: () => Promise<void>;
+  handlePublish: () => Promise<void>;
+};
+
+const TuneManagementContext = createContext<TuneManagementContextValue | null>(
+  null,
+);
+
+function useTuneManagementContext() {
+  const context = useContext(TuneManagementContext);
+  if (!context) {
+    throw new Error(
+      "TuneManagementContext is missing. Wrap with TuneManagementProvider.",
+    );
+  }
+  return context;
+}
+
+function useTuneManagementState(): TuneManagementContextValue {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -136,7 +213,9 @@ export const LabMode = ({
   const filteredUnpublishedKeys = useMemo(() => {
     if (!unpublishedFilter.trim()) return unpublishedTuneKeys;
     const lower = unpublishedFilter.toLowerCase();
-    return unpublishedTuneKeys.filter((key) => key.toLowerCase().includes(lower));
+    return unpublishedTuneKeys.filter((key) =>
+      key.toLowerCase().includes(lower),
+    );
   }, [unpublishedTuneKeys, unpublishedFilter]);
 
   // Auto-select first tune when list loads
@@ -315,27 +394,24 @@ export const LabMode = ({
 
   const selectionLabel = useMemo(() => {
     if (!selectedTune) return "Select tune...";
-    const icon = selectedSource === "published" ? "☁️" : "📁";
-    return `${icon} ${selectedTune}`;
-  }, [selectedSource, selectedTune]);
+    return selectedTune;
+  }, [selectedTune]);
 
   const targetLabel = useMemo(() => {
     if (selectedTarget === "full") return "Full";
-    if (!selectedItemId) return selectedTarget.charAt(0).toUpperCase() + selectedTarget.slice(1);
+    if (!selectedItemId)
+      return selectedTarget.charAt(0).toUpperCase() + selectedTarget.slice(1);
     return `${selectedItemId}`;
   }, [selectedItemId, selectedTarget]);
 
   // Selection handler
-  const selectTune = useCallback(
-    (source: TuneSource, tune: string) => {
-      setSelectedSource(source);
-      setSelectedTune(tune);
-      // Reset target to 'full' when changing tunes
-      setSelectedTarget("full");
-      setSelectedItemId("");
-    },
-    [],
-  );
+  const selectTune = useCallback((source: TuneSource, tune: string) => {
+    setSelectedSource(source);
+    setSelectedTune(tune);
+    // Reset target to 'full' when changing tunes
+    setSelectedTarget("full");
+    setSelectedItemId("");
+  }, []);
 
   // Rename handler
   const openRenameDialog = useCallback((tuneKey: string) => {
@@ -357,13 +433,20 @@ export const LabMode = ({
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || "Rename failed");
-      toast({ title: "Renamed", description: `Tune renamed to "${newName.trim()}"` });
+      toast({
+        title: "Renamed",
+        description: `Tune renamed to "${newName.trim()}"`,
+      });
       setShowRenameDialog(false);
       queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
       queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
     } catch (err) {
-      console.error("[LabMode] Rename failed:", err);
-      toast({ title: "Rename failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+      console.error("[TuneManagement] Rename failed:", err);
+      toast({
+        title: "Rename failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     } finally {
       setIsRenaming(false);
     }
@@ -387,15 +470,22 @@ export const LabMode = ({
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || "Delete failed");
-      toast({ title: "Deleted", description: `Tune "${deleteTarget}" deleted.` });
+      toast({
+        title: "Deleted",
+        description: `Tune "${deleteTarget}" deleted.`,
+      });
       setShowDeleteDialog(false);
       if (selectedTune === deleteTarget) {
         setSelectedTune("");
       }
       queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
     } catch (err) {
-      console.error("[LabMode] Delete failed:", err);
-      toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+      console.error("[TuneManagement] Delete failed:", err);
+      toast({
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -448,7 +538,7 @@ export const LabMode = ({
         throw new Error(data.error || "Unknown error");
       }
     } catch (error) {
-      console.error("[LabMode] Publish failed:", error);
+      console.error("[TuneManagement] Publish failed:", error);
       toast({
         title: "Publish failed",
         description: error instanceof Error ? error.message : "Unknown error",
@@ -465,6 +555,114 @@ export const LabMode = ({
     toast,
     queryClient,
   ]);
+
+  return {
+    selectedSource,
+    setSelectedSource,
+    selectedTune,
+    setSelectedTune,
+    selectedTarget,
+    setSelectedTarget,
+    selectedItemId,
+    setSelectedItemId,
+    showPublishDialog,
+    setShowPublishDialog,
+    publishMode,
+    setPublishMode,
+    newTuneTitle,
+    setNewTuneTitle,
+    isPublishing,
+    publishedFilter,
+    setPublishedFilter,
+    unpublishedFilter,
+    setUnpublishedFilter,
+    showRenameDialog,
+    setShowRenameDialog,
+    renameTarget,
+    newName,
+    setNewName,
+    isRenaming,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    deleteTarget,
+    isDeleting,
+    isLoadingList,
+    publishedTuneKeys,
+    unpublishedTuneKeys,
+    filteredPublishedKeys,
+    filteredUnpublishedKeys,
+    tuneAssets,
+    isLoadingAssets,
+    labSequence,
+    nuggetIds,
+    assemblyIds,
+    xmlFull,
+    xmlDsp,
+    selectionLabel,
+    targetLabel,
+    selectTune,
+    openRenameDialog,
+    handleRename,
+    openDeleteDialog,
+    handleDelete,
+    handlePublish,
+  };
+}
+
+export function TuneManagementProvider({ children }: { children: ReactNode }) {
+  const value = useTuneManagementState();
+  return (
+    <TuneManagementContext.Provider value={value}>
+      {children}
+    </TuneManagementContext.Provider>
+  );
+}
+
+export const TuneManagement = ({
+  onPlaySequence,
+  onStopPlayback,
+  isPlaying = false,
+  onRegisterNoteHandler,
+}: TuneManagementProps) => {
+  const {
+    selectedSource,
+    selectedTune,
+    selectedTarget,
+    setSelectedTarget,
+    selectedItemId,
+    setSelectedItemId,
+    showPublishDialog,
+    setShowPublishDialog,
+    publishMode,
+    setPublishMode,
+    newTuneTitle,
+    setNewTuneTitle,
+    isPublishing,
+    showRenameDialog,
+    setShowRenameDialog,
+    renameTarget,
+    newName,
+    setNewName,
+    isRenaming,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    deleteTarget,
+    isDeleting,
+    isLoadingList,
+    publishedTuneKeys,
+    unpublishedTuneKeys,
+    tuneAssets,
+    isLoadingAssets,
+    labSequence,
+    nuggetIds,
+    assemblyIds,
+    xmlFull,
+    xmlDsp,
+    targetLabel,
+    handleRename,
+    handleDelete,
+    handlePublish,
+  } = useTuneManagementContext();
 
   // Cursor and playback refs
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
@@ -851,109 +1049,31 @@ export const LabMode = ({
         >
           {isPlaying ? (
             <>
-              <Pause className="h-4 w-4 mr-2" />
+              <Pause
+                className="h-4 w-4 mr-2"
+                fill="currentColor"
+                stroke="none"
+              />
               Stop
             </>
           ) : (
             <>
-              <Play className="h-4 w-4 mr-2" />
+              <Play
+                className="h-4 w-4 mr-2"
+                fill="currentColor"
+                stroke="none"
+              />
               Play
             </>
           )}
         </Button>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Tune Selector Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={selectedSource === "published" && isLoadingAssets}
-            >
-              {selectedSource === "published" && isLoadingAssets
-                ? "Loading..."
-                : selectionLabel}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 bg-popover">
-            {/* Published Section */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>☁️ Published</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-                {/* Filter Input */}
-                <div className="px-2 py-1.5 sticky top-0 bg-popover">
-                  <Input
-                    placeholder="Filter..."
-                    value={publishedFilter}
-                    onChange={(e) => setPublishedFilter(e.target.value)}
-                    className="h-8"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <DropdownMenuSeparator />
-                {filteredPublishedKeys.length > 0 ? (
-                  filteredPublishedKeys.map((tune) => (
-                    <DropdownMenuItem
-                      key={tune}
-                      onClick={() => selectTune("published", tune)}
-                    >
-                      <span className="flex-1">{tune}</span>
-                      {selectedTune === tune && selectedSource === "published" && (
-                        <Check className="h-4 w-4 ml-2" />
-                      )}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <DropdownMenuItem disabled>No matches</DropdownMenuItem>
-                )}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-
-            {/* Un-Published Section */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>📁 Un-Published</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-                {/* Filter Input */}
-                <div className="px-2 py-1.5 sticky top-0 bg-popover">
-                  <Input
-                    placeholder="Filter..."
-                    value={unpublishedFilter}
-                    onChange={(e) => setUnpublishedFilter(e.target.value)}
-                    className="h-8"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <DropdownMenuSeparator />
-                {filteredUnpublishedKeys.length > 0 ? (
-                  filteredUnpublishedKeys.map((tune) => (
-                    <DropdownMenuItem
-                      key={tune}
-                      onClick={() => selectTune("local", tune)}
-                    >
-                      <span className="flex-1">{tune}</span>
-                      {selectedTune === tune && selectedSource === "local" && (
-                        <Check className="h-4 w-4 ml-2" />
-                      )}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <DropdownMenuItem disabled>No matches</DropdownMenuItem>
-                )}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         {/* Target Selector Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" disabled={!selectedTune}>
               {targetLabel}
+              <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-popover">
@@ -980,9 +1100,10 @@ export const LabMode = ({
                       }}
                     >
                       <span className="flex-1">{id}</span>
-                      {selectedTarget === "nuggets" && selectedItemId === id && (
-                        <Check className="h-4 w-4 ml-2" />
-                      )}
+                      {selectedTarget === "nuggets" &&
+                        selectedItemId === id && (
+                          <Check className="h-4 w-4 ml-2" />
+                        )}
                     </DropdownMenuItem>
                   ))
                 ) : (
@@ -1004,9 +1125,10 @@ export const LabMode = ({
                       }}
                     >
                       <span className="flex-1">{id}</span>
-                      {selectedTarget === "assemblies" && selectedItemId === id && (
-                        <Check className="h-4 w-4 ml-2" />
-                      )}
+                      {selectedTarget === "assemblies" &&
+                        selectedItemId === id && (
+                          <Check className="h-4 w-4 ml-2" />
+                        )}
                     </DropdownMenuItem>
                   ))
                 ) : (
@@ -1016,44 +1138,6 @@ export const LabMode = ({
             </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {/* Context-Sensitive Action Button */}
-        {selectedTune && (
-          selectedSource === "published" ? (
-            // Edit Dropdown for Published
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Pencil className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-popover">
-                <DropdownMenuItem onClick={() => openRenameDialog(selectedTune)}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => openDeleteDialog(selectedTune)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            // Publish Button for Unpublished
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowPublishDialog(true)}
-            >
-              <Upload className="h-4 w-4 mr-1" />
-              Publish
-            </Button>
-          )
-        )}
       </div>
 
       {/* Sheet music displays */}
@@ -1182,7 +1266,10 @@ export const LabMode = ({
             >
               Cancel
             </Button>
-            <Button onClick={handleRename} disabled={isRenaming || !newName.trim()}>
+            <Button
+              onClick={handleRename}
+              disabled={isRenaming || !newName.trim()}
+            >
               {isRenaming ? "Renaming..." : "Rename"}
             </Button>
           </DialogFooter>
@@ -1210,7 +1297,11 @@ export const LabMode = ({
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
@@ -1219,3 +1310,174 @@ export const LabMode = ({
     </div>
   );
 };
+
+export function TuneManagementActionBar() {
+  const {
+    selectedSource,
+    selectedTune,
+    isLoadingAssets,
+    selectionLabel,
+    publishedFilter,
+    setPublishedFilter,
+    unpublishedFilter,
+    setUnpublishedFilter,
+    filteredPublishedKeys,
+    filteredUnpublishedKeys,
+    selectTune,
+    openRenameDialog,
+    openDeleteDialog,
+    setShowPublishDialog,
+  } = useTuneManagementContext();
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={selectedSource === "published" && isLoadingAssets}
+          >
+            {selectedSource === "published" && isLoadingAssets
+              ? "Loading..."
+              : selectionLabel}
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64 bg-popover">
+          {/* Published Section */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Published</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
+              {/* Filter Input */}
+              <div className="px-2 py-1.5 sticky top-0 bg-popover">
+                <Input
+                  placeholder="Filter..."
+                  value={publishedFilter}
+                  onChange={(e) => setPublishedFilter(e.target.value)}
+                  className="h-8"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+              <DropdownMenuSeparator />
+              {filteredPublishedKeys.length > 0 ? (
+                filteredPublishedKeys.map((tune) => (
+                  <DropdownMenuItem
+                    key={tune}
+                    onClick={() => selectTune("published", tune)}
+                  >
+                    <span className="flex-1">{tune}</span>
+                    {selectedTune === tune &&
+                      selectedSource === "published" && (
+                        <Check className="h-4 w-4 ml-2" />
+                      )}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          {/* Un-Published Section */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Un-Published</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
+              {/* Filter Input */}
+              <div className="px-2 py-1.5 sticky top-0 bg-popover">
+                <Input
+                  placeholder="Filter..."
+                  value={unpublishedFilter}
+                  onChange={(e) => setUnpublishedFilter(e.target.value)}
+                  className="h-8"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+              <DropdownMenuSeparator />
+              {filteredUnpublishedKeys.length > 0 ? (
+                filteredUnpublishedKeys.map((tune) => (
+                  <DropdownMenuItem
+                    key={tune}
+                    onClick={() => selectTune("local", tune)}
+                  >
+                    <span className="flex-1">{tune}</span>
+                    {selectedTune === tune && selectedSource === "local" && (
+                      <Check className="h-4 w-4 ml-2" />
+                    )}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {selectedTune &&
+        (selectedSource === "published" ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-popover">
+              <DropdownMenuItem onClick={() => openRenameDialog(selectedTune)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => openDeleteDialog(selectedTune)}
+                className="text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowPublishDialog(true)}
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            Publish
+          </Button>
+        ))}
+    </>
+  );
+}
+
+interface TuneManagementTabContentProps {
+  onPlaySequence?: (sequence: NoteSequence) => void;
+  onStopPlayback?: () => void;
+  isPlaying?: boolean;
+  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
+}
+
+export function TuneManagementTabContent({
+  onPlaySequence,
+  onStopPlayback,
+  isPlaying,
+  onRegisterNoteHandler,
+}: TuneManagementTabContentProps) {
+  return (
+    <TabsContent
+      value="lab"
+      className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
+    >
+      <TuneManagement
+        onPlaySequence={onPlaySequence}
+        onStopPlayback={onStopPlayback}
+        isPlaying={isPlaying}
+        onRegisterNoteHandler={onRegisterNoteHandler}
+      />
+    </TabsContent>
+  );
+}

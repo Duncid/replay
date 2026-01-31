@@ -1,6 +1,5 @@
 import { AddNoteSequenceDialog } from "@/components/AddNoteSequenceDialog";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
-import { CompositionSubmenu } from "@/components/CompositionSubmenu";
 import {
   FeelPreset,
   Metronome,
@@ -8,15 +7,30 @@ import {
 } from "@/components/Metronome";
 import { MidiConnector } from "@/components/MidiConnector";
 import Piano, { PianoHandle } from "@/components/Piano";
-import { QuestEditor } from "@/components/QuestEditor";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
 import { UserMenu } from "@/components/UserMenu";
 import { WhistleImportSheet } from "@/components/WhistleImportSheet";
-import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
-import { LabMode } from "@/components/modes/LabMode";
-import { LearnMode } from "@/components/modes/LearnMode";
-import { PlayEntry, PlayMode } from "@/components/modes/PlayMode";
+import {
+  LearnMode,
+  LearnModeActionBar,
+  LearnModeTabContent,
+} from "@/components/modes/LearnMode";
+import {
+  PlayEntry,
+  PlayMode,
+  PlayModeActionBar,
+  PlayModeTabContent,
+} from "@/components/modes/PlayMode";
+import {
+  QuestManagementActionBar,
+  QuestManagementTabContent,
+} from "@/components/modes/QuestManagement";
+import {
+  TuneManagementActionBar,
+  TuneManagementTabContent,
+  TuneManagementProvider,
+} from "@/components/modes/TuneManagement";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,15 +56,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -1713,15 +1719,126 @@ const Index = () => {
     // Learn mode doesn't have a history to clear in the same way
   };
 
-  const hasHistory = activeMode === "play" && playMode.history.length > 0;
+  const handlePlayMenuCreateNew = useCallback(() => {
+    playMode.clearHistory();
+    compositions.clearCurrentComposition();
+  }, [compositions, playMode]);
+
+  const handlePlayMenuSave = useCallback(() => {
+    if (compositions.currentComposition && playMode.history.length > 0) {
+      compositions.updateComposition(
+        compositions.currentComposition.id,
+        playMode.history,
+        pianoSoundType,
+        metronomeBpm,
+        metronomeTimeSignature,
+      );
+      return;
+    }
+    if (playMode.history.length > 0) {
+      setSaveModalMode("save");
+      setSaveModalOpen(true);
+    }
+  }, [
+    compositions,
+    playMode.history,
+    pianoSoundType,
+    metronomeBpm,
+    metronomeTimeSignature,
+  ]);
+
+  const handlePlayMenuSaveAs = useCallback(() => {
+    setSaveModalMode("saveAs");
+    setSaveModalOpen(true);
+  }, []);
+
+  const handlePlayMenuCopyNoteSequence = useCallback(async () => {
+    const seq = playMode.getCombinedSequence();
+    if (seq?.sequence) {
+      await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
+      toast({ title: "Copied as NoteSequence" });
+    }
+  }, [playMode, toast]);
+
+  const handlePlayMenuSelectComposition = useCallback(
+    (composition: Composition) => {
+      if (playMode.history.length > 0) {
+        setPendingCompositionToLoad(composition);
+        setSaveBeforeOpenDialogOpen(true);
+      } else {
+        loadCompositionWithToast(composition);
+      }
+    },
+    [
+      loadCompositionWithToast,
+      playMode.history.length,
+      setPendingCompositionToLoad,
+      setSaveBeforeOpenDialogOpen,
+    ],
+  );
+
+  const handlePlayMenuDeleteComposition = useCallback(() => {
+    if (compositions.currentComposition) {
+      compositions.deleteComposition(compositions.currentComposition.id);
+    }
+  }, [compositions]);
+
+  const actionBars = {
+    play: (
+      <PlayModeActionBar
+        t={t}
+        appState={appState}
+        isAutoreplyActive={isAutoreplyActive}
+        setIsAutoreplyActive={setIsAutoreplyActive}
+        selectedModel={selectedModel}
+        setSelectedModel={setSelectedModel}
+        aiModels={AI_MODELS}
+        magentaTemperature={magentaTemperature}
+        setMagentaTemperature={setMagentaTemperature}
+        isMagentaModel={magenta.isMagentaModel}
+        playMode={playMode}
+        isMusicXmlImporting={isMusicXmlImporting}
+        compositions={compositions.compositions}
+        compositionsLoading={compositions.isLoading}
+        currentComposition={compositions.currentComposition}
+        onUploadAbc={handleUploadAbc}
+        onUploadMusicXml={handleUploadMusicXml}
+        onUploadMidi={handleUploadMidi}
+        onUploadNoteSequence={handleUploadNoteSequence}
+        onWriteAbc={() => setPartitionDialogOpen(true)}
+        onWhistleImport={() => setWhistleSheetOpen(true)}
+        onWriteNoteSequence={() => setNoteSequenceDialogOpen(true)}
+        onCreateNew={handlePlayMenuCreateNew}
+        onSave={handlePlayMenuSave}
+        onSaveAs={handlePlayMenuSaveAs}
+        onCopyNoteSequence={handlePlayMenuCopyNoteSequence}
+        onSelectComposition={handlePlayMenuSelectComposition}
+        onDeleteComposition={handlePlayMenuDeleteComposition}
+      />
+    ),
+    learn: (
+      <LearnModeActionBar
+        t={t}
+        selectedModel={selectedModel}
+        setSelectedModel={setSelectedModel}
+        aiModels={{ llm: AI_MODELS.llm }}
+        debugMode={debugMode}
+        setDebugMode={setDebugMode}
+        onEnableFreePractice={() => setLearnModeType("free-practice")}
+      />
+    ),
+    quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
+    lab: <TuneManagementActionBar />,
+  } satisfies Record<ActiveMode, ReactNode>;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-background">
-      <Tabs
-        value={activeMode}
-        onValueChange={(v) => handleModeChange(v as ActiveMode)}
-        className="w-full flex-1 flex flex-col"
-      >
+    <TuneManagementProvider>
+      <div className="min-h-screen flex flex-col items-center justify-start bg-background">
+        <Tabs
+          value={activeMode}
+          onValueChange={(v) => handleModeChange(v as ActiveMode)}
+          className="w-full flex-1 flex flex-col"
+        >
         <div className="sticky top-0 z-30 w-full bg-background">
           <div className="flex items-center justify-between p-2">
             <div className="flex items-center gap-2">
@@ -1744,426 +1861,7 @@ const Index = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {activeMode === "play" && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="autoreply-mode"
-                    checked={isAutoreplyActive}
-                    onCheckedChange={setIsAutoreplyActive}
-                    disabled={
-                      appState !== "idle" && appState !== "user_playing"
-                    }
-                  />
-                  <Label htmlFor="autoreply-mode" className="cursor-pointer">
-                    {t("controls.autoreply")}
-                  </Label>
-                </div>
-              )}
-
-              {activeMode === "play" && isAutoreplyActive && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="justify-between"
-                    >
-                      {AI_MODELS.llm.find((m) => m.value === selectedModel)
-                        ?.label ||
-                        AI_MODELS.magenta.find((m) => m.value === selectedModel)
-                          ?.label ||
-                        selectedModel}
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {AI_MODELS.llm.map((model) => (
-                      <DropdownMenuItem
-                        key={model.value}
-                        onClick={() => setSelectedModel(model.value)}
-                      >
-                        {model.label}
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Magenta</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        {AI_MODELS.magenta.map((model) => (
-                          <DropdownMenuItem
-                            key={model.value}
-                            onClick={() => setSelectedModel(model.value)}
-                          >
-                            {model.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              {activeMode === "play" &&
-                isAutoreplyActive &&
-                magenta.isMagentaModel(selectedModel) && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        Creativity: {magentaTemperature}%
-                        <ChevronDown className="h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80">
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium text-sm mb-1">
-                            Creativity
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            0 = predictable, 100 = surprising
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Slider
-                            value={[magentaTemperature]}
-                            onValueChange={(values) => {
-                              const newValue = values[0];
-                              console.log(
-                                `[Creativity] Slider changed to: ${newValue}`,
-                              );
-                              setMagentaTemperature(newValue);
-                              // Verify it was saved
-                              setTimeout(() => {
-                                const saved = window.localStorage.getItem(
-                                  STORAGE_KEYS.MAGENTA_TEMPERATURE,
-                                );
-                                console.log(
-                                  `[Creativity] Saved to localStorage: ${saved}`,
-                                );
-                              }, 0);
-                            }}
-                            min={0}
-                            max={100}
-                            step={1}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>0</span>
-                            <span className="font-medium">
-                              {magentaTemperature}
-                            </span>
-                            <span>100</span>
-                          </div>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
-            </div>
-            <div className="flex items-center gap-2">
-              {activeMode === "quest" && questHeaderActions}
-              {activeMode === "learn" && (
-                <>
-                  {activeMode === "learn" && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="justify-between"
-                        >
-                          {AI_MODELS.llm.find((m) => m.value === selectedModel)
-                            ?.label || selectedModel}
-                          <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {AI_MODELS.llm.map((model) => (
-                          <DropdownMenuItem
-                            key={model.value}
-                            onClick={() => setSelectedModel(model.value)}
-                          >
-                            {model.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Label
-                      htmlFor="debug-mode"
-                      className="cursor-pointer text-sm text-muted-foreground"
-                    >
-                      Debug
-                    </Label>
-                    <Switch
-                      id="debug-mode"
-                      checked={debugMode}
-                      onCheckedChange={(checked) =>
-                        setDebugMode(checked === true)
-                      }
-                    />
-                  </div>
-                  {debugMode && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setLearnModeType("free-practice");
-                        }}
-                      >
-                        {t("learnMode.freePractice", "Free Practice")}
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-              {/* Play/Stop - only shown when there's history */}
-              {activeMode === "play" && playMode.history.length > 0 && (
-                <Button
-                  onClick={() => {
-                    if (playMode.isPlaying) {
-                      playMode.onStopPlayback();
-                    } else {
-                      const seq = playMode.getCombinedSequence();
-                      if (seq?.sequence) {
-                        playMode.onPlayAll(seq.sequence, seq.segments);
-                      }
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
-                  {playMode.isPlaying ? (
-                    <Square className="h-4 w-4" fill="currentColor" />
-                  ) : (
-                    <Play className="h-4 w-4" fill="currentColor" />
-                  )}
-                  {playMode.isPlayingAll
-                    ? t("controls.stop")
-                    : t("controls.play")}
-                </Button>
-              )}
-              {activeMode === "play" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    {/* Insert submenu */}
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <FilePlus className="h-4 w-4 mr-2" />
-                        {t("menus.insert")}
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem onClick={handleUploadAbc}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          {t("menus.uploadAbc")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={handleUploadMusicXml}
-                          disabled={isMusicXmlImporting}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          {t("menus.uploadMusicXml")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleUploadMidi}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          {t("menus.uploadMidi")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleUploadNoteSequence}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          {t("menus.uploadNoteSequence")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setPartitionDialogOpen(true)}
-                        >
-                          <PencilLine className="h-4 w-4 mr-2" />
-                          {t("menus.writeAbc")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setWhistleSheetOpen(true)}
-                        >
-                          <Mic className="h-4 w-4 mr-2" />
-                          {t("menus.whistleImport")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setNoteSequenceDialogOpen(true)}
-                        >
-                          <Music className="h-4 w-4 mr-2" />
-                          {t("menus.writeNoteSequence")}
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-
-                    <DropdownMenuSeparator />
-
-                    {/* New */}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <DropdownMenuItem
-                          onSelect={(e) => e.preventDefault()}
-                          disabled={playMode.history.length === 0}
-                        >
-                          <FilePlus className="h-4 w-4 mr-2" />
-                          {t("menus.new")}
-                        </DropdownMenuItem>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {t("menus.startNewTitle")}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t("menus.startNewDescription")}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>
-                            {t("menus.cancel")}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => {
-                              playMode.clearHistory();
-                              compositions.clearCurrentComposition();
-                            }}
-                          >
-                            {t("menus.new")}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-
-                    {/* Save */}
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (
-                          compositions.currentComposition &&
-                          playMode.history.length > 0
-                        ) {
-                          compositions.updateComposition(
-                            compositions.currentComposition.id,
-                            playMode.history,
-                            pianoSoundType,
-                            metronomeBpm,
-                            metronomeTimeSignature,
-                          );
-                        } else if (playMode.history.length > 0) {
-                          setSaveModalMode("save");
-                          setSaveModalOpen(true);
-                        }
-                      }}
-                      disabled={
-                        playMode.history.length === 0 || compositions.isLoading
-                      }
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {t("menus.save")}
-                    </DropdownMenuItem>
-
-                    {/* Save as */}
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSaveModalMode("saveAs");
-                        setSaveModalOpen(true);
-                      }}
-                      disabled={playMode.history.length === 0}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {t("menus.saveAs")}
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-
-                    {/* Export submenu */}
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger
-                        disabled={playMode.history.length === 0}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {t("menus.export")}
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            const seq = playMode.getCombinedSequence();
-                            if (seq?.sequence) {
-                              await navigator.clipboard.writeText(
-                                JSON.stringify(seq.sequence, null, 2),
-                              );
-                              toast({ title: "Copied as NoteSequence" });
-                            }
-                          }}
-                        >
-                          Note Sequence
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-
-                    <DropdownMenuSeparator />
-
-                    {/* Open submenu */}
-                    <CompositionSubmenu
-                      compositions={compositions.compositions}
-                      onSelect={(composition) => {
-                        if (playMode.history.length > 0) {
-                          setPendingCompositionToLoad(composition);
-                          setSaveBeforeOpenDialogOpen(true);
-                        } else {
-                          loadCompositionWithToast(composition);
-                        }
-                      }}
-                      isLoading={compositions.isLoading}
-                    />
-
-                    {/* Delete - only when composition loaded */}
-                    {compositions.currentComposition && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem
-                              onSelect={(e) => e.preventDefault()}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Delete composition?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete "
-                                {compositions.currentComposition?.title}" from
-                                the cloud. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => {
-                                  if (compositions.currentComposition) {
-                                    compositions.deleteComposition(
-                                      compositions.currentComposition.id,
-                                    );
-                                  }
-                                }}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              {actionBars[activeMode]}
             </div>
           </div>
         </div>
@@ -2201,46 +1899,25 @@ const Index = () => {
             />
           )}
 
-          <TabsContent
-            value="play"
-            className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
-          >
-            {playMode.render()}
-          </TabsContent>
-          <TabsContent
-            value="learn"
-            className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
-          >
-            {learnModeType === "free-practice" ? (
-              <FreePracticeMode {...freePracticeModeProps} />
-            ) : (
-              learnMode.render()
-            )}
-          </TabsContent>
-          <TabsContent
-            value="quest"
-            className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
-          >
-            <QuestEditor
-              mode="embedded"
-              isActive={activeMode === "quest"}
-              onHeaderActionsChange={setQuestHeaderActions}
-              onHeaderTitleChange={setQuestHeaderTitle}
-            />
-          </TabsContent>
-          <TabsContent
-            value="lab"
-            className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
-          >
-            <LabMode
-              onPlaySequence={handleLabPlaySequence}
-              onStopPlayback={stopAiPlayback}
-              isPlaying={isPlaying}
-              onRegisterNoteHandler={registerLabNoteHandler}
-            />
-          </TabsContent>
+          <PlayModeTabContent playMode={playMode} />
+          <LearnModeTabContent
+            learnModeType={learnModeType}
+            freePracticeProps={freePracticeModeProps}
+            learnMode={learnMode}
+          />
+          <QuestManagementTabContent
+            isActive={activeMode === "quest"}
+            onHeaderActionsChange={setQuestHeaderActions}
+            onHeaderTitleChange={setQuestHeaderTitle}
+          />
+          <TuneManagementTabContent
+            onPlaySequence={handleLabPlaySequence}
+            onStopPlayback={stopAiPlayback}
+            isPlaying={isPlaying}
+            onRegisterNoteHandler={registerLabNoteHandler}
+          />
         </div>
-      </Tabs>
+        </Tabs>
 
       {activeMode !== "quest" && (
         <div className="w-full h-[380px] z-30 bg-background border-t rounded-t-2xl flex flex-col">
@@ -2492,7 +2169,8 @@ const Index = () => {
         isLoading={compositions.isLoading}
         defaultTitle={compositions.currentComposition?.title || ""}
       />
-    </div>
+      </div>
+    </TuneManagementProvider>
   );
 };
 
