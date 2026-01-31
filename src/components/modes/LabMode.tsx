@@ -53,8 +53,9 @@ import {
   getTuneXml,
 } from "@/utils/tuneAssetBundler";
 import { useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, Upload } from "lucide-react";
+import { Pause, Pencil, Play, Trash2, Upload } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
+import { Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   OpenSheetMusicDisplayView,
@@ -95,6 +96,21 @@ export const LabMode = ({
   const [newTuneTitle, setNewTuneTitle] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
 
+  // Filter state for tune lists
+  const [publishedFilter, setPublishedFilter] = useState("");
+  const [unpublishedFilter, setUnpublishedFilter] = useState("");
+
+  // Rename dialog state
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [renameTarget, setRenameTarget] = useState("");
+  const [newName, setNewName] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Fetch published tune keys from database
   const { data: tuneList, isLoading: isLoadingList } = usePublishedTuneKeys();
   const publishedTuneKeys = useMemo(
@@ -108,6 +124,20 @@ export const LabMode = ({
     () => localTuneKeys.filter((key) => !publishedTuneKeys.has(key)),
     [localTuneKeys, publishedTuneKeys],
   );
+
+  // Filtered tune lists for search
+  const filteredPublishedKeys = useMemo(() => {
+    const keys = Array.from(publishedTuneKeys);
+    if (!publishedFilter.trim()) return keys;
+    const lower = publishedFilter.toLowerCase();
+    return keys.filter((key) => key.toLowerCase().includes(lower));
+  }, [publishedTuneKeys, publishedFilter]);
+
+  const filteredUnpublishedKeys = useMemo(() => {
+    if (!unpublishedFilter.trim()) return unpublishedTuneKeys;
+    const lower = unpublishedFilter.toLowerCase();
+    return unpublishedTuneKeys.filter((key) => key.toLowerCase().includes(lower));
+  }, [unpublishedTuneKeys, unpublishedFilter]);
 
   // Auto-select first tune when list loads
   useEffect(() => {
@@ -285,25 +315,91 @@ export const LabMode = ({
 
   const selectionLabel = useMemo(() => {
     if (!selectedTune) return "Select tune...";
-    if (selectedTarget === "full") {
-      return `${selectedTune} / full`;
-    }
-    if (!selectedItemId) {
-      return `${selectedTune} / ${selectedTarget}`;
-    }
-    return `${selectedTune} / ${selectedTarget} / ${selectedItemId}`;
-  }, [selectedItemId, selectedTarget, selectedTune]);
+    const icon = selectedSource === "published" ? "☁️" : "📁";
+    return `${icon} ${selectedTune}`;
+  }, [selectedSource, selectedTune]);
+
+  const targetLabel = useMemo(() => {
+    if (selectedTarget === "full") return "Full";
+    if (!selectedItemId) return selectedTarget.charAt(0).toUpperCase() + selectedTarget.slice(1);
+    return `${selectedItemId}`;
+  }, [selectedItemId, selectedTarget]);
 
   // Selection handler
   const selectTune = useCallback(
-    (source: TuneSource, tune: string, target: TargetType, itemId: string) => {
+    (source: TuneSource, tune: string) => {
       setSelectedSource(source);
       setSelectedTune(tune);
-      setSelectedTarget(target);
-      setSelectedItemId(itemId);
+      // Reset target to 'full' when changing tunes
+      setSelectedTarget("full");
+      setSelectedItemId("");
     },
     [],
   );
+
+  // Rename handler
+  const openRenameDialog = useCallback((tuneKey: string) => {
+    setRenameTarget(tuneKey);
+    setNewName(tuneKey);
+    setShowRenameDialog(true);
+  }, []);
+
+  const handleRename = useCallback(async () => {
+    if (!renameTarget || !newName.trim()) return;
+    setIsRenaming(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tune-manage", {
+        body: {
+          action: "rename",
+          tuneKey: renameTarget,
+          newTitle: newName.trim(),
+        },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || "Rename failed");
+      toast({ title: "Renamed", description: `Tune renamed to "${newName.trim()}"` });
+      setShowRenameDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+      queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
+    } catch (err) {
+      console.error("[LabMode] Rename failed:", err);
+      toast({ title: "Rename failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setIsRenaming(false);
+    }
+  }, [renameTarget, newName, toast, queryClient]);
+
+  // Delete handler
+  const openDeleteDialog = useCallback((tuneKey: string) => {
+    setDeleteTarget(tuneKey);
+    setShowDeleteDialog(true);
+  }, []);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tune-manage", {
+        body: {
+          action: "delete",
+          tuneKey: deleteTarget,
+        },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || "Delete failed");
+      toast({ title: "Deleted", description: `Tune "${deleteTarget}" deleted.` });
+      setShowDeleteDialog(false);
+      if (selectedTune === deleteTarget) {
+        setSelectedTune("");
+      }
+      queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+    } catch (err) {
+      console.error("[LabMode] Delete failed:", err);
+      toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTarget, selectedTune, toast, queryClient]);
 
   // Publish handler
   const handlePublish = useCallback(async () => {
@@ -742,7 +838,8 @@ export const LabMode = ({
 
   return (
     <div className="w-full h-full max-w-3xl mx-auto flex flex-col flex-1 items-center justify-center">
-      <div className="w-full flex flex-wrap justify-end gap-2 mb-3">
+      <div className="w-full flex flex-wrap items-center gap-2 mb-3">
+        {/* Play/Stop Button */}
         <Button
           variant="outline"
           size="sm"
@@ -765,18 +862,10 @@ export const LabMode = ({
           )}
         </Button>
 
-        {/* Publish button - only for local tunes */}
-        {selectedSource === "local" && selectedTune && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => setShowPublishDialog(true)}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Publish
-          </Button>
-        )}
+        {/* Spacer */}
+        <div className="flex-1" />
 
+        {/* Tune Selector Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -790,160 +879,181 @@ export const LabMode = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 bg-popover">
-            {/* Published tunes section */}
-            {publishedTuneKeys.size > 0 && (
-              <>
-                <DropdownMenuLabel>Published</DropdownMenuLabel>
-                {Array.from(publishedTuneKeys).map((tune) => {
-                  const tuneNuggets = getNuggetIdsForTune(tune, "published");
-                  const tuneAssemblies = getAssemblyIdsForTune(
-                    tune,
-                    "published",
-                  );
-                  return (
-                    <DropdownMenuSub key={`published-${tune}`}>
-                      <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="bg-popover">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            selectTune("published", tune, "full", "")
-                          }
-                        >
-                          Full
-                        </DropdownMenuItem>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            Nuggets
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-popover">
-                            {tuneNuggets.length ? (
-                              tuneNuggets.map((id) => (
-                                <DropdownMenuItem
-                                  key={id}
-                                  onClick={() =>
-                                    selectTune("published", tune, "nuggets", id)
-                                  }
-                                >
-                                  {id}
-                                </DropdownMenuItem>
-                              ))
-                            ) : (
-                              <DropdownMenuItem disabled>
-                                No nuggets
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            Assemblies
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-popover">
-                            {tuneAssemblies.length ? (
-                              tuneAssemblies.map((id) => (
-                                <DropdownMenuItem
-                                  key={id}
-                                  onClick={() =>
-                                    selectTune(
-                                      "published",
-                                      tune,
-                                      "assemblies",
-                                      id,
-                                    )
-                                  }
-                                >
-                                  {id}
-                                </DropdownMenuItem>
-                              ))
-                            ) : (
-                              <DropdownMenuItem disabled>
-                                No assemblies
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                  );
-                })}
-              </>
-            )}
+            {/* Published Section */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>☁️ Published</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
+                {/* Filter Input */}
+                <div className="px-2 py-1.5 sticky top-0 bg-popover">
+                  <Input
+                    placeholder="Filter..."
+                    value={publishedFilter}
+                    onChange={(e) => setPublishedFilter(e.target.value)}
+                    className="h-8"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <DropdownMenuSeparator />
+                {filteredPublishedKeys.length > 0 ? (
+                  filteredPublishedKeys.map((tune) => (
+                    <DropdownMenuItem
+                      key={tune}
+                      onClick={() => selectTune("published", tune)}
+                    >
+                      <span className="flex-1">{tune}</span>
+                      {selectedTune === tune && selectedSource === "published" && (
+                        <Check className="h-4 w-4 ml-2" />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
 
-            {/* Separator between sections */}
-            {publishedTuneKeys.size > 0 && unpublishedTuneKeys.length > 0 && (
-              <DropdownMenuSeparator />
-            )}
-
-            {/* Unpublished tunes section */}
-            {unpublishedTuneKeys.length > 0 && (
-              <>
-                <DropdownMenuLabel>Un-Published</DropdownMenuLabel>
-                {unpublishedTuneKeys.map((tune) => {
-                  const tuneNuggets = getNuggetIdsForTune(tune, "local");
-                  const tuneAssemblies = getAssemblyIdsForTune(tune, "local");
-                  return (
-                    <DropdownMenuSub key={`local-${tune}`}>
-                      <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="bg-popover">
-                        <DropdownMenuItem
-                          onClick={() => selectTune("local", tune, "full", "")}
-                        >
-                          Full
-                        </DropdownMenuItem>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            Nuggets
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-popover">
-                            {tuneNuggets.length ? (
-                              tuneNuggets.map((id) => (
-                                <DropdownMenuItem
-                                  key={id}
-                                  onClick={() =>
-                                    selectTune("local", tune, "nuggets", id)
-                                  }
-                                >
-                                  {id}
-                                </DropdownMenuItem>
-                              ))
-                            ) : (
-                              <DropdownMenuItem disabled>
-                                No nuggets
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            Assemblies
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-popover">
-                            {tuneAssemblies.length ? (
-                              tuneAssemblies.map((id) => (
-                                <DropdownMenuItem
-                                  key={id}
-                                  onClick={() =>
-                                    selectTune("local", tune, "assemblies", id)
-                                  }
-                                >
-                                  {id}
-                                </DropdownMenuItem>
-                              ))
-                            ) : (
-                              <DropdownMenuItem disabled>
-                                No assemblies
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                  );
-                })}
-              </>
-            )}
+            {/* Un-Published Section */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>📁 Un-Published</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
+                {/* Filter Input */}
+                <div className="px-2 py-1.5 sticky top-0 bg-popover">
+                  <Input
+                    placeholder="Filter..."
+                    value={unpublishedFilter}
+                    onChange={(e) => setUnpublishedFilter(e.target.value)}
+                    className="h-8"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <DropdownMenuSeparator />
+                {filteredUnpublishedKeys.length > 0 ? (
+                  filteredUnpublishedKeys.map((tune) => (
+                    <DropdownMenuItem
+                      key={tune}
+                      onClick={() => selectTune("local", tune)}
+                    >
+                      <span className="flex-1">{tune}</span>
+                      {selectedTune === tune && selectedSource === "local" && (
+                        <Check className="h-4 w-4 ml-2" />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Target Selector Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={!selectedTune}>
+              {targetLabel}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover">
+            <DropdownMenuItem
+              onClick={() => {
+                setSelectedTarget("full");
+                setSelectedItemId("");
+              }}
+            >
+              <span className="flex-1">Full</span>
+              {selectedTarget === "full" && <Check className="h-4 w-4 ml-2" />}
+            </DropdownMenuItem>
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
+                {nuggetIds.length > 0 ? (
+                  nuggetIds.map((id) => (
+                    <DropdownMenuItem
+                      key={id}
+                      onClick={() => {
+                        setSelectedTarget("nuggets");
+                        setSelectedItemId(id);
+                      }}
+                    >
+                      <span className="flex-1">{id}</span>
+                      {selectedTarget === "nuggets" && selectedItemId === id && (
+                        <Check className="h-4 w-4 ml-2" />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled>No nuggets</DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
+                {assemblyIds.length > 0 ? (
+                  assemblyIds.map((id) => (
+                    <DropdownMenuItem
+                      key={id}
+                      onClick={() => {
+                        setSelectedTarget("assemblies");
+                        setSelectedItemId(id);
+                      }}
+                    >
+                      <span className="flex-1">{id}</span>
+                      {selectedTarget === "assemblies" && selectedItemId === id && (
+                        <Check className="h-4 w-4 ml-2" />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled>No assemblies</DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Context-Sensitive Action Button */}
+        {selectedTune && (
+          selectedSource === "published" ? (
+            // Edit Dropdown for Published
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover">
+                <DropdownMenuItem onClick={() => openRenameDialog(selectedTune)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => openDeleteDialog(selectedTune)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            // Publish Button for Unpublished
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowPublishDialog(true)}
+            >
+              <Upload className="h-4 w-4 mr-1" />
+              Publish
+            </Button>
+          )
+        )}
       </div>
 
       {/* Sheet music displays */}
@@ -1041,6 +1151,67 @@ export const LabMode = ({
             </Button>
             <Button onClick={handlePublish} disabled={isPublishing}>
               {isPublishing ? "Publishing..." : "Publish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Tune</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Renaming: <strong>{renameTarget}</strong>
+            </p>
+            <div className="space-y-2">
+              <Label>New Name</Label>
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Enter new name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRenameDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRename} disabled={isRenaming || !newName.trim()}>
+              {isRenaming ? "Renaming..." : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Tune</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete <strong>{deleteTarget}</strong>?
+            </p>
+            <p className="text-sm text-destructive">
+              This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
