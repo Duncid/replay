@@ -1,297 +1,295 @@
 
 
-# Plan: Add DSP XML Storage to tune_assets Table
+# Plan: Replace LabMode Static Imports with Database Fetching
 
 ## Overview
 
-Add support for storing the new `dsp.xml` (DSP = Display) MusicXML files in the database alongside the existing `tune.xml` files. These appear to be an alternative/processed version of MusicXML for rendering purposes.
+Refactor LabMode to fetch tune assets from the database instead of using Vite `import.meta.glob` static imports. This will enable Lab mode to work with published curriculum data, ensuring consistency with the production runtime.
 
 ## Current State
 
-**File Structure (discovered):**
-- `output/tune.xml` - Full tune MusicXML (already stored)
-- `output/dsp.xml` - **NEW** Full tune DSP MusicXML
-- `output/dsp.lh.xml` / `output/dsp.rh.xml` - **NEW** Left/right hand DSP variants (for gymnopdie)
-- `output/nuggets/N1.xml` - Nugget MusicXML (already stored)
-- `output/nuggets/N1.dsp.xml` - **NEW** Nugget DSP MusicXML
-- `output/nuggets/N1.lh.dsp.xml` / `N1.rh.dsp.xml` - **NEW** Hand-separated DSP variants
-- `output/assemblies/A1.dsp.xml` - **NEW** Assembly DSP MusicXML
+**LabMode Asset Loading (Static Imports):**
+- Uses 9 separate `import.meta.glob` patterns for:
+  - `teacher.json` (for nugget/assembly IDs)
+  - `tune.ns.json`, `tune.xml`, `dsp.xml` (full tune)
+  - `nuggets/*.ns.json`, `nuggets/*.xml`, `nuggets/*.dsp.xml`
+  - `assemblies/*.ns.json`, `assemblies/*.xml`, `assemblies/*.dsp.xml`
+- Assets are bundled at build time and accessed synchronously
 
-**Database (`tune_assets` table) - Current Columns:**
-- `tune_xml` (text) - Full tune MusicXML
-- `nugget_xmls` (jsonb) - `{"N1": "<xml>..."}`
-- `assembly_xmls` (jsonb) - `{"A1": "<xml>..."}`
+**Database (`tune_assets` table) - Available Columns:**
+| Column | Type | Contains |
+|--------|------|----------|
+| `note_sequence` | jsonb | Full tune NoteSequence |
+| `tune_xml` | text | Full tune MusicXML |
+| `tune_dsp_xml` | text | Full tune DSP MusicXML |
+| `nuggets` | jsonb (array) | Array of `{id, noteSequence, ...}` objects |
+| `nugget_xmls` | jsonb (object) | `{"N1": "<xml>..."}` |
+| `nugget_dsp_xmls` | jsonb (object) | `{"N1": "<xml>..."}` |
+| `assemblies` | jsonb (array) | Array of `{id, noteSequence, nuggetIds, ...}` objects |
+| `assembly_xmls` | jsonb (object) | `{"A1": "<xml>..."}` |
+| `assembly_dsp_xmls` | jsonb (object) | `{"A1": "<xml>..."}` |
+| `briefing` | jsonb | Contains `teachingOrder`, `assemblyOrder`, `title`, etc. |
 
----
-
-## Design Decision: How to Store DSP XMLs
-
-There are two main approaches:
-
-### Option A: Add New Columns (Recommended)
-
-Add three new columns mirroring the existing XML columns:
-- `tune_dsp_xml` (text) - Main DSP XML string
-- `nugget_dsp_xmls` (jsonb) - `{"N1": "<xml>...", "N1.lh": "<xml>...", "N1.rh": "<xml>..."}`
-- `assembly_dsp_xmls` (jsonb) - Same pattern
-
-**Pros:**
-- Clear separation between original XML and DSP XML
-- Easy to query and reason about
-- Consistent with current pattern
-
-**Cons:**
-- More columns on the table
-
-### Option B: Nest in Existing JSONB Columns
-
-Store DSP XMLs nested within the existing jsonb structures:
-- `nugget_xmls`: `{"N1": {"xml": "<xml>...", "dsp": "<xml>...", "lhDsp": "<xml>...", "rhDsp": "<xml>..."}}`
-
-**Pros:**
-- No schema change
-- Groups all XMLs for a nugget together
-
-**Cons:**
-- Breaking change for existing code consuming `nugget_xmls`
-- More complex to query
-
-**Recommendation:** Option A (new columns) is cleaner and backward compatible.
+**Existing Hook:**
+- `useTuneAssets(tuneKey)` already fetches from `tune_assets` table
+- Currently orders by `created_at DESC` (should use `published_at` via join)
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Database Migration
+### Step 1: Enhance useTuneAssets Hook
 
-Add three new columns to `tune_assets`:
+**File: `src/hooks/useTuneQueries.ts`**
 
-```sql
-ALTER TABLE tune_assets
-  ADD COLUMN tune_dsp_xml text,
-  ADD COLUMN nugget_dsp_xmls jsonb,
-  ADD COLUMN assembly_dsp_xmls jsonb;
-
-COMMENT ON COLUMN tune_assets.tune_dsp_xml IS 'Full tune DSP MusicXML for display rendering';
-COMMENT ON COLUMN tune_assets.nugget_dsp_xmls IS 'Mapping of nugget ID to DSP XML strings, including .lh/.rh variants';
-COMMENT ON COLUMN tune_assets.assembly_dsp_xmls IS 'Mapping of assembly ID to DSP XML strings, including .lh/.rh variants';
-```
-
-**Column Details:**
-| Column | Type | Description | Example |
-|--------|------|-------------|---------|
-| `tune_dsp_xml` | text | Main DSP MusicXML string | Raw XML |
-| `nugget_dsp_xmls` | jsonb | Map of ID to DSP XML | `{"N1": "<xml>", "N1.lh": "<xml>", "N1.rh": "<xml>"}` |
-| `assembly_dsp_xmls` | jsonb | Map of ID to DSP XML | `{"A1": "<xml>", "A1.lh": "<xml>"}` |
-
----
-
-### Step 2: Add Vite Glob Imports for DSP XML Files
-
-**File: `src/components/QuestEditor.tsx`**
-
-Add new glob imports for DSP files:
+Update the hook to properly join with `curriculum_versions` and filter by `status = 'published'`:
 
 ```typescript
-// Pre-load all DSP XML files at build time
-const tuneDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/dsp.xml",
-  { eager: true, query: "?raw", import: "default" }
-);
+export function useTuneAssets(tuneKey: string | null) {
+  return useQuery({
+    queryKey: ["tune-assets", tuneKey],
+    queryFn: async () => {
+      if (!tuneKey) return null;
 
-const tuneLhDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/dsp.lh.xml",
-  { eager: true, query: "?raw", import: "default" }
-);
+      // Query tune_assets joined with curriculum_versions
+      // to get the most recently published version
+      const { data, error } = await supabase
+        .from("tune_assets")
+        .select(`
+          *,
+          curriculum_versions!inner (
+            status,
+            published_at
+          )
+        `)
+        .eq("tune_key", tuneKey)
+        .eq("curriculum_versions.status", "published")
+        .order("curriculum_versions.published_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-const tuneRhDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/dsp.rh.xml",
-  { eager: true, query: "?raw", import: "default" }
-);
-
-const nuggetDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/nuggets/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" }
-);
-
-const assemblyDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/assemblies/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" }
-);
-```
-
-Add helper functions:
-
-```typescript
-const getTuneDspXml = (musicRef: string): string | null => {
-  const path = `/src/music/${musicRef}/output/dsp.xml`;
-  return tuneDspXmlModules[path] || null;
-};
-
-const getTuneLhDspXml = (musicRef: string): string | null => {
-  const path = `/src/music/${musicRef}/output/dsp.lh.xml`;
-  return tuneLhDspXmlModules[path] || null;
-};
-
-const getTuneRhDspXml = (musicRef: string): string | null => {
-  const path = `/src/music/${musicRef}/output/dsp.rh.xml`;
-  return tuneRhDspXmlModules[path] || null;
-};
-
-const getNuggetDspXml = (musicRef: string, nuggetId: string): string | null => {
-  // Match patterns like N1.dsp.xml, N1.lh.dsp.xml, N1.rh.dsp.xml
-  const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.dsp.xml`;
-  return nuggetDspXmlModules[path] || null;
-};
-
-const getAssemblyDspXml = (musicRef: string, assemblyId: string): string | null => {
-  const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.dsp.xml`;
-  return assemblyDspXmlModules[path] || null;
-};
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!tuneKey,
+  });
+}
 ```
 
 ---
 
-### Step 3: Update TuneAssetBundle Type
+### Step 2: Create a New Hook for Lab Mode Tune List
 
-**File: `src/components/QuestEditor.tsx`**
+**File: `src/hooks/useTuneQueries.ts`**
 
-Extend the interface with new DSP fields:
+Add a hook to fetch all available tune keys from published curriculum:
 
 ```typescript
-interface TuneAssetBundle {
-  // ... existing fields ...
-  tuneXml?: string;
-  nuggetXmls?: Record<string, string>;
-  assemblyXmls?: Record<string, string>;
+export function usePublishedTuneKeys() {
+  return useQuery({
+    queryKey: ["published-tune-keys"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tune_assets")
+        .select(`
+          tune_key,
+          briefing,
+          curriculum_versions!inner (
+            status,
+            published_at
+          )
+        `)
+        .eq("curriculum_versions.status", "published")
+        .order("curriculum_versions.published_at", { ascending: false });
+
+      if (error) throw new Error(error.message);
+
+      // Dedupe by tune_key (take the most recent published)
+      const seen = new Set<string>();
+      return (data ?? []).filter(item => {
+        if (seen.has(item.tune_key)) return false;
+        seen.add(item.tune_key);
+        return true;
+      });
+    },
+  });
+}
+```
+
+---
+
+### Step 3: Define TypeScript Interfaces for Tune Assets
+
+**File: `src/types/tuneAssets.ts`** (new file)
+
+Create typed interfaces for the data structure returned from the database:
+
+```typescript
+import type { NoteSequence } from "./noteSequence";
+
+export interface TuneNugget {
+  id: string;
+  noteSequence: NoteSequence;
+  leftHandSequence?: NoteSequence | null;
+  rightHandSequence?: NoteSequence | null;
+  location?: {
+    startMeasure: number;
+    endMeasure: number;
+    startBeat: number;
+    endBeat: number;
+  };
+  dependsOn?: string[];
+}
+
+export interface TuneAssembly {
+  id: string;
+  noteSequence: NoteSequence;
+  leftHandSequence?: NoteSequence | null;
+  rightHandSequence?: NoteSequence | null;
+  nuggetIds: string[];
+  tier?: number;
+}
+
+export interface TuneBriefing {
+  title?: string;
+  teachingOrder?: string[];
+  assemblyOrder?: string[];
+  // ... other fields
+}
+
+export interface TuneAssetData {
+  id: string;
+  tune_key: string;
+  version_id: string;
+  note_sequence: NoteSequence;
+  tune_xml: string | null;
+  tune_dsp_xml: string | null;
+  nuggets: TuneNugget[] | null;
+  nugget_xmls: Record<string, string> | null;
+  nugget_dsp_xmls: Record<string, string> | null;
+  assemblies: TuneAssembly[] | null;
+  assembly_xmls: Record<string, string> | null;
+  assembly_dsp_xmls: Record<string, string> | null;
+  briefing: TuneBriefing | null;
+}
+```
+
+---
+
+### Step 4: Refactor LabMode Component
+
+**File: `src/components/modes/LabMode.tsx`**
+
+Replace the static imports with database queries:
+
+**Remove:** All `import.meta.glob` statements and their helper functions (lines 29-109)
+
+**Add:** Query hooks and derived state:
+
+```typescript
+import { useTuneAssets, usePublishedTuneKeys } from "@/hooks/useTuneQueries";
+
+// Inside component:
+const { data: tuneList, isLoading: isLoadingList } = usePublishedTuneKeys();
+const tuneOptions = useMemo(
+  () => tuneList?.map(t => t.tune_key) ?? [],
+  [tuneList]
+);
+
+const { data: tuneAssets, isLoading: isLoadingAssets } = useTuneAssets(selectedTune);
+
+// Derive nugget/assembly IDs from database briefing
+const nuggetIds = useMemo(() => {
+  const briefing = tuneAssets?.briefing as TuneBriefing | null;
+  return briefing?.teachingOrder ?? [];
+}, [tuneAssets]);
+
+const assemblyIds = useMemo(() => {
+  const briefing = tuneAssets?.briefing as TuneBriefing | null;
+  return briefing?.assemblyOrder ?? [];
+}, [tuneAssets]);
+
+// Derive sequences from database
+const labSequence = useMemo(() => {
+  if (!tuneAssets) return EMPTY_SEQUENCE;
   
-  // NEW: DSP XML fields
-  tuneDspXml?: string;
-  nuggetDspXmls?: Record<string, string>;   // {"N1": "...", "N1.lh": "...", "N1.rh": "..."}
-  assemblyDspXmls?: Record<string, string>; // {"A1": "...", "A1.lh": "...", "A1.rh": "..."}
-}
-```
-
----
-
-### Step 4: Update bundleTuneAssets Function
-
-**File: `src/components/QuestEditor.tsx`**
-
-In the bundling loop, collect DSP XMLs:
-
-```typescript
-// Load main tune DSP XML
-const tuneDspXml = getTuneDspXml(musicRef);
-
-// Build nugget DSP XMLs map (including .lh and .rh variants)
-const nuggetDspXmls: Record<string, string> = {};
-if (teacherNuggets && Array.isArray(teacherNuggets)) {
-  for (const nugget of teacherNuggets) {
-    // Main DSP
-    const dspXml = getNuggetDspXml(musicRef, nugget.id);
-    if (dspXml) {
-      nuggetDspXmls[nugget.id] = dspXml;
-    }
-    // Left hand DSP
-    const lhDspXml = getNuggetDspXml(musicRef, `${nugget.id}.lh`);
-    if (lhDspXml) {
-      nuggetDspXmls[`${nugget.id}.lh`] = lhDspXml;
-    }
-    // Right hand DSP
-    const rhDspXml = getNuggetDspXml(musicRef, `${nugget.id}.rh`);
-    if (rhDspXml) {
-      nuggetDspXmls[`${nugget.id}.rh`] = rhDspXml;
-    }
+  if (selectedTarget === "full") {
+    return (tuneAssets.note_sequence as NoteSequence) ?? EMPTY_SEQUENCE;
   }
-}
-
-// Build assembly DSP XMLs map (same pattern)
-const assemblyDspXmls: Record<string, string> = {};
-if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
-  for (const assembly of teacherAssemblies) {
-    const dspXml = getAssemblyDspXml(musicRef, assembly.id);
-    if (dspXml) {
-      assemblyDspXmls[assembly.id] = dspXml;
-    }
-    // Left hand DSP
-    const lhDspXml = getAssemblyDspXml(musicRef, `${assembly.id}.lh`);
-    if (lhDspXml) {
-      assemblyDspXmls[`${assembly.id}.lh`] = lhDspXml;
-    }
-    // Right hand DSP
-    const rhDspXml = getAssemblyDspXml(musicRef, `${assembly.id}.rh`);
-    if (rhDspXml) {
-      assemblyDspXmls[`${assembly.id}.rh`] = rhDspXml;
-    }
+  
+  if (selectedTarget === "assemblies") {
+    const assemblies = tuneAssets.assemblies as TuneAssembly[] | null;
+    const assembly = assemblies?.find(a => a.id === selectedItemId);
+    return assembly?.noteSequence ?? EMPTY_SEQUENCE;
   }
-}
+  
+  const nuggets = tuneAssets.nuggets as TuneNugget[] | null;
+  const nugget = nuggets?.find(n => n.id === selectedItemId);
+  return nugget?.noteSequence ?? EMPTY_SEQUENCE;
+}, [tuneAssets, selectedTarget, selectedItemId]);
 
-// Add to asset bundle
-tuneAssets[tuneKey] = {
-  // ... existing fields ...
-  tuneDspXml: tuneDspXml || undefined,
-  nuggetDspXmls: Object.keys(nuggetDspXmls).length > 0 ? nuggetDspXmls : undefined,
-  assemblyDspXmls: Object.keys(assemblyDspXmls).length > 0 ? assemblyDspXmls : undefined,
-};
+// Derive XMLs from database
+const xmlFull = useMemo(() => {
+  if (!tuneAssets) return null;
+  if (selectedTarget === "full") return tuneAssets.tune_xml;
+  if (selectedTarget === "assemblies") {
+    const xmls = tuneAssets.assembly_xmls as Record<string, string> | null;
+    return xmls?.[selectedItemId] ?? null;
+  }
+  const xmls = tuneAssets.nugget_xmls as Record<string, string> | null;
+  return xmls?.[selectedItemId] ?? null;
+}, [tuneAssets, selectedTarget, selectedItemId]);
+
+const xmlDsp = useMemo(() => {
+  if (!tuneAssets) return null;
+  if (selectedTarget === "full") return tuneAssets.tune_dsp_xml;
+  if (selectedTarget === "assemblies") {
+    const xmls = tuneAssets.assembly_dsp_xmls as Record<string, string> | null;
+    return xmls?.[selectedItemId] ?? null;
+  }
+  const xmls = tuneAssets.nugget_dsp_xmls as Record<string, string> | null;
+  return xmls?.[selectedItemId] ?? null;
+}, [tuneAssets, selectedTarget, selectedItemId]);
+```
+
+**Update UI:** Add loading states for when data is being fetched:
+
+```typescript
+if (isLoadingList || isLoadingAssets) {
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <p className="text-muted-foreground">Loading tune assets...</p>
+    </div>
+  );
+}
 ```
 
 ---
 
-### Step 5: Update curriculum-publish Edge Function
+### Step 5: Update Dropdown to Use Dynamic Tune List
 
-**File: `supabase/functions/curriculum-publish/index.ts`**
+**File: `src/components/modes/LabMode.tsx`**
 
-Update the TuneAssetBundle interface:
-
-```typescript
-interface TuneAssetBundle {
-  // ... existing fields ...
-  tuneXml?: string;
-  nuggetXmls?: Record<string, string>;
-  assemblyXmls?: Record<string, string>;
-  // NEW: DSP XML fields
-  tuneDspXml?: string;
-  nuggetDspXmls?: Record<string, string>;
-  assemblyDspXmls?: Record<string, string>;
-}
-```
-
-Update the database insert to include new columns:
+The dropdown now uses `tuneOptions` from the database instead of a hardcoded array:
 
 ```typescript
-return {
-  version_id: versionId,
-  tune_key: tuneKey,
-  // ... existing columns ...
-  tune_xml: assets.tuneXml || null,
-  nugget_xmls: assets.nuggetXmls || null,
-  assembly_xmls: assets.assemblyXmls || null,
-  // NEW: DSP XML columns
-  tune_dsp_xml: assets.tuneDspXml || null,
-  nugget_dsp_xmls: assets.nuggetDspXmls || null,
-  assembly_dsp_xmls: assets.assemblyDspXmls || null,
-};
+// Before (hardcoded):
+const tuneOptions = ["intro", "gymnopdie", "st-louis-blues"] as const;
+
+// After (dynamic from DB):
+const tuneOptions = useMemo(
+  () => tuneList?.map(t => t.tune_key) ?? [],
+  [tuneList]
+);
 ```
 
 ---
 
-### Step 6: Update Logging
+### Step 6: Handle Edge Cases
 
-Add DSP counts to the bundling log:
-
-```typescript
-console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
-  // ... existing fields ...
-  hasTuneXml: !!tuneXml,
-  nuggetXmlCount: Object.keys(nuggetXmls).length,
-  assemblyXmlCount: Object.keys(assemblyXmls).length,
-  // NEW
-  hasTuneDspXml: !!tuneDspXml,
-  nuggetDspXmlCount: Object.keys(nuggetDspXmls).length,
-  assemblyDspXmlCount: Object.keys(assemblyDspXmls).length,
-});
-```
+1. **No published tunes:** Show an empty state message
+2. **Selected tune not found:** Reset selection when tune is removed from published set
+3. **Missing XML data:** Show fallback UI when XMLs are null (some tunes may not have all XML variants)
 
 ---
 
@@ -299,16 +297,49 @@ console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
 
 | File | Action | Description |
 |------|--------|-------------|
-| Database migration | Create | Add `tune_dsp_xml`, `nugget_dsp_xmls`, `assembly_dsp_xmls` columns |
-| `src/components/QuestEditor.tsx` | Modify | Add DSP glob imports, helpers, update TuneAssetBundle type, update bundleTuneAssets |
-| `supabase/functions/curriculum-publish/index.ts` | Modify | Update TuneAssetBundle interface, include DSP XML in database insert |
+| `src/types/tuneAssets.ts` | Create | TypeScript interfaces for tune asset data |
+| `src/hooks/useTuneQueries.ts` | Modify | Enhance `useTuneAssets` with proper join, add `usePublishedTuneKeys` |
+| `src/components/modes/LabMode.tsx` | Modify | Remove static imports, use DB queries, add loading states |
+
+---
+
+## Data Flow Diagram
+
+```text
++-------------------+     +----------------------+     +------------------+
+| usePublishedTune  | --> | Dropdown shows       | --> | User selects     |
+| Keys() hook       |     | available tune_keys  |     | a tune           |
++-------------------+     +----------------------+     +------------------+
+                                                               |
+                                                               v
+                          +----------------------+     +------------------+
+                          | useTuneAssets(key)   | <-- | selectedTune     |
+                          | fetches full data    |     | state            |
+                          +----------------------+     +------------------+
+                                    |
+                                    v
++------------------------------------------------------------------+
+| Derived State (useMemo):                                         |
+|   - nuggetIds from briefing.teachingOrder                        |
+|   - assemblyIds from briefing.assemblyOrder                      |
+|   - labSequence from note_sequence / nuggets[].noteSequence      |
+|   - xmlFull from tune_xml / nugget_xmls / assembly_xmls          |
+|   - xmlDsp from tune_dsp_xml / nugget_dsp_xmls / assembly_dsp_xmls|
++------------------------------------------------------------------+
+                                    |
+                                    v
+                          +----------------------+
+                          | OpenSheetMusicDisplay|
+                          | renders XML          |
+                          +----------------------+
+```
 
 ---
 
 ## Technical Notes
 
-- **File Naming Convention**: The glob pattern `*.dsp.xml` will match both `N1.dsp.xml` and `N1.lh.dsp.xml` / `N1.rh.dsp.xml`
-- **JSONB Key Format**: Using `{"N1": "...", "N1.lh": "...", "N1.rh": "..."}` keeps lookup simple and flat
-- **Backward Compatible**: All new columns are nullable, existing tunes without DSP XMLs will have null values
-- **Storage Consideration**: DSP XMLs are similar size to regular XMLs; the gymnopdie dsp.xml is ~4000 lines vs tune.xml at similar size
+- **Query Optimization:** The `useTuneAssets` hook fetches all columns at once since LabMode needs most of them. For a production app with large XMLs, consider lazy loading XMLs only when needed.
+- **Caching:** React Query will cache the results, so switching between tunes won't re-fetch if data is fresh.
+- **Backward Compatibility:** The hook still works if a tune has null XML columns (older published versions).
+- **Type Safety:** The `Json` type from Supabase types requires casting to the specific interface; the new `tuneAssets.ts` file provides these types.
 
