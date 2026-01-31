@@ -314,7 +314,10 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
                 chord_cap=chord_cap,
                 chord_keep=chord_keep,
             )
-            _write_musicxml(dsp2_part, output_dir / f"dsp{suffix}.xml")
+            _write_musicxml(
+                dsp2_part,
+                output_dir / f"tune.dsp{suffix}.xml",
+            )
 
     elif tune_ns_candidates:
         # --- NS PATH ---
@@ -367,7 +370,7 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
             chord_cap=chord_cap,
             chord_keep="highest",
         )
-        _write_musicxml(dsp2_part, output_dir / "dsp.xml")
+        _write_musicxml(dsp2_part, output_dir / "tune.dsp.xml")
         
     else:
          raise PipelineError(f"Missing input file: expected tune.xml or *.ns.json in {tune_folder}")
