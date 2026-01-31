@@ -79,14 +79,14 @@ const getMidiFromOsmdNote = (note: OsmdNote | null): number | null => {
     typeof pitch.Octave === "number"
       ? pitch.Octave
       : typeof pitch.octave === "number"
-        ? pitch.octave
-        : null;
+      ? pitch.octave
+      : null;
   const halfTone =
     typeof pitch.HalfTone === "number"
       ? pitch.HalfTone
       : typeof pitch.halfTone === "number"
-        ? pitch.halfTone
-        : null;
+      ? pitch.halfTone
+      : null;
 
   if (octave === null || halfTone === null) return null;
   return (octave + 1) * 12 + halfTone;
@@ -118,6 +118,21 @@ export const OpenSheetMusicDisplayView = forwardRef<
     const cursorStyleRetryRef = useRef<number | null>(null);
     const cursorElementRef = useRef<HTMLImageElement | null>(null);
     const cursorColorRef = useRef<string | null>(null);
+
+    useEffect(() => {
+      const styleId = "osmd-cursor-pulse-style";
+      if (document.getElementById(styleId)) return;
+      const styleTag = document.createElement("style");
+      styleTag.id = styleId;
+      styleTag.textContent = `
+        @keyframes osmdCursorPulse {
+          0% { box-shadow: 0 0 0 1px var(--osmd-cursor-ring-color); }
+          50% { box-shadow: 0 0 0 4px var(--osmd-cursor-ring-color); }
+          100% { box-shadow: 0 0 0 1px var(--osmd-cursor-ring-color); }
+        }
+      `;
+      document.head.appendChild(styleTag);
+    }, []);
 
     const notifyCursorElement = useCallback(
       (nextElement: HTMLImageElement | null) => {
@@ -162,8 +177,8 @@ export const OpenSheetMusicDisplayView = forwardRef<
                 .map((ch) => ch + ch)
                 .join("")
             : hex.length >= 6
-              ? hex.slice(0, 6)
-              : null;
+            ? hex.slice(0, 6)
+            : null;
         if (value) {
           const r = Number.parseInt(value.slice(0, 2), 16);
           const g = Number.parseInt(value.slice(2, 4), 16);
@@ -227,7 +242,6 @@ export const OpenSheetMusicDisplayView = forwardRef<
         backgroundColor: "transparent",
         border: `1.5px solid ${withAlpha(resolvedCursorColor, 0.9)}`,
         borderRadius: "12px",
-        boxShadow: `0 0 0 3px ${withAlpha(resolvedCursorColor, 0.6)}`,
         height: "120%",
         width: "32px",
         minWidth: "32px",
@@ -236,6 +250,12 @@ export const OpenSheetMusicDisplayView = forwardRef<
         pointerEvents: "none",
         zIndex: 10,
       };
+      cursorElement.style.setProperty(
+        "--osmd-cursor-ring-color",
+        withAlpha(resolvedCursorColor, 0.6),
+      );
+      cursorElement.style.animation = "osmdCursorPulse 2s ease-in-out infinite";
+      cursorElement.style.boxShadow = "0 0 0 1px var(--osmd-cursor-ring-color)";
       Object.assign(cursorElement.style, baseStyle);
     }, [resolveThemeColors, cursorColor, notifyCursorElement, withAlpha]);
 
@@ -315,28 +335,28 @@ export const OpenSheetMusicDisplayView = forwardRef<
         const isNoteElement = (element: Element) =>
           Boolean(
             element.closest("g.vf-stavenote, g.vf-note") ||
-            (element.getAttribute("class") ?? "").includes("vf-notehead") ||
-            (element.getAttribute("class") ?? "").includes("vf-stem") ||
-            (element.getAttribute("class") ?? "").includes("vf-flag") ||
-            element.closest("g.vf-flag"),
+              (element.getAttribute("class") ?? "").includes("vf-notehead") ||
+              (element.getAttribute("class") ?? "").includes("vf-stem") ||
+              (element.getAttribute("class") ?? "").includes("vf-flag") ||
+              element.closest("g.vf-flag"),
           );
 
         const isStemElement = (element: Element) =>
           Boolean(
             element.closest("g.vf-stem") ||
-            (element.getAttribute("class") ?? "").includes("vf-stem"),
+              (element.getAttribute("class") ?? "").includes("vf-stem"),
           );
 
         const isNoteheadElement = (element: Element) =>
           Boolean(
             element.closest("g.vf-notehead") ||
-            (element.getAttribute("class") ?? "").includes("vf-notehead"),
+              (element.getAttribute("class") ?? "").includes("vf-notehead"),
           );
 
         const isModifierElement = (element: Element) =>
           Boolean(
             element.closest("g.vf-modifiers") ||
-            (element.getAttribute("class") ?? "").includes("vf-modifiers"),
+              (element.getAttribute("class") ?? "").includes("vf-modifiers"),
           );
 
         svg.querySelectorAll("line").forEach((line) => {
