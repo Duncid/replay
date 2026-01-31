@@ -175,6 +175,24 @@ const assemblyXmlModules = import.meta.glob<string>(
   { eager: true, query: "?raw", import: "default" },
 );
 
+// Pre-load all DSP XML files at build time (display-optimized MusicXML)
+const tuneDspXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+// Match all *.dsp.xml files in nuggets (includes N1.dsp.xml, N1.lh.dsp.xml, N1.rh.dsp.xml)
+const nuggetDspXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/nuggets/*.dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+// Match all *.dsp.xml files in assemblies
+const assemblyDspXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/assemblies/*.dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
 // Helper to get module from glob by path
 const getGlobModule = (
   modules: Record<string, { default?: object }>,
@@ -251,6 +269,34 @@ const getAssemblyXml = (musicRef: string, assemblyId: string): string | null => 
   return assemblyXmlModules[path] || null;
 };
 
+// DSP XML helper functions (display-optimized MusicXML)
+const getTuneDspXml = (musicRef: string): string | null => {
+  const path = `/src/music/${musicRef}/output/dsp.xml`;
+  return tuneDspXmlModules[path] || null;
+};
+
+/**
+ * Get nugget DSP XML by ID. Supports patterns:
+ * - "N1" -> N1.dsp.xml (main DSP)
+ * - "N1.lh" -> N1.lh.dsp.xml (left hand DSP)
+ * - "N1.rh" -> N1.rh.dsp.xml (right hand DSP)
+ */
+const getNuggetDspXml = (musicRef: string, nuggetId: string): string | null => {
+  const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.dsp.xml`;
+  return nuggetDspXmlModules[path] || null;
+};
+
+/**
+ * Get assembly DSP XML by ID. Supports patterns:
+ * - "A1" -> A1.dsp.xml (main DSP)
+ * - "A1.lh" -> A1.lh.dsp.xml (left hand DSP)
+ * - "A1.rh" -> A1.rh.dsp.xml (right hand DSP)
+ */
+const getAssemblyDspXml = (musicRef: string, assemblyId: string): string | null => {
+  const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.dsp.xml`;
+  return assemblyDspXmlModules[path] || null;
+};
+
 // Extract tune list from discovered files
 const availableTunes = Object.entries(teacherModules)
   .map(([path, module]) => {
@@ -315,6 +361,10 @@ interface TuneAssetBundle {
   tuneXml?: string;
   nuggetXmls?: Record<string, string>;
   assemblyXmls?: Record<string, string>;
+  // DSP XML fields for display-optimized sheet music rendering
+  tuneDspXml?: string;
+  nuggetDspXmls?: Record<string, string>; // {"N1": "...", "N1.lh": "...", "N1.rh": "..."}
+  assemblyDspXmls?: Record<string, string>; // {"A1": "...", "A1.lh": "...", "A1.rh": "..."}
 }
 
 // Custom styles for React Flow Controls and MiniMap
@@ -2236,6 +2286,53 @@ export function QuestEditor({
           }
         }
 
+        // Collect DSP XML content for display-optimized sheet music rendering
+        const tuneDspXml = getTuneDspXml(musicRef);
+
+        // Build nugget DSP XMLs map (includes .lh and .rh variants)
+        const nuggetDspXmls: Record<string, string> = {};
+        if (teacherNuggets && Array.isArray(teacherNuggets)) {
+          for (const nugget of teacherNuggets) {
+            // Main DSP
+            const dspXml = getNuggetDspXml(musicRef, nugget.id);
+            if (dspXml) {
+              nuggetDspXmls[nugget.id] = dspXml;
+            }
+            // Left hand DSP
+            const lhDspXml = getNuggetDspXml(musicRef, `${nugget.id}.lh`);
+            if (lhDspXml) {
+              nuggetDspXmls[`${nugget.id}.lh`] = lhDspXml;
+            }
+            // Right hand DSP
+            const rhDspXml = getNuggetDspXml(musicRef, `${nugget.id}.rh`);
+            if (rhDspXml) {
+              nuggetDspXmls[`${nugget.id}.rh`] = rhDspXml;
+            }
+          }
+        }
+
+        // Build assembly DSP XMLs map (includes .lh and .rh variants)
+        const assemblyDspXmls: Record<string, string> = {};
+        if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
+          for (const assembly of teacherAssemblies) {
+            // Main DSP
+            const dspXml = getAssemblyDspXml(musicRef, assembly.id);
+            if (dspXml) {
+              assemblyDspXmls[assembly.id] = dspXml;
+            }
+            // Left hand DSP
+            const lhDspXml = getAssemblyDspXml(musicRef, `${assembly.id}.lh`);
+            if (lhDspXml) {
+              assemblyDspXmls[`${assembly.id}.lh`] = lhDspXml;
+            }
+            // Right hand DSP
+            const rhDspXml = getAssemblyDspXml(musicRef, `${assembly.id}.rh`);
+            if (rhDspXml) {
+              assemblyDspXmls[`${assembly.id}.rh`] = rhDspXml;
+            }
+          }
+        }
+
         tuneAssets[tuneKey] = {
           // Store the full teacher structure (v2 schema)
           briefing: teacher
@@ -2264,6 +2361,10 @@ export function QuestEditor({
           tuneXml: tuneXml || undefined,
           nuggetXmls: Object.keys(nuggetXmls).length > 0 ? nuggetXmls : undefined,
           assemblyXmls: Object.keys(assemblyXmls).length > 0 ? assemblyXmls : undefined,
+          // DSP XML fields
+          tuneDspXml: tuneDspXml || undefined,
+          nuggetDspXmls: Object.keys(nuggetDspXmls).length > 0 ? nuggetDspXmls : undefined,
+          assemblyDspXmls: Object.keys(assemblyDspXmls).length > 0 ? assemblyDspXmls : undefined,
         };
         console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
           hasBriefing: !!teacher,
@@ -2275,6 +2376,9 @@ export function QuestEditor({
           hasTuneXml: !!tuneXml,
           nuggetXmlCount: Object.keys(nuggetXmls).length,
           assemblyXmlCount: Object.keys(assemblyXmls).length,
+          hasTuneDspXml: !!tuneDspXml,
+          nuggetDspXmlCount: Object.keys(nuggetDspXmls).length,
+          assemblyDspXmlCount: Object.keys(assemblyDspXmls).length,
         });
       } catch (error) {
         const errMsg = `Failed to load assets for tune "${tuneKey}" (musicRef: ${musicRef}): ${error instanceof Error ? error.message : String(error)}`;
