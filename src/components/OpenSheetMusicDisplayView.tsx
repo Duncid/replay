@@ -359,6 +359,12 @@ export const OpenSheetMusicDisplayView = forwardRef<
               (element.getAttribute("class") ?? "").includes("vf-modifiers"),
           );
 
+        const isFlagElement = (element: Element) =>
+          Boolean(
+            element.closest("g.vf-flag") ||
+              (element.getAttribute("class") ?? "").includes("vf-flag"),
+          );
+
         svg.querySelectorAll("line").forEach((line) => {
           const staffLine = isStaffLineShape(line);
           if (staffLine) {
@@ -394,6 +400,19 @@ export const OpenSheetMusicDisplayView = forwardRef<
             }
 
             if (isNoteheadElement(shape)) {
+              const fill = shape.getAttribute("fill");
+              const normalizedFill = (fill ?? "").trim().toLowerCase();
+              const isTransparentFill =
+                !normalizedFill ||
+                normalizedFill === "none" ||
+                normalizedFill === "transparent" ||
+                normalizedFill === "#0000" ||
+                normalizedFill === "#00000000" ||
+                normalizedFill.endsWith(", 0)") ||
+                normalizedFill.endsWith(",0)");
+              if (isTransparentFill) {
+                shape.setAttribute("fill", colors.accent);
+              }
               shape.setAttribute("stroke", colors.accent);
               shape.setAttribute("stroke-width", "0.8");
               shape.removeAttribute("stroke-opacity");
@@ -413,6 +432,14 @@ export const OpenSheetMusicDisplayView = forwardRef<
               if (!fill && !stroke) {
                 shape.setAttribute("fill", colors.accent);
               }
+              return;
+            }
+
+            if (isFlagElement(shape)) {
+              shape.setAttribute("fill", colors.accent);
+              shape.setAttribute("stroke", colors.accent);
+              shape.removeAttribute("stroke-opacity");
+              shape.removeAttribute("fill-opacity");
               return;
             }
 
