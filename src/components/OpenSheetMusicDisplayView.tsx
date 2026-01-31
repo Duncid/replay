@@ -242,11 +242,11 @@ export const OpenSheetMusicDisplayView = forwardRef<
         backgroundColor: "transparent",
         border: `1.5px solid ${withAlpha(resolvedCursorColor, 0.9)}`,
         borderRadius: "12px",
-        height: "120%",
+        height: "88px",
         width: "32px",
         minWidth: "32px",
         opacity: 0.8,
-        transform: "translateY(-30%)",
+        transform: "translateY(-24px)",
         pointerEvents: "none",
         zIndex: 10,
       };
