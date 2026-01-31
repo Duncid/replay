@@ -1,21 +1,58 @@
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getNoteColorForNoteName } from "@/constants/noteColors";
+import { useToast } from "@/hooks/use-toast";
 import { useTuneAssets, usePublishedTuneKeys } from "@/hooks/useTuneQueries";
+import { supabase } from "@/integrations/supabase/client";
 import type { NoteSequence } from "@/types/noteSequence";
 import type { TuneAssembly, TuneBriefing, TuneNugget } from "@/types/tuneAssets";
+import {
+  bundleSingleTuneAssets,
+  getAssemblyDspXml,
+  getAssemblyXml,
+  getLocalAssemblyIds,
+  getLocalBriefing,
+  getLocalNuggetIds,
+  getLocalTuneKeys,
+  getNuggetDspXml,
+  getNuggetXml,
+  getTuneDspXml,
+  getTuneNs,
+  getTuneXml,
+  getAssemblyNs,
+  getNuggetNs,
+} from "@/utils/tuneAssetBundler";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, Upload } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   OpenSheetMusicDisplayView,
   type OpenSheetMusicDisplayViewHandle,
@@ -30,66 +67,104 @@ interface LabModeProps {
 
 const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
 
+type TuneSource = "published" | "local";
+type TargetType = "full" | "nuggets" | "assemblies";
+
 export const LabMode = ({
   onPlaySequence,
   onStopPlayback,
   isPlaying = false,
   onRegisterNoteHandler,
 }: LabModeProps) => {
-  const targetOptions = ["full", "nuggets", "assemblies"] as const;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
+  // Selection state
+  const [selectedSource, setSelectedSource] = useState<TuneSource>("published");
   const [selectedTune, setSelectedTune] = useState<string>("");
-  const [selectedTarget, setSelectedTarget] =
-    useState<(typeof targetOptions)[number]>("assemblies");
+  const [selectedTarget, setSelectedTarget] = useState<TargetType>("assemblies");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
+
+  // Publish dialog state
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [publishMode, setPublishMode] = useState<"create" | string>("create");
+  const [newTuneTitle, setNewTuneTitle] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Fetch published tune keys from database
   const { data: tuneList, isLoading: isLoadingList } = usePublishedTuneKeys();
-  const tuneOptions = useMemo(
-    () => tuneList?.map((t) => t.tune_key) ?? [],
+  const publishedTuneKeys = useMemo(
+    () => new Set(tuneList?.map((t) => t.tune_key) ?? []),
     [tuneList]
+  );
+
+  // Get local tune keys from file system
+  const localTuneKeys = useMemo(() => getLocalTuneKeys(), []);
+  const unpublishedTuneKeys = useMemo(
+    () => localTuneKeys.filter((key) => !publishedTuneKeys.has(key)),
+    [localTuneKeys, publishedTuneKeys]
   );
 
   // Auto-select first tune when list loads
   useEffect(() => {
-    if (tuneOptions.length > 0 && !selectedTune) {
-      setSelectedTune(tuneOptions[0]);
+    if (!selectedTune) {
+      if (publishedTuneKeys.size > 0) {
+        const firstPublished = Array.from(publishedTuneKeys)[0];
+        setSelectedTune(firstPublished);
+        setSelectedSource("published");
+      } else if (unpublishedTuneKeys.length > 0) {
+        setSelectedTune(unpublishedTuneKeys[0]);
+        setSelectedSource("local");
+      }
     }
-  }, [tuneOptions, selectedTune]);
+  }, [publishedTuneKeys, unpublishedTuneKeys, selectedTune]);
 
-  // Fetch tune assets from database
+  // Fetch tune assets from database (only when published source)
   const { data: tuneAssets, isLoading: isLoadingAssets } = useTuneAssets(
-    selectedTune || null
+    selectedSource === "published" ? selectedTune : null
   );
 
-  // Derive nugget/assembly IDs from database briefing
+  // Derive nugget/assembly IDs based on source
   const nuggetIds = useMemo(() => {
-    const briefing = tuneAssets?.briefing as TuneBriefing | null;
-    return briefing?.teachingOrder ?? [];
-  }, [tuneAssets]);
+    if (selectedSource === "published") {
+      const briefing = tuneAssets?.briefing as TuneBriefing | null;
+      return briefing?.teachingOrder ?? [];
+    }
+    return getLocalNuggetIds(selectedTune);
+  }, [selectedSource, tuneAssets, selectedTune]);
 
   const assemblyIds = useMemo(() => {
-    const briefing = tuneAssets?.briefing as TuneBriefing | null;
-    return briefing?.assemblyOrder ?? [];
-  }, [tuneAssets]);
+    if (selectedSource === "published") {
+      const briefing = tuneAssets?.briefing as TuneBriefing | null;
+      return briefing?.assemblyOrder ?? [];
+    }
+    return getLocalAssemblyIds(selectedTune);
+  }, [selectedSource, tuneAssets, selectedTune]);
 
-  // Get nugget/assembly IDs for a specific tune from the list
+  // Helper functions for dropdown (for published tunes from list)
   const getNuggetIdsForTune = useCallback(
-    (tuneKey: string) => {
-      const tuneInfo = tuneList?.find((t) => t.tune_key === tuneKey);
-      return tuneInfo?.briefing?.teachingOrder ?? [];
+    (tuneKey: string, source: TuneSource) => {
+      if (source === "published") {
+        const tuneInfo = tuneList?.find((t) => t.tune_key === tuneKey);
+        return tuneInfo?.briefing?.teachingOrder ?? [];
+      }
+      return getLocalNuggetIds(tuneKey);
     },
     [tuneList]
   );
 
   const getAssemblyIdsForTune = useCallback(
-    (tuneKey: string) => {
-      const tuneInfo = tuneList?.find((t) => t.tune_key === tuneKey);
-      return tuneInfo?.briefing?.assemblyOrder ?? [];
+    (tuneKey: string, source: TuneSource) => {
+      if (source === "published") {
+        const tuneInfo = tuneList?.find((t) => t.tune_key === tuneKey);
+        return tuneInfo?.briefing?.assemblyOrder ?? [];
+      }
+      return getLocalAssemblyIds(tuneKey);
     },
     [tuneList]
   );
 
+  // Reset item selection when tune or target changes
   useEffect(() => {
     if (selectedTarget === "full") {
       if (selectedItemId) setSelectedItemId("");
@@ -103,62 +178,168 @@ export const LabMode = ({
     if (!selectedItemId || !options.includes(selectedItemId)) {
       setSelectedItemId(options[0]);
     }
-  }, [assemblyIds, nuggetIds, selectedItemId, selectedTarget]);
+  }, [assemblyIds, nuggetIds, selectedItemId, selectedTarget, selectedTune]);
 
-  // Derive sequences from database
+  // Derive sequences based on source
   const labSequence = useMemo(() => {
-    if (!tuneAssets) return EMPTY_SEQUENCE;
+    if (selectedSource === "published") {
+      if (!tuneAssets) return EMPTY_SEQUENCE;
+      if (selectedTarget === "full") {
+        return (tuneAssets.note_sequence as NoteSequence) ?? EMPTY_SEQUENCE;
+      }
+      if (selectedTarget === "assemblies") {
+        const assemblies = tuneAssets.assemblies as TuneAssembly[] | null;
+        const assembly = assemblies?.find((a) => a.id === selectedItemId);
+        return assembly?.noteSequence ?? EMPTY_SEQUENCE;
+      }
+      const nuggets = tuneAssets.nuggets as TuneNugget[] | null;
+      const nugget = nuggets?.find((n) => n.id === selectedItemId);
+      return nugget?.noteSequence ?? EMPTY_SEQUENCE;
+    }
 
+    // Local source
+    if (!selectedTune) return EMPTY_SEQUENCE;
     if (selectedTarget === "full") {
-      return (tuneAssets.note_sequence as NoteSequence) ?? EMPTY_SEQUENCE;
+      return (getTuneNs(selectedTune) as NoteSequence) ?? EMPTY_SEQUENCE;
     }
-
     if (selectedTarget === "assemblies") {
-      const assemblies = tuneAssets.assemblies as TuneAssembly[] | null;
-      const assembly = assemblies?.find((a) => a.id === selectedItemId);
-      return assembly?.noteSequence ?? EMPTY_SEQUENCE;
+      return (getAssemblyNs(selectedTune, selectedItemId) as NoteSequence) ?? EMPTY_SEQUENCE;
     }
+    return (getNuggetNs(selectedTune, selectedItemId) as NoteSequence) ?? EMPTY_SEQUENCE;
+  }, [selectedSource, tuneAssets, selectedTarget, selectedItemId, selectedTune]);
 
-    const nuggets = tuneAssets.nuggets as TuneNugget[] | null;
-    const nugget = nuggets?.find((n) => n.id === selectedItemId);
-    return nugget?.noteSequence ?? EMPTY_SEQUENCE;
-  }, [tuneAssets, selectedTarget, selectedItemId]);
-
-  // Derive full XMLs from database
+  // Derive full XMLs based on source
   const xmlFull = useMemo(() => {
-    if (!tuneAssets) return null;
-    if (selectedTarget === "full") return tuneAssets.tune_xml;
-    if (selectedTarget === "assemblies") {
-      const xmls = tuneAssets.assembly_xmls as Record<string, string> | null;
+    if (selectedSource === "published") {
+      if (!tuneAssets) return null;
+      if (selectedTarget === "full") return tuneAssets.tune_xml;
+      if (selectedTarget === "assemblies") {
+        const xmls = tuneAssets.assembly_xmls as Record<string, string> | null;
+        return xmls?.[selectedItemId] ?? null;
+      }
+      const xmls = tuneAssets.nugget_xmls as Record<string, string> | null;
       return xmls?.[selectedItemId] ?? null;
     }
-    const xmls = tuneAssets.nugget_xmls as Record<string, string> | null;
-    return xmls?.[selectedItemId] ?? null;
-  }, [tuneAssets, selectedTarget, selectedItemId]);
 
-  // Derive DSP XMLs from database
-  const xmlDsp = useMemo(() => {
-    if (!tuneAssets) return null;
-    if (selectedTarget === "full") return tuneAssets.tune_dsp_xml;
+    // Local source
+    if (!selectedTune) return null;
+    if (selectedTarget === "full") return getTuneXml(selectedTune);
     if (selectedTarget === "assemblies") {
-      const xmls = tuneAssets.assembly_dsp_xmls as Record<string, string> | null;
+      return getAssemblyXml(selectedTune, selectedItemId);
+    }
+    return getNuggetXml(selectedTune, selectedItemId);
+  }, [selectedSource, tuneAssets, selectedTarget, selectedItemId, selectedTune]);
+
+  // Derive DSP XMLs based on source
+  const xmlDsp = useMemo(() => {
+    if (selectedSource === "published") {
+      if (!tuneAssets) return null;
+      if (selectedTarget === "full") return tuneAssets.tune_dsp_xml;
+      if (selectedTarget === "assemblies") {
+        const xmls = tuneAssets.assembly_dsp_xmls as Record<string, string> | null;
+        return xmls?.[selectedItemId] ?? null;
+      }
+      const xmls = tuneAssets.nugget_dsp_xmls as Record<string, string> | null;
       return xmls?.[selectedItemId] ?? null;
     }
-    const xmls = tuneAssets.nugget_dsp_xmls as Record<string, string> | null;
-    return xmls?.[selectedItemId] ?? null;
-  }, [tuneAssets, selectedTarget, selectedItemId]);
+
+    // Local source
+    if (!selectedTune) return null;
+    if (selectedTarget === "full") return getTuneDspXml(selectedTune);
+    if (selectedTarget === "assemblies") {
+      return getAssemblyDspXml(selectedTune, selectedItemId);
+    }
+    return getNuggetDspXml(selectedTune, selectedItemId);
+  }, [selectedSource, tuneAssets, selectedTarget, selectedItemId, selectedTune]);
 
   const selectionLabel = useMemo(() => {
     if (!selectedTune) return "Select tune...";
+    const sourcePrefix = selectedSource === "local" ? "📁 " : "☁️ ";
     if (selectedTarget === "full") {
-      return `${selectedTune} / full`;
+      return `${sourcePrefix}${selectedTune} / full`;
     }
     if (!selectedItemId) {
-      return `${selectedTune} / ${selectedTarget}`;
+      return `${sourcePrefix}${selectedTune} / ${selectedTarget}`;
     }
-    return `${selectedTune} / ${selectedTarget} / ${selectedItemId}`;
-  }, [selectedItemId, selectedTarget, selectedTune]);
+    return `${sourcePrefix}${selectedTune} / ${selectedTarget} / ${selectedItemId}`;
+  }, [selectedItemId, selectedTarget, selectedTune, selectedSource]);
 
+  // Selection handler
+  const selectTune = useCallback(
+    (source: TuneSource, tune: string, target: TargetType, itemId: string) => {
+      setSelectedSource(source);
+      setSelectedTune(tune);
+      setSelectedTarget(target);
+      setSelectedItemId(itemId);
+    },
+    []
+  );
+
+  // Publish handler
+  const handlePublish = useCallback(async () => {
+    if (!selectedTune || selectedSource !== "local") return;
+
+    setIsPublishing(true);
+    try {
+      const tuneAssets = bundleSingleTuneAssets(selectedTune);
+      if (!tuneAssets) {
+        throw new Error("Failed to bundle tune assets");
+      }
+
+      const finalTuneKey =
+        publishMode === "create" ? selectedTune : publishMode;
+
+      const { data, error } = await supabase.functions.invoke("tune-publish", {
+        body: {
+          tuneKey: selectedTune,
+          title: publishMode === "create" ? newTuneTitle || selectedTune : undefined,
+          tuneAssets,
+          mode: publishMode === "create" ? "create" : "update",
+          existingTuneKey: publishMode !== "create" ? publishMode : undefined,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Published successfully",
+          description: `Tune "${finalTuneKey}" published.`,
+        });
+        setShowPublishDialog(false);
+        setNewTuneTitle("");
+        setPublishMode("create");
+
+        // Invalidate queries to refresh published list
+        queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+        queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
+
+        // Switch to viewing the published tune
+        setSelectedSource("published");
+        setSelectedTune(finalTuneKey);
+      } else {
+        throw new Error(data.error || "Unknown error");
+      }
+    } catch (error) {
+      console.error("[LabMode] Publish failed:", error);
+      toast({
+        title: "Publish failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [
+    selectedTune,
+    selectedSource,
+    publishMode,
+    newTuneTitle,
+    toast,
+    queryClient,
+  ]);
+
+  // Cursor and playback refs
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
   const osmdDspRef = useRef<OpenSheetMusicDisplay | null>(null);
   const cursorInitializedRef = useRef(false);
@@ -512,17 +693,17 @@ export const LabMode = ({
   if (isLoadingList) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <p className="text-muted-foreground">Loading published tunes...</p>
+        <p className="text-muted-foreground">Loading tunes...</p>
       </div>
     );
   }
 
-  // Empty state - no published tunes
-  if (!tuneOptions.length) {
+  // Empty state - no tunes at all
+  if (publishedTuneKeys.size === 0 && unpublishedTuneKeys.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <p className="text-muted-foreground">
-          No published tunes found. Publish a curriculum in Quest mode first.
+          No tunes found. Add tunes to src/music/ to get started.
         </p>
       </div>
     );
@@ -535,7 +716,7 @@ export const LabMode = ({
           variant="outline"
           size="sm"
           onClick={handlePlayToggle}
-          disabled={!labSequence.notes.length || isLoadingAssets}
+          disabled={!labSequence.notes.length || (selectedSource === "published" && isLoadingAssets)}
         >
           {isPlaying ? (
             <>
@@ -549,82 +730,171 @@ export const LabMode = ({
             </>
           )}
         </Button>
+
+        {/* Publish button - only for local tunes */}
+        {selectedSource === "local" && selectedTune && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowPublishDialog(true)}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Publish
+          </Button>
+        )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" disabled={isLoadingAssets}>
-              {isLoadingAssets ? "Loading..." : selectionLabel}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={selectedSource === "published" && isLoadingAssets}
+            >
+              {selectedSource === "published" && isLoadingAssets
+                ? "Loading..."
+                : selectionLabel}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 bg-popover">
-            {tuneOptions.map((tune) => {
-              const tuneNuggets = getNuggetIdsForTune(tune);
-              const tuneAssemblies = getAssemblyIdsForTune(tune);
-              return (
-                <DropdownMenuSub key={tune}>
-                  <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="bg-popover">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedTune(tune);
-                        setSelectedTarget("full");
-                        setSelectedItemId("");
-                      }}
-                    >
-                      Full
-                    </DropdownMenuItem>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Nugget</DropdownMenuSubTrigger>
+            {/* Published tunes section */}
+            {publishedTuneKeys.size > 0 && (
+              <>
+                <DropdownMenuLabel>☁️ Published</DropdownMenuLabel>
+                {Array.from(publishedTuneKeys).map((tune) => {
+                  const tuneNuggets = getNuggetIdsForTune(tune, "published");
+                  const tuneAssemblies = getAssemblyIdsForTune(tune, "published");
+                  return (
+                    <DropdownMenuSub key={`published-${tune}`}>
+                      <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-popover">
-                        {tuneNuggets.length ? (
-                          tuneNuggets.map((id) => (
-                            <DropdownMenuItem
-                              key={id}
-                              onClick={() => {
-                                setSelectedTune(tune);
-                                setSelectedTarget("nuggets");
-                                setSelectedItemId(id);
-                              }}
-                            >
-                              {id}
-                            </DropdownMenuItem>
-                          ))
-                        ) : (
-                          <DropdownMenuItem disabled>
-                            No nuggets
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem
+                          onClick={() => selectTune("published", tune, "full", "")}
+                        >
+                          Full
+                        </DropdownMenuItem>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="bg-popover">
+                            {tuneNuggets.length ? (
+                              tuneNuggets.map((id) => (
+                                <DropdownMenuItem
+                                  key={id}
+                                  onClick={() =>
+                                    selectTune("published", tune, "nuggets", id)
+                                  }
+                                >
+                                  {id}
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>
+                                No nuggets
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="bg-popover">
+                            {tuneAssemblies.length ? (
+                              tuneAssemblies.map((id) => (
+                                <DropdownMenuItem
+                                  key={id}
+                                  onClick={() =>
+                                    selectTune("published", tune, "assemblies", id)
+                                  }
+                                >
+                                  {id}
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>
+                                No assemblies
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Assemble</DropdownMenuSubTrigger>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Separator between sections */}
+            {publishedTuneKeys.size > 0 && unpublishedTuneKeys.length > 0 && (
+              <DropdownMenuSeparator />
+            )}
+
+            {/* Unpublished tunes section */}
+            {unpublishedTuneKeys.length > 0 && (
+              <>
+                <DropdownMenuLabel>📁 Un-Published</DropdownMenuLabel>
+                {unpublishedTuneKeys.map((tune) => {
+                  const tuneNuggets = getNuggetIdsForTune(tune, "local");
+                  const tuneAssemblies = getAssemblyIdsForTune(tune, "local");
+                  return (
+                    <DropdownMenuSub key={`local-${tune}`}>
+                      <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-popover">
-                        {tuneAssemblies.length ? (
-                          tuneAssemblies.map((id) => (
-                            <DropdownMenuItem
-                              key={id}
-                              onClick={() => {
-                                setSelectedTune(tune);
-                                setSelectedTarget("assemblies");
-                                setSelectedItemId(id);
-                              }}
-                            >
-                              {id}
-                            </DropdownMenuItem>
-                          ))
-                        ) : (
-                          <DropdownMenuItem disabled>
-                            No assemblies
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem
+                          onClick={() => selectTune("local", tune, "full", "")}
+                        >
+                          Full
+                        </DropdownMenuItem>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="bg-popover">
+                            {tuneNuggets.length ? (
+                              tuneNuggets.map((id) => (
+                                <DropdownMenuItem
+                                  key={id}
+                                  onClick={() =>
+                                    selectTune("local", tune, "nuggets", id)
+                                  }
+                                >
+                                  {id}
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>
+                                No nuggets
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="bg-popover">
+                            {tuneAssemblies.length ? (
+                              tuneAssemblies.map((id) => (
+                                <DropdownMenuItem
+                                  key={id}
+                                  onClick={() =>
+                                    selectTune("local", tune, "assemblies", id)
+                                  }
+                                >
+                                  {id}
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>
+                                No assemblies
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              );
-            })}
+                  );
+                })}
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Sheet music displays */}
       <div className="w-full space-y-6">
         <div className="space-y-2">
           <div className="text-sm font-medium text-muted-foreground">
@@ -641,7 +911,9 @@ export const LabMode = ({
             />
           ) : (
             <div className="p-4 text-sm text-muted-foreground border rounded">
-              {isLoadingAssets ? "Loading XML..." : "No XML available"}
+              {selectedSource === "published" && isLoadingAssets
+                ? "Loading XML..."
+                : "No XML available"}
             </div>
           )}
         </div>
@@ -661,11 +933,66 @@ export const LabMode = ({
             />
           ) : (
             <div className="p-4 text-sm text-muted-foreground border rounded">
-              {isLoadingAssets ? "Loading DSP XML..." : "No DSP XML available"}
+              {selectedSource === "published" && isLoadingAssets
+                ? "Loading DSP XML..."
+                : "No DSP XML available"}
             </div>
           )}
         </div>
       </div>
+
+      {/* Publish Dialog */}
+      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publish Tune</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Publishing: <strong>{selectedTune}</strong>
+            </p>
+
+            <div className="space-y-2">
+              <Label>Action</Label>
+              <Select value={publishMode} onValueChange={setPublishMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="create">Create New Tune</SelectItem>
+                  {Array.from(publishedTuneKeys).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      Update "{key}"
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {publishMode === "create" && (
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={newTuneTitle}
+                  onChange={(e) => setNewTuneTitle(e.target.value)}
+                  placeholder={`e.g., ${selectedTune}`}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowPublishDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handlePublish} disabled={isPublishing}>
+              {isPublishing ? "Publishing..." : "Publish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
