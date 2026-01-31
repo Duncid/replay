@@ -102,13 +102,60 @@ const getGlobModule = (
 };
 
 // Export local tune keys discovered from file system
+// Only returns folders that have an output/tune.ns.json file (required for publishing)
 export const getLocalTuneKeys = (): string[] => {
-  return Object.keys(teacherModules)
+  return Object.keys(tuneNsModules)
     .map((path) => {
-      const match = path.match(/\/music\/([^/]+)\/teacher\.json$/);
+      const match = path.match(/\/music\/([^/]+)\/output\/tune\.ns\.json$/);
       return match ? match[1] : null;
     })
     .filter(Boolean) as string[];
+};
+
+// Validation result for pre-publish checks
+export interface TuneValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+// Validate a tune has all required files before publishing
+export const validateTuneForPublishing = (musicRef: string): TuneValidationResult => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Required: tune.ns.json
+  const tuneNs = getTuneNs(musicRef) as { notes?: unknown[] } | null;
+  if (!tuneNs) {
+    errors.push("Missing output/tune.ns.json (required)");
+  } else {
+    const notes = tuneNs?.notes;
+    if (!notes || !Array.isArray(notes) || notes.length === 0) {
+      errors.push("tune.ns.json has no notes");
+    }
+  }
+
+  // Optional but recommended
+  const teacher = getTeacher(musicRef);
+  if (!teacher) {
+    warnings.push("Missing teacher.json (needed for nuggets/assemblies)");
+  }
+
+  const tuneXml = getTuneXml(musicRef);
+  if (!tuneXml) {
+    warnings.push("Missing output/tune.xml");
+  }
+
+  const tuneDspXml = getTuneDspXml(musicRef);
+  if (!tuneDspXml) {
+    warnings.push("Missing output/dsp.xml");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
 };
 
 export const getTeacher = (musicRef: string): Record<string, unknown> | null =>

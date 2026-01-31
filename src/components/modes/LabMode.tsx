@@ -47,9 +47,10 @@ import {
   getTuneXml,
   getAssemblyNs,
   getNuggetNs,
+  validateTuneForPublishing,
 } from "@/utils/tuneAssetBundler";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { Pause, Play, Upload } from "lucide-react";
+import { Pause, Pencil, Play, Trash2, Upload } from "lucide-react";
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -90,6 +91,17 @@ export const LabMode = ({
   const [publishMode, setPublishMode] = useState<"create" | string>("create");
   const [newTuneTitle, setNewTuneTitle] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
+
+  // Rename dialog state
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [renameTargetKey, setRenameTargetKey] = useState<string>("");
+  const [renameNewTitle, setRenameNewTitle] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteTargetKey, setDeleteTargetKey] = useState<string>("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch published tune keys from database
   const { data: tuneList, isLoading: isLoadingList } = usePublishedTuneKeys();
@@ -279,6 +291,21 @@ export const LabMode = ({
   const handlePublish = useCallback(async () => {
     if (!selectedTune || selectedSource !== "local") return;
 
+    // Validate before publishing
+    const validation = validateTuneForPublishing(selectedTune);
+    if (!validation.isValid) {
+      toast({
+        title: "Cannot publish",
+        description: validation.errors.join(", "),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (validation.warnings.length > 0) {
+      console.warn("[LabMode] Publish warnings:", validation.warnings);
+    }
+
     setIsPublishing(true);
     try {
       const tuneAssets = bundleSingleTuneAssets(selectedTune);
@@ -338,6 +365,89 @@ export const LabMode = ({
     toast,
     queryClient,
   ]);
+
+  // Rename handlers
+  const openRenameDialog = useCallback(
+    (tuneKey: string) => {
+      const tuneInfo = tuneList?.find((t) => t.tune_key === tuneKey);
+      setRenameTargetKey(tuneKey);
+      setRenameNewTitle(tuneInfo?.briefing?.title || tuneKey);
+      setShowRenameDialog(true);
+    },
+    [tuneList]
+  );
+
+  const handleRename = useCallback(async () => {
+    if (!renameTargetKey || !renameNewTitle.trim()) return;
+
+    setIsRenaming(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tune-manage", {
+        body: {
+          action: "rename",
+          tuneKey: renameTargetKey,
+          newTitle: renameNewTitle.trim(),
+        },
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Tune renamed successfully" });
+      setShowRenameDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+      queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
+    } catch (error) {
+      toast({
+        title: "Rename failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRenaming(false);
+    }
+  }, [renameTargetKey, renameNewTitle, toast, queryClient]);
+
+  // Delete handlers
+  const openDeleteDialog = useCallback((tuneKey: string) => {
+    setDeleteTargetKey(tuneKey);
+    setShowDeleteDialog(true);
+  }, []);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTargetKey) return;
+
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tune-manage", {
+        body: {
+          action: "delete",
+          tuneKey: deleteTargetKey,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Tune deleted successfully" });
+      setShowDeleteDialog(false);
+
+      // If deleted tune was selected, reset selection
+      if (selectedTune === deleteTargetKey && selectedSource === "published") {
+        setSelectedTune("");
+        setSelectedSource("published");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+      queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTargetKey, selectedTune, selectedSource, toast, queryClient]);
 
   // Cursor and playback refs
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
@@ -814,6 +924,21 @@ export const LabMode = ({
                             )}
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+
+                        {/* Edit Actions */}
+                        <DropdownMenuItem onClick={() => openRenameDialog(tune)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Rename
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openDeleteDialog(tune)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
                   );
@@ -989,6 +1114,74 @@ export const LabMode = ({
             </Button>
             <Button onClick={handlePublish} disabled={isPublishing}>
               {isPublishing ? "Publishing..." : "Publish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Tune</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Tune key: <strong>{renameTargetKey}</strong>
+            </p>
+            <div className="space-y-2">
+              <Label>New Title</Label>
+              <Input
+                value={renameNewTitle}
+                onChange={(e) => setRenameNewTitle(e.target.value)}
+                placeholder="Enter new title..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRenameDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRename}
+              disabled={isRenaming || !renameNewTitle.trim()}
+            >
+              {isRenaming ? "Renaming..." : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Tune</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete <strong>{deleteTargetKey}</strong>?
+            </p>
+            <p className="text-sm text-destructive mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
