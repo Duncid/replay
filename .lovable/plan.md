@@ -1,449 +1,415 @@
 
 
-# Plan: Add Tune Manager to LabMode with Publishing Workflow
+# Plan: Add Edit/Delete for Published Tunes and Improve Unpublished Detection
 
 ## Overview
 
-Transform LabMode into a "Tune Manager" that allows browsing both published (from database) and unpublished (from local `src/music/` files) tunes, with the ability to publish unpublished tunes directly from this interface. This decouples tune publishing from the Quest Editor, where tunes will only reference already-published tune assets.
+Add management capabilities for published tunes (Rename and Delete) and improve the unpublished tune detection to only show folders that have an `output/` subfolder with the required files.
 
-## Current Architecture
+## Current State Analysis
 
-**LabMode (current):**
-- Fetches published tunes from database via `usePublishedTuneKeys()` and `useTuneAssets()`
-- Displays sheet music (XML and DSP XML) for selected tune/nugget/assembly
+**Published Tunes:**
+- Currently, published tunes can only be "updated" by republishing from a local folder
+- No way to rename a tune's key or title after publishing
+- No way to delete a published tune
 
-**QuestEditor (current):**
-- Contains `bundleTuneAssets()` function that reads local `src/music/*/` files via Vite globs
-- Publishing bundles tune assets when curriculum is published
-- Tune nodes reference `musicRef` (folder name) and `tuneKey` (published key)
+**Unpublished Tune Detection:**
+- Currently uses `getLocalTuneKeys()` which scans for `teacher.json` files
+- This shows `st-louis-blues-complex` even though it has no `output/` folder
+- No validation of required files before publishing
 
-**Proposed Flow:**
-1. Tune Manager shows both Published and Un-Published tunes
-2. User can preview any tune's sheet music
-3. User can publish unpublished tunes (create new or update existing)
-4. Quest Editor references only already-published tunes
-
----
-
-## UI Design
-
-### Dropdown Structure
-
-```text
-[Select Tune] v
-+--------------------------------------------------+
-| Published (from DB)                              |
-|   > st-louis-blues                               |
-|       Full                                       |
-|       Nuggets >                                  |
-|           N1, N2, N3...                          |
-|       Assemblies >                               |
-|           A1, A2...                              |
-|   > intro                                        |
-|       Full                                       |
-|       Nuggets >                                  |
-|       Assemblies >                               |
-+--------------------------------------------------+
-| Un-Published (local files)                       |
-|   > gymnopdie                                    |
-|       Full                                       |
-|       Nuggets >                                  |
-|       Assemblies >                               |
-+--------------------------------------------------+
-```
-
-### Top Bar Actions
-
-When an **unpublished** tune is selected, show a "Publish" button in the top bar:
-
-```text
-[Play] [Stop] [Select Tune: gymnopdie / full] [Publish]
-```
-
-### Publish Dialog
-
-When user clicks "Publish", show a dialog:
-
-```text
-+------------------------------------------+
-|              Publish Tune                |
-+------------------------------------------+
-| Tune: gymnopdie                          |
-|                                          |
-| Action:                                  |
-| [v Create New Tune                    ]  |
-|     - Create New Tune                    |
-|     - Update "st-louis-blues"            |
-|     - Update "intro"                     |
-|                                          |
-| +--------------------------------------+ |
-| | Title: [Gymnopedie No. 1          ]  | |  <- Only shown for "Create New"
-| +--------------------------------------+ |
-|                                          |
-| [Cancel]                    [Publish]    |
-+------------------------------------------+
-```
+**Required Files for Publishing:**
+Based on `bundleSingleTuneAssets()`:
+1. `output/tune.ns.json` (required - blocks publish if missing)
+2. `teacher.json` (optional but needed for nuggets/assemblies)
+3. Various XMLs (optional but desirable)
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Move Glob Imports to LabMode
+### Step 1: Add Edit Dropdown for Published Tunes
 
 **File: `src/components/modes/LabMode.tsx`**
 
-Move all the Vite glob imports and helper functions from `QuestEditor.tsx` to `LabMode.tsx` (or a shared module):
+Add an "Edit" button next to published tunes in the dropdown with Rename and Delete options:
 
-```typescript
-// Pre-load all local music files at build time
-const teacherModules = import.meta.glob<{ default: Record<string, unknown> }>(
-  "/src/music/*/teacher.json",
-  { eager: true }
-);
-
-const tuneNsModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/tune.ns.json",
-  { eager: true }
-);
-
-// ... all other glob patterns for nuggets, assemblies, XMLs, DSP XMLs
-```
-
-Extract the list of available local tunes:
-
-```typescript
-const localTuneKeys = useMemo(() => {
-  return Object.keys(teacherModules)
-    .map(path => {
-      const match = path.match(/\/music\/([^/]+)\/teacher\.json$/);
-      return match ? match[1] : null;
-    })
-    .filter(Boolean) as string[];
-}, []);
-```
-
----
-
-### Step 2: Compute Published vs Unpublished Tunes
-
-**File: `src/components/modes/LabMode.tsx`**
-
-```typescript
-const publishedTuneKeys = useMemo(
-  () => new Set(tuneList?.map(t => t.tune_key) ?? []),
-  [tuneList]
-);
-
-const unpublishedTuneKeys = useMemo(
-  () => localTuneKeys.filter(key => !publishedTuneKeys.has(key)),
-  [localTuneKeys, publishedTuneKeys]
-);
-```
-
----
-
-### Step 3: Track Selection Source (Published vs Local)
-
-**File: `src/components/modes/LabMode.tsx`**
-
-Add state to track whether selection is from DB or local:
-
-```typescript
-type TuneSource = "published" | "local";
-
-const [selectedSource, setSelectedSource] = useState<TuneSource>("published");
-const [selectedTune, setSelectedTune] = useState<string>("");
-```
-
----
-
-### Step 4: Derive Data Based on Source
-
-**File: `src/components/modes/LabMode.tsx`**
-
-When source is "published", use database data (existing logic).
-When source is "local", use glob modules:
-
-```typescript
-const { sequence, xmlFull, xmlDsp, nuggetIds, assemblyIds } = useMemo(() => {
-  if (selectedSource === "published" && tuneAssets) {
-    // Existing database-based logic
-    return { ... };
-  }
-  
-  if (selectedSource === "local" && selectedTune) {
-    // Use local glob modules
-    const teacher = getTeacher(selectedTune);
-    const noteSequence = getTuneNs(selectedTune);
-    const tuneXml = getTuneXml(selectedTune);
-    const tuneDspXml = getTuneDspXml(selectedTune);
+```tsx
+{/* Inside published tune submenu, after the tune name */}
+<DropdownMenuSub key={`published-${tune}`}>
+  <DropdownMenuSubTrigger className="flex items-center justify-between">
+    <span>{tune}</span>
+  </DropdownMenuSubTrigger>
+  <DropdownMenuSubContent className="bg-popover">
+    <DropdownMenuItem onClick={() => selectTune("published", tune, "full", "")}>
+      Full
+    </DropdownMenuItem>
+    {/* ... existing Nuggets/Assemblies submenus ... */}
     
-    // Extract nugget/assembly based on selectedTarget and selectedItemId
-    // ...
+    <DropdownMenuSeparator />
     
-    return { ... };
-  }
-  
-  return { sequence: EMPTY_SEQUENCE, xmlFull: null, xmlDsp: null, nuggetIds: [], assemblyIds: [] };
-}, [selectedSource, selectedTune, selectedTarget, selectedItemId, tuneAssets]);
+    {/* Edit Actions */}
+    <DropdownMenuItem onClick={() => openRenameDialog(tune)}>
+      <Pencil className="h-4 w-4 mr-2" />
+      Rename
+    </DropdownMenuItem>
+    <DropdownMenuItem 
+      onClick={() => openDeleteDialog(tune)}
+      className="text-destructive"
+    >
+      <Trash2 className="h-4 w-4 mr-2" />
+      Delete
+    </DropdownMenuItem>
+  </DropdownMenuSubContent>
+</DropdownMenuSub>
 ```
 
----
-
-### Step 5: Update Dropdown UI
+### Step 2: Add Rename Dialog State and UI
 
 **File: `src/components/modes/LabMode.tsx`**
 
-Update the dropdown to show two sections:
-
 ```tsx
-<DropdownMenuContent>
-  {/* Published tunes section */}
-  <DropdownMenuLabel>Published</DropdownMenuLabel>
-  {Array.from(publishedTuneKeys).map(tune => (
-    <DropdownMenuSub key={`published-${tune}`}>
-      <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        <DropdownMenuItem onClick={() => selectTune("published", tune, "full", "")}>
-          Full
-        </DropdownMenuItem>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {getNuggetIdsForTune(tune).map(id => (
-              <DropdownMenuItem key={id} onClick={() => selectTune("published", tune, "nuggets", id)}>
-                {id}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {getAssemblyIdsForTune(tune).map(id => (
-              <DropdownMenuItem key={id} onClick={() => selectTune("published", tune, "assemblies", id)}>
-                {id}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  ))}
-
-  <DropdownMenuSeparator />
-
-  {/* Unpublished tunes section */}
-  <DropdownMenuLabel>Un-Published</DropdownMenuLabel>
-  {unpublishedTuneKeys.map(tune => (
-    <DropdownMenuSub key={`local-${tune}`}>
-      <DropdownMenuSubTrigger>{tune}</DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        <DropdownMenuItem onClick={() => selectTune("local", tune, "full", "")}>
-          Full
-        </DropdownMenuItem>
-        {/* Similar nugget/assembly submenus using local data */}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  ))}
-</DropdownMenuContent>
-```
-
----
-
-### Step 6: Add Publish Button (Conditional)
-
-**File: `src/components/modes/LabMode.tsx`**
-
-Show Publish button only when an unpublished tune is selected:
-
-```tsx
-{selectedSource === "local" && selectedTune && (
-  <Button variant="default" size="sm" onClick={() => setShowPublishDialog(true)}>
-    <Upload className="h-4 w-4 mr-2" />
-    Publish
-  </Button>
-)}
-```
-
----
-
-### Step 7: Create Publish Dialog Component
-
-**File: `src/components/modes/LabMode.tsx`** (or separate component)
-
-```tsx
-const [showPublishDialog, setShowPublishDialog] = useState(false);
-const [publishMode, setPublishMode] = useState<"create" | string>("create"); // "create" or existing tune_key
-const [newTuneTitle, setNewTuneTitle] = useState("");
-const [isPublishing, setIsPublishing] = useState(false);
+// New state
+const [showRenameDialog, setShowRenameDialog] = useState(false);
+const [renameTargetKey, setRenameTargetKey] = useState<string>("");
+const [newTitle, setNewTitle] = useState("");
+const [isRenaming, setIsRenaming] = useState(false);
 
 // Dialog UI
-<Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+<Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
   <DialogContent>
     <DialogHeader>
-      <DialogTitle>Publish Tune</DialogTitle>
+      <DialogTitle>Rename Tune</DialogTitle>
     </DialogHeader>
     <div className="space-y-4 py-4">
       <p className="text-sm text-muted-foreground">
-        Publishing: <strong>{selectedTune}</strong>
+        Tune key: <strong>{renameTargetKey}</strong>
       </p>
-      
       <div className="space-y-2">
-        <Label>Action</Label>
-        <Select value={publishMode} onValueChange={setPublishMode}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="create">Create New Tune</SelectItem>
-            {Array.from(publishedTuneKeys).map(key => (
-              <SelectItem key={key} value={key}>Update "{key}"</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label>New Title</Label>
+        <Input
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="Enter new title..."
+        />
       </div>
-      
-      {publishMode === "create" && (
-        <div className="space-y-2">
-          <Label>Title</Label>
-          <Input
-            value={newTuneTitle}
-            onChange={(e) => setNewTuneTitle(e.target.value)}
-            placeholder="e.g., Gymnopedie No. 1"
-          />
-        </div>
-      )}
     </div>
     <DialogFooter>
-      <Button variant="outline" onClick={() => setShowPublishDialog(false)}>
+      <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
         Cancel
       </Button>
-      <Button onClick={handlePublish} disabled={isPublishing}>
-        {isPublishing ? "Publishing..." : "Publish"}
+      <Button onClick={handleRename} disabled={isRenaming || !newTitle.trim()}>
+        {isRenaming ? "Renaming..." : "Rename"}
       </Button>
     </DialogFooter>
   </DialogContent>
 </Dialog>
 ```
 
----
-
-### Step 8: Implement Publish Handler
+### Step 3: Add Delete Confirmation Dialog
 
 **File: `src/components/modes/LabMode.tsx`**
 
-Create a `bundleSingleTuneAssets` function that bundles just the selected tune:
+```tsx
+// New state
+const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+const [deleteTargetKey, setDeleteTargetKey] = useState<string>("");
+const [isDeleting, setIsDeleting] = useState(false);
 
-```typescript
-const bundleSingleTuneAssets = useCallback((musicRef: string): TuneAssetBundle => {
-  const teacher = getTeacher(musicRef);
-  const noteSequence = getTuneNs(musicRef);
-  // ... same logic as bundleTuneAssets but for a single tune
-  return bundle;
-}, []);
+// Dialog UI
+<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Delete Tune</DialogTitle>
+    </DialogHeader>
+    <div className="py-4">
+      <p className="text-sm text-muted-foreground">
+        Are you sure you want to delete <strong>{deleteTargetKey}</strong>?
+      </p>
+      <p className="text-sm text-destructive mt-2">
+        This action cannot be undone.
+      </p>
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+        Cancel
+      </Button>
+      <Button 
+        variant="destructive" 
+        onClick={handleDelete} 
+        disabled={isDeleting}
+      >
+        {isDeleting ? "Deleting..." : "Delete"}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
 
-const handlePublish = useCallback(async () => {
-  if (!selectedTune) return;
+### Step 4: Implement Rename Handler
+
+**File: `src/components/modes/LabMode.tsx`**
+
+```tsx
+const openRenameDialog = useCallback((tuneKey: string) => {
+  const tuneInfo = tuneList?.find(t => t.tune_key === tuneKey);
+  setRenameTargetKey(tuneKey);
+  setNewTitle(tuneInfo?.briefing?.title || tuneKey);
+  setShowRenameDialog(true);
+}, [tuneList]);
+
+const handleRename = useCallback(async () => {
+  if (!renameTargetKey || !newTitle.trim()) return;
   
-  setIsPublishing(true);
+  setIsRenaming(true);
   try {
-    const tuneAssets = bundleSingleTuneAssets(selectedTune);
-    const tuneKey = publishMode === "create" 
-      ? selectedTune // Use folder name as tune_key for new tunes
-      : publishMode; // Use selected existing tune_key for updates
-    
-    const { data, error } = await supabase.functions.invoke("tune-publish", {
+    const { error } = await supabase.functions.invoke("tune-manage", {
       body: {
-        tuneKey,
-        title: publishMode === "create" ? newTuneTitle : undefined,
-        tuneAssets,
-        mode: publishMode === "create" ? "create" : "update",
+        action: "rename",
+        tuneKey: renameTargetKey,
+        newTitle: newTitle.trim(),
       },
     });
     
     if (error) throw error;
     
-    toast({ title: "Published successfully" });
-    setShowPublishDialog(false);
-    // Invalidate query to refresh published list
+    toast({ title: "Tune renamed successfully" });
+    setShowRenameDialog(false);
     queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+    queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
   } catch (error) {
-    toast({ title: "Publish failed", description: error.message, variant: "destructive" });
+    toast({
+      title: "Rename failed",
+      description: error instanceof Error ? error.message : "Unknown error",
+      variant: "destructive",
+    });
   } finally {
-    setIsPublishing(false);
+    setIsRenaming(false);
   }
-}, [selectedTune, publishMode, newTuneTitle, bundleSingleTuneAssets, toast]);
+}, [renameTargetKey, newTitle, toast, queryClient]);
+```
+
+### Step 5: Implement Delete Handler
+
+**File: `src/components/modes/LabMode.tsx`**
+
+```tsx
+const openDeleteDialog = useCallback((tuneKey: string) => {
+  setDeleteTargetKey(tuneKey);
+  setShowDeleteDialog(true);
+}, []);
+
+const handleDelete = useCallback(async () => {
+  if (!deleteTargetKey) return;
+  
+  setIsDeleting(true);
+  try {
+    const { error } = await supabase.functions.invoke("tune-manage", {
+      body: {
+        action: "delete",
+        tuneKey: deleteTargetKey,
+      },
+    });
+    
+    if (error) throw error;
+    
+    toast({ title: "Tune deleted successfully" });
+    setShowDeleteDialog(false);
+    
+    // If deleted tune was selected, reset selection
+    if (selectedTune === deleteTargetKey && selectedSource === "published") {
+      setSelectedTune("");
+      setSelectedSource("published");
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+    queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
+  } catch (error) {
+    toast({
+      title: "Delete failed",
+      description: error instanceof Error ? error.message : "Unknown error",
+      variant: "destructive",
+    });
+  } finally {
+    setIsDeleting(false);
+  }
+}, [deleteTargetKey, selectedTune, selectedSource, toast, queryClient]);
 ```
 
 ---
 
-### Step 9: Create New Edge Function for Tune Publishing
+### Step 6: Create tune-manage Edge Function
 
-**File: `supabase/functions/tune-publish/index.ts`**
-
-Create a dedicated edge function for publishing individual tunes:
+**File: `supabase/functions/tune-manage/index.ts`**
 
 ```typescript
-interface TunePublishRequest {
+interface TuneManageRequest {
+  action: "rename" | "delete";
   tuneKey: string;
-  title?: string;
-  tuneAssets: TuneAssetBundle;
-  mode: "create" | "update";
+  newTitle?: string; // For rename action
 }
 
-// Handle creating new tune_assets entry or updating existing
-// This operates independently of curriculum_versions
-// May need a separate "standalone_tune_assets" concept or
-// create a dummy curriculum_version for standalone publishes
+// For "rename": Update briefing.title in tune_assets
+// For "delete": Delete the tune_assets record
+
+serve(async (req) => {
+  // CORS handling...
+  
+  const { action, tuneKey, newTitle } = await req.json();
+  
+  if (action === "delete") {
+    // Find and delete all tune_assets with this tune_key
+    const { error } = await supabase
+      .from("tune_assets")
+      .delete()
+      .eq("tune_key", tuneKey);
+    
+    if (error) throw error;
+    return { success: true };
+  }
+  
+  if (action === "rename") {
+    // Get existing tune to preserve other briefing data
+    const { data: existing } = await supabase
+      .from("tune_assets")
+      .select("id, briefing")
+      .eq("tune_key", tuneKey)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (!existing) throw new Error("Tune not found");
+    
+    // Update briefing with new title
+    // Since there's no UPDATE RLS policy, delete and re-insert
+    // OR we could use a Supabase function/RPC
+    // For now, we'll do a direct update using service role
+    const updatedBriefing = { 
+      ...(existing.briefing as object || {}), 
+      title: newTitle 
+    };
+    
+    // Delete old record
+    await supabase.from("tune_assets").delete().eq("id", existing.id);
+    
+    // Re-insert with updated briefing
+    // ... copy all fields with updated briefing
+    
+    return { success: true };
+  }
+});
 ```
 
-**Alternative approach:** Modify the existing `curriculum-publish` endpoint to support "tune-only" publishing mode.
+Note: Since `tune_assets` lacks an UPDATE RLS policy, the rename operation will need to fetch the full record, delete it, and re-insert with the updated title. Alternatively, we could add an UPDATE RLS policy to the table.
 
 ---
 
-### Step 10: Update QuestEditor to Reference Published Tunes Only
+### Step 7: Improve Unpublished Tune Detection
 
-**File: `src/components/QuestEditor.tsx`**
+**File: `src/utils/tuneAssetBundler.ts`**
 
-Change the tune node editing to show a dropdown of **published** tunes instead of local `availableTunes`:
+Change `getLocalTuneKeys()` to only return folders with an `output/` subfolder:
 
 ```typescript
-// In the tune edit section, replace:
-// <Select ... onValueChange={setEditingMusicRef}>
-//   {availableTunes.map(tune => ...)}
-// </Select>
+// Add a new glob pattern for output folder detection
+const outputFolderModules = import.meta.glob<unknown>(
+  "/src/music/*/output/tune.ns.json",
+  { eager: true }
+);
 
-// With a dropdown that fetches from usePublishedTuneKeys():
-const { data: publishedTunes } = usePublishedTuneKeys();
-
-// And in the UI:
-<Select value={editingMusicRef} onValueChange={setEditingMusicRef}>
-  <SelectTrigger>
-    <SelectValue placeholder="Select a published tune..." />
-  </SelectTrigger>
-  <SelectContent>
-    {publishedTunes?.map(tune => (
-      <SelectItem key={tune.tune_key} value={tune.tune_key}>
-        {tune.briefing?.title || tune.tune_key}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+// Update getLocalTuneKeys to require output folder
+export const getLocalTuneKeys = (): string[] => {
+  return Object.keys(outputFolderModules)
+    .map((path) => {
+      const match = path.match(/\/music\/([^/]+)\/output\/tune\.ns\.json$/);
+      return match ? match[1] : null;
+    })
+    .filter(Boolean) as string[];
+};
 ```
+
+This ensures only folders with `output/tune.ns.json` (the required file) are shown as unpublished.
 
 ---
 
-### Step 11: Remove bundleTuneAssets from QuestEditor
+### Step 8: Add Pre-Publish Validation
 
-**File: `src/components/QuestEditor.tsx`**
+**File: `src/utils/tuneAssetBundler.ts`**
 
-After tune publishing is moved to Tune Manager:
-1. Remove all glob imports (lines 109-194)
-2. Remove `bundleTuneAssets` function (lines 2142-2398)
-3. Update `confirmPublish` to not bundle tune assets (curriculum-publish will reference existing tune_assets)
+Add a validation function that checks for all required files:
 
-The curriculum-publish edge function would then only validate that referenced tuneKeys exist in the database.
+```typescript
+export interface TuneValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export const validateTuneForPublishing = (musicRef: string): TuneValidationResult => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // Required: tune.ns.json
+  const tuneNs = getTuneNs(musicRef);
+  if (!tuneNs) {
+    errors.push("Missing output/tune.ns.json (required)");
+  } else {
+    const notes = (tuneNs as { notes?: unknown[] })?.notes;
+    if (!notes || !Array.isArray(notes) || notes.length === 0) {
+      errors.push("tune.ns.json has no notes");
+    }
+  }
+  
+  // Optional but recommended
+  const teacher = getTeacher(musicRef);
+  if (!teacher) {
+    warnings.push("Missing teacher.json (needed for nuggets/assemblies)");
+  }
+  
+  const tuneXml = getTuneXml(musicRef);
+  if (!tuneXml) {
+    warnings.push("Missing output/tune.xml");
+  }
+  
+  const tuneDspXml = getTuneDspXml(musicRef);
+  if (!tuneDspXml) {
+    warnings.push("Missing output/dsp.xml");
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
+};
+```
+
+**File: `src/components/modes/LabMode.tsx`**
+
+Update publish handler to validate before publishing:
+
+```tsx
+const handlePublish = useCallback(async () => {
+  if (!selectedTune || selectedSource !== "local") return;
+
+  // Validate first
+  const validation = validateTuneForPublishing(selectedTune);
+  if (!validation.isValid) {
+    toast({
+      title: "Cannot publish",
+      description: validation.errors.join(", "),
+      variant: "destructive",
+    });
+    return;
+  }
+  
+  if (validation.warnings.length > 0) {
+    console.warn("[LabMode] Publish warnings:", validation.warnings);
+  }
+  
+  // Continue with existing publish logic...
+}, [...]);
+```
 
 ---
 
@@ -451,29 +417,68 @@ The curriculum-publish edge function would then only validate that referenced tu
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/components/modes/LabMode.tsx` | Modify | Add glob imports, two-section dropdown, publish button, publish dialog |
-| `supabase/functions/tune-publish/index.ts` | Create | New edge function for standalone tune publishing |
-| `src/components/QuestEditor.tsx` | Modify | Remove glob imports, change tune selection to use published tunes only |
-| `supabase/functions/curriculum-publish/index.ts` | Modify | Update to reference existing tune_assets instead of receiving bundles |
+| `src/components/modes/LabMode.tsx` | Modify | Add Rename/Delete dialogs, handlers, and Edit menu items |
+| `supabase/functions/tune-manage/index.ts` | Create | New edge function for rename and delete operations |
+| `supabase/config.toml` | Modify | Add tune-manage function |
+| `src/utils/tuneAssetBundler.ts` | Modify | Improve unpublished detection, add validation function |
 
 ---
 
 ## Database Consideration
 
-Currently `tune_assets` is tied to `curriculum_versions` via `version_id`. For standalone tune publishing, we have two options:
+The `tune_assets` table currently lacks an UPDATE RLS policy. For the rename operation, we have two options:
 
-**Option A (Recommended):** Create a special "standalone" curriculum_version for independently published tunes, or add a nullable `version_id` with a different identifier for standalone assets.
+**Option A (Implemented Above):** Use delete + re-insert pattern (works with existing policies)
 
-**Option B:** Keep tune publishing tied to curriculum publishing but allow "preview" mode in Tune Manager that uses local files without persisting.
-
-For this plan, we'll implement **Option A** - a simple approach where standalone tunes get their own version_id from a reserved "standalone" curriculum entry.
+**Option B (Recommended):** Add an UPDATE RLS policy to allow updates:
+```sql
+CREATE POLICY "Allow public update tune_assets" 
+ON public.tune_assets 
+FOR UPDATE 
+TO public 
+USING (true);
+```
 
 ---
 
-## Technical Notes
+## UI Flow Summary
 
-- The glob imports are evaluated at build time, so all local music files are bundled into the frontend
-- Published tunes come from the database and are fetched at runtime
-- The publish workflow creates a new tune_assets entry that can then be referenced by Quest curriculum
-- Query invalidation ensures the UI updates after publishing
+### Published Tune Edit Flow:
+```text
+[Dropdown] > [Published] > [tune-name] > 
+    Full / Nuggets / Assemblies
+    ---
+    Rename  -> Opens Rename Dialog -> [New Title Input] -> [Cancel | Rename]
+    Delete  -> Opens Delete Dialog -> [Cancel | Delete]
+```
+
+### Unpublished Tune Detection:
+```text
+Before: Shows all folders with teacher.json
+        - gymnopdie       (has output/)
+        - intro           (has output/)
+        - st-louis-blues  (has output/)
+        - st-louis-blues-complex  (NO output/ - should NOT show)
+
+After:  Shows only folders with output/tune.ns.json
+        - gymnopdie
+        - intro  
+        - st-louis-blues
+```
+
+### Pre-Publish Validation:
+```text
+User clicks Publish -> Validate files:
+  REQUIRED:
+    - output/tune.ns.json ✓
+    - tune.ns.json must have notes ✓
+  
+  WARNINGS (logged but allows publish):
+    - teacher.json missing
+    - tune.xml missing
+    - dsp.xml missing
+
+If validation fails -> Show error toast, block publish
+If validation passes with warnings -> Log warnings, continue publish
+```
 
