@@ -198,8 +198,8 @@ function useTuneManagementState(): TuneManagementContextValue {
   // Get local tune keys from file system
   const localTuneKeys = useMemo(() => getLocalTuneKeys(), []);
   const unpublishedTuneKeys = useMemo(
-    () => localTuneKeys.filter((key) => !publishedTuneKeys.has(key)),
-    [localTuneKeys, publishedTuneKeys],
+    () => localTuneKeys,
+    [localTuneKeys],
   );
 
   // Filtered tune lists for search
