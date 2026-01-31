@@ -71,6 +71,10 @@ interface TuneAssetBundle {
   tuneXml?: string;
   nuggetXmls?: Record<string, string>;
   assemblyXmls?: Record<string, string>;
+  // DSP XML fields for display-optimized sheet music rendering
+  tuneDspXml?: string;
+  nuggetDspXmls?: Record<string, string>;
+  assemblyDspXmls?: Record<string, string>;
 }
 
 interface PublishRequest {
@@ -872,6 +876,10 @@ serve(async (req) => {
           tune_xml: assets.tuneXml || null,
           nugget_xmls: assets.nuggetXmls || null,
           assembly_xmls: assets.assemblyXmls || null,
+          // DSP XML columns for display-optimized sheet music rendering
+          tune_dsp_xml: assets.tuneDspXml || null,
+          nugget_dsp_xmls: assets.nuggetDspXmls || null,
+          assembly_dsp_xmls: assets.assemblyDspXmls || null,
         };
       });
 
