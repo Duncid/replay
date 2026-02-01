@@ -1,6 +1,6 @@
-import { SheetMusic } from "@/components/SheetMusic";
+import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
+import { useOsmdCursorPlayback } from "@/components/useOsmdCursorPlayback";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
 import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
@@ -29,6 +29,9 @@ interface TunePracticeProps {
   practicePlan?: PracticePlanItem[];
   currentEvalIndex?: number;
   pendingEvalIndex?: number;
+  dspXml?: string | null;
+  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
 }
 
 const STREAK_THRESHOLD = 3;
@@ -100,10 +103,12 @@ function StreakDisplay({
   lastEvaluation,
   currentNuggetId,
   messages,
+  className,
 }: {
   lastEvaluation?: TuneEvaluationResponse | null;
   currentNuggetId: string;
   messages: { success: string; fail: string; close: string };
+  className?: string;
 }) {
   const [fires, setFires] = useState<number[]>([]); // Array of unique IDs for fires to enable staggered removal
   const [tempMessage, setTempMessage] = useState<"success" | "fail" | "close" | null>(null);
@@ -224,7 +229,7 @@ function StreakDisplay({
   }, [lastEvaluation]);
 
   return (
-    <div className="flex flex-1 items-center gap-2 min-h-[24px] s-px-3">
+    <div className={cn("flex items-center gap-2 min-h-[24px]", className)}>
       {/* Fires */}
       {fires.map((fireId, index) => (
         <span
@@ -276,6 +281,9 @@ export function TunePractice({
   practicePlan = [],
   currentEvalIndex,
   pendingEvalIndex,
+  dspXml,
+  onRegisterNoteHandler,
+  onRegisterNoteOffHandler,
 }: TunePracticeProps) {
   const { t } = useTranslation();
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
@@ -332,6 +340,18 @@ export function TunePractice({
       return () => clearTimeout(timer);
     }
   }, [streakComplete, currentStreak, pulsedStreak]);
+  const {
+    osmdViewRef,
+    handleOsmdReady,
+    handleCursorElementReady,
+  } = useOsmdCursorPlayback({
+    sequence: (sampleSequence ?? { notes: [], totalTime: 0 }) as NoteSequence,
+    onRegisterNoteHandler,
+    onRegisterNoteOffHandler,
+    isPlaying,
+    autoScheduleOnPlay: true,
+    resetKey: currentNugget.itemId,
+  });
 
   const handleNextNugget = () => {
     setShouldPulse(false);
@@ -340,178 +360,188 @@ export function TunePractice({
   };
 
   return (
-    <div className="flex flex-col h-full items-center justify-center p-6">
-      <div className="flex w-full max-w-5xl flex-col gap-4 lg:flex-row lg:items-stretch">
-        <Card className="w-full flex-[2] relative">
-          <CardHeader className="flex flex-row pb-4 justify-between items-center">
-            <StatusDisplay
-              isRecording={isRecording}
-              isEvaluating={isEvaluating}
-              lastEvaluation={lastEvaluation}
-              labels={statusLabels}
-              debugMode={debugMode}
-              currentEvalIndex={currentEvalIndex}
-              pendingEvalIndex={pendingEvalIndex}
-            />
-            <div className="flex items-center gap-2">
-              {debugMode && practicePlan.length > 0 && (
-                <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" title="View Practice Plan">
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
-                    <SheetHeader>
-                      <SheetTitle>Practice Plan</SheetTitle>
-                    </SheetHeader>
-                    <ScrollArea className="h-[calc(100vh-100px)] mt-4">
-                      <div className="space-y-4 pr-4">
-                        {practicePlan.map((item, index) => {
-                          const isCurrent = index === currentIndex;
-                          const itemTypeLabel = 
-                            item.itemType === 'nugget' ? 'Nugget' :
-                            item.itemType === 'assembly' ? 'Assembly' :
-                            'Full Tune';
-                          
-                          return (
-                            <div
-                              key={`${item.itemId}-${index}`}
-                              className={cn(
-                                "p-4 rounded-lg border",
-                                isCurrent 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-border bg-muted/30"
-                              )}
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-mono text-muted-foreground">
-                                    {index + 1}.
-                                  </span>
-                                  <span className="font-medium font-mono text-sm">
-                                    {item.itemId}
-                                  </span>
-                                  <Badge 
-                                    variant={isCurrent ? "default" : "outline"}
-                                    className="text-xs"
-                                  >
-                                    {itemTypeLabel}
-                                  </Badge>
-                                  {isCurrent && (
-                                    <Badge variant="default" className="text-xs">
-                                      Current
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <p className="text-sm text-foreground mb-2">
-                                {item.instruction}
-                              </p>
-                              {item.motifs && item.motifs.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  <span className="text-xs text-muted-foreground">Motifs:</span>
-                                  {item.motifs.map((motif) => (
-                                    <Badge 
-                                      key={motif} 
-                                      variant="secondary" 
-                                      className="text-xs"
-                                    >
-                                      {motif}
-                                    </Badge>
-                                  ))}
-                                </div>
+    <div className="flex h-full w-full flex-col gap-4 px-6 py-4">
+      <div className="flex items-center justify-between">
+        <StatusDisplay
+          isRecording={isRecording}
+          isEvaluating={isEvaluating}
+          lastEvaluation={lastEvaluation}
+          labels={statusLabels}
+          debugMode={debugMode}
+          currentEvalIndex={currentEvalIndex}
+          pendingEvalIndex={pendingEvalIndex}
+        />
+        <div className="flex items-center gap-2">
+          {debugMode && practicePlan.length > 0 && (
+            <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" title="View Practice Plan">
+                  <List className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+                <SheetHeader>
+                  <SheetTitle>Practice Plan</SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="h-[calc(100vh-100px)] mt-4">
+                  <div className="space-y-4 pr-4">
+                    {practicePlan.map((item, index) => {
+                      const isCurrent = index === currentIndex;
+                      const itemTypeLabel =
+                        item.itemType === "nugget"
+                          ? "Nugget"
+                          : item.itemType === "assembly"
+                            ? "Assembly"
+                            : "Full Tune";
+
+                      return (
+                        <div
+                          key={`${item.itemId}-${index}`}
+                          className={cn(
+                            "p-4 rounded-lg border",
+                            isCurrent
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-muted/30",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono text-muted-foreground">
+                                {index + 1}.
+                              </span>
+                              <span className="font-medium font-mono text-sm">
+                                {item.itemId}
+                              </span>
+                              <Badge
+                                variant={isCurrent ? "default" : "outline"}
+                                className="text-xs"
+                              >
+                                {itemTypeLabel}
+                              </Badge>
+                              {isCurrent && (
+                                <Badge variant="default" className="text-xs">
+                                  Current
+                                </Badge>
                               )}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  </SheetContent>
-                </Sheet>
-              )}
-              <Button variant="ghost" size="icon" onClick={onLeave}>
-                <X />
-              </Button>
+                          </div>
+                          <p className="text-sm text-foreground mb-2">
+                            {item.instruction}
+                          </p>
+                          {item.motifs && item.motifs.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              <span className="text-xs text-muted-foreground">
+                                Motifs:
+                              </span>
+                              {item.motifs.map((motif) => (
+                                <Badge
+                                  key={motif}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
+                                  {motif}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+          )}
+          <Button variant="ghost" size="icon" onClick={onLeave}>
+            <X />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col items-center gap-4">
+        <p className="text-foreground text-center text-base px-3">
+          {currentNugget.instruction}
+        </p>
+
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
+          {dspXml ? (
+            <OpenSheetMusicDisplayView
+              ref={osmdViewRef}
+              xml={dspXml}
+              compactness="compacttight"
+              hasColor
+              className="relative w-full"
+              centerHorizontally
+              onOsmdReady={handleOsmdReady}
+              onCursorElementReady={handleCursorElementReady}
+            />
+          ) : (
+            <div className="w-full rounded-lg border p-4 text-sm text-muted-foreground">
+              No DSP XML available
             </div>
-          </CardHeader>
+          )}
 
-          <CardContent className="space-y-4 p-4">
-            {/* Instruction */}
-            <p className="text-foreground text-center px-3">{currentNugget.instruction}</p>
+          <Button
+            variant="ghost"
+            onClick={onPlaySample}
+            disabled={isPlaying}
+            className="gap-2"
+          >
+            <Play fill="currentColor" stroke="none" />
+            {t("tune.buttons.replay")}
+          </Button>
 
-            {/* Sheet music and Play button */}
-            <div className="flex flex-col items-center gap-1">
-              {sampleSequence?.notes?.length ? (
-                <div className="flex justify-center">
-                  <SheetMusic sequence={sampleSequence} compact noTitle noControls hasColor scale={1.1} />
-                </div>
-              ) : null}
-
-              {/* Play button visually attached to sheet */}
-              <Button variant="ghost" onClick={onPlaySample} disabled={isPlaying} className="gap-2">
-                <Play fill="currentColor" stroke="none" />
-                {t("tune.buttons.replay")}
-              </Button>
-            </div>
-
-            {/* Bottom section: StreakDisplay left, Previous/Next buttons right */}
-            <div className="flex items-center justify-between">
-              {/* Streak display bottom left */}
-              <StreakDisplay
-                lastEvaluation={lastEvaluation}
-                currentNuggetId={currentNugget.itemId}
-                messages={streakMessages}
-              />
-
-              {/* Next button bottom right */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={onPreviousNugget}
-                  className="gap-2"
-                  disabled={isFirstNugget}
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                  {t("tune.buttons.previous")}
-                </Button>
-                <Button
-                  variant={shouldPulse ? "default" : "ghost"}
-                  onClick={handleNextNugget}
-                  isPulsating={shouldPulse}
-                  className="gap-2"
-                >
-                  {t("tune.buttons.next")}
-                  <ArrowRight className="h-5 w-5" />
-                </Button>
+          <div className="w-full max-w-2xl rounded-2xl border bg-muted/30 px-4 py-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {t("tune.comments.title")}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full flex-1">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold">{t("tune.comments.title")}</div>
               {evaluationLabel ? (
                 <Badge variant="outline" className="text-xs">
                   {evaluationLabel}
                 </Badge>
               ) : null}
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
             <p
               key={commentKey}
               className="comment-typing text-sm leading-relaxed text-foreground/90 motion-reduce:animate-none"
             >
               {commentText}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               {t("tune.comments.helper")}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={onPreviousNugget}
+          className="gap-2"
+          disabled={isFirstNugget}
+        >
+          <ArrowLeft className="h-5 w-5" />
+          {t("tune.buttons.previous")}
+        </Button>
+
+        <StreakDisplay
+          lastEvaluation={lastEvaluation}
+          currentNuggetId={currentNugget.itemId}
+          messages={streakMessages}
+          className="justify-center"
+        />
+
+        <Button
+          variant={shouldPulse ? "default" : "ghost"}
+          onClick={handleNextNugget}
+          isPulsating={shouldPulse}
+          className="gap-2"
+        >
+          {t("tune.buttons.next")}
+          <ArrowRight className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );

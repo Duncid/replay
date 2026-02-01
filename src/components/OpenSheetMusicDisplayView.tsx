@@ -25,6 +25,7 @@ interface OpenSheetMusicDisplayViewProps {
   onCursorElementReady?: (cursorElement: HTMLImageElement | null) => void;
   className?: string;
   style?: React.CSSProperties;
+  centerHorizontally?: boolean;
 }
 
 export type OpenSheetMusicDisplayViewHandle = {
@@ -106,6 +107,7 @@ export const OpenSheetMusicDisplayView = forwardRef<
       onCursorElementReady,
       className,
       style,
+      centerHorizontally = false,
     },
     ref,
   ) => {
@@ -268,6 +270,23 @@ export const OpenSheetMusicDisplayView = forwardRef<
         },
       }),
       [applyCursorStyle],
+    );
+
+    const applyCenteredWidth = useCallback(
+      (svg: SVGSVGElement) => {
+        if (!centerHorizontally || !containerRef.current) return;
+        const widthAttr = svg.getAttribute("width");
+        const parsedWidth = widthAttr ? Number.parseFloat(widthAttr) : NaN;
+        const viewBoxWidth = svg.viewBox?.baseVal?.width ?? NaN;
+        const width = Number.isFinite(parsedWidth)
+          ? parsedWidth
+          : Number.isFinite(viewBoxWidth)
+            ? viewBoxWidth
+            : NaN;
+        if (!Number.isFinite(width)) return;
+        containerRef.current.style.width = `${width}px`;
+      },
+      [centerHorizontally],
     );
 
     useEffect(() => {
@@ -538,12 +557,18 @@ export const OpenSheetMusicDisplayView = forwardRef<
           if (svgRoot && themeColorsRef.current) {
             applyThemeColors(svgRoot, themeColorsRef.current);
           }
+          if (svgRoot) {
+            applyCenteredWidth(svgRoot);
+          }
           applyCursorStyle();
 
           observer = new MutationObserver(() => {
             const currentSvg = container.querySelector("svg");
             if (currentSvg && themeColorsRef.current) {
               applyThemeColors(currentSvg, themeColorsRef.current);
+            }
+            if (currentSvg) {
+              applyCenteredWidth(currentSvg);
             }
             applyCursorStyle();
           });
@@ -568,8 +593,10 @@ export const OpenSheetMusicDisplayView = forwardRef<
       hasColor,
       onOsmdReady,
       applyCursorStyle,
+      applyCenteredWidth,
       resolveThemeColors,
       notifyCursorElement,
+      centerHorizontally,
     ]);
 
     useEffect(() => {
@@ -578,6 +605,18 @@ export const OpenSheetMusicDisplayView = forwardRef<
 
     if (!xml) return null;
 
-    return <div ref={containerRef} className={className} style={style} />;
+    const content = (
+      <div ref={containerRef} className={className} style={style} />
+    );
+
+    if (!centerHorizontally) {
+      return content;
+    }
+
+    return (
+      <div className="w-full flex justify-center">
+        {content}
+      </div>
+    );
   },
 );

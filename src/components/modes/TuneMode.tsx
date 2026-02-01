@@ -1,7 +1,11 @@
-import React, { useEffect, useCallback, useState, useRef } from "react";
+import React, { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import { useTuneState } from "@/hooks/useTuneState";
-import { useStartTunePractice, useEvaluateTuneAttempt } from "@/hooks/useTuneQueries";
+import {
+  useStartTunePractice,
+  useEvaluateTuneAttempt,
+  useTuneAssets,
+} from "@/hooks/useTuneQueries";
 import { TunePractice } from "./TunePractice";
 import { TuneDebugCard } from "@/components/TuneDebugCard";
 import { TuneEvaluationDebugCard } from "@/components/TuneEvaluationDebugCard";
@@ -20,6 +24,8 @@ interface TuneModeProps {
   isPlayingSample?: boolean;
   currentRecording?: INoteSequence | null;
   isRecording?: boolean;
+  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
 }
 
 export function TuneMode({
@@ -32,12 +38,15 @@ export function TuneMode({
   isPlayingSample = false,
   currentRecording,
   isRecording = false,
+  onRegisterNoteHandler,
+  onRegisterNoteOffHandler,
 }: TuneModeProps) {
   const { t } = useTranslation();
   const { state, currentNugget, setPhase, setPracticePlan, updateEvaluation, clearEvaluation, nextNugget, previousNugget, setError } = useTuneState(tuneKey);
   
   const startPractice = useStartTunePractice();
   const evaluateAttempt = useEvaluateTuneAttempt();
+  const { data: tuneAssets } = useTuneAssets(tuneKey);
 
   const [coachDebugData, setCoachDebugData] = useState<TuneDebugData | null>(null);
   const [evalDebugData, setEvalDebugData] = useState<TuneEvaluationDebugData | null>(null);
@@ -58,6 +67,19 @@ export function TuneMode({
   
   // Track evaluation state for inline indicator
   const [isEvaluating, setIsEvaluating] = useState(false);
+
+  const dspXml = useMemo(() => {
+    if (!tuneAssets || !currentNugget) return null;
+    if (currentNugget.itemType === "full_tune") {
+      return tuneAssets.tune_dsp_xml ?? tuneAssets.tune_xml ?? null;
+    }
+    if (currentNugget.itemType === "assembly") {
+      const xmls = tuneAssets.assembly_dsp_xmls as Record<string, string> | null;
+      return xmls?.[currentNugget.itemId] ?? null;
+    }
+    const xmls = tuneAssets.nugget_dsp_xmls as Record<string, string> | null;
+    return xmls?.[currentNugget.itemId] ?? null;
+  }, [currentNugget, tuneAssets]);
 
   const sanitizeNoteSequence = (sequence?: INoteSequence | null): INoteSequence | undefined => {
     if (!sequence) return undefined;
@@ -501,6 +523,9 @@ export function TuneMode({
         practicePlan={state.practicePlan}
         currentEvalIndex={state.currentEvalIndex}
         pendingEvalIndex={pendingEvalIndex}
+        dspXml={dspXml}
+        onRegisterNoteHandler={onRegisterNoteHandler}
+        onRegisterNoteOffHandler={onRegisterNoteOffHandler}
       />
     );
   }

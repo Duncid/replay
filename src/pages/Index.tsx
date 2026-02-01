@@ -28,8 +28,8 @@ import {
 } from "@/components/modes/QuestManagement";
 import {
   TuneManagementActionBar,
-  TuneManagementTabContent,
   TuneManagementProvider,
+  TuneManagementTabContent,
 } from "@/components/modes/TuneManagement";
 import {
   AlertDialog,
@@ -40,20 +40,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -87,20 +82,7 @@ import {
 } from "@/utils/noteSequenceUtils";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
 import JSZip from "jszip";
-import {
-  ChevronDown,
-  Download,
-  FilePlus,
-  Mic,
-  MoreHorizontal,
-  Music,
-  PencilLine,
-  Play,
-  Save,
-  Square,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   type ReactNode,
   useCallback,
@@ -399,6 +381,9 @@ const Index = () => {
   const [learnModeType, setLearnModeType] = useState<
     "curriculum" | "free-practice"
   >("curriculum");
+  const tuneNoteHandlerRef = useRef<((noteKey: string) => void) | null>(null);
+  const tuneNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(null);
+  const labNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(null);
 
   // Free practice recording
   const [freePracticeRecording, setFreePracticeRecording] =
@@ -450,6 +435,27 @@ const Index = () => {
   const registerLabNoteHandler = useCallback(
     (handler: ((noteKey: string) => void) | null) => {
       labNoteHandlerRef.current = handler;
+    },
+    [],
+  );
+
+  const registerLabNoteOffHandler = useCallback(
+    (handler: ((noteKey: string) => void) | null) => {
+      labNoteOffHandlerRef.current = handler;
+    },
+    [],
+  );
+
+  const registerTuneNoteHandler = useCallback(
+    (handler: ((noteKey: string) => void) | null) => {
+      tuneNoteHandlerRef.current = handler;
+    },
+    [],
+  );
+
+  const registerTuneNoteOffHandler = useCallback(
+    (handler: ((noteKey: string) => void) | null) => {
+      tuneNoteOffHandlerRef.current = handler;
     },
     [],
   );
@@ -1384,6 +1390,8 @@ const Index = () => {
       setMetronomeFeel(feel as FeelPreset),
     setMetronomeSoundType: (soundType: LessonMetronomeSoundType) =>
       setMetronomeSoundType(soundType as MetronomeSoundType),
+    onRegisterNoteHandler: registerTuneNoteHandler,
+    onRegisterNoteOffHandler: registerTuneNoteOffHandler,
   });
 
   const { resetToStart: resetLearnToStart } = learnMode;
@@ -1470,6 +1478,9 @@ const Index = () => {
       if (activeMode === "learn") {
         if (learnModeType === "curriculum") {
           learnMode.handleUserAction();
+          if (isInTuneMode) {
+            tuneNoteHandlerRef.current?.(noteKey);
+          }
         }
       }
 
@@ -1522,6 +1533,9 @@ const Index = () => {
 
   const handleNoteEnd = useCallback(
     (noteKey: string, frequency: number) => {
+      if (activeMode === "lab") {
+        labNoteOffHandlerRef.current?.(noteKey);
+      }
       if (activeMode === "play") {
         recordingManager.addNoteEnd(noteKey);
       } else if (activeMode === "learn") {
@@ -1529,6 +1543,7 @@ const Index = () => {
           // TuneMode: Always record when a tune is active
           if (isInTuneMode) {
             learnRecordingManager.addNoteEnd(noteKey);
+            tuneNoteOffHandlerRef.current?.(noteKey);
           } else if (
             learnMode.lesson.phase === "your_turn" &&
             learnMode.lessonMode === "evaluation"
@@ -1755,7 +1770,9 @@ const Index = () => {
   const handlePlayMenuCopyNoteSequence = useCallback(async () => {
     const seq = playMode.getCombinedSequence();
     if (seq?.sequence) {
-      await navigator.clipboard.writeText(JSON.stringify(seq.sequence, null, 2));
+      await navigator.clipboard.writeText(
+        JSON.stringify(seq.sequence, null, 2),
+      );
       toast({ title: "Copied as NoteSequence" });
     }
   }, [playMode, toast]);
@@ -1839,336 +1856,343 @@ const Index = () => {
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
           className="w-full flex-1 min-h-0 flex flex-col"
         >
-        <div className="sticky top-0 z-30 w-full bg-background">
-          <div className="flex items-center justify-between p-2">
-            <div className="flex items-center gap-2">
-              <UserMenu
-                language={language}
-                onLanguageChange={setLanguage}
-                notationPreference={musicNotation}
-                onNotationChange={setMusicNotation}
-              />
-              <TabsList>
-                <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
-                <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
-                <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
-                <TabsTrigger value="lab">{t("tabs.lab")}</TabsTrigger>
-              </TabsList>
-              {activeMode === "quest" && questHeaderTitle && (
-                <span className="text-sm text-muted-foreground ml-2">
-                  {questHeaderTitle}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {actionBars[activeMode]}
+          <div className="sticky top-0 z-30 w-full bg-background">
+            <div className="flex items-center justify-between p-2">
+              <div className="flex items-center gap-2">
+                <UserMenu
+                  language={language}
+                  onLanguageChange={setLanguage}
+                  notationPreference={musicNotation}
+                  onNotationChange={setMusicNotation}
+                />
+                <TabsList>
+                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
+                  <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
+                  <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
+                  <TabsTrigger value="lab">{t("tabs.lab")}</TabsTrigger>
+                </TabsList>
+                {activeMode === "quest" && questHeaderTitle && (
+                  <span className="text-sm text-muted-foreground ml-2">
+                    {questHeaderTitle}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {actionBars[activeMode]}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          id="topContainer"
-          className="w-full flex flex-col items-stretch justify-start relative flex-1 min-h-0 overflow-hidden"
-        >
-          {/* AI Playing / Replay indicator */}
-          <TopToastLabel
-            show={appState === "ai_playing"}
-            label={isReplaying ? t("status.replay") : t("status.playing")}
-            pulse
-          />
-
-          {/* Generation toast (Free and Duo modes) */}
-          {generationLabel && (
-            <TopToastLabel show={true} label={generationLabel} pulse />
-          )}
-
-          {/* Recording ending progress toast (play mode) */}
-          {activeMode === "play" && (
-            <TopToastProgress
-              show={recordingManager.showEndingProgress}
-              progress={recordingManager.endingProgress}
+          <div
+            id="topContainer"
+            className="w-full flex flex-col items-stretch justify-start relative flex-1 min-h-0 overflow-hidden"
+          >
+            {/* AI Playing / Replay indicator */}
+            <TopToastLabel
+              show={appState === "ai_playing"}
+              label={isReplaying ? t("status.replay") : t("status.playing")}
+              pulse
             />
-          )}
 
-          {/* AI preparing progress (play mode with autoreply) */}
-          {activeMode === "play" && isAutoreplyActive && (
-            <TopToastProgress
-              show={recordingManager.showProgress}
-              progress={recordingManager.progress}
-              label={t("status.improvising")}
+            {/* Generation toast (Free and Duo modes) */}
+            {generationLabel && (
+              <TopToastLabel show={true} label={generationLabel} pulse />
+            )}
+
+            {/* Recording ending progress toast (play mode) */}
+            {activeMode === "play" && (
+              <TopToastProgress
+                show={recordingManager.showEndingProgress}
+                progress={recordingManager.endingProgress}
+              />
+            )}
+
+            {/* AI preparing progress (play mode with autoreply) */}
+            {activeMode === "play" && isAutoreplyActive && (
+              <TopToastProgress
+                show={recordingManager.showProgress}
+                progress={recordingManager.progress}
+                label={t("status.improvising")}
+              />
+            )}
+
+            <PlayModeTabContent playMode={playMode} />
+            <LearnModeTabContent
+              learnModeType={learnModeType}
+              freePracticeProps={freePracticeModeProps}
+              learnMode={learnMode}
             />
-          )}
-
-          <PlayModeTabContent playMode={playMode} />
-          <LearnModeTabContent
-            learnModeType={learnModeType}
-            freePracticeProps={freePracticeModeProps}
-            learnMode={learnMode}
-          />
-          <QuestManagementTabContent
-            isActive={activeMode === "quest"}
-            onHeaderActionsChange={setQuestHeaderActions}
-            onHeaderTitleChange={setQuestHeaderTitle}
-          />
-          <TuneManagementTabContent
-            onPlaySequence={handleLabPlaySequence}
-            onStopPlayback={stopAiPlayback}
-            isPlaying={isPlaying}
-            onRegisterNoteHandler={registerLabNoteHandler}
-          />
-        </div>
+            <QuestManagementTabContent
+              isActive={activeMode === "quest"}
+              onHeaderActionsChange={setQuestHeaderActions}
+              onHeaderTitleChange={setQuestHeaderTitle}
+            />
+            <TuneManagementTabContent
+              onPlaySequence={handleLabPlaySequence}
+              onStopPlayback={stopAiPlayback}
+              isPlaying={isPlaying}
+              onRegisterNoteHandler={registerLabNoteHandler}
+              onRegisterNoteOffHandler={registerLabNoteOffHandler}
+            />
+          </div>
         </Tabs>
 
-      {activeMode !== "quest" && (
-        <div className="w-full h-[380px] z-30 bg-background border-t rounded-t-2xl flex flex-col">
-          {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
-          <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 bg-popover">
-                  <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup
-                    value={pianoSoundType}
-                    onValueChange={(v) =>
-                      setPianoSoundType(v as PianoSoundType)
-                    }
+        {activeMode !== "quest" && (
+          <div className="w-full h-[380px] z-30 bg-background border-t rounded-t-2xl flex flex-col">
+            {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
+            <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="w-56 bg-popover"
                   >
-                    <DropdownMenuRadioItem value="classic">
-                      {t("piano.basic")}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-xs text-muted-foreground">
-                      {t("piano.sampledInstruments")}
-                    </DropdownMenuLabel>
-                    {SAMPLED_INSTRUMENTS.map((instrument) => (
-                      <DropdownMenuRadioItem
-                        key={instrument}
-                        value={instrument}
-                      >
-                        {PIANO_SOUND_LABELS[instrument]}
+                    <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={pianoSoundType}
+                      onValueChange={(v) =>
+                        setPianoSoundType(v as PianoSoundType)
+                      }
+                    >
+                      <DropdownMenuRadioItem value="classic">
+                        {t("piano.basic")}
                       </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground">
+                        {t("piano.sampledInstruments")}
+                      </DropdownMenuLabel>
+                      {SAMPLED_INSTRUMENTS.map((instrument) => (
+                        <DropdownMenuRadioItem
+                          key={instrument}
+                          value={instrument}
+                        >
+                          {PIANO_SOUND_LABELS[instrument]}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-              <Metronome
-                bpm={metronomeBpm}
-                setBpm={setMetronomeBpm}
-                timeSignature={metronomeTimeSignature}
-                setTimeSignature={setMetronomeTimeSignature}
-                isPlaying={metronomeIsPlaying}
-                setIsPlaying={setMetronomeIsPlaying}
-                feel={activeMode === "learn" ? metronomeFeel : undefined}
-                onFeelChange={
-                  activeMode === "learn" ? setMetronomeFeel : undefined
-                }
-                onMetronomeStartTimeChange={
-                  activeMode === "learn" ? setMetronomeStartTime : undefined
-                }
-                soundType={
-                  activeMode === "learn" ? metronomeSoundType : undefined
-                }
-                onSoundTypeChange={
-                  activeMode === "learn" ? setMetronomeSoundType : undefined
-                }
+                <Metronome
+                  bpm={metronomeBpm}
+                  setBpm={setMetronomeBpm}
+                  timeSignature={metronomeTimeSignature}
+                  setTimeSignature={setMetronomeTimeSignature}
+                  isPlaying={metronomeIsPlaying}
+                  setIsPlaying={setMetronomeIsPlaying}
+                  feel={activeMode === "learn" ? metronomeFeel : undefined}
+                  onFeelChange={
+                    activeMode === "learn" ? setMetronomeFeel : undefined
+                  }
+                  onMetronomeStartTimeChange={
+                    activeMode === "learn" ? setMetronomeStartTime : undefined
+                  }
+                  soundType={
+                    activeMode === "learn" ? metronomeSoundType : undefined
+                  }
+                  onSoundTypeChange={
+                    activeMode === "learn" ? setMetronomeSoundType : undefined
+                  }
+                />
+              </div>
+
+              <MidiConnector
+                isConnected={!!connectedDevice}
+                deviceName={connectedDevice?.name || null}
+                isSupported={isMidiSupported}
+                onConnect={requestAccess}
+                onDisconnect={disconnect}
               />
             </div>
 
-            <MidiConnector
-              isConnected={!!connectedDevice}
-              deviceName={connectedDevice?.name || null}
-              isSupported={isMidiSupported}
-              onConnect={requestAccess}
-              onDisconnect={disconnect}
+            <Piano
+              className="flex-1 min-h-0"
+              ref={pianoRef}
+              activeKeys={activeKeys}
+              allowInput={
+                appState === "idle" ||
+                appState === "user_playing" ||
+                appState === "waiting_for_ai"
+              }
+              soundType={pianoSoundType}
+              hasColor={isInTuneMode || activeMode === "lab"}
+              language={language}
+              notationPreference={musicNotation}
+              onNoteStart={handleNoteStart}
+              onNoteEnd={handleNoteEnd}
             />
           </div>
+        )}
 
-          <Piano
-            className="flex-1 min-h-0"
-            ref={pianoRef}
-            activeKeys={activeKeys}
-            allowInput={
-              appState === "idle" ||
-              appState === "user_playing" ||
-              appState === "waiting_for_ai"
+        {/* Add/Edit Partition Sheet */}
+        <AddPartitionDialog
+          open={partitionDialogOpen}
+          onOpenChange={(open) => {
+            setPartitionDialogOpen(open);
+            if (!open) {
+              setEditingEntryIndex(null);
+              setEditDialogMode("add");
             }
-            soundType={pianoSoundType}
-            hasColor={isInTuneMode || activeMode === "lab"}
-            language={language}
-            notationPreference={musicNotation}
-            onNoteStart={handleNoteStart}
-            onNoteEnd={handleNoteEnd}
-          />
-        </div>
-      )}
+          }}
+          onAdd={(sequence) => {
+            if (activeMode === "play") {
+              playModeRef.current?.addEntry(sequence, false);
+            }
+          }}
+          onEdit={(sequence) => {
+            if (activeMode === "play" && editingEntryIndex !== null) {
+              playModeRef.current?.updateEntry(editingEntryIndex, sequence);
+            }
+          }}
+          bpm={metronomeBpm}
+          mode={editDialogMode}
+          initialAbc={
+            editDialogMode === "edit" &&
+            editingEntryIndex !== null &&
+            playMode.history[editingEntryIndex]
+              ? noteSequenceToAbc(playMode.history[editingEntryIndex].sequence)
+              : undefined
+          }
+          instrument={pianoSoundType}
+        />
 
-      {/* Add/Edit Partition Sheet */}
-      <AddPartitionDialog
-        open={partitionDialogOpen}
-        onOpenChange={(open) => {
-          setPartitionDialogOpen(open);
-          if (!open) {
-            setEditingEntryIndex(null);
-            setEditDialogMode("add");
+        {/* Add/Edit NoteSequence Dialog */}
+        <AddNoteSequenceDialog
+          open={noteSequenceDialogOpen}
+          onOpenChange={(open) => {
+            setNoteSequenceDialogOpen(open);
+            if (!open) {
+              setNoteSequenceEditIndex(null);
+              setNoteSequenceEditMode("add");
+            }
+          }}
+          onAdd={(sequence) => {
+            if (activeMode === "play") {
+              playModeRef.current?.addEntry(sequence, false);
+            }
+          }}
+          onEdit={(sequence) => {
+            if (activeMode === "play" && noteSequenceEditIndex !== null) {
+              playModeRef.current?.updateEntry(noteSequenceEditIndex, sequence);
+            }
+          }}
+          mode={noteSequenceEditMode}
+          initialSequence={
+            noteSequenceEditMode === "edit" &&
+            noteSequenceEditIndex !== null &&
+            playMode.history[noteSequenceEditIndex]
+              ? playMode.history[noteSequenceEditIndex].sequence
+              : undefined
           }
-        }}
-        onAdd={(sequence) => {
-          if (activeMode === "play") {
-            playModeRef.current?.addEntry(sequence, false);
-          }
-        }}
-        onEdit={(sequence) => {
-          if (activeMode === "play" && editingEntryIndex !== null) {
-            playModeRef.current?.updateEntry(editingEntryIndex, sequence);
-          }
-        }}
-        bpm={metronomeBpm}
-        mode={editDialogMode}
-        initialAbc={
-          editDialogMode === "edit" &&
-          editingEntryIndex !== null &&
-          playMode.history[editingEntryIndex]
-            ? noteSequenceToAbc(playMode.history[editingEntryIndex].sequence)
-            : undefined
-        }
-        instrument={pianoSoundType}
-      />
+        />
 
-      {/* Add/Edit NoteSequence Dialog */}
-      <AddNoteSequenceDialog
-        open={noteSequenceDialogOpen}
-        onOpenChange={(open) => {
-          setNoteSequenceDialogOpen(open);
-          if (!open) {
-            setNoteSequenceEditIndex(null);
-            setNoteSequenceEditMode("add");
-          }
-        }}
-        onAdd={(sequence) => {
-          if (activeMode === "play") {
-            playModeRef.current?.addEntry(sequence, false);
-          }
-        }}
-        onEdit={(sequence) => {
-          if (activeMode === "play" && noteSequenceEditIndex !== null) {
-            playModeRef.current?.updateEntry(noteSequenceEditIndex, sequence);
-          }
-        }}
-        mode={noteSequenceEditMode}
-        initialSequence={
-          noteSequenceEditMode === "edit" &&
-          noteSequenceEditIndex !== null &&
-          playMode.history[noteSequenceEditIndex]
-            ? playMode.history[noteSequenceEditIndex].sequence
-            : undefined
-        }
-      />
+        <WhistleImportSheet
+          open={whistleSheetOpen}
+          onOpenChange={setWhistleSheetOpen}
+          bpm={metronomeBpm}
+          timeSignature={metronomeTimeSignature}
+          onSave={(sequence) => {
+            if (activeMode === "play") {
+              playModeRef.current?.addEntry(sequence, false);
+            }
+          }}
+        />
 
-      <WhistleImportSheet
-        open={whistleSheetOpen}
-        onOpenChange={setWhistleSheetOpen}
-        bpm={metronomeBpm}
-        timeSignature={metronomeTimeSignature}
-        onSave={(sequence) => {
-          if (activeMode === "play") {
-            playModeRef.current?.addEntry(sequence, false);
-          }
-        }}
-      />
-
-      {/* Save before opening another composition */}
-      <AlertDialog
-        open={saveBeforeOpenDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingCompositionToLoad(null);
-          }
-          setSaveBeforeOpenDialogOpen(open);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("menus.saveBeforeOpeningTitle")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {compositions.currentComposition
-                ? t("menus.saveBeforeOpeningDescriptionExisting")
-                : t("menus.saveBeforeOpeningDescriptionNew")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="sm:flex-row sm:justify-end sm:space-x-2">
-            <AlertDialogCancel
-              onClick={() => setPendingCompositionToLoad(null)}
-            >
-              {t("menus.cancel")}
-            </AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={handleContinueWithoutSaving}
-              disabled={compositions.isLoading}
-            >
-              {t("menus.continueWithoutSaving")}
-            </Button>
-            {compositions.currentComposition ? (
-              <AlertDialogAction
-                onClick={handleSaveAndLoadExisting}
+        {/* Save before opening another composition */}
+        <AlertDialog
+          open={saveBeforeOpenDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPendingCompositionToLoad(null);
+            }
+            setSaveBeforeOpenDialogOpen(open);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("menus.saveBeforeOpeningTitle")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {compositions.currentComposition
+                  ? t("menus.saveBeforeOpeningDescriptionExisting")
+                  : t("menus.saveBeforeOpeningDescriptionNew")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="sm:flex-row sm:justify-end sm:space-x-2">
+              <AlertDialogCancel
+                onClick={() => setPendingCompositionToLoad(null)}
+              >
+                {t("menus.cancel")}
+              </AlertDialogCancel>
+              <Button
+                variant="outline"
+                onClick={handleContinueWithoutSaving}
                 disabled={compositions.isLoading}
               >
-                {t("menus.saveAndOpen")}
-              </AlertDialogAction>
-            ) : (
-              <AlertDialogAction
-                onClick={handleSaveAsNewBeforeLoad}
-                disabled={compositions.isLoading}
-              >
-                {t("menus.saveAsNewAndOpen")}
-              </AlertDialogAction>
-            )}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                {t("menus.continueWithoutSaving")}
+              </Button>
+              {compositions.currentComposition ? (
+                <AlertDialogAction
+                  onClick={handleSaveAndLoadExisting}
+                  disabled={compositions.isLoading}
+                >
+                  {t("menus.saveAndOpen")}
+                </AlertDialogAction>
+              ) : (
+                <AlertDialogAction
+                  onClick={handleSaveAsNewBeforeLoad}
+                  disabled={compositions.isLoading}
+                >
+                  {t("menus.saveAsNewAndOpen")}
+                </AlertDialogAction>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      {/* Save Composition Modal */}
-      <SaveCompositionModal
-        open={saveModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
+        {/* Save Composition Modal */}
+        <SaveCompositionModal
+          open={saveModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setLoadPendingAfterSave(false);
+            }
+            setSaveModalOpen(open);
+          }}
+          onSave={async (title) => {
+            let savedComposition: Composition | null = null;
+            if (
+              saveModalMode === "saveAs" ||
+              !compositions.currentComposition
+            ) {
+              savedComposition = await compositions.saveComposition(
+                title,
+                playMode.history,
+                pianoSoundType,
+                metronomeBpm,
+                metronomeTimeSignature,
+              );
+            }
+            setSaveModalOpen(false);
+            if (
+              loadPendingAfterSave &&
+              pendingCompositionToLoad &&
+              savedComposition
+            ) {
+              loadCompositionWithToast(pendingCompositionToLoad);
+            }
             setLoadPendingAfterSave(false);
-          }
-          setSaveModalOpen(open);
-        }}
-        onSave={async (title) => {
-          let savedComposition: Composition | null = null;
-          if (saveModalMode === "saveAs" || !compositions.currentComposition) {
-            savedComposition = await compositions.saveComposition(
-              title,
-              playMode.history,
-              pianoSoundType,
-              metronomeBpm,
-              metronomeTimeSignature,
-            );
-          }
-          setSaveModalOpen(false);
-          if (
-            loadPendingAfterSave &&
-            pendingCompositionToLoad &&
-            savedComposition
-          ) {
-            loadCompositionWithToast(pendingCompositionToLoad);
-          }
-          setLoadPendingAfterSave(false);
-        }}
-        isLoading={compositions.isLoading}
-        defaultTitle={compositions.currentComposition?.title || ""}
-      />
+          }}
+          isLoading={compositions.isLoading}
+          defaultTitle={compositions.currentComposition?.title || ""}
+        />
       </div>
     </TuneManagementProvider>
   );
