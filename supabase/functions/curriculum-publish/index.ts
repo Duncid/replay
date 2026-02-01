@@ -60,28 +60,14 @@ interface ValidationWarning {
   edgeId?: string;
 }
 
-interface TuneAssetBundle {
-  briefing?: Record<string, unknown>;
-  nuggets?: Array<Record<string, unknown>>;
-  assemblies?: Array<Record<string, unknown>>;
-  noteSequence: Record<string, unknown>;
-  leftHandSequence?: Record<string, unknown>;
-  rightHandSequence?: Record<string, unknown>;
-  // XML fields for sheet music rendering
-  tuneXml?: string;
-  nuggetXmls?: Record<string, string>;
-  assemblyXmls?: Record<string, string>;
-  // DSP XML fields for display-optimized sheet music rendering
-  tuneDspXml?: string;
-  nuggetDspXmls?: Record<string, string>;
-  assemblyDspXmls?: Record<string, string>;
-}
+// Note: TuneAssetBundle interface removed - tunes must be published via Tune Manager first
+// The curriculum-publish function now validates that referenced tune_keys exist in tune_assets
 
 interface PublishRequest {
   questGraphId: string;
   publishTitle?: string;
   mode: "publish" | "dryRun";
-  tuneAssets?: Record<string, TuneAssetBundle>;
+  // tuneAssets no longer accepted - tunes must be pre-published
 }
 
 interface PublishResponse {
@@ -573,7 +559,7 @@ serve(async (req) => {
 
   try {
     const requestBody: PublishRequest = await req.json();
-    const { questGraphId, publishTitle, mode, tuneAssets } = requestBody;
+    const { questGraphId, publishTitle, mode } = requestBody;
 
     if (!questGraphId || typeof questGraphId !== "string") {
       return new Response(
@@ -640,6 +626,38 @@ serve(async (req) => {
 
     // Transform to runtime format
     const runtimeData = transformToRuntime(questData);
+
+    // Validate that all referenced tune_keys exist in tune_assets table
+    const tuneNodes = runtimeData.nodes.filter(n => n.kind === "tune");
+    const tuneKeys = tuneNodes.map(n => n.key);
+
+    if (tuneKeys.length > 0) {
+      // Check that all referenced tunes exist in tune_assets (any published version)
+      const { data: existingTunes, error: tuneCheckError } = await supabase
+        .from("tune_assets")
+        .select("tune_key")
+        .in("tune_key", tuneKeys);
+
+      if (tuneCheckError) {
+        console.error("[curriculum-publish] Failed to verify tune assets:", tuneCheckError);
+        allWarnings.push({
+          type: "tune_check_failed",
+          message: `Failed to verify tune assets: ${tuneCheckError.message}`,
+        });
+      } else {
+        const existingKeys = new Set((existingTunes || []).map(t => t.tune_key));
+        const missingTunes = tuneKeys.filter(k => !existingKeys.has(k));
+        
+        if (missingTunes.length > 0) {
+          allErrors.push({
+            type: "missing_tune_assets",
+            message: `Tune assets not found in database: ${missingTunes.join(", ")}. Publish these tunes via Tune Manager first.`,
+          });
+        } else {
+          console.log(`[curriculum-publish] Verified ${tuneKeys.length} tune assets exist in database`);
+        }
+      }
+    }
 
     // Generate export JSON (using existing exportGraphToSchema logic)
     // For now, we'll store the questData as-is, but ideally we'd use exportGraphToSchema
@@ -837,72 +855,11 @@ serve(async (req) => {
 
     console.log("[curriculum-publish] Inserted export snapshot");
 
-    // 5. Insert tune assets if provided
-    // Merge evaluationGuidance from curriculum nodes into briefing
-    const tuneNodes = runtimeData.nodes.filter(n => n.kind === "tune");
-    const tuneEvalGuidanceMap = new Map<string, string | null>();
-    for (const tuneNode of tuneNodes) {
-      const evalGuidance = (tuneNode.data as { evaluationGuidance?: string }).evaluationGuidance || null;
-      tuneEvalGuidanceMap.set(tuneNode.key, evalGuidance);
-    }
+    // Note: Tune assets are no longer inserted during curriculum publish
+    // Tunes must be published via Tune Manager (tune-publish edge function) first
+    // The validation above ensures all referenced tune_keys exist in tune_assets
 
-    // Log received tune assets for debugging
-    console.log(`[curriculum-publish] Received tune assets: ${Object.keys(tuneAssets || {}).join(', ') || 'NONE'}`);
-    for (const [key, assets] of Object.entries(tuneAssets || {})) {
-      const noteCount = (assets.noteSequence as { notes?: unknown[] })?.notes?.length || 0;
-      console.log(`[curriculum-publish] Tune ${key}: ${(assets.nuggets as unknown[])?.length || 0} nuggets, ${(assets.assemblies as unknown[])?.length || 0} assemblies, ${noteCount} notes in main sequence`);
-    }
-
-    let tuneAssetsInserted = 0;
-    if (tuneAssets && Object.keys(tuneAssets).length > 0) {
-      const tuneAssetRows = Object.entries(tuneAssets).map(([tuneKey, assets]) => {
-        // Merge evaluationGuidance into briefing
-        const evaluationGuidance = tuneEvalGuidanceMap.get(tuneKey) || null;
-        const briefing = {
-          ...(assets.briefing || {}),
-          ...(evaluationGuidance ? { evaluationGuidance } : {}),
-        };
-        
-        return {
-          version_id: versionId,
-          tune_key: tuneKey,
-          briefing: Object.keys(briefing).length > 0 ? briefing : null,
-          note_sequence: assets.noteSequence,
-          left_hand_sequence: assets.leftHandSequence || null,
-          right_hand_sequence: assets.rightHandSequence || null,
-          nuggets: assets.nuggets || null,
-          assemblies: assets.assemblies || null,
-          // XML columns for sheet music rendering
-          tune_xml: assets.tuneXml || null,
-          nugget_xmls: assets.nuggetXmls || null,
-          assembly_xmls: assets.assemblyXmls || null,
-          // DSP XML columns for display-optimized sheet music rendering
-          tune_dsp_xml: assets.tuneDspXml || null,
-          nugget_dsp_xmls: assets.nuggetDspXmls || null,
-          assembly_dsp_xmls: assets.assemblyDspXmls || null,
-        };
-      });
-
-      const { error: tuneAssetsError } = await supabase
-        .from("tune_assets")
-        .upsert(tuneAssetRows, { onConflict: "version_id,tune_key" });
-
-      if (tuneAssetsError) {
-        console.error("[curriculum-publish] Failed to insert tune assets:", tuneAssetsError);
-        // Non-fatal: log warning but continue
-        allWarnings.push({
-          type: "tune_assets_failed",
-          message: `Failed to insert tune assets: ${tuneAssetsError.message}`,
-        });
-      } else {
-        tuneAssetsInserted = tuneAssetRows.length;
-        console.log("[curriculum-publish] Inserted tune assets:", tuneAssetsInserted);
-      }
-    } else {
-      console.warn("[curriculum-publish] No tune assets received - tunes in graph may not have musicRef or assets failed to bundle");
-    }
-
-    // 6. Update version status to published
+    // 5. Update version status to published
     const publishedAt = new Date().toISOString();
     const { error: updateError } = await supabase
       .from("curriculum_versions")
@@ -925,10 +882,7 @@ serve(async (req) => {
         versionId,
         versionNumber: nextVersionNumber,
         publishedAt,
-        counts: {
-          ...counts,
-          tuneAssets: tuneAssetsInserted,
-        },
+        counts,
         warnings: allWarnings.map(w => w.message),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
