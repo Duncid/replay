@@ -52,7 +52,7 @@ import {
   getNuggetNs,
   getNuggetRh,
   getNuggetXml,
-  getTeacher,
+  
   getTuneDspXml,
   getTuneLh,
   getTuneLhXml,
@@ -138,8 +138,6 @@ type TuneManagementContextValue = {
   unpublishedTuneKeys: string[];
   filteredPublishedKeys: string[];
   filteredUnpublishedKeys: string[];
-  tuneTitleMap: Map<string, string>;
-  getTuneTitle: (tuneKey: string, source: TuneSource) => string;
   tuneAssets: ReturnType<typeof useTuneAssets>["data"];
   isLoadingAssets: boolean;
   labSequence: NoteSequence;
@@ -215,51 +213,24 @@ function useTuneManagementState(): TuneManagementContextValue {
     [tuneList],
   );
 
-  // Create a lookup map for tune_key → display title
-  const tuneTitleMap = useMemo(() => {
-    const map = new Map<string, string>();
-    tuneList?.forEach((t) => {
-      map.set(t.tune_key, t.briefing?.title || t.tune_key);
-    });
-    return map;
-  }, [tuneList]);
-
-  // Helper to get display title for a tune key
-  const getTuneTitle = useCallback(
-    (tuneKey: string, source: TuneSource) => {
-      if (source === "published") {
-        return tuneTitleMap.get(tuneKey) || tuneKey;
-      }
-      // For local tunes, try to get title from teacher.json
-      const teacher = getTeacher(tuneKey);
-      return (teacher as { title?: string })?.title || tuneKey;
-    },
-    [tuneTitleMap],
-  );
-
   // Get local tune keys from file system
   const localTuneKeys = useMemo(() => getLocalTuneKeys(), []);
   const unpublishedTuneKeys = useMemo(() => localTuneKeys, [localTuneKeys]);
 
-  // Filtered tune lists for search (search by key or title)
+  // Filtered tune lists for search
   const filteredPublishedKeys = useMemo(() => {
     const keys = Array.from(publishedTuneKeys);
     if (!publishedFilter.trim()) return keys;
     const lower = publishedFilter.toLowerCase();
-    return keys.filter((key) => {
-      const title = tuneTitleMap.get(key) || key;
-      return key.toLowerCase().includes(lower) || title.toLowerCase().includes(lower);
-    });
-  }, [publishedTuneKeys, publishedFilter, tuneTitleMap]);
+    return keys.filter((key) => key.toLowerCase().includes(lower));
+  }, [publishedTuneKeys, publishedFilter]);
 
   const filteredUnpublishedKeys = useMemo(() => {
     if (!unpublishedFilter.trim()) return unpublishedTuneKeys;
     const lower = unpublishedFilter.toLowerCase();
-    return unpublishedTuneKeys.filter((key) => {
-      const teacher = getTeacher(key);
-      const title = (teacher as { title?: string })?.title || key;
-      return key.toLowerCase().includes(lower) || title.toLowerCase().includes(lower);
-    });
+    return unpublishedTuneKeys.filter((key) =>
+      key.toLowerCase().includes(lower),
+    );
   }, [unpublishedTuneKeys, unpublishedFilter]);
 
   // Auto-select first tune when list loads
@@ -665,8 +636,8 @@ function useTuneManagementState(): TuneManagementContextValue {
 
   const selectionLabel = useMemo(() => {
     if (!selectedTune) return "Select tune...";
-    return getTuneTitle(selectedTune, selectedSource);
-  }, [selectedTune, selectedSource, getTuneTitle]);
+    return selectedTune;
+  }, [selectedTune]);
 
   const targetLabel = useMemo(() => {
     if (!selectedItemId && selectedTarget !== "full") {
@@ -872,8 +843,6 @@ function useTuneManagementState(): TuneManagementContextValue {
     unpublishedTuneKeys,
     filteredPublishedKeys,
     filteredUnpublishedKeys,
-    tuneTitleMap,
-    getTuneTitle,
     tuneAssets,
     isLoadingAssets,
     labSequence,
@@ -1715,8 +1684,6 @@ export function TuneManagementActionBar() {
     setUnpublishedFilter,
     filteredPublishedKeys,
     filteredUnpublishedKeys,
-    tuneTitleMap,
-    getTuneTitle,
     selectTune,
     openRenameDialog,
     openDeleteDialog,
@@ -1761,7 +1728,7 @@ export function TuneManagementActionBar() {
                     key={tune}
                     onClick={() => selectTune("published", tune)}
                   >
-                    <span className="flex-1">{tuneTitleMap.get(tune) || tune}</span>
+                    <span className="flex-1">{tune}</span>
                     {selectedTune === tune &&
                       selectedSource === "published" && (
                         <Check className="h-4 w-4 ml-2" />
@@ -1796,7 +1763,7 @@ export function TuneManagementActionBar() {
                     key={tune}
                     onClick={() => selectTune("local", tune)}
                   >
-                    <span className="flex-1">{getTuneTitle(tune, "local")}</span>
+                    <span className="flex-1">{tune}</span>
                     {selectedTune === tune && selectedSource === "local" && (
                       <Check className="h-4 w-4 ml-2" />
                     )}
