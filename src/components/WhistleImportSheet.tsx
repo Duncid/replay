@@ -1,13 +1,24 @@
+import { SheetMusic } from "@/components/SheetMusic";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { usePianoAudio } from "@/hooks/usePianoAudio";
+import { NoteSequence } from "@/types/noteSequence";
+import {
+  createEmptyNoteSequence,
+  midiToFrequency,
+  midiToSolfege,
+  pitchToAbcNote,
+} from "@/utils/noteSequenceUtils";
+import { AlertCircle, Mic, Play, Square, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Card, CardContent } from "@/components/ui/card";
-import { SheetMusic } from "@/components/SheetMusic";
-import { NoteSequence } from "@/types/noteSequence";
-import { createEmptyNoteSequence, midiToFrequency, midiToSolfege, pitchToAbcNote } from "@/utils/noteSequenceUtils";
-import { AlertCircle, AudioLines, Mic, Play, RefreshCw, Square, X } from "lucide-react";
-import { usePianoAudio } from "@/hooks/usePianoAudio";
 
 interface WhistleImportSheetProps {
   open: boolean;
@@ -42,7 +53,10 @@ function formatNoteWithSolfegeAndAbc(pitch: number, language: string): string {
   return `${solfege} (${abc})`;
 }
 
-function detectPitch(buffer: Float32Array, sampleRate: number): PitchDetectionResult {
+function detectPitch(
+  buffer: Float32Array,
+  sampleRate: number,
+): PitchDetectionResult {
   let size = buffer.length;
   let rms = 0;
   for (let i = 0; i < size; i++) {
@@ -97,7 +111,7 @@ function detectPitch(buffer: Float32Array, sampleRate: number): PitchDetectionRe
   const denominator = 2 * (2 * correlations[maxIndex] - prev - next);
   const offset = denominator === 0 ? 0 : delta / denominator;
 
-  const period = (maxIndex + offset) || maxIndex;
+  const period = maxIndex + offset || maxIndex;
   const frequency = sampleRate / period;
   const confidence = maxValue / correlations[0];
 
@@ -115,7 +129,7 @@ function drawWaveform(canvas: HTMLCanvasElement, buffer: Float32Array) {
   // Get the actual display size
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  
+
   // Set internal canvas size accounting for device pixel ratio
   const displayWidth = rect.width;
   const displayHeight = rect.height;
@@ -175,7 +189,7 @@ export function WhistleImportSheet({
   const [livePitch, setLivePitch] = useState<number | null>(null);
   const [liveRms, setLiveRms] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+
   // Audio engine for playback (only create when sheet is open)
   const audio = usePianoAudio(open ? "classic" : null);
   const { ensureAudioReady, playNote } = audio;
@@ -202,7 +216,7 @@ export function WhistleImportSheet({
   const sequence = useMemo(() => {
     const seq = createEmptyNoteSequence(bpm, timeSignature);
     seq.notes = notes;
-    seq.totalTime = notes.length ? Math.max(...notes.map(n => n.endTime)) : 0;
+    seq.totalTime = notes.length ? Math.max(...notes.map((n) => n.endTime)) : 0;
     return seq;
   }, [notes, bpm, timeSignature]);
 
@@ -216,7 +230,7 @@ export function WhistleImportSheet({
       analyserRef.current = null;
     }
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
     if (audioContextRef.current) {
@@ -235,7 +249,7 @@ export function WhistleImportSheet({
     const currentNote = currentNoteRef.current;
     const duration = endTime - currentNote.startTime;
     if (duration >= MIN_DURATION) {
-      setNotes(prev => [
+      setNotes((prev) => [
         ...prev,
         {
           pitch: Math.round(currentNote.pitch),
@@ -249,7 +263,12 @@ export function WhistleImportSheet({
   }, []);
 
   const processAudio = useCallback(() => {
-    if (!isRecordingRef.current || !analyserRef.current || !audioContextRef.current) return;
+    if (
+      !isRecordingRef.current ||
+      !analyserRef.current ||
+      !audioContextRef.current
+    )
+      return;
 
     // Ensure AudioContext is running
     if (audioContextRef.current.state !== "running") {
@@ -263,16 +282,26 @@ export function WhistleImportSheet({
     analyser.getFloatTimeDomainData(buffer);
 
     // Debug logging (temporary)
-    const bufferRms = Math.sqrt(buffer.reduce((sum, val) => sum + val * val, 0) / buffer.length);
+    const bufferRms = Math.sqrt(
+      buffer.reduce((sum, val) => sum + val * val, 0) / buffer.length,
+    );
     if (bufferRms > 0.001) {
-      console.debug("Audio buffer RMS:", bufferRms.toFixed(4), "Max:", Math.max(...Array.from(buffer.map(Math.abs))).toFixed(4));
+      console.debug(
+        "Audio buffer RMS:",
+        bufferRms.toFixed(4),
+        "Max:",
+        Math.max(...Array.from(buffer.map(Math.abs))).toFixed(4),
+      );
     }
 
     if (waveformCanvasRef.current) {
       drawWaveform(waveformCanvasRef.current, buffer);
     }
 
-    const { frequency, confidence, rms } = detectPitch(buffer, audioContextRef.current.sampleRate);
+    const { frequency, confidence, rms } = detectPitch(
+      buffer,
+      audioContextRef.current.sampleRate,
+    );
     const now = audioContextRef.current.currentTime - recordingStartRef.current;
 
     const isVoiced =
@@ -305,7 +334,10 @@ export function WhistleImportSheet({
           };
         }
       } else {
-        if (Math.abs(pitch - currentNoteRef.current.pitch) >= 1 && voicedStreakRef.current >= STABILITY_FRAMES) {
+        if (
+          Math.abs(pitch - currentNoteRef.current.pitch) >= 1 &&
+          voicedStreakRef.current >= STABILITY_FRAMES
+        ) {
           finalizeCurrentNote(now);
           currentNoteRef.current = {
             pitch,
@@ -315,7 +347,8 @@ export function WhistleImportSheet({
           };
         } else {
           currentNoteRef.current.lastTime = now;
-          currentNoteRef.current.velocity = (currentNoteRef.current.velocity + velocity) / 2;
+          currentNoteRef.current.velocity =
+            (currentNoteRef.current.velocity + velocity) / 2;
         }
       }
     } else {
@@ -328,7 +361,10 @@ export function WhistleImportSheet({
         lastLiveUpdateRef.current = nowMillis;
       }
 
-      if (currentNoteRef.current && unvoicedStreakRef.current >= RELEASE_FRAMES) {
+      if (
+        currentNoteRef.current &&
+        unvoicedStreakRef.current >= RELEASE_FRAMES
+      ) {
         finalizeCurrentNote(now);
       }
     }
@@ -341,25 +377,31 @@ export function WhistleImportSheet({
       setError(null);
       setPermissionDenied(false);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log("Microphone stream obtained:", stream.getAudioTracks().length, "audio track(s)");
-      
+      console.log(
+        "Microphone stream obtained:",
+        stream.getAudioTracks().length,
+        "audio track(s)",
+      );
+
       const audioContext = new AudioContext();
       console.log("AudioContext created, state:", audioContext.state);
-      
+
       // Ensure AudioContext is running (resume if suspended)
       if (audioContext.state === "suspended") {
         await audioContext.resume();
         console.log("AudioContext resumed, new state:", audioContext.state);
       }
-      
+
       // Wait a bit to ensure AudioContext is fully ready
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       // Verify AudioContext is running
       if (audioContext.state !== "running") {
-        throw new Error(`AudioContext failed to start. State: ${audioContext.state}`);
+        throw new Error(
+          `AudioContext failed to start. State: ${audioContext.state}`,
+        );
       }
-      
+
       const source = audioContext.createMediaStreamSource(stream);
       console.log("MediaStreamSource created");
 
@@ -376,7 +418,9 @@ export function WhistleImportSheet({
       analyser.smoothingTimeConstant = 0;
 
       source.connect(highpass).connect(lowpass).connect(analyser);
-      console.log("Audio graph connected: source -> highpass -> lowpass -> analyser");
+      console.log(
+        "Audio graph connected: source -> highpass -> lowpass -> analyser",
+      );
 
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
@@ -387,10 +431,15 @@ export function WhistleImportSheet({
       setLiveRms(0);
       isRecordingRef.current = true;
       setIsRecording(true);
-      
+
       // Start processing after a brief delay to ensure everything is ready
       setTimeout(() => {
-        if (isRecordingRef.current && analyserRef.current && audioContextRef.current && audioContextRef.current.state === "running") {
+        if (
+          isRecordingRef.current &&
+          analyserRef.current &&
+          audioContextRef.current &&
+          audioContextRef.current.state === "running"
+        ) {
           rafRef.current = requestAnimationFrame(processAudio);
         }
       }, 100);
@@ -400,18 +449,24 @@ export function WhistleImportSheet({
         setPermissionDenied(true);
         setError(t("whistleImport.errors.permissionDenied"));
       } else {
-        const errorMessage = err instanceof Error ? err.message : t("whistleImport.errors.unknown");
-        setError(t("whistleImport.errors.accessFailed", { error: errorMessage }));
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : t("whistleImport.errors.unknown");
+        setError(
+          t("whistleImport.errors.accessFailed", { error: errorMessage }),
+        );
       }
       cleanupAudio();
     }
-      }, [cleanupAudio, processAudio, t]);
+  }, [cleanupAudio, processAudio, t]);
 
   const stopRecording = useCallback(() => {
     isRecordingRef.current = false;
     setIsRecording(false);
     if (audioContextRef.current) {
-      const now = audioContextRef.current.currentTime - recordingStartRef.current;
+      const now =
+        audioContextRef.current.currentTime - recordingStartRef.current;
       finalizeCurrentNote(now);
     }
     cleanupAudio();
@@ -446,7 +501,9 @@ export function WhistleImportSheet({
     setIsPlaying(true);
     playbackRef.current = { cancelled: false };
 
-    const sortedNotes = [...sequence.notes].sort((a, b) => a.startTime - b.startTime);
+    const sortedNotes = [...sequence.notes].sort(
+      (a, b) => a.startTime - b.startTime,
+    );
     const startTime = performance.now();
 
     for (const note of sortedNotes) {
@@ -515,7 +572,9 @@ export function WhistleImportSheet({
 
   const hasRecording = notes.length > 0;
   const liveNoteLabel =
-    livePitch !== null ? formatNoteWithSolfegeAndAbc(Math.round(livePitch), i18n.language) : "";
+    livePitch !== null
+      ? formatNoteWithSolfegeAndAbc(Math.round(livePitch), i18n.language)
+      : "";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -536,66 +595,83 @@ export function WhistleImportSheet({
               </CardContent>
             </Card>
           )}
-            <div className="flex flex-col h-full items-center w-full justify-center gap-6">
-              {permissionDenied && (
-                <p className="text-xs text-muted-foreground">
-                  {t("whistleImport.permissionTip")}
-                </p>
-              )}
+          <div className="flex flex-col h-full items-center w-full justify-center gap-6">
+            {permissionDenied && (
+              <p className="text-xs text-muted-foreground">
+                {t("whistleImport.permissionTip")}
+              </p>
+            )}
 
-              <div id="noteIndicator" className="relative flex items-center justify-center w-32 h-32 rounded-full bg-muted/20">
-                <span className="text-2xl font-semibold text-foreground z-10">{liveNoteLabel}</span>
-                {/* Ring that varies with RMS level */}
-                <div
-                  className="absolute inset-0 rounded-full border-2 border-accent transition-all duration-75"
-                  style={{
-                    borderWidth: `${2 + Math.min(1, liveRms * 12) * 6}px`,
-                    opacity: Math.min(1, liveRms * 12),
-                  }}
-                />
-              </div>
-              <Button
-                onClick={isRecording ? stopRecording : startRecording}
-                className="gap-2"
-                variant={isRecording ? "destructive" : "default"}
-              >
-                {isRecording ? <Square className="h-4 w-4" fill="currentColor" /> : <Mic className="h-4 w-4" />}
-                {isRecording ? t("whistleImport.buttons.stop") : t("whistleImport.buttons.rec")}
-              </Button>
-              <canvas ref={waveformCanvasRef} className="w-full h-24" />
+            <div
+              id="noteIndicator"
+              className="relative flex items-center justify-center w-32 h-32 rounded-full bg-muted/20"
+            >
+              <span className="text-2xl font-semibold text-foreground z-10">
+                {liveNoteLabel}
+              </span>
+              {/* Ring that varies with RMS level */}
+              <div
+                className="absolute inset-0 rounded-full border-2 border-accent transition-all duration-75"
+                style={{
+                  borderWidth: `${2 + Math.min(1, liveRms * 12) * 6}px`,
+                  opacity: Math.min(1, liveRms * 12),
+                }}
+              />
             </div>
+            <Button
+              onClick={isRecording ? stopRecording : startRecording}
+              className="gap-2"
+              variant={isRecording ? "destructive" : "default"}
+            >
+              {isRecording ? (
+                <Square className="h-4 w-4" fill="currentColor" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+              {isRecording
+                ? t("whistleImport.buttons.stop")
+                : t("whistleImport.buttons.rec")}
+            </Button>
+            <canvas ref={waveformCanvasRef} className="w-full h-24" />
+          </div>
 
-            <div className="space-y-2 flex-shrink-0 min-h-36">
+          <div className="space-y-2 flex-shrink-0 min-h-36">
             {hasRecording && (
-                <>
+              <>
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-medium">{t("whistleImport.detectedNotes")}</div>
+                  <div className="text-sm font-medium">
+                    {t("whistleImport.detectedNotes")}
+                  </div>
                   <div className="flex items-center justify-between gap-2">
-                  {isPlaying ? (
+                    {isPlaying ? (
+                      <Button variant="outline" onClick={handleStop}>
+                        <Square fill="currentColor" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={handlePlay}
+                        disabled={!hasRecording || sequence.notes.length === 0}
+                      >
+                        <Play fill="currentColor" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
-                      onClick={handleStop}
+                      onClick={handleClear}
+                      disabled={!hasRecording && !isRecording}
+                      className="gap-2"
                     >
-                      <Square className="w-4 h-4" fill="currentColor" />
+                      <X className="h-4 w-4" />
                     </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={handlePlay}
-                      disabled={!hasRecording || sequence.notes.length === 0}
-                    >
-                      <Play className="w-4 h-4" fill="currentColor" />
-                    </Button>
-                  )}
-                  <Button variant="outline" onClick={handleClear} disabled={!hasRecording && !isRecording} className="gap-2">
-                    <X className="h-4 w-4" />
-                  </Button></div>
+                  </div>
                 </div>
                 <div className="overflow-x-auto flex-1">
                   <SheetMusic sequence={sequence} compact noControls noTitle />
-                </div></>
+                </div>
+              </>
             )}
-            </div>
+          </div>
         </div>
 
         <SheetFooter className="gap-2 flex-shrink-0">

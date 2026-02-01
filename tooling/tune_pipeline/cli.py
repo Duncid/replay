@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import copy
+import shutil
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -13,6 +15,7 @@ from tune_pipeline.nuggets_extract import extract_nuggets, extract_assemblies
 from tune_pipeline.validate_teacher import validate_teacher
 from tune_pipeline.xml_split_hands import HandSplitResult, split_by_staff
 from tune_pipeline.xml_simplify import simplify_part_for_dsp2
+from tune_pipeline.nuggets_extract import _apply_clef_heuristic_to_xml
 from tune_pipeline.xml_to_midi import write_midi
 
 
@@ -55,6 +58,33 @@ def _get_piano_parts(score: stream.Score) -> list[stream.Part]:
             piano_parts.append(part)
             continue
     return piano_parts
+
+
+def _build_piano_score(
+    source_score: stream.Score, piano_parts: list[stream.Part]
+) -> stream.Score:
+    piano_score = stream.Score()
+    if source_score.metadata:
+        piano_score.metadata = copy.deepcopy(source_score.metadata)
+    for part in piano_parts:
+        piano_score.insert(0, copy.deepcopy(part))
+    return piano_score
+
+
+def _strip_lyrics(score: stream.Score) -> None:
+    for element in score.recurse().notes:
+        element.lyrics = []
+        element.lyric = None
+
+
+def _strip_lyrics_from_xml(path: Path) -> None:
+    tree = ET.parse(path)
+    root = tree.getroot()
+    for parent in root.iter():
+        for child in list(parent):
+            if child.tag.endswith("lyric"):
+                parent.remove(child)
+    tree.write(path, encoding="utf-8", xml_declaration=True)
 
 
 def _combine_parts(parts: list[stream.Part]) -> stream.Part:
@@ -241,7 +271,6 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     # 2. Output Setup - clean and recreate
     output_dir = tune_folder / "output"
     if output_dir.exists():
-        import shutil
         shutil.rmtree(output_dir)
     output_dir.mkdir(exist_ok=True)
     
@@ -267,6 +296,13 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         if not raw_piano_parts:
             # Fallback to first part if no piano detected
             raw_piano_parts = [score.parts[0]]
+
+        # Persist a simplified tune.xml containing only piano parts
+        piano_score = _build_piano_score(score, raw_piano_parts)
+        _strip_lyrics(piano_score)
+        tune_xml_out = output_dir / "tune.xml"
+        _write_musicxml(piano_score, tune_xml_out)
+        _strip_lyrics_from_xml(tune_xml_out)
 
         # Combined Part (Always needed for 'full')
         combined_part = _combine_parts(raw_piano_parts)
@@ -314,10 +350,9 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
                 chord_cap=chord_cap,
                 chord_keep=chord_keep,
             )
-            _write_musicxml(
-                dsp2_part,
-                output_dir / f"tune.dsp{suffix}.xml",
-            )
+            dsp_path = output_dir / f"tune.dsp{suffix}.xml"
+            _write_musicxml(dsp2_part, dsp_path)
+            _apply_clef_heuristic_to_xml(dsp_path)
 
     elif tune_ns_candidates:
         # --- NS PATH ---
@@ -370,7 +405,9 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
             chord_cap=chord_cap,
             chord_keep="highest",
         )
-        _write_musicxml(dsp2_part, output_dir / "tune.dsp.xml")
+        dsp_path = output_dir / "tune.dsp.xml"
+        _write_musicxml(dsp2_part, dsp_path)
+        _apply_clef_heuristic_to_xml(dsp_path)
         
     else:
          raise PipelineError(f"Missing input file: expected tune.xml or *.ns.json in {tune_folder}")

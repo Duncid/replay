@@ -1,15 +1,15 @@
-import { useState, useMemo } from 'react';
 import {
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { FolderOpen, Search } from 'lucide-react';
-import { Composition } from '@/hooks/useCompositions';
-import { format } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Composition } from "@/hooks/useCompositions";
+import { format } from "date-fns";
+import { FolderOpen, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 
 interface CompositionSubmenuProps {
   compositions: Composition[];
@@ -22,20 +22,20 @@ export function CompositionSubmenu({
   onSelect,
   isLoading = false,
 }: CompositionSubmenuProps) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const filteredCompositions = useMemo(() => {
     if (!search.trim()) return compositions;
     const lowerSearch = search.toLowerCase();
-    return compositions.filter(c => 
-      c.title.toLowerCase().includes(lowerSearch)
+    return compositions.filter((c) =>
+      c.title.toLowerCase().includes(lowerSearch),
     );
   }, [compositions, search]);
 
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger disabled={isLoading}>
-        <FolderOpen className="h-4 w-4 mr-2" />
+        <FolderOpen />
         Open
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-72">
@@ -55,7 +55,9 @@ export function CompositionSubmenu({
         <ScrollArea className="h-[200px]">
           {filteredCompositions.length === 0 ? (
             <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-              {compositions.length === 0 ? 'No saved compositions' : 'No matches found'}
+              {compositions.length === 0
+                ? "No saved compositions"
+                : "No matches found"}
             </div>
           ) : (
             filteredCompositions.map((composition) => (
@@ -64,9 +66,14 @@ export function CompositionSubmenu({
                 onClick={() => onSelect(composition)}
                 className="flex flex-col items-start gap-1 cursor-pointer"
               >
-                <span className="font-medium truncate w-full">{composition.title}</span>
+                <span className="font-medium truncate w-full">
+                  {composition.title}
+                </span>
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(composition.updated_at), 'MMM d, yyyy h:mm a')}
+                  {format(
+                    new Date(composition.updated_at),
+                    "MMM d, yyyy h:mm a",
+                  )}
                 </span>
               </DropdownMenuItem>
             ))

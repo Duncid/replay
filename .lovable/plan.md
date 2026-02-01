@@ -1,10 +1,9 @@
-
-
 # Plan: Simplify Tune Selector UI
 
 ## Overview
 
 Restructure the tune selector to be cleaner and more intuitive:
+
 1. **Tune Selector Dropdown** - Lists tunes under "Published" and "Un-Published" sub-triggers with filter search
 2. **Target Selector Dropdown** - Separate dropdown for Full / Nuggets / Assemblies (with item sub-selection)
 3. **Action Button** - Context-sensitive action to the right of the tune selector:
@@ -31,6 +30,7 @@ Restructure the tune selector to be cleaner and more intuitive:
 ```
 
 **Problems:**
+
 - Too many nested levels (up to 4 deep)
 - Edit actions buried inside tune submenu
 - No search/filter capability
@@ -47,6 +47,7 @@ Restructure the tune selector to be cleaner and more intuitive:
 ```
 
 ### Tune Selector Dropdown:
+
 ```text
 [Tune Selector ▾]
   ├─ ☁️ Published
@@ -55,7 +56,7 @@ Restructure the tune selector to be cleaner and more intuitive:
   │     tune-name-2
   │     ...
   │
-  ├─ 📁 Un-Published  
+  ├─ 📁 Un-Published
   │     [🔍 Filter...]
   │     local-tune-1
   │     local-tune-2
@@ -63,6 +64,7 @@ Restructure the tune selector to be cleaner and more intuitive:
 ```
 
 ### Target Selector Dropdown:
+
 ```text
 [Full ▾]
   ├─ Full  ✓
@@ -73,6 +75,7 @@ Restructure the tune selector to be cleaner and more intuitive:
 ```
 
 ### Action Button (Context-Sensitive):
+
 - **Published tune selected:** Shows "Edit" dropdown with Rename/Delete
 - **Unpublished tune selected:** Shows "Publish" button
 
@@ -91,17 +94,15 @@ const [unpublishedFilter, setUnpublishedFilter] = useState("");
 const filteredPublishedKeys = useMemo(() => {
   if (!publishedFilter.trim()) return Array.from(publishedTuneKeys);
   const lower = publishedFilter.toLowerCase();
-  return Array.from(publishedTuneKeys).filter(key => 
-    key.toLowerCase().includes(lower)
+  return Array.from(publishedTuneKeys).filter((key) =>
+    key.toLowerCase().includes(lower),
   );
 }, [publishedTuneKeys, publishedFilter]);
 
 const filteredUnpublishedKeys = useMemo(() => {
   if (!unpublishedFilter.trim()) return unpublishedTuneKeys;
   const lower = unpublishedFilter.toLowerCase();
-  return unpublishedTuneKeys.filter(key => 
-    key.toLowerCase().includes(lower)
-  );
+  return unpublishedTuneKeys.filter((key) => key.toLowerCase().includes(lower));
 }, [unpublishedTuneKeys, unpublishedFilter]);
 ```
 
@@ -113,13 +114,14 @@ Replace the current deeply nested dropdown with a flatter structure:
 <DropdownMenu>
   <DropdownMenuTrigger asChild>
     <Button variant="outline" size="sm">
-      {selectedSource === "published" ? "☁️" : "📁"} {selectedTune || "Select tune..."}
+      {selectedSource === "published" ? "☁️" : "📁"}{" "}
+      {selectedTune || "Select tune..."}
     </Button>
   </DropdownMenuTrigger>
   <DropdownMenuContent align="start" className="w-64 bg-popover">
     {/* Published Section */}
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger>☁️ Published</DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger>Published</DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="bg-popover w-56">
         {/* Filter Input */}
         <div className="px-2 py-1.5">
@@ -154,7 +156,7 @@ Replace the current deeply nested dropdown with a flatter structure:
 
     {/* Un-Published Section */}
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger>📁 Un-Published</DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger>Un-Published</DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="bg-popover w-56">
         {/* Filter Input */}
         <div className="px-2 py-1.5">
@@ -198,47 +200,62 @@ A second dropdown for selecting Full / Nuggets / Assemblies:
 <DropdownMenu>
   <DropdownMenuTrigger asChild>
     <Button variant="outline" size="sm" disabled={!selectedTune}>
-      {selectedTarget === "full" 
-        ? "Full" 
-        : selectedItemId 
-          ? `${selectedTarget} / ${selectedItemId}`
-          : selectedTarget}
+      {selectedTarget === "full"
+        ? "Full"
+        : selectedItemId
+        ? `${selectedTarget} / ${selectedItemId}`
+        : selectedTarget}
     </Button>
   </DropdownMenuTrigger>
   <DropdownMenuContent align="start" className="bg-popover">
-    <DropdownMenuItem 
-      onClick={() => { setSelectedTarget("full"); setSelectedItemId(""); }}
+    <DropdownMenuItem
+      onClick={() => {
+        setSelectedTarget("full");
+        setSelectedItemId("");
+      }}
     >
       Full {selectedTarget === "full" && "✓"}
     </DropdownMenuItem>
-    
+
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="bg-popover">
-        {nuggetIds.length ? nuggetIds.map((id) => (
-          <DropdownMenuItem
-            key={id}
-            onClick={() => { setSelectedTarget("nuggets"); setSelectedItemId(id); }}
-          >
-            {id} {selectedTarget === "nuggets" && selectedItemId === id && "✓"}
-          </DropdownMenuItem>
-        )) : (
+        {nuggetIds.length ? (
+          nuggetIds.map((id) => (
+            <DropdownMenuItem
+              key={id}
+              onClick={() => {
+                setSelectedTarget("nuggets");
+                setSelectedItemId(id);
+              }}
+            >
+              {id}{" "}
+              {selectedTarget === "nuggets" && selectedItemId === id && "✓"}
+            </DropdownMenuItem>
+          ))
+        ) : (
           <DropdownMenuItem disabled>No nuggets</DropdownMenuItem>
         )}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
-    
+
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="bg-popover">
-        {assemblyIds.length ? assemblyIds.map((id) => (
-          <DropdownMenuItem
-            key={id}
-            onClick={() => { setSelectedTarget("assemblies"); setSelectedItemId(id); }}
-          >
-            {id} {selectedTarget === "assemblies" && selectedItemId === id && "✓"}
-          </DropdownMenuItem>
-        )) : (
+        {assemblyIds.length ? (
+          assemblyIds.map((id) => (
+            <DropdownMenuItem
+              key={id}
+              onClick={() => {
+                setSelectedTarget("assemblies");
+                setSelectedItemId(id);
+              }}
+            >
+              {id}{" "}
+              {selectedTarget === "assemblies" && selectedItemId === id && "✓"}
+            </DropdownMenuItem>
+          ))
+        ) : (
           <DropdownMenuItem disabled>No assemblies</DropdownMenuItem>
         )}
       </DropdownMenuSubContent>
@@ -250,43 +267,46 @@ A second dropdown for selecting Full / Nuggets / Assemblies:
 ### Step 4: Context-Sensitive Action Button
 
 ```tsx
-{/* Action Button - changes based on source */}
-{selectedTune && (
-  selectedSource === "published" ? (
-    // Edit Dropdown for Published
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Pencil className="h-4 w-4 mr-1" />
-          Edit
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-popover">
-        <DropdownMenuItem onClick={() => openRenameDialog(selectedTune)}>
-          <Pencil className="h-4 w-4 mr-2" />
-          Rename
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => openDeleteDialog(selectedTune)}
-          className="text-destructive"
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  ) : (
-    // Publish Button for Unpublished
-    <Button
-      variant="default"
-      size="sm"
-      onClick={() => setShowPublishDialog(true)}
-    >
-      <Upload className="h-4 w-4 mr-1" />
-      Publish
-    </Button>
-  )
-)}
+{
+  /* Action Button - changes based on source */
+}
+{
+  selectedTune &&
+    (selectedSource === "published" ? (
+      // Edit Dropdown for Published
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Pencil />
+            Edit
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="bg-popover">
+          <DropdownMenuItem onClick={() => openRenameDialog(selectedTune)}>
+            <Pencil />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => openDeleteDialog(selectedTune)}
+            className="text-destructive"
+          >
+            <Trash2 />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      // Publish Button for Unpublished
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => setShowPublishDialog(true)}
+      >
+        <Upload className="h-4 w-4 mr-1" />
+        Publish
+      </Button>
+    ));
+}
 ```
 
 ---
@@ -318,15 +338,16 @@ A second dropdown for selecting Full / Nuggets / Assemblies:
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/modes/LabMode.tsx` | Replace nested dropdown with flat structure, add filter state, create separate target selector, add context-sensitive action button |
+| File                                      | Changes                                                                                                                             |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `src/components/modes/TuneManagement.tsx` | Replace nested dropdown with flat structure, add filter state, create separate target selector, add context-sensitive action button |
 
 ---
 
 ## Visual Summary
 
 **Before (Current):**
+
 ```text
 [Play] [Publish] [☁️ tune / assemblies / id ▾]
                        └─ Published ► tune ► Full/Nuggets/Assemblies/Rename/Delete
@@ -334,6 +355,7 @@ A second dropdown for selecting Full / Nuggets / Assemblies:
 ```
 
 **After (New):**
+
 ```text
 [Play]                 [☁️ tune ▾]  [Assemblies / id ▾]  [Edit ▾]
                              │              │                │
@@ -342,4 +364,3 @@ A second dropdown for selecting Full / Nuggets / Assemblies:
 ```
 
 This simplifies navigation from 4 levels deep to 2 levels maximum, adds searchability, and puts actions in a consistent location.
-

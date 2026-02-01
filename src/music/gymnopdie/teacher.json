@@ -1,804 +1,445 @@
 {
-    "schemaVersion": "teacher.v2",
-    "title": "Gymnopédie No. 1",
-    "pipelineSettings": {
-        "staffToHandDefault": {
-            "1": "RH",
-            "2": "LH"
-        },
-        "handSplitPolicy": {
-            "mode": "byStaff"
-        }
+  "schemaVersion": "teacher.v2",
+  "title": "Gymnopédie No. 1 (excerpt as provided, mm. 1–71)",
+  "pipelineSettings": {
+    "staffToHandDefault": { "1": "RH", "2": "LH" },
+    "handSplitPolicy": { "mode": "byStaff" }
+  },
+  "motifs": [
+    {
+      "id": "M1",
+      "label": "LH pedal + offbeat chord",
+      "importance": 0.95,
+      "description": "Dotted-half bass pedal under a sustained chord that enters after beat 1 (classic Gymnopédie accompaniment feel)."
     },
-    "motifs": [
-        {
-            "id": "M1",
-            "label": "Bass pedal + delayed chord",
-            "importance": 0.95,
-            "description": "LH holds a long bass (often dotted-half) while the upper chord enters after beat 1 (rest then half), creating the signature floating pulse."
-        },
-        {
-            "id": "M2",
-            "label": "3-note slur gesture",
-            "importance": 0.75,
-            "description": "RH lyrical 3-note phrase cells (often stepwise/third-based) that shape the main melody; aim for one-breath legato."
-        },
-        {
-            "id": "M3",
-            "label": "Sustained tone over changing harmony",
-            "importance": 0.7,
-            "description": "RH (or inner voice) holds a tied note across measures while harmony shifts underneath; requires steady tone and pedal control."
-        },
-        {
-            "id": "M4",
-            "label": "Color tones (C♮/F♮ planing)",
-            "importance": 0.55,
-            "description": "Modal/borrowed-color sonorities (notably C natural and F natural) that appear in the contrasting section and return later."
-        }
-    ],
-    "motifOccurrences": [
-        {
-            "motifId": "M1",
-            "location": {
-                "startMeasure": 1,
-                "startBeat": 1,
-                "endMeasure": 16,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M1",
-            "location": {
-                "startMeasure": 19,
-                "startBeat": 1,
-                "endMeasure": 40,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M1",
-            "location": {
-                "startMeasure": 41,
-                "startBeat": 1,
-                "endMeasure": 78,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M2",
-            "location": {
-                "startMeasure": 5,
-                "startBeat": 1,
-                "endMeasure": 8,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M2",
-            "location": {
-                "startMeasure": 13,
-                "startBeat": 1,
-                "endMeasure": 16,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M2",
-            "location": {
-                "startMeasure": 44,
-                "startBeat": 1,
-                "endMeasure": 47,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M2",
-            "location": {
-                "startMeasure": 52,
-                "startBeat": 1,
-                "endMeasure": 55,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M3",
-            "location": {
-                "startMeasure": 9,
-                "startBeat": 1,
-                "endMeasure": 12,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M3",
-            "location": {
-                "startMeasure": 19,
-                "startBeat": 1,
-                "endMeasure": 21,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M3",
-            "location": {
-                "startMeasure": 48,
-                "startBeat": 1,
-                "endMeasure": 51,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M3",
-            "location": {
-                "startMeasure": 58,
-                "startBeat": 1,
-                "endMeasure": 60,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M4",
-            "location": {
-                "startMeasure": 21,
-                "startBeat": 1,
-                "endMeasure": 32,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M4",
-            "location": {
-                "startMeasure": 61,
-                "startBeat": 1,
-                "endMeasure": 73,
-                "endBeat": 3
-            }
-        },
-        {
-            "motifId": "M4",
-            "location": {
-                "startMeasure": 74,
-                "startBeat": 1,
-                "endMeasure": 78,
-                "endBeat": 3
-            }
-        }
-    ],
-    "nuggets": [
-        {
-            "id": "N1",
-            "label": "Intro pulse (no RH)",
-            "location": {
-                "startMeasure": 1,
-                "startBeat": 1,
-                "endMeasure": 4,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1"
-            ],
-            "modes": [
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N2",
-            "label": "Melody enters (slur cells)",
-            "location": {
-                "startMeasure": 5,
-                "startBeat": 1,
-                "endMeasure": 8,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M2"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N3",
-            "label": "Held F# over harmony",
-            "location": {
-                "startMeasure": 9,
-                "startBeat": 1,
-                "endMeasure": 12,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M3"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N4",
-            "label": "Repeat/answer phrase",
-            "location": {
-                "startMeasure": 13,
-                "startBeat": 1,
-                "endMeasure": 16,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M2"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N5",
-            "label": "Bass shift + long tones",
-            "location": {
-                "startMeasure": 17,
-                "startBeat": 1,
-                "endMeasure": 18,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N6",
-            "label": "E pedal (tie) with color",
-            "location": {
-                "startMeasure": 19,
-                "startBeat": 1,
-                "endMeasure": 21,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M3",
-                "M4"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N7",
-            "label": "Ascending A–B–C♮ then descent",
-            "location": {
-                "startMeasure": 22,
-                "startBeat": 1,
-                "endMeasure": 24,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M4"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N8",
-            "label": "D tie → stepwise lift (D–E–F♮–G)",
-            "location": {
-                "startMeasure": 25,
-                "startBeat": 1,
-                "endMeasure": 28,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M4"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N9",
-            "label": "Answer + D tie return",
-            "location": {
-                "startMeasure": 29,
-                "startBeat": 1,
-                "endMeasure": 32,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M4"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N10",
-            "label": "F# long → B–A–B / C#–D–E",
-            "location": {
-                "startMeasure": 33,
-                "startBeat": 1,
-                "endMeasure": 36,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N11",
-            "label": "Thicker texture → cadence chords",
-            "location": {
-                "startMeasure": 37,
-                "startBeat": 1,
-                "endMeasure": 39,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M3",
-                "M4"
-            ],
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N12",
-            "label": "Return intro pulse (no RH)",
-            "location": {
-                "startMeasure": 40,
-                "startBeat": 1,
-                "endMeasure": 43,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1"
-            ],
-            "modes": [
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N13",
-            "label": "Melody returns (like earlier)",
-            "location": {
-                "startMeasure": 44,
-                "startBeat": 1,
-                "endMeasure": 47,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M2"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N14",
-            "label": "Held F# returns (tie)",
-            "location": {
-                "startMeasure": 48,
-                "startBeat": 1,
-                "endMeasure": 51,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M3"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N15",
-            "label": "Phrase reprise into C# long tone",
-            "location": {
-                "startMeasure": 52,
-                "startBeat": 1,
-                "endMeasure": 56,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M2"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N16",
-            "label": "F# long → E tie again",
-            "location": {
-                "startMeasure": 57,
-                "startBeat": 1,
-                "endMeasure": 60,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M3"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N17",
-            "label": "A–B–C♮ sequence (return of color)",
-            "location": {
-                "startMeasure": 61,
-                "startBeat": 1,
-                "endMeasure": 64,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M4"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N18",
-            "label": "D release → D–E–F♮–G / A",
-            "location": {
-                "startMeasure": 65,
-                "startBeat": 1,
-                "endMeasure": 68,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M4"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N19",
-            "label": "D tie → G long → F♮ long → setup",
-            "location": {
-                "startMeasure": 69,
-                "startBeat": 1,
-                "endMeasure": 73,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M4"
-            ],
-            "modes": [
-                "RH",
-                "LH",
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "N20",
-            "label": "Final cadence + ritard",
-            "location": {
-                "startMeasure": 74,
-                "startBeat": 1,
-                "endMeasure": 78,
-                "endBeat": 3
-            },
-            "dependsOn": [
-                "M1",
-                "M4"
-            ],
-            "modes": [
-                "HandsTogether"
-            ]
-        }
-    ],
-    "assemblies": [
-        {
-            "id": "A1",
-            "tier": 1,
-            "label": "Intro → first melody",
-            "nuggetIds": [
-                "N1",
-                "N2"
-            ],
-            "difficulty": {
-                "level": 2
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "A2",
-            "tier": 1,
-            "label": "Melody → held-tone blend",
-            "nuggetIds": [
-                "N2",
-                "N3"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "A3",
-            "tier": 1,
-            "label": "Held-tone → answer phrase",
-            "nuggetIds": [
-                "N3",
-                "N4"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "A4",
-            "tier": 1,
-            "label": "E pedal → color ascent",
-            "nuggetIds": [
-                "N6",
-                "N7"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "A5",
-            "tier": 1,
-            "label": "D tie lift → answer",
-            "nuggetIds": [
-                "N8",
-                "N9"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "A6",
-            "tier": 1,
-            "label": "Final approach → cadence",
-            "nuggetIds": [
-                "N19",
-                "N20"
-            ],
-            "difficulty": {
-                "level": 4
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "B1",
-            "tier": 2,
-            "label": "Main A section (complete statement)",
-            "nuggetIds": [
-                "N1",
-                "N2",
-                "N3",
-                "N4"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "B2",
-            "tier": 2,
-            "label": "Middle section (bass shift → cadence)",
-            "nuggetIds": [
-                "N5",
-                "N6",
-                "N7",
-                "N8",
-                "N9",
-                "N10",
-                "N11"
-            ],
-            "difficulty": {
-                "level": 4
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "B3",
-            "tier": 2,
-            "label": "Return statement (intro + melody + tie)",
-            "nuggetIds": [
-                "N12",
-                "N13",
-                "N14"
-            ],
-            "difficulty": {
-                "level": 3
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "B4",
-            "tier": 2,
-            "label": "Late reprise into color return",
-            "nuggetIds": [
-                "N15",
-                "N16",
-                "N17",
-                "N18"
-            ],
-            "difficulty": {
-                "level": 4
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "C1",
-            "tier": 3,
-            "label": "Build to the big return",
-            "nuggetIds": [
-                "N1",
-                "N2",
-                "N3",
-                "N4",
-                "N5",
-                "N6",
-                "N7",
-                "N8",
-                "N9",
-                "N10",
-                "N11",
-                "N12"
-            ],
-            "difficulty": {
-                "level": 5
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        },
-        {
-            "id": "C2",
-            "tier": 3,
-            "label": "From mid-answer to the end",
-            "nuggetIds": [
-                "N9",
-                "N10",
-                "N11",
-                "N12",
-                "N13",
-                "N14",
-                "N15",
-                "N16",
-                "N17",
-                "N18",
-                "N19",
-                "N20"
-            ],
-            "difficulty": {
-                "level": 5
-            },
-            "modes": [
-                "HandsTogether"
-            ]
-        }
-    ],
-    "tuneHints": {
-        "goal": "Keep the 3/4 pulse weightless: bass is a slow anchor, chords bloom after beat 1, and the melody floats above with long, unbroken legato.",
-        "counting": "Count a calm 1–2–3; place the bass on 1, then let the harmony arrive slightly after 1 (beat 2 feel) without rushing.",
-        "commonMistakes": [
-            "Rushing into beat 2 (the delayed chord) and losing the suspended feel",
-            "Over-accenting melody attacks instead of shaping long lines",
-            "Tied-note sections sagging in tone or going out of balance with LH",
-            "Pedal blurring harmonic changes (especially in color-tone passages)"
-        ],
-        "whatToListenFor": [
-            "Even, slow breathing of the accompaniment (bass + chord)",
-            "Melody as one connected phrase, not separate notes",
-            "Clear harmonic color shifts when C♮/F♮ appear",
-            "A gentle arrival into the final cadence with true diminuendo/ritard"
-        ]
+    {
+      "id": "M2",
+      "label": "RH three-step ascent",
+      "importance": 0.7,
+      "description": "Quarter-note melodic lift (e.g., F#5→A5, or similar 3-note rising cell)."
     },
-    "teachingOrder": [
-        "N1",
-        "N2",
-        "N3",
-        "N4",
-        "N12",
-        "N13",
-        "N14",
-        "N5",
-        "N6",
-        "N7",
-        "N8",
-        "N9",
-        "N10",
-        "N11",
-        "N15",
-        "N16",
-        "N17",
-        "N18",
-        "N19",
-        "N20"
+    {
+      "id": "M3",
+      "label": "RH three-step descent/turn",
+      "importance": 0.65,
+      "description": "Quarter-note gentle fall/turn that resolves into a longer tone (e.g., G5→F#5→C#5 / stepwise easing)."
+    },
+    {
+      "id": "M4",
+      "label": "Tied cantus tone over harmony changes",
+      "importance": 0.8,
+      "description": "A single RH pitch sustained across multiple measures while the LH harmony shifts (requires calm tone control)."
+    },
+    {
+      "id": "M5",
+      "label": "Color-chord mixture (C/F naturals)",
+      "importance": 0.55,
+      "description": "Modal color via accidentals (notably C natural and F natural) that changes the harmonic palette and voicing balance."
+    }
+  ],
+  "motifOccurrences": [
+    {
+      "motifId": "M1",
+      "location": {
+        "startMeasure": 1,
+        "startBeat": 1,
+        "endMeasure": 16,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M1",
+      "location": {
+        "startMeasure": 17,
+        "startBeat": 1,
+        "endMeasure": 39,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M1",
+      "location": {
+        "startMeasure": 40,
+        "startBeat": 1,
+        "endMeasure": 71,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M2",
+      "location": {
+        "startMeasure": 5,
+        "startBeat": 2,
+        "endMeasure": 8,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M2",
+      "location": {
+        "startMeasure": 13,
+        "startBeat": 2,
+        "endMeasure": 16,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M2",
+      "location": {
+        "startMeasure": 44,
+        "startBeat": 2,
+        "endMeasure": 47,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M2",
+      "location": {
+        "startMeasure": 52,
+        "startBeat": 2,
+        "endMeasure": 55,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 9,
+        "startBeat": 1,
+        "endMeasure": 12,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M4",
+      "location": {
+        "startMeasure": 48,
+        "startBeat": 1,
+        "endMeasure": 51,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M5",
+      "location": {
+        "startMeasure": 21,
+        "startBeat": 1,
+        "endMeasure": 32,
+        "endBeat": 3
+      }
+    },
+    {
+      "motifId": "M5",
+      "location": {
+        "startMeasure": 60,
+        "startBeat": 1,
+        "endMeasure": 71,
+        "endBeat": 3
+      }
+    }
+  ],
+  "nuggets": [
+    {
+      "id": "N1",
+      "label": "Intro: accompaniment only",
+      "length": 16,
+      "location": {
+        "startMeasure": 1,
+        "startBeat": 1,
+        "endMeasure": 4,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1"],
+      "modes": ["LH", "HandsTogether"]
+    },
+    {
+      "id": "N2",
+      "label": "First melody entrance",
+      "length": 22,
+      "location": {
+        "startMeasure": 5,
+        "startBeat": 1,
+        "endMeasure": 8,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M2", "M3"],
+      "modes": ["RH", "HandsTogether"]
+    },
+    {
+      "id": "N3",
+      "label": "Sustained tone over shifts (F# tied)",
+      "length": 16,
+      "location": {
+        "startMeasure": 9,
+        "startBeat": 1,
+        "endMeasure": 12,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M4"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N4",
+      "label": "Melody repeat (variant)",
+      "length": 22,
+      "location": {
+        "startMeasure": 13,
+        "startBeat": 1,
+        "endMeasure": 16,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M2", "M3"],
+      "modes": ["RH", "HandsTogether"]
+    },
+    {
+      "id": "N5",
+      "label": "Shifted bass color (F2 / B1 area)",
+      "length": 16,
+      "location": {
+        "startMeasure": 17,
+        "startBeat": 1,
+        "endMeasure": 20,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N6",
+      "label": "Modal-color section begins (C/F naturals)",
+      "length": 24,
+      "location": {
+        "startMeasure": 21,
+        "startBeat": 1,
+        "endMeasure": 24,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M5"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N7",
+      "label": "Build to held D5 (tie)",
+      "length": 18,
+      "location": {
+        "startMeasure": 25,
+        "startBeat": 1,
+        "endMeasure": 28,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M5"],
+      "modes": ["RH", "HandsTogether"]
+    },
+    {
+      "id": "N8",
+      "label": "Echo and settle (diminuendo line)",
+      "length": 16,
+      "location": {
+        "startMeasure": 29,
+        "startBeat": 1,
+        "endMeasure": 32,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M5"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N9",
+      "label": "Return toward E-bass region",
+      "length": 20,
+      "location": {
+        "startMeasure": 33,
+        "startBeat": 1,
+        "endMeasure": 36,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N10",
+      "label": "Cadential weight and full sonorities",
+      "length": 14,
+      "location": {
+        "startMeasure": 37,
+        "startBeat": 1,
+        "endMeasure": 39,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N11",
+      "label": "Reset: accompaniment only",
+      "length": 16,
+      "location": {
+        "startMeasure": 40,
+        "startBeat": 1,
+        "endMeasure": 43,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1"],
+      "modes": ["LH", "HandsTogether"]
+    },
+    {
+      "id": "N12",
+      "label": "Melody re-entry (repeat of early cell)",
+      "length": 22,
+      "location": {
+        "startMeasure": 44,
+        "startBeat": 1,
+        "endMeasure": 47,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M2", "M3"],
+      "modes": ["RH", "HandsTogether"]
+    },
+    {
+      "id": "N13",
+      "label": "Second long tied tone (F# tied again)",
+      "length": 16,
+      "location": {
+        "startMeasure": 48,
+        "startBeat": 1,
+        "endMeasure": 51,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M4"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N14",
+      "label": "Melody repeat leading into diminuendo A4",
+      "length": 22,
+      "location": {
+        "startMeasure": 52,
+        "startBeat": 1,
+        "endMeasure": 55,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M2", "M3"],
+      "modes": ["RH", "HandsTogether"]
+    },
+    {
+      "id": "N15",
+      "label": "E4 held over harmony color (F natural appears)",
+      "length": 18,
+      "location": {
+        "startMeasure": 56,
+        "startBeat": 1,
+        "endMeasure": 60,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M4", "M5"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N16",
+      "label": "Modal-color reprise (A1 bass + C natural)",
+      "length": 20,
+      "location": {
+        "startMeasure": 61,
+        "startBeat": 1,
+        "endMeasure": 64,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M5"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N17",
+      "label": "Build and release (toward G5)",
+      "length": 20,
+      "location": {
+        "startMeasure": 65,
+        "startBeat": 1,
+        "endMeasure": 68,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1", "M5"],
+      "modes": ["HandsTogether"]
+    },
+    {
+      "id": "N18",
+      "label": "Closing gesture (excerpt end)",
+      "length": 12,
+      "location": {
+        "startMeasure": 69,
+        "startBeat": 1,
+        "endMeasure": 71,
+        "endBeat": 3
+      },
+      "dependsOn": ["M1"],
+      "modes": ["HandsTogether"]
+    }
+  ],
+  "assemblies": [
+    { "id": "A1", "tier": 1, "nuggetIds": ["N1", "N2"] },
+    { "id": "A2", "tier": 1, "nuggetIds": ["N2", "N3"] },
+    { "id": "A3", "tier": 1, "nuggetIds": ["N3", "N4"] },
+    { "id": "A4", "tier": 1, "nuggetIds": ["N5", "N6"] },
+    { "id": "A5", "tier": 1, "nuggetIds": ["N6", "N7"] },
+    { "id": "A6", "tier": 1, "nuggetIds": ["N11", "N12"] },
+    { "id": "A7", "tier": 1, "nuggetIds": ["N12", "N13"] },
+    { "id": "A8", "tier": 2, "nuggetIds": ["N1", "N2", "N3", "N4"] },
+    { "id": "A9", "tier": 2, "nuggetIds": ["N5", "N6", "N7", "N8"] },
+    { "id": "A10", "tier": 2, "nuggetIds": ["N11", "N12", "N13", "N14"] },
+    {
+      "id": "A11",
+      "tier": 3,
+      "nuggetIds": ["N1", "N2", "N3", "N4", "N5", "N6"]
+    }
+  ],
+  "tuneHints": {
+    "goal": "Keep the piece weightless and even: a stable, slow 3/4 pulse; the LH is a soft 'breathing platform' and the RH is an unforced, singing line. Prioritize tone and balance over volume.",
+    "counting": "Count 1–2–3 steadily; aim for the chord to feel like it 'arrives after 1' without rushing. Let the harmony float through beats 2–3.",
+    "commonMistakes": [
+      "Making the LH too loud (especially the chord) so the melody disappears",
+      "Rushing the offbeat chord entry (turning it into a march)",
+      "Over-pedaling so harmonies blur into each other (especially in the color-chord sections)",
+      "Uneven RH quarter-notes that sound like accents rather than a calm line",
+      "Letting tied tones sag in pitch/energy instead of sustaining a focused pianissimo"
     ],
-    "assemblyOrder": [
-        "A1",
-        "A2",
-        "A3",
-        "B1",
-        "A4",
-        "A5",
-        "B2",
-        "B3",
-        "B4",
-        "A6",
-        "C1",
-        "C2"
+    "whatToListenFor": [
+      "A consistent, slow sway in 3/4 with no heavy downbeat",
+      "Clear separation of harmonic changes even at pp (changes should be audible without getting louder)",
+      "RH line sounds like one connected phrase, not isolated notes",
+      "Tied notes remain present and luminous while LH changes underneath",
+      "Color-chords (with naturals) feel like a change of light, not a wrong-note surprise"
     ]
+  },
+  "teachingOrder": [
+    "N1",
+    "N2",
+    "N3",
+    "N4",
+    "N11",
+    "N12",
+    "N13",
+    "N14",
+    "N5",
+    "N6",
+    "N7",
+    "N8",
+    "N9",
+    "N10",
+    "N15",
+    "N16",
+    "N17",
+    "N18"
+  ],
+  "assemblyOrder": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8",
+    "A9",
+    "A10",
+    "A11"
+  ]
 }

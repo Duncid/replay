@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE score-partwise  PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='utf-8'?>
 <score-partwise version="4.0">
   <movement-title>Music21 Fragment</movement-title>
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-01-31</encoding-date>
+      <encoding-date>2026-02-01</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -16,22 +15,22 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P72fa1410ca8b82fe0c5003636d0e1b35">
+    <score-part id="P90a6b2084cef18398775dce10ca5930b">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Ib2b83224696078bdeaa449ca9bbb273b">
+      <score-instrument id="I0082d44152fe69dfbb799fa32a4f18d2">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Ib2b83224696078bdeaa449ca9bbb273b">
+      <midi-instrument id="I0082d44152fe69dfbb799fa32a4f18d2">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
-  <!--=========================== Part 1 ===========================-->
-  <part id="P72fa1410ca8b82fe0c5003636d0e1b35">
-    <!--========================= Measure 1 ==========================-->
+  
+  <part id="P90a6b2084cef18398775dce10ca5930b">
+    
     <measure implicit="no" number="1">
       <attributes>
         <divisions>10080</divisions>
@@ -42,7 +41,7 @@
           <beats>3</beats>
           <beat-type>4</beat-type>
         </time>
-      </attributes>
+      <clef><sign>G</sign><line>2</line></clef></attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="6.5" default-y="-40" relative-y="-40">
@@ -58,7 +57,7 @@
           <octave>4</octave>
         </pitch>
         <duration>30240</duration>
-        <tie type="start" />
+        <staff>1</staff><tie type="start" />
         <type>half</type>
         <dot />
         <stem>up</stem>
@@ -81,7 +80,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -89,10 +88,10 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
-    <!--========================= Measure 2 ==========================-->
+    
     <measure implicit="no" number="2">
       <direction placement="below">
         <direction-type>
@@ -109,7 +108,7 @@
           <octave>4</octave>
         </pitch>
         <duration>30240</duration>
-        <tie type="stop" />
+        <staff>1</staff><tie type="stop" />
         <tie type="start" />
         <type>half</type>
         <dot />
@@ -125,7 +124,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -133,10 +132,10 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
-    <!--========================= Measure 3 ==========================-->
+    
     <measure implicit="no" number="3">
       <print new-system="yes">
         <system-layout>
@@ -146,9 +145,7 @@
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>93.22</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -160,7 +157,7 @@
           <octave>4</octave>
         </pitch>
         <duration>30240</duration>
-        <tie type="stop" />
+        <staff>1</staff><tie type="stop" />
         <tie type="start" />
         <type>half</type>
         <dot />
@@ -176,7 +173,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -184,10 +181,10 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
-    <!--========================= Measure 4 ==========================-->
+    
     <measure implicit="no" number="4">
       <note default-x="15.5" default-y="-35">
         <pitch>
@@ -196,7 +193,7 @@
           <octave>4</octave>
         </pitch>
         <duration>30240</duration>
-        <tie type="stop" />
+        <staff>1</staff><tie type="stop" />
         <type>half</type>
         <dot />
         <stem>up</stem>
@@ -210,7 +207,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -218,7 +215,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
   </part>

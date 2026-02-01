@@ -1,18 +1,17 @@
-import { useEffect, useRef } from "react";
-import abcjs from "abcjs";
 import { Button } from "@/components/ui/button";
-import { Play, MoreHorizontal, Copy } from "lucide-react";
-import { NoteSequence } from "@/types/noteSequence";
-import { getNoteColorForNoteName } from "@/constants/noteColors";
-import { midiToNoteName } from "@/utils/noteSequenceUtils";
-import { noteSequenceToAbc } from "@/utils/noteSequenceUtils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getNoteColorForNoteName } from "@/constants/noteColors";
 import { useToast } from "@/hooks/use-toast";
+import { NoteSequence } from "@/types/noteSequence";
+import { midiToNoteName, noteSequenceToAbc } from "@/utils/noteSequenceUtils";
+import abcjs from "abcjs";
+import { Copy, MoreHorizontal, Play } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 interface SheetMusicProps {
   sequence: NoteSequence;
@@ -55,7 +54,9 @@ export const SheetMusic = ({
       notesByStartTime.get(key)!.push(note);
     });
 
-    const sortedKeys = Array.from(notesByStartTime.keys()).sort((a, b) => a - b);
+    const sortedKeys = Array.from(notesByStartTime.keys()).sort(
+      (a, b) => a - b,
+    );
     const noteColors: Array<string | undefined> = [];
 
     sortedKeys.forEach((key) => {
@@ -66,31 +67,42 @@ export const SheetMusic = ({
       });
     });
 
-    const noteElements = renderDivRef.current.querySelectorAll<SVGElement>(".abcjs-note");
+    const noteElements =
+      renderDivRef.current.querySelectorAll<SVGElement>(".abcjs-note");
     noteElements.forEach((element, index) => {
       const color = noteColors[index];
       if (!color) return;
 
       element.setAttribute("fill", color);
       element.setAttribute("stroke", color);
-      element.querySelectorAll<SVGElement>("path, ellipse, circle").forEach((child) => {
-        child.setAttribute("fill", color);
-        child.setAttribute("stroke", color);
-      });
+      element
+        .querySelectorAll<SVGElement>("path, ellipse, circle")
+        .forEach((child) => {
+          child.setAttribute("fill", color);
+          child.setAttribute("stroke", color);
+        });
     });
   };
 
   useEffect(() => {
-    if (!sequence || sequence.notes.length === 0 || !renderDivRef.current) return;
+    if (!sequence || sequence.notes.length === 0 || !renderDivRef.current)
+      return;
 
-    const title = noTitle ? undefined : label || (isUserNotes ? "You played" : "AI responded");
+    const title = noTitle
+      ? undefined
+      : label || (isUserNotes ? "You played" : "AI responded");
     const abc = noteSequenceToAbc(sequence, title);
 
     renderDivRef.current.innerHTML = "";
 
     const options = compact
       ? { staffwidth: containerWidth, scale: renderScale, add_classes: true }
-      : { responsive: "resize" as const, staffwidth: 600, scale: renderScale, add_classes: true };
+      : {
+          responsive: "resize" as const,
+          staffwidth: 600,
+          scale: renderScale,
+          add_classes: true,
+        };
 
     abcjs.renderAbc(renderDivRef.current, abc, options);
     applyNoteColors();
@@ -99,9 +111,16 @@ export const SheetMusic = ({
   const handleCopySequence = async () => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
-      toast({ title: "Copied", description: "NoteSequence copied to clipboard" });
+      toast({
+        title: "Copied",
+        description: "NoteSequence copied to clipboard",
+      });
     } catch {
-      toast({ title: "Error", description: "Failed to copy", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to copy",
+        variant: "destructive",
+      });
     }
   };
 
@@ -111,16 +130,23 @@ export const SheetMusic = ({
     // Minimal view for TrackItem - just the sheet music
     if (noControls) {
       return (
-        <div 
-          ref={renderDivRef} 
-          style={{ width: containerWidth, minWidth: containerWidth, height: 64 }}
-          className="overflow-hidden [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground [&_.abcjs-staff]:opacity-50 [&_.abcjs-staff_line]:opacity-50 [&_.abcjs-staff line]:opacity-50 [&_.abcjs-staff path]:opacity-50" 
+        <div
+          ref={renderDivRef}
+          style={{
+            width: containerWidth,
+            minWidth: containerWidth,
+            height: 64,
+          }}
+          className="overflow-hidden [&_svg]:h-auto [&_path]:stroke-foreground [&_text]:fill-foreground [&_.abcjs-staff]:opacity-50 [&_.abcjs-staff_line]:opacity-50 [&_.abcjs-staff line]:opacity-50 [&_.abcjs-staff path]:opacity-50"
         />
       );
     }
 
     return (
-      <div style={{ width: containerWidth }} className="bg-card/50 border border-border/50 rounded-md p-2">
+      <div
+        style={{ width: containerWidth }}
+        className="bg-card/50 border border-border/50 rounded-md p-2"
+      >
         <div className="flex items-center gap-2">
           <div
             ref={renderDivRef}
@@ -128,19 +154,24 @@ export const SheetMusic = ({
           />
           <div className="flex items-center gap-1 shrink-0">
             {onReplay && (
-              <Button variant="ghost" size="sm" onClick={onReplay} className="h-7 w-7 p-0">
-                <Play className="w-3.5 h-3.5" fill="currentColor" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onReplay}
+                className="h-7 w-7 p-0"
+              >
+                <Play fill="currentColor" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                  <MoreHorizontal className="w-3.5 h-3.5" />
+                  <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-popover">
                 <DropdownMenuItem onClick={handleCopySequence}>
-                  <Copy className="w-4 h-4 mr-2" />
+                  <Copy />
                   Copy NoteSequence
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -160,19 +191,19 @@ export const SheetMusic = ({
         <div className="flex items-center gap-1">
           {onReplay && (
             <Button variant="outline" size="sm" onClick={onReplay}>
-              <Play className="w-4 h-4" fill="currentColor" />
+              <Play fill="currentColor" />
               Replay
             </Button>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleCopySequence}>
-                <Copy className="w-4 h-4 mr-2" />
+                <Copy />
                 Copy NoteSequence
               </DropdownMenuItem>
             </DropdownMenuContent>

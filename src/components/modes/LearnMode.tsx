@@ -5,7 +5,18 @@ import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { LessonPractice } from "@/components/modes/LessonPractice";
 import { LessonEvaluation } from "@/components/modes/LessonEvaluation";
+import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
 import { TuneMode } from "@/components/modes/TuneMode";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   useEvaluateStructuredLesson,
@@ -21,10 +32,12 @@ import {
   TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { useLessonState } from "@/hooks/useLessonState";
 import { useLessonEngine, DebugState, EvaluationState } from "@/hooks/useLessonEngine";
+import { ChevronDown } from "lucide-react";
+import type { TFunction } from "i18next";
 
 interface LearnModeProps {
   isPlaying: boolean;
@@ -568,4 +581,109 @@ export function LearnMode({
     isInTuneMode: activeTuneKey !== null,
     resetToStart,
   };
+}
+
+export type LearnModeController = ReturnType<typeof LearnMode>;
+
+type TranslationFn = TFunction;
+
+type AIModels = {
+  llm: ReadonlyArray<{ value: string; label: string }>;
+};
+
+interface LearnModeActionBarProps {
+  t: TranslationFn;
+  selectedModel: string;
+  setSelectedModel: (value: string) => void;
+  aiModels: AIModels;
+  debugMode: boolean;
+  setDebugMode: (value: boolean) => void;
+  onEnableFreePractice: () => void;
+}
+
+export function LearnModeActionBar({
+  t,
+  selectedModel,
+  setSelectedModel,
+  aiModels,
+  debugMode,
+  setDebugMode,
+  onEnableFreePractice,
+}: LearnModeActionBarProps) {
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="justify-between"
+          >
+            {aiModels.llm.find((m) => m.value === selectedModel)?.label ||
+              selectedModel}
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {aiModels.llm.map((model) => (
+            <DropdownMenuItem
+              key={model.value}
+              onClick={() => setSelectedModel(model.value)}
+            >
+              {model.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <div className="flex items-center gap-2 ml-auto">
+        <Label
+          htmlFor="debug-mode"
+          className="cursor-pointer text-sm text-muted-foreground"
+        >
+          Debug
+        </Label>
+        <Switch
+          id="debug-mode"
+          checked={debugMode}
+          onCheckedChange={(checked) => setDebugMode(checked === true)}
+        />
+      </div>
+      {debugMode && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onEnableFreePractice}
+        >
+          {t("learnMode.freePractice", "Free Practice")}
+        </Button>
+      )}
+    </>
+  );
+}
+
+type FreePracticeModeProps = ComponentProps<typeof FreePracticeMode>;
+
+interface LearnModeTabContentProps {
+  learnModeType: "free-practice" | "curriculum";
+  freePracticeProps: FreePracticeModeProps;
+  learnMode: LearnModeController;
+}
+
+export function LearnModeTabContent({
+  learnModeType,
+  freePracticeProps,
+  learnMode,
+}: LearnModeTabContentProps) {
+  return (
+    <TabsContent
+      value="learn"
+      className="w-full h-full flex-1 min-h-0 flex items-center justify-center overflow-auto"
+    >
+      {learnModeType === "free-practice" ? (
+        <FreePracticeMode {...freePracticeProps} />
+      ) : (
+        learnMode.render()
+      )}
+    </TabsContent>
+  );
 }

@@ -2,8 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useStartFreeFormLesson, useEvaluateFreeFormLesson } from "@/hooks/useLessonQueries";
-import { LessonMetronomeSettings, LessonFeelPreset, LessonMetronomeSoundType } from "@/types/learningSession";
+import {
+  useEvaluateFreeFormLesson,
+  useStartFreeFormLesson,
+} from "@/hooks/useLessonQueries";
+import {
+  LessonFeelPreset,
+  LessonMetronomeSettings,
+  LessonMetronomeSoundType,
+} from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
 import { Loader2, Play, Send, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -52,7 +59,9 @@ export function FreePracticeMode({
 
   // State
   const [prompt, setPrompt] = useState("");
-  const [targetSequence, setTargetSequence] = useState<NoteSequence | null>(null);
+  const [targetSequence, setTargetSequence] = useState<NoteSequence | null>(
+    null,
+  );
   const [instruction, setInstruction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -93,7 +102,7 @@ export function FreePracticeMode({
       setMetronomeIsPlaying,
       setMetronomeFeel,
       setMetronomeSoundType,
-    ]
+    ],
   );
 
   // Start a new lesson
@@ -164,12 +173,12 @@ export function FreePracticeMode({
   // Auto-evaluate when recording completes
   useEffect(() => {
     // Check if recording just completed (userRecording has notes and we haven't evaluated yet)
-    const recordingJustCompleted = 
-      userRecording !== null && 
-      userRecording.notes.length > 0 && 
+    const recordingJustCompleted =
+      userRecording !== null &&
+      userRecording.notes.length > 0 &&
       previousRecordingRef.current === null &&
-      !hasEvaluatedRef.current && 
-      !isEvaluating && 
+      !hasEvaluatedRef.current &&
+      !isEvaluating &&
       targetSequence;
 
     if (recordingJustCompleted) {
@@ -263,7 +272,10 @@ export function FreePracticeMode({
     return (
       <div className="w-full max-w-2xl mx-auto space-y-3">
         <Textarea
-          placeholder={t("learnMode.promptPlaceholder", "What would you like to practice?")}
+          placeholder={t(
+            "learnMode.promptPlaceholder",
+            "What would you like to practice?",
+          )}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           disabled={isLoading || isPlaying}
@@ -274,11 +286,7 @@ export function FreePracticeMode({
           disabled={!prompt.trim() || isLoading || isPlaying}
           className="w-full gap-2"
         >
-          {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Send className="w-4 h-4" />
-          )}
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send />}
           {t("learnMode.startLearning", "Start Practice")}
         </Button>
       </div>
@@ -308,7 +316,9 @@ export function FreePracticeMode({
           {isEvaluating ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">{t("learnMode.evaluating", "Evaluating...")}</span>
+              <span className="text-sm">
+                {t("learnMode.evaluating", "Evaluating...")}
+              </span>
             </div>
           ) : feedback ? (
             <p className="text-muted-foreground italic text-center text-lg font-sans">
@@ -317,7 +327,9 @@ export function FreePracticeMode({
           ) : isRecording ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">{t("learnMode.playing", "Playing...")}</span>
+              <span className="text-sm">
+                {t("learnMode.playing", "Playing...")}
+              </span>
             </div>
           ) : (
             <p className="text-muted-foreground/60 text-sm text-center">
@@ -334,7 +346,7 @@ export function FreePracticeMode({
             disabled={isLoading || isEvaluating || isPlaying}
             className="gap-2"
           >
-            <Play className="w-4 h-4" />
+            <Play />
             {t("learnMode.playButton", "Play")}
           </Button>
         </div>
@@ -342,4 +354,3 @@ export function FreePracticeMode({
     </Card>
   );
 }
-
