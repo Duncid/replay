@@ -607,12 +607,12 @@ export function QuestEditor({
   // Fetch published tunes from database for tune node selector
   const { data: publishedTuneList, isLoading: isLoadingTunes } = usePublishedTuneKeys();
 
-  // Transform published tunes to selector format
+  // Transform published tunes to selector format (show tune_key, not briefing.title)
   const availablePublishedTunes = useMemo(() => {
     if (!publishedTuneList) return [];
     return publishedTuneList.map(tune => ({
       key: tune.tune_key,
-      label: tune.briefing?.title || tune.tune_key,
+      label: tune.tune_key,
     }));
   }, [publishedTuneList]);
 
