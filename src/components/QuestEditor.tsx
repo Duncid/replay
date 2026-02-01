@@ -47,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { QuestGraph, useQuestGraphs } from "@/hooks/useQuestGraphs";
+import { usePublishedTuneKeys } from "@/hooks/useTuneQueries";
 import { supabase } from "@/integrations/supabase/client";
 import {
   QuestData,
@@ -105,267 +106,9 @@ import {
   useState,
 } from "react";
 
-// Auto-discover all teacher.json files at build time
-const teacherModules = import.meta.glob<{ default: Record<string, unknown> }>(
-  "/src/music/*/teacher.json",
-  { eager: true },
-);
-
-// Pre-load all tune note sequences at build time
-const tuneNsModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/tune.ns.json",
-  { eager: true },
-);
-
-const tuneLhModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/tune.lh.ns.json",
-  { eager: true },
-);
-
-const tuneRhModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/tune.rh.ns.json",
-  { eager: true },
-);
-
-// Pre-load all nugget note sequences
-const nuggetNsModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/nuggets/*.ns.json",
-  { eager: true },
-);
-
-const nuggetLhModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/nuggets/*.lh.ns.json",
-  { eager: true },
-);
-
-const nuggetRhModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/nuggets/*.rh.ns.json",
-  { eager: true },
-);
-
-// Pre-load all assembly note sequences
-const assemblyNsModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/assemblies/*.ns.json",
-  { eager: true },
-);
-
-const assemblyLhModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/assemblies/*.lh.ns.json",
-  { eager: true },
-);
-
-const assemblyRhModules = import.meta.glob<{ default: object }>(
-  "/src/music/*/output/assemblies/*.rh.ns.json",
-  { eager: true },
-);
-
-// Pre-load all XML files at build time (for sheet music rendering)
-const tuneXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/tune.xml",
-  { eager: true, query: "?raw", import: "default" },
-);
-
-const nuggetXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/nuggets/*.xml",
-  { eager: true, query: "?raw", import: "default" },
-);
-
-const assemblyXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/assemblies/*.xml",
-  { eager: true, query: "?raw", import: "default" },
-);
-
-// Pre-load all DSP XML files at build time (display-optimized MusicXML)
-const tuneDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/dsp.xml",
-  { eager: true, query: "?raw", import: "default" },
-);
-
-// Match all *.dsp.xml files in nuggets (includes N1.dsp.xml, N1.lh.dsp.xml, N1.rh.dsp.xml)
-const nuggetDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/nuggets/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" },
-);
-
-// Match all *.dsp.xml files in assemblies
-const assemblyDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/assemblies/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" },
-);
-
-// Helper to get module from glob by path
-const getGlobModule = (
-  modules: Record<string, { default?: object }>,
-  path: string,
-): object | null => {
-  const module = modules[path];
-  return module?.default || (module as unknown as object) || null;
-};
-
-const getTeacher = (musicRef: string) =>
-  getGlobModule(
-    teacherModules,
-    `/src/music/${musicRef}/teacher.json`,
-  ) as Record<string, unknown> | null;
-
-const getTuneNs = (musicRef: string) =>
-  getGlobModule(tuneNsModules, `/src/music/${musicRef}/output/tune.ns.json`);
-
-const getTuneLh = (musicRef: string) =>
-  getGlobModule(tuneLhModules, `/src/music/${musicRef}/output/tune.lh.ns.json`);
-
-const getTuneRh = (musicRef: string) =>
-  getGlobModule(tuneRhModules, `/src/music/${musicRef}/output/tune.rh.ns.json`);
-
-const getNuggetNs = (musicRef: string, nuggetId: string) =>
-  getGlobModule(
-    nuggetNsModules,
-    `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`,
-  );
-
-const getNuggetLh = (musicRef: string, nuggetId: string) =>
-  getGlobModule(
-    nuggetLhModules,
-    `/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`,
-  );
-
-const getNuggetRh = (musicRef: string, nuggetId: string) =>
-  getGlobModule(
-    nuggetRhModules,
-    `/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`,
-  );
-
-const getAssemblyNs = (musicRef: string, assemblyId: string) =>
-  getGlobModule(
-    assemblyNsModules,
-    `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`,
-  );
-
-const getAssemblyLh = (musicRef: string, assemblyId: string) =>
-  getGlobModule(
-    assemblyLhModules,
-    `/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`,
-  );
-
-const getAssemblyRh = (musicRef: string, assemblyId: string) =>
-  getGlobModule(
-    assemblyRhModules,
-    `/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`,
-  );
-
-// XML helper functions
-const getTuneXml = (musicRef: string): string | null => {
-  const path = `/src/music/${musicRef}/output/tune.xml`;
-  return tuneXmlModules[path] || null;
-};
-
-const getNuggetXml = (musicRef: string, nuggetId: string): string | null => {
-  const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.xml`;
-  return nuggetXmlModules[path] || null;
-};
-
-const getAssemblyXml = (musicRef: string, assemblyId: string): string | null => {
-  const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.xml`;
-  return assemblyXmlModules[path] || null;
-};
-
-// DSP XML helper functions (display-optimized MusicXML)
-const getTuneDspXml = (musicRef: string): string | null => {
-  const path = `/src/music/${musicRef}/output/dsp.xml`;
-  return tuneDspXmlModules[path] || null;
-};
-
-/**
- * Get nugget DSP XML by ID. Supports patterns:
- * - "N1" -> N1.dsp.xml (main DSP)
- * - "N1.lh" -> N1.lh.dsp.xml (left hand DSP)
- * - "N1.rh" -> N1.rh.dsp.xml (right hand DSP)
- */
-const getNuggetDspXml = (musicRef: string, nuggetId: string): string | null => {
-  const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.dsp.xml`;
-  return nuggetDspXmlModules[path] || null;
-};
-
-/**
- * Get assembly DSP XML by ID. Supports patterns:
- * - "A1" -> A1.dsp.xml (main DSP)
- * - "A1.lh" -> A1.lh.dsp.xml (left hand DSP)
- * - "A1.rh" -> A1.rh.dsp.xml (right hand DSP)
- */
-const getAssemblyDspXml = (musicRef: string, assemblyId: string): string | null => {
-  const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.dsp.xml`;
-  return assemblyDspXmlModules[path] || null;
-};
-
-// Extract tune list from discovered files
-const availableTunes = Object.entries(teacherModules)
-  .map(([path, module]) => {
-    const match = path.match(/\/music\/([^/]+)\/teacher\.json$/);
-    const key = match ? match[1] : "";
-    const teacher = module.default || module;
-    const title =
-      (teacher as { title?: string })?.title ||
-      key.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    return { key, label: title };
-  })
-  .filter((t) => t.key);
-
-// Type for tune asset bundle sent to publish endpoint
-interface TuneAssetBundle {
-  briefing?: {
-    schemaVersion?: string;
-    title?: string;
-    pipelineSettings?: Record<string, unknown>;
-    motifs?: Array<{
-      id: string;
-      label: string;
-      importance: number;
-      description: string;
-      occursIn: string[];
-    }>;
-    motifOccurrences?: Array<Record<string, unknown>>;
-    tuneHints?: {
-      goal?: string;
-      counting?: string;
-      commonMistakes?: string[];
-      whatToListenFor?: string[];
-    };
-    teachingOrder?: string[];
-    assemblyOrder?: string[];
-  };
-  nuggets?: Array<{
-    id: string;
-    label?: string;
-    location?: Record<string, unknown>;
-    dependsOn?: string[];
-    modes?: string[];
-    noteSequence?: object | null;
-    leftHandSequence?: object | null;
-    rightHandSequence?: object | null;
-  }>;
-  assemblies?: Array<{
-    id: string;
-    tier: number;
-    label?: string;
-    nuggetIds: string[];
-    difficulty?: { level: number };
-    modes?: string[];
-    noteSequence?: object | null;
-    leftHandSequence?: object | null;
-    rightHandSequence?: object | null;
-  }>;
-  noteSequence: object;
-  leftHandSequence?: object;
-  rightHandSequence?: object;
-  // XML fields for sheet music rendering
-  tuneXml?: string;
-  nuggetXmls?: Record<string, string>;
-  assemblyXmls?: Record<string, string>;
-  // DSP XML fields for display-optimized sheet music rendering
-  tuneDspXml?: string;
-  nuggetDspXmls?: Record<string, string>; // {"N1": "...", "N1.lh": "...", "N1.rh": "..."}
-  assemblyDspXmls?: Record<string, string>; // {"A1": "...", "A1.lh": "...", "A1.rh": "..."}
-}
+// Note: Tune asset bundling has been removed.
+// Tunes must now be published via Tune Manager before they can be referenced in Quest nodes.
+// The curriculum-publish edge function validates that referenced tune_keys exist in tune_assets.
 
 // Custom styles for React Flow Controls and MiniMap
 const questControlsStyles = `
@@ -860,6 +603,18 @@ export function QuestEditor({
     loadQuestGraph,
     clearCurrentGraph,
   } = useQuestGraphs();
+
+  // Fetch published tunes from database for tune node selector
+  const { data: publishedTuneList, isLoading: isLoadingTunes } = usePublishedTuneKeys();
+
+  // Transform published tunes to selector format
+  const availablePublishedTunes = useMemo(() => {
+    if (!publishedTuneList) return [];
+    return publishedTuneList.map(tune => ({
+      key: tune.tune_key,
+      label: tune.briefing?.title || tune.tune_key,
+    }));
+  }, [publishedTuneList]);
 
   const [questData, setQuestData] = useLocalStorage<QuestData>(
     "quest-editor-data",
@@ -2138,264 +1893,7 @@ export function QuestEditor({
     runValidation,
   ]);
 
-  // Helper function to bundle tune assets for publishing (uses pre-loaded glob modules)
-  const bundleTuneAssets = useCallback((): Record<string, TuneAssetBundle> => {
-    const tuneAssets: Record<string, TuneAssetBundle> = {};
-    const bundlingErrors: string[] = [];
-
-    // Find all tune nodes with musicRef
-    const tuneNodes = nodes.filter(
-      (n) => n.data.type === "tune" && n.data.musicRef && n.data.tuneKey,
-    );
-
-    for (const node of tuneNodes) {
-      const musicRef = node.data.musicRef!;
-      const tuneKey = node.data.tuneKey!;
-
-      try {
-        // Load main files from pre-loaded glob modules
-        const teacher = getTeacher(musicRef);
-        const noteSequence = getTuneNs(musicRef) as {
-          notes?: unknown[];
-        } | null;
-        const leftHand = getTuneLh(musicRef);
-        const rightHand = getTuneRh(musicRef);
-
-        // VALIDATION: Check that noteSequence was loaded
-        if (!noteSequence) {
-          const errMsg = `Failed to load note sequence for tune "${tuneKey}" (musicRef: ${musicRef})`;
-          console.error(`[QuestEditor] CRITICAL: ${errMsg}`);
-          bundlingErrors.push(errMsg);
-          continue;
-        }
-
-        // VALIDATION: Check that noteSequence has notes
-        if (
-          !noteSequence.notes ||
-          !Array.isArray(noteSequence.notes) ||
-          noteSequence.notes.length === 0
-        ) {
-          const errMsg = `Note sequence for tune "${tuneKey}" has no notes`;
-          console.error(`[QuestEditor] CRITICAL: ${errMsg}`);
-          bundlingErrors.push(errMsg);
-          continue;
-        }
-
-        // Load nugget note sequences from pre-loaded glob modules
-        let enrichedNuggets: TuneAssetBundle["nuggets"] = undefined;
-        const teacherNuggets = teacher?.nuggets as
-          | Array<{
-              id: string;
-              label: string;
-              location?: Record<string, unknown>;
-              dependsOn?: string[];
-              modes?: string[];
-            }>
-          | undefined;
-        if (teacherNuggets && Array.isArray(teacherNuggets)) {
-          enrichedNuggets = teacherNuggets.map((nugget) => {
-            const nuggetId = nugget.id;
-
-            return {
-              id: nugget.id,
-              label: nugget.label,
-              location: nugget.location,
-              dependsOn: nugget.dependsOn,
-              modes: nugget.modes,
-              noteSequence: getNuggetNs(musicRef, nuggetId),
-              leftHandSequence: getNuggetLh(musicRef, nuggetId),
-              rightHandSequence: getNuggetRh(musicRef, nuggetId),
-            } as NonNullable<TuneAssetBundle["nuggets"]>[number];
-          });
-
-          // VALIDATION: Check nugget count matches teacher.json
-          const expectedNuggetCount = teacherNuggets.length;
-          const loadedNuggetCount = enrichedNuggets.filter(
-            (n) => n.noteSequence,
-          ).length;
-          if (loadedNuggetCount !== expectedNuggetCount) {
-            console.warn(
-              `[QuestEditor] Nugget count mismatch for ${tuneKey}: expected ${expectedNuggetCount}, got ${loadedNuggetCount} with note sequences`,
-            );
-          }
-        }
-
-        // Load assembly note sequences from pre-loaded glob modules
-        let enrichedAssemblies: TuneAssetBundle["assemblies"] = undefined;
-        const teacherAssemblies = teacher?.assemblies as
-          | Array<{
-              id: string;
-              tier: number;
-              label: string;
-              nuggetIds: string[];
-              difficulty?: { level: number };
-              modes?: string[];
-            }>
-          | undefined;
-        if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
-          enrichedAssemblies = teacherAssemblies.map((assembly) => {
-            const assemblyId = assembly.id;
-
-            return {
-              id: assembly.id,
-              tier: assembly.tier,
-              label: assembly.label,
-              nuggetIds: assembly.nuggetIds,
-              difficulty: assembly.difficulty,
-              modes: assembly.modes,
-              noteSequence: getAssemblyNs(musicRef, assemblyId),
-              leftHandSequence: getAssemblyLh(musicRef, assemblyId),
-              rightHandSequence: getAssemblyRh(musicRef, assemblyId),
-            } as NonNullable<TuneAssetBundle["assemblies"]>[number];
-          });
-
-          // VALIDATION: Check assembly count matches teacher.json
-          const expectedAssemblyCount = teacherAssemblies.length;
-          const loadedAssemblyCount = enrichedAssemblies.filter(
-            (a) => a.noteSequence,
-          ).length;
-          if (loadedAssemblyCount !== expectedAssemblyCount) {
-            console.warn(
-              `[QuestEditor] Assembly count mismatch for ${tuneKey}: expected ${expectedAssemblyCount}, got ${loadedAssemblyCount} with note sequences`,
-            );
-          }
-        }
-
-        // Collect XML content for sheet music rendering
-        const tuneXml = getTuneXml(musicRef);
-
-        // Build nugget XMLs map
-        const nuggetXmls: Record<string, string> = {};
-        if (teacherNuggets && Array.isArray(teacherNuggets)) {
-          for (const nugget of teacherNuggets) {
-            const xml = getNuggetXml(musicRef, nugget.id);
-            if (xml) {
-              nuggetXmls[nugget.id] = xml;
-            }
-          }
-        }
-
-        // Build assembly XMLs map
-        const assemblyXmls: Record<string, string> = {};
-        if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
-          for (const assembly of teacherAssemblies) {
-            const xml = getAssemblyXml(musicRef, assembly.id);
-            if (xml) {
-              assemblyXmls[assembly.id] = xml;
-            }
-          }
-        }
-
-        // Collect DSP XML content for display-optimized sheet music rendering
-        const tuneDspXml = getTuneDspXml(musicRef);
-
-        // Build nugget DSP XMLs map (includes .lh and .rh variants)
-        const nuggetDspXmls: Record<string, string> = {};
-        if (teacherNuggets && Array.isArray(teacherNuggets)) {
-          for (const nugget of teacherNuggets) {
-            // Main DSP
-            const dspXml = getNuggetDspXml(musicRef, nugget.id);
-            if (dspXml) {
-              nuggetDspXmls[nugget.id] = dspXml;
-            }
-            // Left hand DSP
-            const lhDspXml = getNuggetDspXml(musicRef, `${nugget.id}.lh`);
-            if (lhDspXml) {
-              nuggetDspXmls[`${nugget.id}.lh`] = lhDspXml;
-            }
-            // Right hand DSP
-            const rhDspXml = getNuggetDspXml(musicRef, `${nugget.id}.rh`);
-            if (rhDspXml) {
-              nuggetDspXmls[`${nugget.id}.rh`] = rhDspXml;
-            }
-          }
-        }
-
-        // Build assembly DSP XMLs map (includes .lh and .rh variants)
-        const assemblyDspXmls: Record<string, string> = {};
-        if (teacherAssemblies && Array.isArray(teacherAssemblies)) {
-          for (const assembly of teacherAssemblies) {
-            // Main DSP
-            const dspXml = getAssemblyDspXml(musicRef, assembly.id);
-            if (dspXml) {
-              assemblyDspXmls[assembly.id] = dspXml;
-            }
-            // Left hand DSP
-            const lhDspXml = getAssemblyDspXml(musicRef, `${assembly.id}.lh`);
-            if (lhDspXml) {
-              assemblyDspXmls[`${assembly.id}.lh`] = lhDspXml;
-            }
-            // Right hand DSP
-            const rhDspXml = getAssemblyDspXml(musicRef, `${assembly.id}.rh`);
-            if (rhDspXml) {
-              assemblyDspXmls[`${assembly.id}.rh`] = rhDspXml;
-            }
-          }
-        }
-
-        tuneAssets[tuneKey] = {
-          // Store the full teacher structure (v2 schema)
-          briefing: teacher
-            ? {
-                schemaVersion: teacher.schemaVersion as string | undefined,
-                title: teacher.title as string | undefined,
-                pipelineSettings: teacher.pipelineSettings as
-                  | Record<string, unknown>
-                  | undefined,
-                motifs: teacher.motifs as TuneAssetBundle["briefing"]["motifs"],
-                motifOccurrences: teacher.motifOccurrences as
-                  | Array<Record<string, unknown>>
-                  | undefined,
-                tuneHints:
-                  teacher.tuneHints as TuneAssetBundle["briefing"]["tuneHints"],
-                teachingOrder: teacher.teachingOrder as string[] | undefined,
-                assemblyOrder: teacher.assemblyOrder as string[] | undefined,
-              }
-            : undefined,
-          nuggets: enrichedNuggets,
-          assemblies: enrichedAssemblies,
-          noteSequence,
-          leftHandSequence: leftHand || undefined,
-          rightHandSequence: rightHand || undefined,
-          // XML fields
-          tuneXml: tuneXml || undefined,
-          nuggetXmls: Object.keys(nuggetXmls).length > 0 ? nuggetXmls : undefined,
-          assemblyXmls: Object.keys(assemblyXmls).length > 0 ? assemblyXmls : undefined,
-          // DSP XML fields
-          tuneDspXml: tuneDspXml || undefined,
-          nuggetDspXmls: Object.keys(nuggetDspXmls).length > 0 ? nuggetDspXmls : undefined,
-          assemblyDspXmls: Object.keys(assemblyDspXmls).length > 0 ? assemblyDspXmls : undefined,
-        };
-        console.log(`[QuestEditor] Bundled tune assets for ${tuneKey}:`, {
-          hasBriefing: !!teacher,
-          nuggetCount: enrichedNuggets?.length || 0,
-          assemblyCount: enrichedAssemblies?.length || 0,
-          hasLeftHand: !!leftHand,
-          hasRightHand: !!rightHand,
-          noteCount: noteSequence.notes?.length || 0,
-          hasTuneXml: !!tuneXml,
-          nuggetXmlCount: Object.keys(nuggetXmls).length,
-          assemblyXmlCount: Object.keys(assemblyXmls).length,
-          hasTuneDspXml: !!tuneDspXml,
-          nuggetDspXmlCount: Object.keys(nuggetDspXmls).length,
-          assemblyDspXmlCount: Object.keys(assemblyDspXmls).length,
-        });
-      } catch (error) {
-        const errMsg = `Failed to load assets for tune "${tuneKey}" (musicRef: ${musicRef}): ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[QuestEditor] ${errMsg}`);
-        bundlingErrors.push(errMsg);
-      }
-    }
-
-    // If there were critical errors, throw to prevent publishing with missing assets
-    if (bundlingErrors.length > 0) {
-      throw new Error(
-        `Tune asset bundling failed:\n${bundlingErrors.join("\n")}`,
-      );
-    }
-
-    return tuneAssets;
-  }, [nodes]);
+  // Note: bundleTuneAssets has been removed - tunes must be published via Tune Manager first
 
   const confirmPublish = useCallback(async () => {
     if (!currentGraph) return;
@@ -2403,11 +1901,8 @@ export function QuestEditor({
     setIsPublishing(true);
 
     try {
-      // Bundle tune assets before publishing (synchronous - uses pre-loaded globs)
-      const tuneAssets = bundleTuneAssets();
-      console.log(
-        `[QuestEditor] Publishing with ${Object.keys(tuneAssets).length} tune assets`,
-      );
+      // No longer bundling tune assets - they must be published via Tune Manager first
+      console.log("[QuestEditor] Publishing curriculum (tunes already in DB)");
 
       const { data, error } = await supabase.functions.invoke(
         "curriculum-publish",
@@ -2416,7 +1911,7 @@ export function QuestEditor({
             questGraphId: currentGraph.id,
             publishTitle: publishDialogTitle.trim() || undefined,
             mode: "publish",
-            tuneAssets,
+            // tuneAssets no longer sent - tunes must be pre-published
           },
         },
       );
@@ -2462,12 +1957,10 @@ export function QuestEditor({
           errorMessage =
             "Edge Function not deployed or unreachable. Please deploy the 'curriculum-publish' function.";
         } else if (error.message.includes("non-2xx")) {
-          // Try to extract more details from the response
           errorMessage =
             "Edge Function returned an error. Check function logs for details.";
         }
       } else if (typeof error === "object" && error !== null) {
-        // Handle FunctionsHttpError with context
         const errObj = error as Record<string, unknown>;
         if (
           "context" in errObj &&
@@ -2512,7 +2005,7 @@ export function QuestEditor({
     } finally {
       setIsPublishing(false);
     }
-  }, [currentGraph, publishDialogTitle, toast, bundleTuneAssets]);
+  }, [currentGraph, publishDialogTitle, toast]);
 
   const hasValidationErrors =
     validationResult?.errors && validationResult.errors.length > 0;
@@ -3381,20 +2874,25 @@ export function QuestEditor({
                     <Select
                       value={editingMusicRef}
                       onValueChange={setEditingMusicRef}
+                      disabled={isLoadingTunes}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a tune folder..." />
+                        <SelectValue placeholder={isLoadingTunes ? "Loading..." : "Select a published tune..."} />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableTunes.map((tune) => (
-                          <SelectItem key={tune.key} value={tune.key}>
-                            {tune.label}
-                          </SelectItem>
-                        ))}
+                        {availablePublishedTunes.length === 0 ? (
+                          <SelectItem value="" disabled>No published tunes available</SelectItem>
+                        ) : (
+                          availablePublishedTunes.map((tune) => (
+                            <SelectItem key={tune.key} value={tune.key}>
+                              {tune.label}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Select a folder from src/music/
+                      Only tunes published via Tune Manager can be selected
                     </p>
                   </div>
                   <div className="space-y-2">
