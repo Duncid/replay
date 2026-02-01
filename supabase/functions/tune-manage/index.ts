@@ -70,46 +70,42 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get existing tune record with all data
-      const { data: existing, error: fetchError } = await supabase
+      // Get ALL tune records with this tune_key (there may be multiple versions)
+      const { data: existingRecords, error: fetchError } = await supabase
         .from("tune_assets")
         .select("*")
-        .eq("tune_key", tuneKey)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+        .eq("tune_key", tuneKey);
 
       if (fetchError) {
         console.error("[tune-manage] Fetch error:", fetchError);
         throw new Error(`Tune not found: ${tuneKey}`);
       }
 
-      if (!existing) {
+      if (!existingRecords || existingRecords.length === 0) {
         throw new Error(`Tune not found: ${tuneKey}`);
       }
 
-      // Update briefing with new title
-      const updatedBriefing = {
-        ...(existing.briefing as object || {}),
-        title: newTitle.trim(),
-      };
+      console.log(`[tune-manage] Found ${existingRecords.length} records for tuneKey: ${tuneKey}`);
 
-      // Since there's no UPDATE RLS policy, we delete and re-insert
-      // First, delete the old record
+      // Since there's no UPDATE RLS policy, we delete and re-insert ALL records
+      // Delete all records with this tune_key
       const { error: deleteError } = await supabase
         .from("tune_assets")
         .delete()
-        .eq("id", existing.id);
+        .eq("tune_key", tuneKey);
 
       if (deleteError) {
         console.error("[tune-manage] Delete for rename error:", deleteError);
         throw deleteError;
       }
 
-      // Re-insert with updated briefing
-      const { error: insertError } = await supabase
-        .from("tune_assets")
-        .insert({
+      // Re-insert all records with updated briefing title
+      const recordsToInsert = existingRecords.map(existing => {
+        const updatedBriefing = {
+          ...(existing.briefing as object || {}),
+          title: newTitle.trim(),
+        };
+        return {
           version_id: existing.version_id,
           tune_key: existing.tune_key,
           briefing: updatedBriefing,
@@ -124,17 +120,22 @@ Deno.serve(async (req) => {
           nugget_dsp_xmls: existing.nugget_dsp_xmls,
           assembly_xmls: existing.assembly_xmls,
           assembly_dsp_xmls: existing.assembly_dsp_xmls,
-        });
+        };
+      });
+
+      const { error: insertError } = await supabase
+        .from("tune_assets")
+        .insert(recordsToInsert);
 
       if (insertError) {
         console.error("[tune-manage] Insert for rename error:", insertError);
         throw insertError;
       }
 
-      console.log(`[tune-manage] Renamed tuneKey: ${tuneKey} to title: ${newTitle.trim()}`);
+      console.log(`[tune-manage] Renamed ${existingRecords.length} records for tuneKey: ${tuneKey} to title: ${newTitle.trim()}`);
 
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, updatedCount: existingRecords.length }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
