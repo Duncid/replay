@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE score-partwise  PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='utf-8'?>
 <score-partwise version="4.0">
   <movement-title>Music21 Fragment</movement-title>
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-01-31</encoding-date>
+      <encoding-date>2026-02-01</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -16,22 +15,22 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P43121317fa191a573af87b76ee186aa6">
+    <score-part id="Pf82d97f7c5f323ed91d8acad2c01b451">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Id7da37b80c7594954a11ca93b48d197d">
+      <score-instrument id="I8adc7e869fbccf34202e908fed080207">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Id7da37b80c7594954a11ca93b48d197d">
+      <midi-instrument id="I8adc7e869fbccf34202e908fed080207">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
-  <!--=========================== Part 1 ===========================-->
-  <part id="P43121317fa191a573af87b76ee186aa6">
-    <!--========================= Measure 1 ==========================-->
+  
+  <part id="Pf82d97f7c5f323ed91d8acad2c01b451">
+    
     <measure implicit="no" number="1">
       <attributes>
         <divisions>10080</divisions>
@@ -39,11 +38,92 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
-        <clef>
-          <sign>G</sign>
-          <line>2</line>
-        </clef>
-      </attributes>
+        <clef><sign>G</sign><line>2</line></clef></attributes>
+      <note>
+        <pitch>
+          <step>F</step>
+          <alter>1</alter>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+        <accidental>sharp</accidental>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <alter>1</alter>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+        <accidental>sharp</accidental>
+      </note>
+      <note>
+        <chord />
+        <pitch>
+          <step>G</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <alter>1</alter>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+        <accidental>sharp</accidental>
+      </note>
+    </measure>
+    
+    <measure implicit="no" number="2">
+      <note>
+        <pitch>
+          <step>B</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
+      <note>
+        <chord />
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <alter>1</alter>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+        <accidental>sharp</accidental>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
       <barline location="right">
         <bar-style>light-heavy</bar-style>
       </barline>

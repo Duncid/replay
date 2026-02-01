@@ -80,7 +80,7 @@ export function FeedbackScreen({
             "mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4",
             config.bgColor,
             "border",
-            config.borderColor
+            config.borderColor,
           )}
         >
           <Icon className={cn("w-8 h-8", config.iconColor)} />
@@ -159,7 +159,7 @@ export function FeedbackScreen({
         {awardedSkills && awardedSkills.length > 0 && (
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
             <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
-              <Unlock className="w-4 h-4" />
+              <Unlock />
               <span className="font-medium text-sm">
                 {t("evaluation.skillsUnlocked", "Skills Unlocked!")}
               </span>

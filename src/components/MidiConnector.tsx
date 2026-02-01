@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { KeyboardMusic, Unplug, AlertCircle } from "lucide-react";
+import { AlertCircle, KeyboardMusic, Unplug } from "lucide-react";
 
 interface MidiConnectorProps {
   isConnected: boolean;
@@ -19,7 +19,7 @@ export const MidiConnector = ({
   if (!isSupported) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <AlertCircle className="w-4 h-4" />
+        <AlertCircle />
         <span>MIDI not supported in this browser</span>
       </div>
     );
@@ -32,8 +32,13 @@ export const MidiConnector = ({
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           <span className="text-foreground font-medium">{deviceName}</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={onDisconnect} className="gap-2">
-          <Unplug className="w-4 h-4" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDisconnect}
+          className="gap-2"
+        >
+          <Unplug />
           Disconnect
         </Button>
       </div>
@@ -42,7 +47,7 @@ export const MidiConnector = ({
 
   return (
     <Button variant="outline" size="sm" onClick={onConnect}>
-      <KeyboardMusic className="w-4 h-4" />
+      <KeyboardMusic />
       Connect MIDI
     </Button>
   );

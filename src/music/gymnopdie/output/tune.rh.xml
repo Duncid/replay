@@ -5,7 +5,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-01-31</encoding-date>
+      <encoding-date>2026-02-01</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -19,11 +19,11 @@
     <score-part id="P1">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I28c073ef6e2ca151ec415da695ee10a8">
+      <score-instrument id="I1c48f41e8c3ceee4b6952b9b63f2b78b">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I28c073ef6e2ca151ec415da695ee10a8">
+      <midi-instrument id="I1c48f41e8c3ceee4b6952b9b63f2b78b">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
@@ -41,9 +41,6 @@
           </system-margins>
           <top-system-distance>170</top-system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>65</staff-distance>
-        </staff-layout>
       </print>
       <attributes>
         <divisions>10080</divisions>
@@ -58,11 +55,15 @@
           <sign>G</sign>
           <line>2</line>
         </clef>
-        <staff-details print-object="yes" />
       </attributes>
       <direction placement="above">
         <direction-type>
           <words default-x="-37.68" font-weight="bold" relative-x="-17.19" relative-y="21.74">Lent et douloureux</words>
+        </direction-type>
+      </direction>
+      <direction placement="above">
+        <direction-type>
+          <words />
         </direction-type>
       </direction>
       <direction placement="above">
@@ -89,7 +90,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -97,7 +98,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 2 ==========================-->
@@ -112,7 +113,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -120,7 +121,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 3 ==========================-->
@@ -135,7 +136,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -143,7 +144,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 4 ==========================-->
@@ -158,7 +159,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -166,7 +167,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 5 ==========================-->
@@ -217,7 +218,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -225,7 +226,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 6 ==========================-->
@@ -238,9 +239,7 @@
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>95.25</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -280,7 +279,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -288,7 +287,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 7 ==========================-->
@@ -345,7 +344,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -353,7 +352,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 8 ==========================-->
@@ -379,7 +378,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -387,7 +386,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 9 ==========================-->
@@ -431,7 +430,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -439,7 +438,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 10 =========================-->
@@ -475,7 +474,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -483,7 +482,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 11 =========================-->
@@ -496,9 +495,7 @@
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>93.22</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -526,7 +523,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -534,7 +531,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 12 =========================-->
@@ -560,7 +557,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -568,7 +565,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 13 =========================-->
@@ -619,7 +616,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -627,7 +624,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 14 =========================-->
@@ -667,7 +664,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -675,7 +672,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 15 =========================-->
@@ -719,7 +716,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -727,7 +724,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 16 =========================-->
@@ -740,9 +737,7 @@
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>95.25</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -776,7 +771,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -784,7 +779,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 17 =========================-->
@@ -806,7 +801,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -814,7 +809,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 18 =========================-->
@@ -841,7 +836,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -849,7 +844,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 19 =========================-->
@@ -888,7 +883,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -896,7 +891,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 20 =========================-->
@@ -923,7 +918,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -931,7 +926,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 21 =========================-->
@@ -944,9 +939,7 @@
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>90.25</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -976,7 +969,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -984,7 +977,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 22 =========================-->
@@ -1040,7 +1033,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1048,7 +1041,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 23 =========================-->
@@ -1086,7 +1079,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1094,7 +1087,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 24 =========================-->
@@ -1139,7 +1132,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1147,7 +1140,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 25 =========================-->
@@ -1190,7 +1183,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1198,7 +1191,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 26 =========================-->
@@ -1211,9 +1204,7 @@
           </system-margins>
           <top-system-distance>70</top-system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>81.9</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -1268,7 +1259,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1276,7 +1267,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 27 =========================-->
@@ -1316,7 +1307,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1324,7 +1315,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 28 =========================-->
@@ -1369,7 +1360,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1377,7 +1368,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 29 =========================-->
@@ -1428,7 +1419,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1436,7 +1427,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 30 =========================-->
@@ -1466,7 +1457,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1474,7 +1465,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 31 =========================-->
@@ -1487,9 +1478,7 @@
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>96.19</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -1539,7 +1528,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1547,7 +1536,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 32 =========================-->
@@ -1568,7 +1557,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1576,7 +1565,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 33 =========================-->
@@ -1603,7 +1592,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1611,7 +1600,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 34 =========================-->
@@ -1662,7 +1651,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1670,7 +1659,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 35 =========================-->
@@ -1714,7 +1703,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1722,7 +1711,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 36 =========================-->
@@ -1735,9 +1724,7 @@
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>126.9</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -1789,7 +1776,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -1797,7 +1784,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 37 =========================-->
@@ -2029,7 +2016,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2037,7 +2024,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 41 =========================-->
@@ -2050,9 +2037,7 @@
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>86.12</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -2067,7 +2052,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2075,7 +2060,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 42 =========================-->
@@ -2090,7 +2075,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2098,7 +2083,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 43 =========================-->
@@ -2113,7 +2098,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2121,7 +2106,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 44 =========================-->
@@ -2172,7 +2157,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2180,7 +2165,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 45 =========================-->
@@ -2225,7 +2210,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2233,7 +2218,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 46 =========================-->
@@ -2246,9 +2231,7 @@
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>99.31</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -2305,7 +2288,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2313,7 +2296,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 47 =========================-->
@@ -2342,7 +2325,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2350,7 +2333,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 48 =========================-->
@@ -2386,7 +2369,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2394,7 +2377,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 49 =========================-->
@@ -2430,7 +2413,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2438,7 +2421,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 50 =========================-->
@@ -2466,7 +2449,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2474,7 +2457,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 51 =========================-->
@@ -2500,7 +2483,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2508,7 +2491,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 52 =========================-->
@@ -2521,9 +2504,7 @@
           </system-margins>
           <top-system-distance>70</top-system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>95.25</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -2574,7 +2555,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2582,7 +2563,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 53 =========================-->
@@ -2622,7 +2603,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2630,7 +2611,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 54 =========================-->
@@ -2674,7 +2655,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2682,7 +2663,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 55 =========================-->
@@ -2716,7 +2697,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2724,7 +2705,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 56 =========================-->
@@ -2746,7 +2727,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2754,7 +2735,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 57 =========================-->
@@ -2767,9 +2748,7 @@
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>95.25</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -2791,7 +2770,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2799,7 +2778,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 58 =========================-->
@@ -2829,7 +2808,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2837,7 +2816,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 59 =========================-->
@@ -2878,7 +2857,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2886,7 +2865,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 60 =========================-->
@@ -2916,7 +2895,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2924,7 +2903,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 61 =========================-->
@@ -2980,7 +2959,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -2988,7 +2967,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 62 =========================-->
@@ -3031,7 +3010,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3039,7 +3018,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 63 =========================-->
@@ -3052,9 +3031,7 @@
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>95.25</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -3112,7 +3089,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3120,7 +3097,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 64 =========================-->
@@ -3153,7 +3130,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3161,7 +3138,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 65 =========================-->
@@ -3203,7 +3180,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3211,7 +3188,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 66 =========================-->
@@ -3251,7 +3228,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3259,7 +3236,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 67 =========================-->
@@ -3304,7 +3281,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3312,7 +3289,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 68 =========================-->
@@ -3325,9 +3302,7 @@
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>105.25</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -3378,7 +3353,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3386,7 +3361,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 69 =========================-->
@@ -3416,7 +3391,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3424,7 +3399,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 70 =========================-->
@@ -3474,7 +3449,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3482,7 +3457,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 71 =========================-->
@@ -3503,7 +3478,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3511,7 +3486,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 72 =========================-->
@@ -3539,7 +3514,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3547,7 +3522,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 73 =========================-->
@@ -3602,7 +3577,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3610,7 +3585,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 74 =========================-->
@@ -3623,9 +3598,7 @@
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
-        <staff-layout number="2">
-          <staff-distance>91.9</staff-distance>
-        </staff-layout>
+        <staff-layout />
       </print>
       <attributes>
         <staff-details print-object="yes" />
@@ -3665,7 +3638,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3673,7 +3646,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 75 =========================-->
@@ -3718,7 +3691,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>5</voice>
+        <voice>6</voice>
       </note>
       <backup>
         <duration>30240</duration>
@@ -3726,7 +3699,7 @@
       <note print-object="no" print-spacing="yes">
         <rest measure="yes" />
         <duration>30240</duration>
-        <voice>6</voice>
+        <voice>7</voice>
       </note>
     </measure>
     <!--========================= Measure 76 =========================-->
@@ -3850,6 +3823,11 @@
         <direction-type>
           <words />
         </direction-type>
+      </direction>
+      <direction placement="above">
+        <direction-type>
+          <words />
+        </direction-type>
         <sound tempo="46" />
       </direction>
       <note default-x="17.74" default-y="-50">
@@ -3910,6 +3888,11 @@
       <direction placement="above">
         <direction-type>
           <words default-y="11.74" font-size="10" font-style="italic" relative-x="-17.19" relative-y="21.74">34</words>
+        </direction-type>
+      </direction>
+      <direction placement="above">
+        <direction-type>
+          <words />
         </direction-type>
       </direction>
       <direction placement="above">

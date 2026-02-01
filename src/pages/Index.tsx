@@ -1833,11 +1833,11 @@ const Index = () => {
 
   return (
     <TuneManagementProvider>
-      <div className="min-h-screen flex flex-col items-center justify-start bg-background">
+      <div className="h-screen flex flex-col items-center justify-start bg-background overflow-hidden">
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
-          className="w-full flex-1 flex flex-col"
+          className="w-full flex-1 min-h-0 flex flex-col"
         >
         <div className="sticky top-0 z-30 w-full bg-background">
           <div className="flex items-center justify-between p-2">
@@ -1868,7 +1868,7 @@ const Index = () => {
 
         <div
           id="topContainer"
-          className="w-full flex flex-col items-stretch justify-start relative flex-1"
+          className="w-full flex flex-col items-stretch justify-start relative flex-1 min-h-0 overflow-hidden"
         >
           {/* AI Playing / Replay indicator */}
           <TopToastLabel

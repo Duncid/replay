@@ -378,6 +378,25 @@ export const OpenSheetMusicDisplayView = forwardRef<
           }
         });
 
+        const isBlackColor = (value: string) => {
+          const normalized = value.trim().toLowerCase();
+          if (!normalized) return false;
+          if (normalized === "black") return true;
+          if (normalized.startsWith("#")) {
+            const hex = normalized.slice(1);
+            if (hex.length === 3) {
+              return hex === "000";
+            }
+            if (hex.length === 6 || hex.length === 8) {
+              return hex.slice(0, 6) === "000000";
+            }
+            return false;
+          }
+          return /rgba?\(\s*0\s*,\s*0\s*,\s*0(?:\s*,\s*1(?:\.0+)?)?\s*\)/.test(
+            normalized,
+          );
+        };
+
         svg
           .querySelectorAll("path, polyline, polygon, circle, ellipse")
           .forEach((shape) => {
@@ -410,9 +429,12 @@ export const OpenSheetMusicDisplayView = forwardRef<
                 normalizedFill === "#00000000" ||
                 normalizedFill.endsWith(", 0)") ||
                 normalizedFill.endsWith(",0)");
-              if (isTransparentFill) {
-                shape.setAttribute("fill", colors.accent);
+              const isDefaultFill =
+                isTransparentFill || isBlackColor(normalizedFill);
+              if (hasColor && !isDefaultFill) {
+                return;
               }
+              shape.setAttribute("fill", colors.accent);
               shape.setAttribute("stroke", colors.accent);
               shape.setAttribute("stroke-width", "0.8");
               shape.removeAttribute("stroke-opacity");

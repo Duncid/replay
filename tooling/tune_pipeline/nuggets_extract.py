@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
+import xml.etree.ElementTree as ET
 
-from music21 import stream, tempo, meter, key, instrument
+from music21 import stream, tempo, meter, key, instrument, note, chord, clef
 from pydantic import BaseModel
 
 import copy
@@ -90,6 +91,129 @@ def _write_musicxml(part: stream.Part, path: Path) -> Path:
     score.insert(0, part)
     score.write("musicxml", fp=str(path))
     return path
+
+
+def _collect_pitch_range(part: stream.Part) -> Optional[Tuple[int, int]]:
+    min_midi: Optional[int] = None
+    max_midi: Optional[int] = None
+    for element in part.recurse().notes:
+        if isinstance(element, note.Note):
+            pitches = [element.pitch]
+        elif isinstance(element, chord.Chord):
+            pitches = list(element.pitches)
+        else:
+            continue
+        for p in pitches:
+            midi_value = int(p.midi)
+            min_midi = midi_value if min_midi is None else min(min_midi, midi_value)
+            max_midi = midi_value if max_midi is None else max(max_midi, midi_value)
+    if min_midi is None or max_midi is None:
+        return None
+    return min_midi, max_midi
+
+
+def _remove_existing_clefs(part: stream.Part) -> None:
+    for existing in list(part.recurse().getElementsByClass(clef.Clef)):
+        try:
+            existing.activeSite.remove(existing)
+        except Exception:
+            pass
+
+
+def _pitch_to_midi(step: str, octave: int, alter: int = 0) -> int:
+    step_map = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+    return (octave + 1) * 12 + step_map.get(step.upper(), 0) + alter
+
+
+def _apply_clef_heuristic_to_xml(path: Path, threshold_midi: int = 60) -> None:
+    tree = ET.parse(path)
+    root = tree.getroot()
+
+    note_nodes = root.findall(".//note")
+    min_midi = None
+    max_midi = None
+
+    for note_node in note_nodes:
+        pitch = note_node.find("pitch")
+        if pitch is None:
+            continue
+        step_node = pitch.find("step")
+        octave_node = pitch.find("octave")
+        if step_node is None or octave_node is None:
+            continue
+        alter_node = pitch.find("alter")
+        alter = int(alter_node.text) if alter_node is not None else 0
+        midi_value = _pitch_to_midi(step_node.text or "C", int(octave_node.text), alter)
+        min_midi = midi_value if min_midi is None else min(min_midi, midi_value)
+        max_midi = midi_value if max_midi is None else max(max_midi, midi_value)
+
+    if min_midi is None or max_midi is None:
+        return
+
+    attributes = root.find(".//attributes")
+    if attributes is None:
+        return
+
+    for clef_node in list(attributes.findall("clef")):
+        attributes.remove(clef_node)
+
+    needs_bass = min_midi < threshold_midi
+    needs_treble = max_midi >= threshold_midi
+    use_grand_staff = needs_bass and needs_treble
+
+    staves_node = attributes.find("staves")
+    if use_grand_staff:
+        if staves_node is None:
+            staves_node = ET.Element("staves")
+            time_node = attributes.find("time")
+            insert_index = list(attributes).index(time_node) + 1 if time_node is not None else 0
+            attributes.insert(insert_index, staves_node)
+        staves_node.text = "2"
+        treble_node = ET.Element("clef", {"number": "1"})
+        ET.SubElement(treble_node, "sign").text = "G"
+        ET.SubElement(treble_node, "line").text = "2"
+        bass_node = ET.Element("clef", {"number": "2"})
+        ET.SubElement(bass_node, "sign").text = "F"
+        ET.SubElement(bass_node, "line").text = "4"
+        attributes.append(treble_node)
+        attributes.append(bass_node)
+    else:
+        if staves_node is not None:
+            attributes.remove(staves_node)
+        clef_node = ET.Element("clef")
+        if needs_bass and not needs_treble:
+            ET.SubElement(clef_node, "sign").text = "F"
+            ET.SubElement(clef_node, "line").text = "4"
+        else:
+            ET.SubElement(clef_node, "sign").text = "G"
+            ET.SubElement(clef_node, "line").text = "2"
+        attributes.append(clef_node)
+
+    for note_node in note_nodes:
+        pitch = note_node.find("pitch")
+        if pitch is None:
+            continue
+        step_node = pitch.find("step")
+        octave_node = pitch.find("octave")
+        if step_node is None or octave_node is None:
+            continue
+        alter_node = pitch.find("alter")
+        alter = int(alter_node.text) if alter_node is not None else 0
+        midi_value = _pitch_to_midi(step_node.text or "C", int(octave_node.text), alter)
+        staff_value = "1" if (not use_grand_staff or midi_value >= threshold_midi) else "2"
+
+        staff_node = note_node.find("staff")
+        if staff_node is None:
+            staff_node = ET.Element("staff")
+            insert_after = note_node.find("voice") or note_node.find("duration")
+            if insert_after is not None:
+                insert_index = list(note_node).index(insert_after) + 1
+                note_node.insert(insert_index, staff_node)
+            else:
+                note_node.append(staff_node)
+        staff_node.text = staff_value
+
+    tree.write(path, encoding="utf-8", xml_declaration=True)
 
 
 def _tempo_boundaries(score: stream.Score) -> List[Tuple[float, Optional[float], float]]:
@@ -332,7 +456,9 @@ def extract_nuggets(
             if part is not None:
                 sliced_part = _slice_part_by_offset(part, start_offset, end_offset)
                 xml_filename = f"{nugget_id}{suffix}.xml"
-                _write_musicxml(sliced_part, nuggets_dir / xml_filename)
+                xml_path = nuggets_dir / xml_filename
+                _write_musicxml(sliced_part, xml_path)
+                _apply_clef_heuristic_to_xml(xml_path)
 
                 chord_keep = "lowest" if track_name == "lh" else "highest"
                 dsp2_part = simplify_part_for_dsp2(
@@ -342,7 +468,9 @@ def extract_nuggets(
                     chord_keep=chord_keep,
                 )
                 dsp_filename = f"{nugget_id}{suffix}.dsp.xml"
-                _write_musicxml(dsp2_part, nuggets_dir / dsp_filename)
+                dsp_path = nuggets_dir / dsp_filename
+                _write_musicxml(dsp2_part, dsp_path)
+                _apply_clef_heuristic_to_xml(dsp_path)
 
 
 def extract_assemblies(
@@ -469,7 +597,9 @@ def extract_assemblies(
             if part is not None:
                 sliced_part = _slice_part_by_offset(part, start_offset, end_offset)
                 xml_filename = f"{assembly_id}{suffix}.xml"
-                _write_musicxml(sliced_part, assemblies_dir / xml_filename)
+                xml_path = assemblies_dir / xml_filename
+                _write_musicxml(sliced_part, xml_path)
+                _apply_clef_heuristic_to_xml(xml_path)
 
                 chord_keep = "lowest" if track_name == "lh" else "highest"
                 dsp2_part = simplify_part_for_dsp2(
@@ -479,6 +609,8 @@ def extract_assemblies(
                     chord_keep=chord_keep,
                 )
                 dsp_filename = f"{assembly_id}{suffix}.dsp.xml"
-                _write_musicxml(dsp2_part, assemblies_dir / dsp_filename)
+                dsp_path = assemblies_dir / dsp_filename
+                _write_musicxml(dsp2_part, dsp_path)
+                _apply_clef_heuristic_to_xml(dsp_path)
         
         print(f"Extracted assembly {assembly_id}: {len(sliced_notes)} notes, {total_duration:.2f}s")

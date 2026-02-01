@@ -1,19 +1,5 @@
-import { Button } from "@/components/ui/button";
-import {
-  Play,
-  Square,
-  MoreHorizontal,
-  Trash2,
-  Copy,
-  Shuffle,
-  Wand2,
-  ArrowLeftToLine,
-  ArrowRightToLine,
-} from "lucide-react";
-import { NoteSequence } from "@/types/noteSequence";
 import { SheetMusic } from "@/components/SheetMusic";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +7,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { NoteSequence } from "@/types/noteSequence";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  Copy,
+  MoreHorizontal,
+  Play,
+  Shuffle,
+  Square,
+  Trash2,
+  Wand2,
+} from "lucide-react";
 
 interface TrackItemProps {
   id?: string;
@@ -60,7 +60,14 @@ export function TrackItem({
   const { toast } = useToast();
 
   // Only make sortable if id is provided (not for live recording)
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: id || "non-sortable",
     disabled: !id || isRecording,
   });
@@ -75,7 +82,9 @@ export function TrackItem({
 
   // AI-generated styling uses a blue shade
   const controlBarBg = isAiGenerated ? "bg-blue-500/20" : "bg-muted/50";
-  const controlBarBorder = isAiGenerated ? "border-blue-500/30" : "border-border";
+  const controlBarBorder = isAiGenerated
+    ? "border-blue-500/30"
+    : "border-border";
   const contentBg = isAiGenerated ? "bg-blue-500/5" : "bg-card/50";
   const contentBorder = isAiGenerated ? "border-blue-500/30" : "border-border";
 
@@ -101,7 +110,8 @@ export function TrackItem({
       style={style}
       className={cn(
         "flex flex-col w-fit shrink-0 transition-all duration-300 rounded-md h-full",
-        isPlaying && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background",
+        isPlaying &&
+          "ring-2 ring-primary/70 ring-offset-2 ring-offset-background",
         isDragging && "z-50",
       )}
     >
@@ -127,7 +137,7 @@ export function TrackItem({
                 onMouseDown={handleButtonMouseDown}
                 onPointerDown={handleButtonPointerDown}
               >
-                <Square className="w-3 h-3" fill="currentColor" />
+                <Square fill="currentColor" />
               </Button>
             ) : (
               <Button
@@ -138,7 +148,7 @@ export function TrackItem({
                 onMouseDown={handleButtonMouseDown}
                 onPointerDown={handleButtonPointerDown}
               >
-                <Play className="w-3 h-3" fill="currentColor" />
+                <Play fill="currentColor" />
               </Button>
             )}
             <DropdownMenu>
@@ -150,48 +160,66 @@ export function TrackItem({
                   onMouseDown={handleButtonMouseDown}
                   onPointerDown={handleButtonPointerDown}
                 >
-                  <MoreHorizontal className="w-3 h-3" />
+                  <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="bg-popover">
                 <DropdownMenuItem disabled={isFirst} onClick={onMergePrevious}>
-                  <ArrowLeftToLine className="w-3 h-3 mr-2" />
+                  <ArrowLeftToLine />
                   Merge with previous
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={isLast} onClick={onMergeNext}>
-                  <ArrowRightToLine className="w-3 h-3 mr-2" />
+                  <ArrowRightToLine />
                   Merge with next
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {onRequestImprov && (
                   <DropdownMenuItem onClick={() => onRequestImprov(sequence)}>
-                    <Wand2 className="w-3 h-3 mr-2" />
+                    <Wand2 />
                     Improvise
                   </DropdownMenuItem>
                 )}
                 {onRequestVariations && (
-                  <DropdownMenuItem onClick={() => onRequestVariations(sequence)}>
-                    <Shuffle className="w-3 h-3 mr-2" />
+                  <DropdownMenuItem
+                    onClick={() => onRequestVariations(sequence)}
+                  >
+                    <Shuffle />
                     Create variations
                   </DropdownMenuItem>
                 )}
-                {(onRequestImprov || onRequestVariations) && <DropdownMenuSeparator />}
+                {(onRequestImprov || onRequestVariations) && (
+                  <DropdownMenuSeparator />
+                )}
                 <DropdownMenuItem onClick={handleCopySequence}>
-                  <Copy className="w-3 h-3 mr-2" />
+                  <Copy />
                   Copy as NoteSequence
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onRemove} className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-3 h-3 mr-2" />
+                <DropdownMenuItem
+                  onClick={onRemove}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 />
                   Remove
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         )}
-        {isRecording && <span className="text-xs text-muted-foreground px-1">Recording...</span>}
+        {isRecording && (
+          <span className="text-xs text-muted-foreground px-1">
+            Recording...
+          </span>
+        )}
       </div>
       {/* Sheet music - no title, no controls */}
-      <div className={cn(contentBg, "rounded-b-md overflow-hidden h-full", "border", contentBorder)}>
+      <div
+        className={cn(
+          contentBg,
+          "rounded-b-md overflow-hidden h-full",
+          "border",
+          contentBorder,
+        )}
+      >
         <SheetMusic sequence={sequence} compact noTitle noControls />
       </div>
     </div>

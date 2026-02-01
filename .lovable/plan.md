@@ -277,20 +277,20 @@ A second dropdown for selecting Full / Nuggets / Assemblies:
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
-            <Pencil className="h-4 w-4 mr-1" />
+            <Pencil />
             Edit
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="bg-popover">
           <DropdownMenuItem onClick={() => openRenameDialog(selectedTune)}>
-            <Pencil className="h-4 w-4 mr-2" />
+            <Pencil />
             Rename
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => openDeleteDialog(selectedTune)}
             className="text-destructive"
           >
-            <Trash2 className="h-4 w-4 mr-2" />
+            <Trash2 />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>

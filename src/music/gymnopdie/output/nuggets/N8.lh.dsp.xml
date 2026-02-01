@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE score-partwise  PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='utf-8'?>
 <score-partwise version="4.0">
   <movement-title>Music21 Fragment</movement-title>
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-01-31</encoding-date>
+      <encoding-date>2026-02-01</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -16,22 +15,22 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P2e436798b0a34718d509130fd800133d">
+    <score-part id="Pfb60f1151bbe05d494a373626cd74245">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I2b2db2bf2da121e2f086254629699bca">
+      <score-instrument id="Ibbc5b45dbfdb01899317926f7003c284">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I2b2db2bf2da121e2f086254629699bca">
+      <midi-instrument id="Ibbc5b45dbfdb01899317926f7003c284">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
-  <!--=========================== Part 1 ===========================-->
-  <part id="P2e436798b0a34718d509130fd800133d">
-    <!--========================= Measure 1 ==========================-->
+  
+  <part id="Pfb60f1151bbe05d494a373626cd74245">
+    
     <measure implicit="no" number="1">
       <attributes>
         <divisions>10080</divisions>
@@ -39,18 +38,57 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
-        <clef>
-          <sign>F</sign>
-          <line>4</line>
-        </clef>
-      </attributes>
+        <staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>
       <note>
         <pitch>
           <step>D</step>
           <octave>2</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>2</staff><type>quarter</type>
+      </note>
+      <note>
+        <chord />
+        <pitch>
+          <step>G</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>2</staff><type>quarter</type>
+      </note>
+      <note>
+        <chord />
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>2</staff><type>quarter</type>
+      </note>
+      <note>
+        <chord />
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>2</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <pitch>
@@ -58,7 +96,7 @@
           <octave>3</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <chord />
@@ -67,7 +105,7 @@
           <octave>3</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <chord />
@@ -76,7 +114,7 @@
           <octave>3</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <chord />
@@ -85,15 +123,18 @@
           <octave>4</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>1</staff><type>quarter</type>
       </note>
+    </measure>
+    
+    <measure implicit="no" number="2">
       <note>
         <pitch>
           <step>D</step>
           <octave>2</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <pitch>
@@ -101,7 +142,7 @@
           <octave>3</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <chord />
@@ -111,7 +152,7 @@
           <octave>3</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
         <accidental>sharp</accidental>
       </note>
       <note>
@@ -121,7 +162,7 @@
           <octave>3</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <chord />
@@ -130,71 +171,23 @@
           <octave>4</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>1</staff><type>quarter</type>
       </note>
-    </measure>
-    <!--========================= Measure 2 ==========================-->
-    <measure implicit="no" number="2">
       <note>
         <pitch>
-          <step>D</step>
+          <step>E</step>
           <octave>2</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <pitch>
-          <step>A</step>
+          <step>B</step>
           <octave>3</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
-      </note>
-      <note>
-        <chord />
-        <pitch>
-          <step>C</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>10080</duration>
-        <type>quarter</type>
-      </note>
-      <note>
-        <chord />
-        <pitch>
-          <step>F</step>
-          <alter>0</alter>
-          <octave>4</octave>
-        </pitch>
-        <duration>10080</duration>
-        <type>quarter</type>
-        <accidental>natural</accidental>
-      </note>
-      <note>
-        <pitch>
-          <step>D</step>
-          <octave>2</octave>
-        </pitch>
-        <duration>10080</duration>
-        <type>quarter</type>
-      </note>
-      <note>
-        <pitch>
-          <step>A</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>10080</duration>
-        <type>quarter</type>
-      </note>
-      <note>
-        <chord />
-        <pitch>
-          <step>C</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>10080</duration>
-        <type>quarter</type>
+        <staff>2</staff><type>quarter</type>
       </note>
       <note>
         <chord />
@@ -203,7 +196,16 @@
           <octave>4</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>1</staff><type>quarter</type>
+      </note>
+      <note>
+        <chord />
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
       </note>
       <barline location="right">
         <bar-style>light-heavy</bar-style>

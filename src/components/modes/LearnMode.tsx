@@ -677,7 +677,7 @@ export function LearnModeTabContent({
   return (
     <TabsContent
       value="learn"
-      className="w-full h-full flex-1 min-h-0 flex items-center justify-center"
+      className="w-full h-full flex-1 min-h-0 flex items-center justify-center overflow-auto"
     >
       {learnModeType === "free-practice" ? (
         <FreePracticeMode {...freePracticeProps} />

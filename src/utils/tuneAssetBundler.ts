@@ -1,101 +1,110 @@
 // Centralized Vite glob imports for tune assets
 // These are loaded at build time for local music files
 
-import type { NoteSequence } from "@/types/noteSequence";
-import type { TuneAssembly, TuneBriefing, TuneNugget } from "@/types/tuneAssets";
+import type { TuneBriefing } from "@/types/tuneAssets";
 
 // Auto-discover all teacher.json files at build time
 const teacherModules = import.meta.glob<{ default: Record<string, unknown> }>(
   "/src/music/*/teacher.json",
-  { eager: true }
+  { eager: true },
 );
 
 // Pre-load all tune note sequences at build time
 const tuneNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 const tuneLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.lh.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 const tuneRhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.rh.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 // Pre-load all nugget note sequences
 const nuggetNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 const nuggetLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.lh.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 const nuggetRhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.rh.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 // Pre-load all assembly note sequences
 const assemblyNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 const assemblyLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.lh.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 const assemblyRhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.rh.ns.json",
-  { eager: true }
+  { eager: true },
 );
 
 // Pre-load all XML files at build time (for sheet music rendering)
 const tuneXmlModules = import.meta.glob<string>(
   "/src/music/*/output/tune.xml",
-  { eager: true, query: "?raw", import: "default" }
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const tuneLhXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/tune.lh.xml",
+  { eager: true, query: "?raw", import: "default" },
+);
+
+const tuneRhXmlModules = import.meta.glob<string>(
+  "/src/music/*/output/tune.rh.xml",
+  { eager: true, query: "?raw", import: "default" },
 );
 
 const nuggetXmlModules = import.meta.glob<string>(
   "/src/music/*/output/nuggets/*.xml",
-  { eager: true, query: "?raw", import: "default" }
+  { eager: true, query: "?raw", import: "default" },
 );
 
 const assemblyXmlModules = import.meta.glob<string>(
   "/src/music/*/output/assemblies/*.xml",
-  { eager: true, query: "?raw", import: "default" }
+  { eager: true, query: "?raw", import: "default" },
 );
 
 // Pre-load all DSP XML files at build time (display-optimized MusicXML)
 const tuneDspXmlModules = import.meta.glob<string>(
-  "/src/music/*/output/dsp.xml",
-  { eager: true, query: "?raw", import: "default" }
+  "/src/music/*/output/tune.dsp.xml",
+  { eager: true, query: "?raw", import: "default" },
 );
 
 // Match all *.dsp.xml files in nuggets (includes N1.dsp.xml, N1.lh.dsp.xml, N1.rh.dsp.xml)
 const nuggetDspXmlModules = import.meta.glob<string>(
   "/src/music/*/output/nuggets/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" }
+  { eager: true, query: "?raw", import: "default" },
 );
 
 // Match all *.dsp.xml files in assemblies
 const assemblyDspXmlModules = import.meta.glob<string>(
   "/src/music/*/output/assemblies/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" }
+  { eager: true, query: "?raw", import: "default" },
 );
 
 // Helper to get module from glob by path
 const getGlobModule = (
   modules: Record<string, { default?: object }>,
-  path: string
+  path: string,
 ): object | null => {
   const module = modules[path];
   return module?.default || (module as unknown as object) || null;
@@ -120,7 +129,9 @@ export interface TuneValidationResult {
 }
 
 // Validate a tune has all required files before publishing
-export const validateTuneForPublishing = (musicRef: string): TuneValidationResult => {
+export const validateTuneForPublishing = (
+  musicRef: string,
+): TuneValidationResult => {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -148,7 +159,7 @@ export const validateTuneForPublishing = (musicRef: string): TuneValidationResul
 
   const tuneDspXml = getTuneDspXml(musicRef);
   if (!tuneDspXml) {
-    warnings.push("Missing output/dsp.xml");
+    warnings.push("Missing output/tune.dsp.xml");
   }
 
   return {
@@ -161,7 +172,7 @@ export const validateTuneForPublishing = (musicRef: string): TuneValidationResul
 export const getTeacher = (musicRef: string): Record<string, unknown> | null =>
   getGlobModule(
     teacherModules,
-    `/src/music/${musicRef}/teacher.json`
+    `/src/music/${musicRef}/teacher.json`,
   ) as Record<string, unknown> | null;
 
 export const getTuneNs = (musicRef: string): object | null =>
@@ -173,49 +184,58 @@ export const getTuneLh = (musicRef: string): object | null =>
 export const getTuneRh = (musicRef: string): object | null =>
   getGlobModule(tuneRhModules, `/src/music/${musicRef}/output/tune.rh.ns.json`);
 
-export const getNuggetNs = (musicRef: string, nuggetId: string): object | null =>
+export const getNuggetNs = (
+  musicRef: string,
+  nuggetId: string,
+): object | null =>
   getGlobModule(
     nuggetNsModules,
-    `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`,
   );
 
-export const getNuggetLh = (musicRef: string, nuggetId: string): object | null =>
+export const getNuggetLh = (
+  musicRef: string,
+  nuggetId: string,
+): object | null =>
   getGlobModule(
     nuggetLhModules,
-    `/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.lh.ns.json`,
   );
 
-export const getNuggetRh = (musicRef: string, nuggetId: string): object | null =>
+export const getNuggetRh = (
+  musicRef: string,
+  nuggetId: string,
+): object | null =>
   getGlobModule(
     nuggetRhModules,
-    `/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.rh.ns.json`,
   );
 
 export const getAssemblyNs = (
   musicRef: string,
-  assemblyId: string
+  assemblyId: string,
 ): object | null =>
   getGlobModule(
     assemblyNsModules,
-    `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`,
   );
 
 export const getAssemblyLh = (
   musicRef: string,
-  assemblyId: string
+  assemblyId: string,
 ): object | null =>
   getGlobModule(
     assemblyLhModules,
-    `/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.lh.ns.json`,
   );
 
 export const getAssemblyRh = (
   musicRef: string,
-  assemblyId: string
+  assemblyId: string,
 ): object | null =>
   getGlobModule(
     assemblyRhModules,
-    `/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.rh.ns.json`,
   );
 
 // XML helper functions
@@ -224,9 +244,19 @@ export const getTuneXml = (musicRef: string): string | null => {
   return tuneXmlModules[path] || null;
 };
 
+export const getTuneLhXml = (musicRef: string): string | null => {
+  const path = `/src/music/${musicRef}/output/tune.lh.xml`;
+  return tuneLhXmlModules[path] || null;
+};
+
+export const getTuneRhXml = (musicRef: string): string | null => {
+  const path = `/src/music/${musicRef}/output/tune.rh.xml`;
+  return tuneRhXmlModules[path] || null;
+};
+
 export const getNuggetXml = (
   musicRef: string,
-  nuggetId: string
+  nuggetId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.xml`;
   return nuggetXmlModules[path] || null;
@@ -234,7 +264,7 @@ export const getNuggetXml = (
 
 export const getAssemblyXml = (
   musicRef: string,
-  assemblyId: string
+  assemblyId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.xml`;
   return assemblyXmlModules[path] || null;
@@ -242,13 +272,13 @@ export const getAssemblyXml = (
 
 // DSP XML helper functions (display-optimized MusicXML)
 export const getTuneDspXml = (musicRef: string): string | null => {
-  const path = `/src/music/${musicRef}/output/dsp.xml`;
+  const path = `/src/music/${musicRef}/output/tune.dsp.xml`;
   return tuneDspXmlModules[path] || null;
 };
 
 export const getNuggetDspXml = (
   musicRef: string,
-  nuggetId: string
+  nuggetId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.dsp.xml`;
   return nuggetDspXmlModules[path] || null;
@@ -256,7 +286,7 @@ export const getNuggetDspXml = (
 
 export const getAssemblyDspXml = (
   musicRef: string,
-  assemblyId: string
+  assemblyId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.dsp.xml`;
   return assemblyDspXmlModules[path] || null;
@@ -279,7 +309,7 @@ export const getLocalNuggetIds = (musicRef: string): string[] => {
   if (!teacher) return [];
   const teachingOrder = teacher.teachingOrder as string[] | undefined;
   if (teachingOrder) return teachingOrder;
-  
+
   const nuggets = teacher.nuggets as Array<{ id: string }> | undefined;
   return nuggets?.map((n) => n.id) ?? [];
 };
@@ -290,7 +320,7 @@ export const getLocalAssemblyIds = (musicRef: string): string[] => {
   if (!teacher) return [];
   const assemblyOrder = teacher.assemblyOrder as string[] | undefined;
   if (assemblyOrder) return assemblyOrder;
-  
+
   const assemblies = teacher.assemblies as Array<{ id: string }> | undefined;
   return assemblies?.map((a) => a.id) ?? [];
 };
@@ -341,7 +371,7 @@ export interface TuneAssetBundle {
 
 // Bundle a single tune's assets for publishing
 export const bundleSingleTuneAssets = (
-  musicRef: string
+  musicRef: string,
 ): TuneAssetBundle | null => {
   try {
     const teacher = getTeacher(musicRef);
@@ -354,7 +384,7 @@ export const bundleSingleTuneAssets = (
     // VALIDATION: Check that noteSequence was loaded
     if (!noteSequence) {
       console.error(
-        `[tuneAssetBundler] Failed to load note sequence for musicRef: ${musicRef}`
+        `[tuneAssetBundler] Failed to load note sequence for musicRef: ${musicRef}`,
       );
       return null;
     }
@@ -366,7 +396,7 @@ export const bundleSingleTuneAssets = (
       noteSequence.notes.length === 0
     ) {
       console.error(
-        `[tuneAssetBundler] Note sequence for ${musicRef} has no notes`
+        `[tuneAssetBundler] Note sequence for ${musicRef} has no notes`,
       );
       return null;
     }
@@ -494,8 +524,7 @@ export const bundleSingleTuneAssets = (
       leftHandSequence: leftHand as Record<string, unknown> | undefined,
       rightHandSequence: rightHand as Record<string, unknown> | undefined,
       tuneXml: tuneXml || undefined,
-      nuggetXmls:
-        Object.keys(nuggetXmls).length > 0 ? nuggetXmls : undefined,
+      nuggetXmls: Object.keys(nuggetXmls).length > 0 ? nuggetXmls : undefined,
       assemblyXmls:
         Object.keys(assemblyXmls).length > 0 ? assemblyXmls : undefined,
       tuneDspXml: tuneDspXml || undefined,
@@ -507,7 +536,7 @@ export const bundleSingleTuneAssets = (
   } catch (error) {
     console.error(
       `[tuneAssetBundler] Failed to bundle assets for ${musicRef}:`,
-      error
+      error,
     );
     return null;
   }
