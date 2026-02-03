@@ -337,8 +337,9 @@ const Index = () => {
   const MIN_WAIT_TIME_MS = 1000;
 
   useEffect(() => {
-    const warmupAudio = () => {
-      pianoRef.current?.ensureAudioReady();
+    const warmupAudio = async () => {
+      await pianoRef.current?.ensureAudioReady();
+      await pianoRef.current?.preload();
     };
 
     const handleFirstInteraction = () => {
@@ -360,6 +361,12 @@ const Index = () => {
       document.removeEventListener("touchstart", handleFirstInteraction);
     };
   }, []);
+
+  // Preload audio samples when instrument changes
+  useEffect(() => {
+    if (!hasUserInteractedRef.current) return;
+    pianoRef.current?.preload();
+  }, [pianoSoundType]);
 
   // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
   // (they will be initialized after those functions are defined)
@@ -1409,11 +1416,6 @@ const Index = () => {
     setIsInTuneMode(learnMode.isInTuneMode);
   }, [learnMode.isInTuneMode]);
 
-  useEffect(() => {
-    if (!hasUserInteractedRef.current) return;
-    if (activeMode !== "learn" || !isInTuneMode) return;
-    pianoRef.current?.preload();
-  }, [activeMode, isInTuneMode, pianoSoundType]);
 
   // Reset learn flow when the current user changes
   useEffect(() => {
