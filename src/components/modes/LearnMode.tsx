@@ -61,7 +61,9 @@ interface LearnModeProps {
   debugMode: boolean;
   localUserId?: string | null;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
-  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (
+    handler: ((noteKey: string) => void) | null,
+  ) => void;
   // Metronome control props
   metronomeBpm: number;
   setMetronomeBpm: (bpm: number) => void;

@@ -271,6 +271,7 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
   const [isLoaded, setIsLoaded] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
   const soundTypeRef = useRef<PianoSoundType | null>(soundType);
+  const loadPromiseRef = useRef<Promise<void> | null>(null);
   // Use ref to track isLoaded for stable callbacks
   const isLoadedRef = useRef(false);
 
@@ -290,6 +291,7 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
     setIsLoaded(false);
     isLoadedRef.current = false;
     soundTypeRef.current = soundType;
+    loadPromiseRef.current = null;
 
     // Skip engine creation if soundType is null
     if (soundType === null) {
@@ -301,10 +303,12 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
       engineRef.current = createClassicEngine();
       setIsLoaded(true);
       isLoadedRef.current = true;
+      loadPromiseRef.current = Promise.resolve();
     } else if (SAMPLED_INSTRUMENTS.includes(soundType)) {
       console.log(`[AudioEngine] Creating sampler engine for: ${soundType}`);
       const { engine, loadPromise } = createSamplerEngine(soundType);
       engineRef.current = engine;
+      loadPromiseRef.current = loadPromise;
       loadPromise.then(() => {
         if (soundTypeRef.current === soundType && engineRef.current === engine) {
           setIsLoaded(true);
@@ -343,6 +347,16 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
     await Tone.start();
   }, []);
 
+  const preload = useCallback(async () => {
+    if (soundTypeRef.current === null) return;
+    try {
+      await ensureAudioReady();
+      await loadPromiseRef.current;
+    } catch (error) {
+      console.warn("[AudioEngine] Preload skipped:", error);
+    }
+  }, [ensureAudioReady]);
+
   const startNote = useCallback((noteKey: string) => {
     if (!engineRef.current || !isLoadedRef.current) return;
     engineRef.current.startNote(noteKey);
@@ -361,6 +375,7 @@ export function useTonePiano(soundType: PianoSoundType | null = "classic") {
   return {
     isLoaded,
     ensureAudioReady,
+    preload,
     startNote,
     stopNote,
     playNote,

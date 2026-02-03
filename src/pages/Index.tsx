@@ -325,6 +325,7 @@ const Index = () => {
   const pianoRef = useRef<PianoHandle>(null);
   const currentRequestIdRef = useRef<string | null>(null);
   const requestStartTimeRef = useRef<number>(0);
+  const hasUserInteractedRef = useRef(false);
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const noteTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const shouldStopAiRef = useRef<boolean>(false);
@@ -341,6 +342,7 @@ const Index = () => {
     };
 
     const handleFirstInteraction = () => {
+      hasUserInteractedRef.current = true;
       warmupAudio();
       document.removeEventListener("pointerdown", handleFirstInteraction);
       document.removeEventListener("touchstart", handleFirstInteraction);
@@ -382,7 +384,9 @@ const Index = () => {
     "curriculum" | "free-practice"
   >("curriculum");
   const tuneNoteHandlerRef = useRef<((noteKey: string) => void) | null>(null);
-  const tuneNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(null);
+  const tuneNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(
+    null,
+  );
   const labNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(null);
 
   // Free practice recording
@@ -1404,6 +1408,12 @@ const Index = () => {
   useEffect(() => {
     setIsInTuneMode(learnMode.isInTuneMode);
   }, [learnMode.isInTuneMode]);
+
+  useEffect(() => {
+    if (!hasUserInteractedRef.current) return;
+    if (activeMode !== "learn" || !isInTuneMode) return;
+    pianoRef.current?.preload();
+  }, [activeMode, isInTuneMode, pianoSoundType]);
 
   // Reset learn flow when the current user changes
   useEffect(() => {
