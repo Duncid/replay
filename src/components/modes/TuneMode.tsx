@@ -124,169 +124,7 @@ export function TuneMode({
     return (recording as INoteSequence & { recordingId?: string }).recordingId ?? null;
   }, []);
 
-  // Auto-evaluate when recording stops (silence detected)
-  useEffect(() => {
-    // Reset when recording starts
-    if (isRecording) {
-      setIsEvaluating(false);
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-        preEvalTimer.current = null;
-      }
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-        silenceTimer.current = null;
-      }
-      return;
-    }
-    
-    if (!isRecording && currentRecording && currentRecording !== lastProcessedRecording.current) {
-      // Recording just stopped, start silence timer
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-      }
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-      }
-      
-      // Show "Evaluating..." after 0.5s of silence
-      preEvalTimer.current = setTimeout(() => {
-        setIsEvaluating(true);
-      }, 500);
-      
-      silenceTimer.current = setTimeout(() => {
-        if (state.phase !== "practicing" || !currentNugget || !currentRecording) return;
-        const recordingId = getRecordingId(currentRecording);
-        const signature = getRecordingSignature(currentRecording);
-        if (recordingId && lastProcessedRecordingIdRef.current === recordingId) return;
-        if (!recordingId && lastProcessedSignatureRef.current === signature) return;
-
-        const targetSequence = (
-          currentNugget.nugget?.noteSequence ||
-          currentNugget.assembly?.noteSequence ||
-          currentNugget.fullTune?.noteSequence
-        ) as INoteSequence | undefined;
-        const targetNoteCount = targetSequence?.notes?.length || 8;
-        const minNotes = Math.min(
-          targetNoteCount,
-          Math.max(2, Math.ceil(targetNoteCount * 0.5)),
-        );
-        const minDurationSec = 0.3;
-        const { noteCount, totalTime } = getRecordingStats(currentRecording);
-        const shouldSend = noteCount >= minNotes && totalTime >= minDurationSec;
-        const decision = `rec=${recordingId ?? "none"} notes ${noteCount}/${targetNoteCount}, duration ${totalTime.toFixed(2)}s (min ${minNotes}, ${minDurationSec}s) -> ${shouldSend ? "send" : "skip"}`;
-        setLastEvalDecision(decision);
-        if (debugMode) {
-          console.log(`[TuneMode] Eval gate: ${decision}`);
-        }
-        lastProcessedSignatureRef.current = signature;
-        lastProcessedRecordingIdRef.current = recordingId;
-        if (!shouldSend) {
-          setIsEvaluating(false);
-          return;
-        }
-        lastProcessedRecording.current = currentRecording;
-        handleEvaluate(currentRecording);
-      }, 1500); // 1.5 second delay after recording stops
-    }
-
-    return () => {
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-      }
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-      }
-    };
-  }, [isRecording, currentRecording, state.phase, currentNugget, debugMode, getRecordingId, getRecordingSignature, getRecordingStats]);
-
-  // Initial load - fetch practice plan
-  useEffect(() => {
-    if (state.phase === "loading") {
-      fetchPracticePlan();
-    }
-  }, [state.phase]);
-
-  // Track whether this is a regeneration (plan was exhausted)
-  const isRegeneration = state.practicePlan.length === 0 && state.currentIndex === 0 && state.phase === "loading";
-
-  const fetchPracticePlan = async () => {
-    try {
-      setPhase("coaching");
-      
-      if (debugMode) {
-        // In debug mode, fetch with debug flag to get prompt preview
-        const debugResponse = await startPractice.mutateAsync({
-          tuneKey,
-          localUserId,
-          language,
-          debug: true,
-        });
-        
-        setCoachDebugData({
-          tuneKey,
-          tuneTitle: (debugResponse as any).tuneTitle || tuneKey,
-          motifsCount: (debugResponse as any).motifsCount || 0,
-          nuggetsCount: (debugResponse as any).nuggetsCount || 0,
-          practiceHistory: (debugResponse as any).practiceHistory || [],
-          prompt: (debugResponse as any).prompt,
-          request: (debugResponse as any).request,
-        });
-        
-        // Store raw nuggets for later use
-        setPendingCoachResponse(debugResponse as any);
-      } else {
-        const response = await startPractice.mutateAsync({
-          tuneKey,
-          localUserId,
-          language,
-          debug: false,
-        });
-        
-        if (response.practicePlan && response.practicePlan.length > 0) {
-          setPracticePlan(response.practicePlan, response.tuneTitle);
-          // Show different message for regeneration vs first load
-          toast.success(
-            isRegeneration 
-              ? t("tune.planReady")
-              : (response.encouragement || t("tune.letsPractice"))
-          );
-        } else {
-          throw new Error("No practice plan received");
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching practice plan:", error);
-      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
-      toast.error(t("tune.loadPlanFailed"));
-    }
-  };
-
-  const proceedFromCoachDebug = async () => {
-    setCoachDebugData(null);
-    
-    try {
-      const response = await startPractice.mutateAsync({
-        tuneKey,
-        localUserId,
-        language,
-        debug: false,
-      });
-      
-      if (response.practicePlan && response.practicePlan.length > 0) {
-        setPracticePlan(response.practicePlan, response.tuneTitle);
-        toast.success(response.encouragement || t("tune.letsPractice"));
-      } else {
-        throw new Error("No practice plan received");
-      }
-    } catch (error) {
-      console.error("Error fetching practice plan:", error);
-      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
-      toast.error(t("tune.loadPlanFailed"));
-    }
-  };
-
-  const handleEvaluate = async (recording: INoteSequence) => {
+  const handleEvaluate = useCallback(async (recording: INoteSequence) => {
     if (!currentNugget) return;
 
     // Get the note sequence from nugget, assembly, or full tune
@@ -457,6 +295,181 @@ export function TuneMode({
       setIsEvaluating(false);
       setPendingEvalIndex(undefined);
       toast.error(t("tune.evaluateFailed"));
+    }
+  }, [
+    debugMode,
+    tuneKey,
+    currentNugget,
+    localUserId,
+    language,
+    evaluateAttempt,
+    updateEvaluation,
+    onClearRecording,
+    state.tuneTitle,
+    state.currentIndex,
+    state.practicePlan.length,
+    t,
+  ]);
+
+  // Auto-evaluate when recording stops (silence detected)
+  useEffect(() => {
+    // Reset when recording starts
+    if (isRecording) {
+      setIsEvaluating(false);
+      if (preEvalTimer.current) {
+        clearTimeout(preEvalTimer.current);
+        preEvalTimer.current = null;
+      }
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current);
+        silenceTimer.current = null;
+      }
+      return;
+    }
+    
+    if (!isRecording && currentRecording && currentRecording !== lastProcessedRecording.current) {
+      // Recording just stopped, start silence timer
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current);
+      }
+      if (preEvalTimer.current) {
+        clearTimeout(preEvalTimer.current);
+      }
+      
+      // Show "Evaluating..." after 0.5s of silence
+      preEvalTimer.current = setTimeout(() => {
+        setIsEvaluating(true);
+      }, 500);
+      
+      silenceTimer.current = setTimeout(() => {
+        if (state.phase !== "practicing" || !currentNugget || !currentRecording) return;
+        const recordingId = getRecordingId(currentRecording);
+        const signature = getRecordingSignature(currentRecording);
+        if (recordingId && lastProcessedRecordingIdRef.current === recordingId) return;
+        if (!recordingId && lastProcessedSignatureRef.current === signature) return;
+
+        const targetSequence = (
+          currentNugget.nugget?.noteSequence ||
+          currentNugget.assembly?.noteSequence ||
+          currentNugget.fullTune?.noteSequence
+        ) as INoteSequence | undefined;
+        const targetNoteCount = targetSequence?.notes?.length || 8;
+        const minNotes = Math.min(
+          targetNoteCount,
+          Math.max(2, Math.ceil(targetNoteCount * 0.5)),
+        );
+        const minDurationSec = 0.3;
+        const { noteCount, totalTime } = getRecordingStats(currentRecording);
+        const shouldSend = noteCount >= minNotes && totalTime >= minDurationSec;
+        const decision = `rec=${recordingId ?? "none"} notes ${noteCount}/${targetNoteCount}, duration ${totalTime.toFixed(2)}s (min ${minNotes}, ${minDurationSec}s) -> ${shouldSend ? "send" : "skip"}`;
+        setLastEvalDecision(decision);
+        if (debugMode) {
+          console.log(`[TuneMode] Eval gate: ${decision}`);
+        }
+        lastProcessedSignatureRef.current = signature;
+        lastProcessedRecordingIdRef.current = recordingId;
+        if (!shouldSend) {
+          setIsEvaluating(false);
+          return;
+        }
+        lastProcessedRecording.current = currentRecording;
+        handleEvaluate(currentRecording);
+      }, 1500); // 1.5 second delay after recording stops
+    }
+
+    return () => {
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current);
+      }
+      if (preEvalTimer.current) {
+        clearTimeout(preEvalTimer.current);
+      }
+    };
+  }, [isRecording, currentRecording, state.phase, currentNugget, debugMode, getRecordingId, getRecordingSignature, getRecordingStats, handleEvaluate]);
+
+  // Initial load - fetch practice plan
+  useEffect(() => {
+    if (state.phase === "loading") {
+      fetchPracticePlan();
+    }
+  }, [state.phase]);
+
+  // Track whether this is a regeneration (plan was exhausted)
+  const isRegeneration = state.practicePlan.length === 0 && state.currentIndex === 0 && state.phase === "loading";
+
+  const fetchPracticePlan = async () => {
+    try {
+      setPhase("coaching");
+      
+      if (debugMode) {
+        // In debug mode, fetch with debug flag to get prompt preview
+        const debugResponse = await startPractice.mutateAsync({
+          tuneKey,
+          localUserId,
+          language,
+          debug: true,
+        });
+        
+        setCoachDebugData({
+          tuneKey,
+          tuneTitle: (debugResponse as any).tuneTitle || tuneKey,
+          motifsCount: (debugResponse as any).motifsCount || 0,
+          nuggetsCount: (debugResponse as any).nuggetsCount || 0,
+          practiceHistory: (debugResponse as any).practiceHistory || [],
+          prompt: (debugResponse as any).prompt,
+          request: (debugResponse as any).request,
+        });
+        
+        // Store raw nuggets for later use
+        setPendingCoachResponse(debugResponse as any);
+      } else {
+        const response = await startPractice.mutateAsync({
+          tuneKey,
+          localUserId,
+          language,
+          debug: false,
+        });
+        
+        if (response.practicePlan && response.practicePlan.length > 0) {
+          setPracticePlan(response.practicePlan, response.tuneTitle);
+          // Show different message for regeneration vs first load
+          toast.success(
+            isRegeneration 
+              ? t("tune.planReady")
+              : (response.encouragement || t("tune.letsPractice"))
+          );
+        } else {
+          throw new Error("No practice plan received");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching practice plan:", error);
+      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
+      toast.error(t("tune.loadPlanFailed"));
+    }
+  };
+
+  const proceedFromCoachDebug = async () => {
+    setCoachDebugData(null);
+    
+    try {
+      const response = await startPractice.mutateAsync({
+        tuneKey,
+        localUserId,
+        language,
+        debug: false,
+      });
+      
+      if (response.practicePlan && response.practicePlan.length > 0) {
+        setPracticePlan(response.practicePlan, response.tuneTitle);
+        toast.success(response.encouragement || t("tune.letsPractice"));
+      } else {
+        throw new Error("No practice plan received");
+      }
+    } catch (error) {
+      console.error("Error fetching practice plan:", error);
+      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
+      toast.error(t("tune.loadPlanFailed"));
     }
   };
 
