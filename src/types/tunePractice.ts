@@ -94,6 +94,7 @@ export interface NuggetPracticeHistory {
 export interface TuneEvaluationResponse {
   evaluation: 'pass' | 'close' | 'fail';
   feedbackText: string;
+  reasoning?: string;
   currentStreak: number;
   successCount?: number;
   suggestNewNugget: boolean;
