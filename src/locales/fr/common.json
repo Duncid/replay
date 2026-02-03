@@ -117,7 +117,8 @@
     "comments": {
       "title": "Commentaires du coach",
       "placeholder": "Joue une phrase pour obtenir un retour.",
-      "helper": "Les commentaires se mettent à jour automatiquement après chaque prise."
+      "helper": "Les commentaires se mettent à jour automatiquement après chaque prise.",
+      "noComments": "Essaie !"
     },
     "status": {
       "playing": "Lecture",

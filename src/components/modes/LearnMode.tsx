@@ -470,6 +470,7 @@ export function LearnMode({
           isRecording={isRecording}
           onRegisterNoteHandler={onRegisterNoteHandler}
           onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+          onClearRecording={onClearRecording}
         />
       );
     }

@@ -14,6 +14,7 @@ export interface RecordingNote {
 export interface RecordingResult {
   sequence: NoteSequence;
   recordingStartTime: number;
+  recordingId: string;
 }
 
 interface UseRecordingManagerOptions {
@@ -45,6 +46,7 @@ export function useRecordingManager({
 
   const recordingRef = useRef<NoteSequence>(createEmptyNoteSequence(bpm, timeSignature));
   const lastRecordingRef = useRef<RecordingResult | null>(null);
+  const recordingIdRef = useRef(0);
   const notePressDataRef = useRef<Map<string, { startTime: number; velocity: number; toneTime?: number }>>(new Map());
   const recordingStartTimeRef = useRef<number | null>(null);
   const heldKeysCountRef = useRef(0);
@@ -116,9 +118,11 @@ export function useRecordingManager({
     };
 
     // Save recording before sending
+    recordingIdRef.current += 1;
     const result: RecordingResult = {
       sequence: { ...normalizedRecording, notes: [...normalizedRecording.notes] },
       recordingStartTime: recordingStartTimeRef.current!,
+      recordingId: `rec_${recordingIdRef.current}`,
     };
     lastRecordingRef.current = result;
 

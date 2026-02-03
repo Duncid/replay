@@ -1316,8 +1316,12 @@ const Index = () => {
     bpm: metronomeBpm,
     timeSignature: metronomeTimeSignature,
     onRecordingComplete: (result) => {
-      setLearnModeRecording(result.sequence);
-      learnModeRecordingRef.current = result.sequence;
+      const sequenceWithId = {
+        ...result.sequence,
+        recordingId: result.recordingId,
+      } as NoteSequence & { recordingId: string };
+      setLearnModeRecording(sequenceWithId);
+      learnModeRecordingRef.current = sequenceWithId;
       setAppState("idle");
     },
     pauseTimeoutMs: 2000,
