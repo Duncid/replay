@@ -1,193 +1,136 @@
 
-# Plan: Restrict Tune Node Selection to Published Tunes
+# Plan: Add Reasoning Field to Force LLM to Show Its Work
 
 ## Overview
 
-Update the Quest Editor so that Tune nodes can only reference tunes that have already been published to the database. This decouples tune asset management from curriculum publishing, simplifying the workflow.
+Add a mandatory `reasoning` field to the LLM tool call that forces it to compare notes one-by-one **before** making an evaluation decision. This Chain-of-Thought approach reduces hallucinations by making the LLM explicitly validate its analysis.
 
-## Current Flow (Being Changed)
+## Problem
 
-```text
-1. User creates Tune node in Quest Editor
-2. User selects local folder from src/music/* as "musicRef"
-3. On curriculum publish:
-   - Frontend bundles all tune assets from local files
-   - Sends large payload (~MB of JSON) to edge function
-   - Edge function inserts tune_assets to DB
+The LLM is hallucinating evaluation results because it skips directly to a grade without verifying its note-by-note comparison. In your example, it claimed "incorrect pitches" when all 7 pitches were perfect matches.
+
+## Solution
+
+Force the LLM to output its reasoning **first** using a structured format that:
+1. Shows the segment it chose to evaluate
+2. Compares each note pitch: `72: good, 73: good, 71: mistake(expected 72), ...`
+3. Notes any additions or missing notes
+4. Explains timing assessment
+
+## Technical Changes
+
+### 1. Update LLM Tool Definition (tune-evaluate)
+
+Add `reasoning` as the **first** required property:
+
+```typescript
+parameters: {
+  type: "object",
+  properties: {
+    reasoning: {
+      type: "string",
+      description: `REQUIRED FIRST: Show your work by comparing the chosen segment note-by-note.
+Format for pitch analysis: "Note 1: 72 vs 72 (good), Note 2: 73 vs 73 (good), Note 3: 71 vs 72 (mistake), Note 4: (addition), Note 5: (missing 66)"
+Then briefly explain timing assessment.
+This field MUST be completed before deciding the evaluation grade.`,
+    },
+    evaluation: {
+      type: "string",
+      enum: ["pass", "close", "fail"],
+      description: "Overall evaluation based on the reasoning above",
+    },
+    // ... other fields unchanged
+  },
+  required: ["reasoning", "evaluation", "feedbackText", "successCount", "replayDemo"],
+}
 ```
 
-## New Flow (After Change)
+### 2. Update System Prompt
+
+Add explicit instructions for the reasoning format:
 
 ```text
-1. User publishes tunes via Tune Manager (already done)
-2. User creates Tune node in Quest Editor
-3. User selects from already-published tunes in DB
-4. On curriculum publish:
-   - Tunes already exist in tune_assets table
-   - No bundling needed
-   - Smaller, faster publish payload
+REASONING REQUIREMENT:
+Before giving your evaluation, you MUST show your note-by-note comparison in the "reasoning" field.
+Format: "Segment [start-end]: Note 1: [user pitch] vs [target pitch] (good/mistake), Note 2: ..."
+For each note, mark as:
+- "good" if pitches match
+- "mistake([expected])" if pitch is wrong, showing what was expected
+- "(addition)" if user played an extra note not in target
+- "(missing [pitch])" if a target note was not played
+Then briefly note timing observations.
+Your evaluation grade MUST be consistent with this analysis.
+```
+
+### 3. Add Reasoning to Response
+
+Include reasoning in the edge function response and debug data:
+
+```typescript
+// Parse from LLM
+const evalResult = JSON.parse(toolCall.function.arguments) as {
+  reasoning: string;  // NEW
+  evaluation: "pass" | "close" | "fail";
+  feedbackText: string;
+  // ...
+};
+
+// Include in response
+return new Response(
+  JSON.stringify({
+    evaluation: evalResult.evaluation,
+    feedbackText: evalResult.feedbackText,
+    reasoning: evalResult.reasoning,  // NEW
+    // ...
+  })
+);
+```
+
+### 4. Update Response Type
+
+Add `reasoning` to `TuneEvaluationResponse`:
+
+```typescript
+export interface TuneEvaluationResponse {
+  evaluation: 'pass' | 'close' | 'fail';
+  feedbackText: string;
+  reasoning?: string;  // NEW
+  // ... rest unchanged
+}
+```
+
+### 5. Display Reasoning in Debug UI
+
+Update `TuneEvaluationDebugCard` or feedback display to show the reasoning:
+
+```tsx
+{debugData.reasoning && (
+  <div className="mt-2">
+    <h4 className="text-sm font-medium mb-1">LLM Reasoning</h4>
+    <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap">
+      {debugData.reasoning}
+    </pre>
+  </div>
+)}
 ```
 
 ---
 
-## Technical Changes
+## Expected LLM Output
 
-### 1. QuestEditor.tsx - Add Published Tunes Hook
+For the example you showed (perfect 7/7 match), the LLM would now output:
 
-Import `usePublishedTuneKeys` and use it instead of `availableTunes`:
-
-```typescript
-import { usePublishedTuneKeys } from "@/hooks/useTuneQueries";
-
-// Inside QuestEditor component:
-const { data: publishedTuneList, isLoading: isLoadingTunes } = usePublishedTuneKeys();
-
-// Transform to selector format
-const availablePublishedTunes = useMemo(() => {
-  if (!publishedTuneList) return [];
-  return publishedTuneList.map(tune => ({
-    key: tune.tune_key,
-    label: tune.briefing?.title || tune.tune_key,
-  }));
-}, [publishedTuneList]);
-```
-
-### 2. QuestEditor.tsx - Update Tune Node Edit Form
-
-Replace the current musicRef selector (lines 3379-3398) to use published tunes:
-
-**Current code:**
-```tsx
-<Select value={editingMusicRef} onValueChange={setEditingMusicRef}>
-  <SelectTrigger>
-    <SelectValue placeholder="Select a tune folder..." />
-  </SelectTrigger>
-  <SelectContent>
-    {availableTunes.map((tune) => (
-      <SelectItem key={tune.key} value={tune.key}>
-        {tune.label}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-<p className="text-xs text-muted-foreground">
-  Select a folder from src/music/
-</p>
-```
-
-**New code:**
-```tsx
-<Select 
-  value={editingMusicRef} 
-  onValueChange={setEditingMusicRef}
-  disabled={isLoadingTunes}
->
-  <SelectTrigger>
-    <SelectValue placeholder={isLoadingTunes ? "Loading..." : "Select a published tune..."} />
-  </SelectTrigger>
-  <SelectContent>
-    {availablePublishedTunes.length === 0 ? (
-      <SelectItem value="" disabled>No published tunes available</SelectItem>
-    ) : (
-      availablePublishedTunes.map((tune) => (
-        <SelectItem key={tune.key} value={tune.key}>
-          {tune.label}
-        </SelectItem>
-      ))
-    )}
-  </SelectContent>
-</Select>
-<p className="text-xs text-muted-foreground">
-  Only tunes published via Tune Manager can be selected
-</p>
-```
-
-### 3. QuestEditor.tsx - Remove Tune Asset Bundling
-
-The `bundleTuneAssets` function (lines 2142-2398) and all its supporting glob imports (lines 109-310) are no longer needed for publishing.
-
-**Remove these imports/declarations:**
-- `teacherModules`, `tuneNsModules`, `tuneLhModules`, `tuneRhModules`
-- `nuggetNsModules`, `nuggetLhModules`, `nuggetRhModules`
-- `assemblyNsModules`, `assemblyLhModules`, `assemblyRhModules`
-- `tuneXmlModules`, `nuggetXmlModules`, `assemblyXmlModules`
-- `tuneDspXmlModules`, `nuggetDspXmlModules`, `assemblyDspXmlModules`
-- Helper functions: `getGlobModule`, `getTeacher`, `getTuneNs`, etc.
-- `availableTunes` variable
-- `TuneAssetBundle` interface (frontend version)
-- `bundleTuneAssets` callback
-
-**Simplify `confirmPublish`:**
-```typescript
-const confirmPublish = useCallback(async () => {
-  if (!currentGraph) return;
-
-  setIsPublishing(true);
-
-  try {
-    // No longer bundling tune assets - they're already published
-    console.log("[QuestEditor] Publishing curriculum (tunes already in DB)");
-
-    const { data, error } = await supabase.functions.invoke(
-      "curriculum-publish",
-      {
-        body: {
-          questGraphId: currentGraph.id,
-          publishTitle: publishDialogTitle.trim() || undefined,
-          mode: "publish",
-          // tuneAssets no longer sent
-        },
-      },
-    );
-    // ... rest unchanged
-  }
-}, [currentGraph, publishDialogTitle, toast]);
-```
-
-### 4. curriculum-publish Edge Function - Handle Pre-Published Tunes
-
-Update the edge function to no longer require `tuneAssets` in the payload. Instead, verify that referenced tunes exist in the database.
-
-**Changes in supabase/functions/curriculum-publish/index.ts:**
-
-1. Remove `TuneAssetBundle` interface (no longer receiving from frontend)
-2. Remove `tuneAssets` from request body destructuring
-3. Add validation that referenced tune_keys exist in tune_assets table
-4. Remove tune_assets insertion logic (step 5)
-
-**Add validation for existing tune assets:**
-```typescript
-// After transformToRuntime(), validate tune references exist in DB
-const tuneNodes = runtimeData.nodes.filter(n => n.kind === "tune");
-const tuneKeys = tuneNodes.map(n => n.key);
-
-if (tuneKeys.length > 0) {
-  // Check that all referenced tunes exist in tune_assets (any version)
-  const { data: existingTunes, error: tuneCheckError } = await supabase
-    .from("tune_assets")
-    .select("tune_key")
-    .in("tune_key", tuneKeys);
-
-  if (tuneCheckError) {
-    console.error("[curriculum-publish] Failed to verify tune assets:", tuneCheckError);
-  } else {
-    const existingKeys = new Set((existingTunes || []).map(t => t.tune_key));
-    const missingTunes = tuneKeys.filter(k => !existingKeys.has(k));
-    
-    if (missingTunes.length > 0) {
-      allErrors.push({
-        type: "missing_tune_assets",
-        message: `Tune assets not found in database: ${missingTunes.join(", ")}. Publish these tunes via Tune Manager first.`,
-      });
-    }
-  }
+```json
+{
+  "reasoning": "Segment [0-6]: Note 1: 72 vs 72 (good), Note 2: 72 vs 72 (good), Note 3: 73 vs 73 (good), Note 4: 74 vs 74 (good), Note 5: 70 vs 70 (good), Note 6: 69 vs 69 (good), Note 7: 72 vs 72 (good). All 7 pitches match. Timing: slightly compressed but within 30% tolerance.",
+  "evaluation": "pass",
+  "feedbackText": "All notes correct with good timing!",
+  "successCount": 1,
+  "replayDemo": false
 }
 ```
 
-**Remove tune asset insertion (lines 840-903):**
-The entire section that inserts `tuneAssets` into the database can be removed since:
-- Tunes are published separately via `tune-publish` edge function
-- Each tune already has a `version_id` from when it was published
+This forces the LLM to explicitly verify each pitch match before deciding the grade, making it much harder to hallucinate "incorrect pitches" when the reasoning clearly shows all matches.
 
 ---
 
@@ -195,51 +138,16 @@ The entire section that inserts `tuneAssets` into the database can be removed si
 
 | File | Changes |
 |------|---------|
-| `src/components/QuestEditor.tsx` | 1. Add `usePublishedTuneKeys` hook import and usage 2. Replace `availableTunes` with `availablePublishedTunes` 3. Update tune selector UI to show published tunes 4. Remove glob imports and bundling logic 5. Simplify `confirmPublish` to not send tuneAssets |
-| `supabase/functions/curriculum-publish/index.ts` | 1. Remove `TuneAssetBundle` interface 2. Remove `tuneAssets` from request handling 3. Add validation that referenced tunes exist in DB 4. Remove tune_assets insertion logic |
-
----
-
-## Validation Behavior
-
-**During Dry Run / Validation:**
-- Check that all Tune nodes have `tuneKey` set
-- Verify each `tuneKey` exists in `tune_assets` table
-- Show error if any tunes are missing: "Tune assets not found: X, Y. Publish via Tune Manager first."
-
-**During Publish:**
-- Same validation as dry run
-- Block publish if any tune assets are missing
-- No longer insert tune assets (they already exist)
-
----
-
-## UI Changes Summary
-
-**Before:**
-```text
-Music Reference: [Select a tune folder...  ▾]
-  - st-louis-blues (from local files)
-  - hot-house (from local files)
-  
-Hint: Select a folder from src/music/
-```
-
-**After:**
-```text
-Music Reference: [Select a published tune... ▾]
-  - St. Louis Blues (from database)
-  - Hot House (from database)
-  
-Hint: Only tunes published via Tune Manager can be selected
-```
+| `supabase/functions/tune-evaluate/index.ts` | Add `reasoning` to tool definition, update system prompt with reasoning format, include reasoning in response |
+| `src/types/tunePractice.ts` | Add `reasoning?: string` to `TuneEvaluationResponse` |
+| `src/components/TuneEvaluationDebugCard.tsx` | Display reasoning in debug view |
 
 ---
 
 ## Benefits
 
-1. **Smaller publish payloads** - No longer sending MB of tune data
-2. **Faster publishing** - Skip bundling and asset serialization
-3. **Single source of truth** - Tunes managed exclusively via Tune Manager
-4. **Clearer workflow** - Publish tunes first, then reference in curriculum
-5. **Reduced code complexity** - Remove ~300 lines of glob/bundling code
+1. **Self-verification** - LLM must show its work before deciding
+2. **Debuggable** - You can see exactly what the LLM compared
+3. **Consistent** - Explicit comparison reduces hallucinations
+4. **No code-side analysis needed** - Keeps evaluation in LLM domain
+5. **Transparent** - Reasoning visible in debug mode for auditing
