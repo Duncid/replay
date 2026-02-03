@@ -8,18 +8,20 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { TuneEvaluationDebugData } from "@/types/tunePractice";
+import type { TuneEvaluationDebugData, TuneEvaluationResponse } from "@/types/tunePractice";
 import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
 import { useState } from "react";
 
 interface TuneEvaluationDebugCardProps {
   debugData: TuneEvaluationDebugData;
+  evaluationResult?: TuneEvaluationResponse | null;
   onProceed: () => void;
   onCancel?: () => void;
 }
 
 export function TuneEvaluationDebugCard({
   debugData,
+  evaluationResult,
   onProceed,
   onCancel,
 }: TuneEvaluationDebugCardProps) {
@@ -48,6 +50,15 @@ ${promptText}
       </div>
 
       <TuneEvaluationNotesTable debugData={debugData} />
+
+      {evaluationResult?.reasoning && (
+        <div className="mt-3 pt-3 border-t">
+          <h4 className="text-sm font-medium mb-2 text-muted-foreground">LLM Reasoning</h4>
+          <pre className="text-xs bg-muted p-3 rounded whitespace-pre-wrap font-mono">
+            {evaluationResult.reasoning}
+          </pre>
+        </div>
+      )}
     </div>
   );
 

@@ -291,6 +291,17 @@ GRADING:
 - "close": Mostly correct but minor pitch/order issues (1-2 wrong notes) or timing slightly outside tolerance.
 - "fail": Multiple wrong notes, missing notes, or major order/timing problems.
 
+REASONING REQUIREMENT (CRITICAL):
+Before giving your evaluation, you MUST show your note-by-note comparison in the "reasoning" field.
+Format: "Segment [start-end]: Note 1: [user pitch] vs [target pitch] (good/mistake), Note 2: ..."
+For each note, mark as:
+- "good" if pitches match exactly
+- "mistake([expected])" if pitch is wrong, showing what was expected
+- "(addition)" if user played an extra note not in target
+- "(missing [pitch])" if a target note was not played
+Then briefly note timing observations.
+Your evaluation grade MUST be consistent with this analysis. If all notes are marked "good", the evaluation MUST be "pass" (assuming timing is acceptable).
+
 FEEDBACK STYLE:
 - Be encouraging and constructive
 - Reference the teacherHints when giving feedback
@@ -316,10 +327,18 @@ FEEDBACK STYLE:
           parameters: {
             type: "object",
             properties: {
+              reasoning: {
+                type: "string",
+                description: `REQUIRED FIRST: Show your work by comparing the chosen segment note-by-note.
+Format for pitch analysis: "Segment [start-end]: Note 1: 72 vs 72 (good), Note 2: 73 vs 73 (good), Note 3: 71 vs 72 (mistake), Note 4: (addition), Note 5: (missing 66)"
+Then briefly explain timing assessment.
+This field MUST be completed before deciding the evaluation grade.
+Your final evaluation MUST be consistent with this analysis.`,
+              },
               evaluation: {
                 type: "string",
                 enum: ["pass", "close", "fail"],
-                description: "Overall evaluation of the performance",
+                description: "Overall evaluation based on the reasoning above. MUST be consistent with the note-by-note analysis.",
               },
               feedbackText: {
                 type: "string",
@@ -343,7 +362,7 @@ FEEDBACK STYLE:
                 description: `Whether to award skills associated with this tune. Only set if markTuneAcquired is true AND demonstrating competency. Skills are automatically fetched from tune_awards_skill edges. Available skills: ${availableSkills.length > 0 ? availableSkills.join(", ") : "none"}. Already unlocked: ${unlockedSkills.length > 0 ? unlockedSkills.join(", ") : "none"}.`,
               },
             },
-            required: ["evaluation", "feedbackText", "successCount", "replayDemo"],
+            required: ["reasoning", "evaluation", "feedbackText", "successCount", "replayDemo"],
           },
         },
       },
@@ -409,6 +428,7 @@ FEEDBACK STYLE:
     }
 
     const evalResult = JSON.parse(toolCall.function.arguments) as {
+      reasoning: string;
       evaluation: "pass" | "close" | "fail";
       feedbackText: string;
       successCount: number;
@@ -535,6 +555,7 @@ FEEDBACK STYLE:
       JSON.stringify({
         evaluation: evalResult.evaluation,
         feedbackText: evalResult.feedbackText,
+        reasoning: evalResult.reasoning,
         currentStreak: newStreak,
         successCount: normalizedSuccessCount,
         suggestNewNugget,
