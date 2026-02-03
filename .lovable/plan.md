@@ -1,87 +1,170 @@
 
-# Fix: Stale Closure in TuneMode Evaluation
+# Plan: Preload Audio Engine to Eliminate First-Note Delay
 
 ## Problem Summary
 
-The debug sheet shows "No prompt available" because the `handleEvaluate` function is called with a stale closure where `debugMode` is `false`, even when debug mode is actually enabled.
+When playing the first notes, there's noticeable latency because:
+1. The AudioContext may be suspended (browser autoplay policy)
+2. For sampled instruments, audio samples are loaded from a CDN on-demand
+3. Preload is only called in specific modes (TuneMode), not globally
 
-## Root Cause
+## Root Cause Analysis
 
-In `TuneMode.tsx`, the `setTimeout` callback (lines 157-190) captures a reference to `handleEvaluate` at the moment the useEffect runs. Since `handleEvaluate` is a regular function (not memoized), each render creates a new version. The timeout callback holds onto the old version, which may have `debugMode = false` in its closure.
+| Issue | Location | Impact |
+|-------|----------|--------|
+| AudioContext suspended | Browser policy | ~50-100ms delay on first sound |
+| Sample files not preloaded | useTonePiano.ts | ~200-500ms delay for network fetch |
+| Preload only in TuneMode | Index.tsx:1412-1416 | Other modes have no preloading |
+| No warmup on instrument change | Index.tsx | Switching instruments causes delay |
 
-## Technical Details
+## Solution Overview
 
-```text
-Timeline of the bug:
-1. Component mounts, debugMode = false (initial/default)
-2. Recording stops, useEffect creates setTimeout with handleEvaluate[v1] (debugMode=false)
-3. debugMode becomes true (user already had it enabled, or localStorage loads)
-4. Timeout fires, calls handleEvaluate[v1] with stale debugMode=false
-5. if(debugMode) branch is skipped, no debug request made
-6. UI shows debug button (current render has debugMode=true) but "No prompt available"
-```
+Trigger audio preloading immediately after the first user interaction, regardless of which mode the user is in. This ensures samples are loaded before the user touches the piano.
 
-## Solution
+## Technical Changes
 
-Wrap `handleEvaluate` in `useCallback` with proper dependencies, including `debugMode`. This ensures the timeout always calls the most current version of the function.
+### 1. Expand Warmup to Include Full Preload (Index.tsx)
 
-## Files to Modify
+Currently, `warmupAudio` only calls `ensureAudioReady()`. Change it to also call `preload()`:
 
-| File | Change |
-|------|--------|
-| `src/components/modes/TuneMode.tsx` | Wrap `handleEvaluate` in `useCallback` with dependencies: `debugMode`, `tuneKey`, `currentNugget`, `localUserId`, `language`, `evaluateAttempt`, state setters |
-
-## Code Changes
-
-1. Import `useCallback` (already imported)
-
-2. Convert `handleEvaluate` from:
 ```typescript
-const handleEvaluate = async (recording: INoteSequence) => {
-  // ... function body
+// Before (line 340-342):
+const warmupAudio = () => {
+  pianoRef.current?.ensureAudioReady();
+};
+
+// After:
+const warmupAudio = async () => {
+  await pianoRef.current?.ensureAudioReady();
+  await pianoRef.current?.preload();
 };
 ```
 
-To:
+### 2. Add Preload on Instrument Change (Index.tsx)
+
+When the user changes instruments, preload the new samples:
+
 ```typescript
-const handleEvaluate = useCallback(async (recording: INoteSequence) => {
-  // ... function body (unchanged)
-}, [
-  debugMode,
-  tuneKey,
-  currentNugget,
-  localUserId,
-  language,
-  evaluateAttempt,
-  updateEvaluation,
-  onClearRecording,
-  state.tuneTitle,
-  state.currentIndex,
-  state.practicePlan.length,
-  t,
-]);
+// Add new useEffect after hasUserInteracted warmup effect (~line 363)
+useEffect(() => {
+  if (!hasUserInteractedRef.current) return;
+  pianoRef.current?.preload();
+}, [pianoSoundType]);
 ```
 
-3. Add `handleEvaluate` to the useEffect dependency array (line 201):
+### 3. Remove Mode-Conditional Preload (Index.tsx)
+
+The existing TuneMode-specific preload (lines 1412-1416) becomes redundant:
+
 ```typescript
-}, [isRecording, currentRecording, state.phase, currentNugget, debugMode, 
-    getRecordingId, getRecordingSignature, getRecordingStats, handleEvaluate]);
+// Before:
+useEffect(() => {
+  if (!hasUserInteractedRef.current) return;
+  if (activeMode !== "learn" || !isInTuneMode) return;
+  pianoRef.current?.preload();
+}, [activeMode, isInTuneMode, pianoSoundType]);
+
+// After: Remove this effect entirely (covered by global preload)
 ```
 
-## Expected Outcome
+### 4. Ensure Preload Awaits Load Completion (useTonePiano.ts)
 
-After the fix:
-- When debug mode is enabled, two requests will be made (one with `debug: true`, one with `debug: false`)
-- The prompt will be extracted and set in `lastEvalPrompt`
-- The debug sheet will show the actual LLM prompt instead of "No prompt available"
-- The LLM reasoning (from our recent Chain-of-Thought feature) will also display correctly
+The current `preload()` implementation already awaits `loadPromiseRef.current`, but verify it properly chains:
 
-## Testing
+```typescript
+const preload = useCallback(async () => {
+  if (soundTypeRef.current === null) return;
+  try {
+    await ensureAudioReady();        // Resume AudioContext + Tone.start()
+    await loadPromiseRef.current;    // Wait for samples to load
+  } catch (error) {
+    console.warn("[AudioEngine] Preload skipped:", error);
+  }
+}, [ensureAudioReady]);
+```
 
-1. Enable debug mode via the toggle
-2. Start tune practice
-3. Record a performance
-4. Wait for evaluation
-5. Open the Debug sheet
-6. Verify the Prompt section shows the full LLM prompt (not "No prompt available")
-7. Verify the Answer section shows the evaluation result including `reasoning`
+This is already correct.
+
+### 5. Add Loading State Visibility (Optional Enhancement)
+
+The Piano component already shows a loading indicator when `!audio.isLoaded`. No changes needed here.
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/Index.tsx` | 1. Update warmupAudio to call preload() 2. Add useEffect to preload on instrument change 3. Remove TuneMode-specific preload effect |
+
+## Implementation Details
+
+### Change 1: Update warmupAudio function
+
+**Location**: `src/pages/Index.tsx` lines 339-346
+
+```typescript
+useEffect(() => {
+  const warmupAudio = async () => {
+    await pianoRef.current?.ensureAudioReady();
+    await pianoRef.current?.preload();
+  };
+
+  const handleFirstInteraction = () => {
+    hasUserInteractedRef.current = true;
+    warmupAudio();
+    document.removeEventListener("pointerdown", handleFirstInteraction);
+    document.removeEventListener("touchstart", handleFirstInteraction);
+  };
+
+  document.addEventListener("pointerdown", handleFirstInteraction, {
+    once: true,
+  });
+  document.addEventListener("touchstart", handleFirstInteraction, {
+    once: true,
+  });
+
+  return () => {
+    document.removeEventListener("pointerdown", handleFirstInteraction);
+    document.removeEventListener("touchstart", handleFirstInteraction);
+  };
+}, []);
+```
+
+### Change 2: Add instrument change preload
+
+**Location**: Add after line 362 in `src/pages/Index.tsx`
+
+```typescript
+// Preload audio samples when instrument changes
+useEffect(() => {
+  if (!hasUserInteractedRef.current) return;
+  pianoRef.current?.preload();
+}, [pianoSoundType]);
+```
+
+### Change 3: Remove redundant TuneMode preload
+
+**Location**: `src/pages/Index.tsx` lines 1412-1416
+
+Delete this entire useEffect:
+```typescript
+// DELETE THIS:
+useEffect(() => {
+  if (!hasUserInteractedRef.current) return;
+  if (activeMode !== "learn" || !isInTuneMode) return;
+  pianoRef.current?.preload();
+}, [activeMode, isInTuneMode, pianoSoundType]);
+```
+
+## Expected Behavior After Fix
+
+1. **First interaction** → AudioContext resumes + samples start loading
+2. **Instrument switch** → New samples preload immediately
+3. **First key press** → Instant sound (no network delay)
+4. **Loading indicator** → Shows while samples download (already implemented)
+
+## Testing Checklist
+
+- [ ] Switch to "Acoustic Piano" instrument and verify loading indicator appears
+- [ ] After loading completes, press a key - sound should be immediate
+- [ ] Switch between instruments - each should preload before use
+- [ ] Works in all modes: Play, Learn, Lab
