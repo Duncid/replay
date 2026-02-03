@@ -116,7 +116,8 @@
     "comments": {
       "title": "Coach comments",
       "placeholder": "Play a phrase to get feedback.",
-      "helper": "Comments update automatically after each take."
+      "helper": "Comments update automatically after each take.",
+      "noComments": "Give it a try!"
     },
     "status": {
       "playing": "Playing",

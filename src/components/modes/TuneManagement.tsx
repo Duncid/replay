@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TabsContent } from "@/components/ui/tabs";
-import { getNoteColorForNoteName } from "@/constants/noteColors";
+import { useOsmdCursorPlayback } from "@/components/useOsmdCursorPlayback";
 import { useToast } from "@/hooks/use-toast";
 import { usePublishedTuneKeys, useTuneAssets } from "@/hooks/useTuneQueries";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +36,6 @@ import type {
   TuneBriefing,
   TuneNugget,
 } from "@/types/tuneAssets";
-import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
 import {
   bundleSingleTuneAssets,
   getAssemblyDspXml,
@@ -93,6 +92,7 @@ interface TuneManagementProps {
   onStopPlayback?: () => void;
   isPlaying?: boolean;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
 }
 
 const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
@@ -876,6 +876,7 @@ export const TuneManagement = ({
   onStopPlayback,
   isPlaying = false,
   onRegisterNoteHandler,
+  onRegisterNoteOffHandler,
 }: TuneManagementProps) => {
   const {
     selectedSource,
@@ -922,17 +923,22 @@ export const TuneManagement = ({
 
   // Cursor and playback refs
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
-  const osmdDspRef = useRef<OpenSheetMusicDisplay | null>(null);
-  const cursorInitializedRef = useRef(false);
-  const expectedGroupIndexRef = useRef(0);
-  const remainingPitchCountsRef = useRef<Map<number, number>>(new Map());
-  const wasPlayingRef = useRef(false);
-  const cursorTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
-  const cursorEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const initCursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const osmdViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
-  const osmdDspViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
-  const initStyleAppliedRef = useRef(false);
+  const {
+    osmdViewRef: osmdDspViewRef,
+    handleOsmdReady: handleOsmdDspReady,
+    handleCursorElementReady: handleCursorElementReadyDsp,
+    scheduleCursorPlayback,
+    clearCursorTimers,
+    showCursorAtStart,
+    resetExpectedTracking,
+  } = useOsmdCursorPlayback({
+    sequence: labSequence,
+    onRegisterNoteHandler,
+    onRegisterNoteOffHandler,
+    isPlaying,
+    resetKey: `${selectedTarget}:${selectedItemId}:${selectedTune ?? ""}`,
+  });
 
   const handLabel = useCallback((hand: HandType) => {
     return hand === "left" ? "Left hand" : "Right hand";
@@ -954,234 +960,6 @@ export const TuneManagement = ({
       assemblyIds.map((id) => [id, getHandAvailability("assemblies", id)]),
     );
   }, [assemblyIds, getHandAvailability]);
-
-  const expectedGroups = useMemo(() => {
-    if (!labSequence.notes.length) return [];
-    const grouped = new Map<number, { startTime: number; pitches: number[] }>();
-    labSequence.notes.forEach((note) => {
-      const key = Math.round(note.startTime * 1000);
-      const existing = grouped.get(key);
-      if (existing) {
-        existing.pitches.push(note.pitch);
-        existing.startTime = Math.min(existing.startTime, note.startTime);
-      } else {
-        grouped.set(key, { startTime: note.startTime, pitches: [note.pitch] });
-      }
-    });
-    return Array.from(grouped.values()).sort(
-      (a, b) => a.startTime - b.startTime,
-    );
-  }, [labSequence.notes]);
-
-  const buildPitchCounts = useCallback((pitches: number[]) => {
-    const counts = new Map<number, number>();
-    pitches.forEach((pitch) => {
-      counts.set(pitch, (counts.get(pitch) ?? 0) + 1);
-    });
-    return counts;
-  }, []);
-
-  const resetExpectedTracking = useCallback(() => {
-    expectedGroupIndexRef.current = 0;
-    remainingPitchCountsRef.current = buildPitchCounts(
-      expectedGroups[0]?.pitches ?? [],
-    );
-  }, [buildPitchCounts, expectedGroups]);
-
-  const setCursorColorForGroup = useCallback(
-    (groupIndex: number) => {
-      const pitches = expectedGroups[groupIndex]?.pitches;
-      if (!pitches?.length) return;
-      const noteName = midiToNoteName(pitches[0]);
-      const noteColor = getNoteColorForNoteName(noteName);
-      if (noteColor) {
-        osmdDspViewRef.current?.setCursorColor(noteColor);
-      }
-    },
-    [expectedGroups],
-  );
-
-  const resetCursor = useCallback(() => {
-    const osmd = osmdDspRef.current;
-    if (osmd?.cursor) {
-      osmd.cursor.reset();
-      osmd.cursor.hide();
-    }
-    cursorInitializedRef.current = false;
-  }, []);
-
-  const clearCursorTimers = useCallback(() => {
-    cursorTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-    cursorTimeoutsRef.current = [];
-    if (cursorEndTimeoutRef.current) {
-      clearTimeout(cursorEndTimeoutRef.current);
-      cursorEndTimeoutRef.current = null;
-    }
-    if (initCursorTimeoutRef.current) {
-      clearTimeout(initCursorTimeoutRef.current);
-      initCursorTimeoutRef.current = null;
-    }
-  }, []);
-
-  const showCursorAtStart = useCallback(() => {
-    const osmd = osmdDspRef.current;
-    if (osmd?.cursor) {
-      osmd.cursor.reset();
-      osmd.cursor.show();
-      osmd.cursor.update();
-    }
-    cursorInitializedRef.current = true;
-    setCursorColorForGroup(0);
-  }, [setCursorColorForGroup]);
-
-  const ensureCursorInitialized = useCallback(() => {
-    if (!cursorInitializedRef.current) {
-      const osmd = osmdDspRef.current;
-      if (osmd?.cursor) {
-        osmd.cursor.reset();
-        osmd.cursor.show();
-        osmd.cursor.update();
-      }
-      cursorInitializedRef.current = true;
-    }
-  }, []);
-
-  const advanceCursorToNextPlayableNote = useCallback(() => {
-    const cursor = osmdDspRef.current?.cursor;
-    if (!cursor) return;
-    const getNotesUnderCursor = cursor.NotesUnderCursor?.bind(cursor);
-    if (!getNotesUnderCursor) {
-      cursor.next();
-      cursor.update();
-      return;
-    }
-    let steps = 0;
-    const maxSteps = 128;
-    do {
-      cursor.next();
-      steps += 1;
-      if (cursor.iterator?.EndReached) break;
-      const notes = getNotesUnderCursor() ?? [];
-      const hasPlayableNote = notes.some((note) => {
-        const typedNote = note as {
-          isRest?: boolean | (() => boolean);
-          IsCueNote?: boolean;
-          IsGraceNote?: boolean;
-          isCueNote?: boolean;
-          isGraceNote?: boolean;
-        };
-        const isRest =
-          typeof typedNote.isRest === "function"
-            ? typedNote.isRest()
-            : typedNote.isRest;
-        const isCue = typedNote.IsCueNote ?? typedNote.isCueNote;
-        const isGrace = typedNote.IsGraceNote ?? typedNote.isGraceNote;
-        return !isRest && !isCue && !isGrace;
-      });
-      if (hasPlayableNote) break;
-    } while (steps < maxSteps);
-    cursor.update();
-  }, []);
-
-  const scheduleCursorPlayback = useCallback(() => {
-    const osmd = osmdDspRef.current;
-    if (!osmd?.cursor || labSequence.notes.length === 0) return;
-
-    clearCursorTimers();
-    resetExpectedTracking();
-    showCursorAtStart();
-
-    const minStartTime = Math.min(
-      ...labSequence.notes.map((note) => note.startTime),
-    );
-    const normalizedNotes = labSequence.notes.map((note) => ({
-      ...note,
-      startTime: note.startTime - minStartTime,
-      endTime: note.endTime - minStartTime,
-    }));
-    const normalizedTotalTime =
-      labSequence.totalTime > 0
-        ? labSequence.totalTime - minStartTime
-        : Math.max(...normalizedNotes.map((note) => note.endTime), 0);
-
-    const startTimes = Array.from(
-      new Set(normalizedNotes.map((note) => note.startTime)),
-    ).sort((a, b) => a - b);
-
-    startTimes.slice(1).forEach((startTime, index) => {
-      const targetIndex = index + 1;
-      const timeout = setTimeout(() => {
-        const cursor = osmdRef.current?.cursor;
-        if (!cursor) return;
-        if (expectedGroupIndexRef.current >= targetIndex) return;
-        expectedGroupIndexRef.current = targetIndex;
-        remainingPitchCountsRef.current = buildPitchCounts(
-          expectedGroups[targetIndex]?.pitches ?? [],
-        );
-        setCursorColorForGroup(targetIndex);
-        advanceCursorToNextPlayableNote();
-      }, startTime * 1000);
-      cursorTimeoutsRef.current.push(timeout);
-    });
-
-    cursorEndTimeoutRef.current = setTimeout(() => {
-      showCursorAtStart();
-      resetExpectedTracking();
-    }, normalizedTotalTime * 1000);
-  }, [
-    advanceCursorToNextPlayableNote,
-    buildPitchCounts,
-    clearCursorTimers,
-    expectedGroups,
-    labSequence,
-    resetExpectedTracking,
-    setCursorColorForGroup,
-    showCursorAtStart,
-  ]);
-
-  const handleUserNote = useCallback(
-    (noteKey: string) => {
-      const osmd = osmdDspRef.current;
-      if (!osmd?.cursor || expectedGroups.length === 0) return;
-
-      const pitch = noteNameToMidi(noteKey);
-      const remaining = remainingPitchCountsRef.current;
-      const remainingCount = remaining.get(pitch);
-      if (!remainingCount) return;
-
-      ensureCursorInitialized();
-      if (remainingCount === 1) {
-        remaining.delete(pitch);
-      } else {
-        remaining.set(pitch, remainingCount - 1);
-      }
-
-      if (remaining.size > 0) return;
-
-      const nextIndex = expectedGroupIndexRef.current + 1;
-      if (nextIndex >= expectedGroups.length) {
-        resetCursor();
-        resetExpectedTracking();
-        return;
-      }
-
-      expectedGroupIndexRef.current = nextIndex;
-      remainingPitchCountsRef.current = buildPitchCounts(
-        expectedGroups[nextIndex].pitches,
-      );
-      setCursorColorForGroup(nextIndex);
-      advanceCursorToNextPlayableNote();
-    },
-    [
-      advanceCursorToNextPlayableNote,
-      buildPitchCounts,
-      ensureCursorInitialized,
-      expectedGroups,
-      resetCursor,
-      resetExpectedTracking,
-      setCursorColorForGroup,
-    ],
-  );
 
   const handlePlayToggle = useCallback(() => {
     if (isPlaying) {
@@ -1212,84 +990,6 @@ export const TuneManagement = ({
       osmd.cursor.hide();
     }
   }, []);
-
-  const handleOsmdDspReady = useCallback(
-    (osmd: OpenSheetMusicDisplay) => {
-      osmdDspRef.current = osmd;
-      resetExpectedTracking();
-      initStyleAppliedRef.current = false;
-      if (initCursorTimeoutRef.current) {
-        clearTimeout(initCursorTimeoutRef.current);
-      }
-      initCursorTimeoutRef.current = setTimeout(() => {
-        showCursorAtStart();
-        setCursorColorForGroup(0);
-        initCursorTimeoutRef.current = null;
-      }, 300);
-    },
-    [resetExpectedTracking, setCursorColorForGroup, showCursorAtStart],
-  );
-
-  const handleCursorElementReadyDsp = useCallback(
-    (cursorElement: HTMLImageElement | null) => {
-      if (!cursorElement) {
-        initStyleAppliedRef.current = false;
-        return;
-      }
-      if (initStyleAppliedRef.current) return;
-      if (initCursorTimeoutRef.current) {
-        clearTimeout(initCursorTimeoutRef.current);
-      }
-      initCursorTimeoutRef.current = setTimeout(() => {
-        showCursorAtStart();
-        setCursorColorForGroup(0);
-        initStyleAppliedRef.current = true;
-        initCursorTimeoutRef.current = null;
-      }, 300);
-    },
-    [setCursorColorForGroup, showCursorAtStart],
-  );
-
-  useEffect(() => {
-    if (wasPlayingRef.current && !isPlaying) {
-      clearCursorTimers();
-      showCursorAtStart();
-      resetExpectedTracking();
-    }
-    wasPlayingRef.current = isPlaying;
-  }, [clearCursorTimers, isPlaying, resetExpectedTracking, showCursorAtStart]);
-
-  useEffect(() => {
-    resetExpectedTracking();
-  }, [resetExpectedTracking]);
-
-  useEffect(() => {
-    onRegisterNoteHandler?.(handleUserNote);
-    return () => {
-      onRegisterNoteHandler?.(null);
-    };
-  }, [handleUserNote, onRegisterNoteHandler]);
-
-  useEffect(() => {
-    return () => {
-      clearCursorTimers();
-    };
-  }, [clearCursorTimers]);
-
-  useEffect(() => {
-    clearCursorTimers();
-    resetExpectedTracking();
-    if (osmdDspRef.current?.cursor) {
-      showCursorAtStart();
-    }
-  }, [
-    clearCursorTimers,
-    resetExpectedTracking,
-    showCursorAtStart,
-    selectedItemId,
-    selectedTarget,
-    selectedTune,
-  ]);
 
   const selectTarget = useCallback(
     (target: TargetType, itemId: string, hand: HandType) => {
@@ -1820,6 +1520,7 @@ interface TuneManagementTabContentProps {
   onStopPlayback?: () => void;
   isPlaying?: boolean;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
 }
 
 export function TuneManagementTabContent({
@@ -1827,6 +1528,7 @@ export function TuneManagementTabContent({
   onStopPlayback,
   isPlaying,
   onRegisterNoteHandler,
+  onRegisterNoteOffHandler,
 }: TuneManagementTabContentProps) {
   return (
     <TabsContent
@@ -1838,6 +1540,7 @@ export function TuneManagementTabContent({
         onStopPlayback={onStopPlayback}
         isPlaying={isPlaying}
         onRegisterNoteHandler={onRegisterNoteHandler}
+        onRegisterNoteOffHandler={onRegisterNoteOffHandler}
       />
     </TabsContent>
   );

@@ -1,14 +1,25 @@
-import { SheetMusic } from "@/components/SheetMusic";
+import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
+import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useOsmdCursorPlayback } from "@/components/useOsmdCursorPlayback";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
-import type { PracticePlanItem, TuneEvaluationResponse } from "@/types/tunePractice";
-import { ArrowLeft, ArrowRight, Minus, Play, X, List } from "lucide-react";
+import type {
+  PracticePlanItem,
+  TuneEvaluationDebugData,
+  TuneEvaluationResponse,
+} from "@/types/tunePractice";
+import { ArrowLeft, ArrowRight, List, Minus, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "react-i18next";
 
 interface TunePracticeProps {
@@ -29,6 +40,15 @@ interface TunePracticeProps {
   practicePlan?: PracticePlanItem[];
   currentEvalIndex?: number;
   pendingEvalIndex?: number;
+  dspXml?: string | null;
+  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (
+    handler: ((noteKey: string) => void) | null,
+  ) => void;
+  evalPrompt?: string | null;
+  evalAnswer?: string | null;
+  evalDecision?: string | null;
+  evalDebugData?: TuneEvaluationDebugData | null;
 }
 
 const STREAK_THRESHOLD = 3;
@@ -64,7 +84,9 @@ function StatusDisplay({
       <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
         <span className="text-sm font-medium">{labels.sending}</span>
         {debugMode && pendingEvalIndex !== undefined && (
-          <span className="text-xs font-mono text-muted-foreground/70">#{pendingEvalIndex}</span>
+          <span className="text-xs font-mono text-muted-foreground/70">
+            #{pendingEvalIndex}
+          </span>
         )}
       </div>
     );
@@ -77,7 +99,9 @@ function StatusDisplay({
         <Minus className="h-4 w-4" />
         <span className="text-sm font-medium">{labels.close}</span>
         {debugMode && currentEvalIndex !== undefined && (
-          <span className="text-xs font-mono opacity-70">#{currentEvalIndex}</span>
+          <span className="text-xs font-mono opacity-70">
+            #{currentEvalIndex}
+          </span>
         )}
       </div>
     );
@@ -100,13 +124,17 @@ function StreakDisplay({
   lastEvaluation,
   currentNuggetId,
   messages,
+  className,
 }: {
   lastEvaluation?: TuneEvaluationResponse | null;
   currentNuggetId: string;
   messages: { success: string; fail: string; close: string };
+  className?: string;
 }) {
   const [fires, setFires] = useState<number[]>([]); // Array of unique IDs for fires to enable staggered removal
-  const [tempMessage, setTempMessage] = useState<"success" | "fail" | "close" | null>(null);
+  const [tempMessage, setTempMessage] = useState<
+    "success" | "fail" | "close" | null
+  >(null);
   const [messageVisible, setMessageVisible] = useState(false);
   const [isRemovingFires, setIsRemovingFires] = useState(false);
   const nextFireIdRef = useRef(0);
@@ -181,21 +209,18 @@ function StreakDisplay({
           setIsRemovingFires(true);
           const firesCopy = [...currentFires];
           firesCopy.forEach((fireId, index) => {
-            const timer = setTimeout(
-              () => {
-                setFires((prev) => {
-                  const updated = prev.filter((id) => id !== fireId);
-                  if (index === firesCopy.length - 1) {
-                    // Last fire removed
-                    setIsRemovingFires(false);
-                    setTempMessage(null);
-                    setMessageVisible(false);
-                  }
-                  return updated;
-                });
-              },
-              (index + 1) * 500,
-            );
+            const timer = setTimeout(() => {
+              setFires((prev) => {
+                const updated = prev.filter((id) => id !== fireId);
+                if (index === firesCopy.length - 1) {
+                  // Last fire removed
+                  setIsRemovingFires(false);
+                  setTempMessage(null);
+                  setMessageVisible(false);
+                }
+                return updated;
+              });
+            }, (index + 1) * 500);
             timeoutRefs.current.push(timer);
           });
         }
@@ -224,12 +249,15 @@ function StreakDisplay({
   }, [lastEvaluation]);
 
   return (
-    <div className="flex flex-1 items-center gap-2 min-h-[24px] s-px-3">
+    <div className={cn("flex items-center gap-2 min-h-[24px]", className)}>
       {/* Fires */}
       {fires.map((fireId, index) => (
         <span
           key={fireId}
-          className={cn("text-lg transition-opacity duration-300", isRemovingFires ? "opacity-0" : "opacity-100")}
+          className={cn(
+            "text-lg transition-opacity duration-300",
+            isRemovingFires ? "opacity-0" : "opacity-100",
+          )}
           style={{
             transitionDelay: isRemovingFires ? `${index * 500}ms` : "0ms",
           }}
@@ -252,8 +280,8 @@ function StreakDisplay({
           {tempMessage === "success"
             ? messages.success
             : tempMessage === "fail"
-              ? messages.fail
-              : messages.close}
+            ? messages.fail
+            : messages.close}
         </span>
       )}
     </div>
@@ -276,6 +304,13 @@ export function TunePractice({
   practicePlan = [],
   currentEvalIndex,
   pendingEvalIndex,
+  dspXml,
+  onRegisterNoteHandler,
+  onRegisterNoteOffHandler,
+  evalPrompt,
+  evalAnswer,
+  evalDecision,
+  evalDebugData,
 }: TunePracticeProps) {
   const { t } = useTranslation();
   const streakComplete = currentStreak >= STREAK_THRESHOLD;
@@ -283,7 +318,31 @@ export function TunePractice({
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
   const [showPlanSheet, setShowPlanSheet] = useState(false);
   const [commentKey, setCommentKey] = useState(0);
+  const [showEvalDebug, setShowEvalDebug] = useState(false);
   const isFirstNugget = currentIndex === 0;
+  const handleCopyEvalDebug = async () => {
+    const promptText = evalPrompt?.trim() ?? "";
+    const answerText = evalAnswer?.trim() ?? "";
+    const payload = `Prompt sent:\n${promptText}\n\nAnswer received:\n${answerText}`;
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload);
+        return;
+      }
+    } catch {
+      // fall through to legacy copy approach
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = payload;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  };
   const statusLabels = {
     playing: t("tune.status.playing"),
     sending: t("tune.status.sending"),
@@ -296,19 +355,18 @@ export function TunePractice({
   };
 
   // Get sample sequence from nugget, assembly, or full tune
-  const sampleSequence = (
-    currentNugget.nugget?.noteSequence || 
-    currentNugget.assembly?.noteSequence || 
-    currentNugget.fullTune?.noteSequence
-  ) as NoteSequence | undefined;
+  const sampleSequence = (currentNugget.nugget?.noteSequence ||
+    currentNugget.assembly?.noteSequence ||
+    currentNugget.fullTune?.noteSequence) as NoteSequence | undefined;
 
-  const commentText = lastEvaluation?.feedbackText ?? t("tune.comments.placeholder");
+  const commentText =
+    lastEvaluation?.feedbackText ?? t("tune.comments.noComments");
   const evaluationLabel = lastEvaluation
     ? lastEvaluation.evaluation === "pass"
       ? t("tune.feedback.pass")
       : lastEvaluation.evaluation === "close"
-        ? t("tune.feedback.close")
-        : t("tune.feedback.tryAgain")
+      ? t("tune.feedback.close")
+      : t("tune.feedback.tryAgain")
     : null;
 
   useEffect(() => {
@@ -325,13 +383,25 @@ export function TunePractice({
 
     // Only trigger pulse once when streak first reaches threshold
     // If streak drops and comes back, we can pulse again
-    if (pulsedStreak !== STREAK_THRESHOLD && currentStreak >= STREAK_THRESHOLD) {
+    if (
+      pulsedStreak !== STREAK_THRESHOLD &&
+      currentStreak >= STREAK_THRESHOLD
+    ) {
       setShouldPulse(true);
       setPulsedStreak(STREAK_THRESHOLD);
       const timer = setTimeout(() => setShouldPulse(false), 3000);
       return () => clearTimeout(timer);
     }
   }, [streakComplete, currentStreak, pulsedStreak]);
+  const { osmdViewRef, handleOsmdReady, handleCursorElementReady } =
+    useOsmdCursorPlayback({
+      sequence: (sampleSequence ?? { notes: [], totalTime: 0 }) as NoteSequence,
+      onRegisterNoteHandler,
+      onRegisterNoteOffHandler,
+      isPlaying,
+      autoScheduleOnPlay: true,
+      resetKey: currentNugget.itemId,
+    });
 
   const handleNextNugget = () => {
     setShouldPulse(false);
@@ -340,178 +410,240 @@ export function TunePractice({
   };
 
   return (
-    <div className="flex flex-col h-full items-center justify-center p-6">
-      <div className="flex w-full max-w-5xl flex-col gap-4 lg:flex-row lg:items-stretch">
-        <Card className="w-full flex-[2] relative">
-          <CardHeader className="flex flex-row pb-4 justify-between items-center">
-            <StatusDisplay
-              isRecording={isRecording}
-              isEvaluating={isEvaluating}
-              lastEvaluation={lastEvaluation}
-              labels={statusLabels}
-              debugMode={debugMode}
-              currentEvalIndex={currentEvalIndex}
-              pendingEvalIndex={pendingEvalIndex}
-            />
-            <div className="flex items-center gap-2">
-              {debugMode && practicePlan.length > 0 && (
-                <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" title="View Practice Plan">
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
-                    <SheetHeader>
-                      <SheetTitle>Practice Plan</SheetTitle>
-                    </SheetHeader>
-                    <ScrollArea className="h-[calc(100vh-100px)] mt-4">
-                      <div className="space-y-4 pr-4">
-                        {practicePlan.map((item, index) => {
-                          const isCurrent = index === currentIndex;
-                          const itemTypeLabel = 
-                            item.itemType === 'nugget' ? 'Nugget' :
-                            item.itemType === 'assembly' ? 'Assembly' :
-                            'Full Tune';
-                          
-                          return (
-                            <div
-                              key={`${item.itemId}-${index}`}
-                              className={cn(
-                                "p-4 rounded-lg border",
-                                isCurrent 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-border bg-muted/30"
-                              )}
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-mono text-muted-foreground">
-                                    {index + 1}.
-                                  </span>
-                                  <span className="font-medium font-mono text-sm">
-                                    {item.itemId}
-                                  </span>
-                                  <Badge 
-                                    variant={isCurrent ? "default" : "outline"}
-                                    className="text-xs"
-                                  >
-                                    {itemTypeLabel}
-                                  </Badge>
-                                  {isCurrent && (
-                                    <Badge variant="default" className="text-xs">
-                                      Current
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <p className="text-sm text-foreground mb-2">
-                                {item.instruction}
-                              </p>
-                              {item.motifs && item.motifs.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  <span className="text-xs text-muted-foreground">Motifs:</span>
-                                  {item.motifs.map((motif) => (
-                                    <Badge 
-                                      key={motif} 
-                                      variant="secondary" 
-                                      className="text-xs"
-                                    >
-                                      {motif}
-                                    </Badge>
-                                  ))}
-                                </div>
+    <div className="flex h-full w-full flex-col gap-4 px-6 py-4">
+      <div className="flex items-center justify-between">
+        <StatusDisplay
+          isRecording={isRecording}
+          isEvaluating={isEvaluating}
+          lastEvaluation={lastEvaluation}
+          labels={statusLabels}
+          debugMode={debugMode}
+          currentEvalIndex={currentEvalIndex}
+          pendingEvalIndex={pendingEvalIndex}
+        />
+        <div className="flex items-center gap-2">
+          {debugMode && practicePlan.length > 0 && (
+            <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" title="View Practice Plan">
+                  <List className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+                <SheetHeader>
+                  <SheetTitle>Practice Plan</SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="h-[calc(100vh-100px)] mt-4">
+                  <div className="space-y-4 pr-4">
+                    {practicePlan.map((item, index) => {
+                      const isCurrent = index === currentIndex;
+                      const itemTypeLabel =
+                        item.itemType === "nugget"
+                          ? "Nugget"
+                          : item.itemType === "assembly"
+                          ? "Assembly"
+                          : "Full Tune";
+
+                      return (
+                        <div
+                          key={`${item.itemId}-${index}`}
+                          className={cn(
+                            "p-4 rounded-lg border",
+                            isCurrent
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-muted/30",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono text-muted-foreground">
+                                {index + 1}.
+                              </span>
+                              <span className="font-medium font-mono text-sm">
+                                {item.itemId}
+                              </span>
+                              <Badge
+                                variant={isCurrent ? "default" : "outline"}
+                                className="text-xs"
+                              >
+                                {itemTypeLabel}
+                              </Badge>
+                              {isCurrent && (
+                                <Badge variant="default" className="text-xs">
+                                  Current
+                                </Badge>
                               )}
                             </div>
-                          );
-                        })}
+                          </div>
+                          <p className="text-sm text-foreground mb-2">
+                            {item.instruction}
+                          </p>
+                          {item.motifs && item.motifs.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              <span className="text-xs text-muted-foreground">
+                                Motifs:
+                              </span>
+                              {item.motifs.map((motif) => (
+                                <Badge
+                                  key={motif}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
+                                  {motif}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+          )}
+          <Button variant="ghost" size="icon" onClick={onLeave}>
+            <X />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col items-center gap-6">
+        <p className="text-foreground text-center text-base px-3">
+          {currentNugget.instruction}
+        </p>
+
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
+          {dspXml ? (
+            <OpenSheetMusicDisplayView
+              ref={osmdViewRef}
+              xml={dspXml}
+              compactness="compacttight"
+              hasColor
+              className="relative w-full"
+              centerHorizontally
+              onOsmdReady={handleOsmdReady}
+              onCursorElementReady={handleCursorElementReady}
+            />
+          ) : (
+            <div className="w-full rounded-lg border p-4 text-sm text-muted-foreground">
+              No DSP XML available
+            </div>
+          )}
+
+          <Button
+            variant="default"
+            size="play"
+            onClick={onPlaySample}
+            disabled={isPlaying}
+            className="gap-2"
+          >
+            <Play fill="currentColor" stroke="none" />
+          </Button>
+
+          <div className="w-fit max-w-lg rounded-2xl bg-muted/30 px-4 py-3 mt-12">
+            <StreakDisplay
+              lastEvaluation={lastEvaluation}
+              currentNuggetId={currentNugget.itemId}
+              messages={streakMessages}
+              className="justify-center mb-2"
+            />
+            <div
+              key={commentKey}
+              className="comment-typing text-sm text-center leading-relaxed text-lg text-foreground/90 motion-reduce:animate-none"
+            >
+              {commentText}
+            </div>
+            {debugMode && (
+              <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <div className="flex flex-col gap-1">
+                  <span>
+                    Eval index: {lastEvaluation?.evalIndex ?? "-"} /{" "}
+                    {currentEvalIndex ?? "-"}
+                  </span>
+                  {evalDecision ? (
+                    <span className="text-[10px] text-muted-foreground/80">
+                      {evalDecision}
+                    </span>
+                  ) : null}
+                </div>
+                <Sheet open={showEvalDebug} onOpenChange={setShowEvalDebug}>
+                  <SheetTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      Debug
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent
+                    side="right"
+                    className="w-[520px] sm:max-w-[520px]"
+                  >
+                    <SheetHeader>
+                      <div className="flex items-center justify-between gap-3">
+                        <SheetTitle>Eval debug</SheetTitle>
+                      </div>
+                    </SheetHeader>
+                    <ScrollArea className="h-[calc(100vh-140px)] mt-4">
+                      <div className="space-y-3">
+                        {evalDebugData ? (
+                          <TuneEvaluationNotesTable debugData={evalDebugData} />
+                        ) : null}
+                        <div className="flex justify-end items-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCopyEvalDebug}
+                          >
+                            Copy
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-4 text-sm">
+                        <div>
+                          <div className="text-xs font-semibold text-muted-foreground mb-1">
+                            Prompt
+                          </div>
+                          <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                            {evalPrompt || "No prompt available."}
+                          </pre>
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-muted-foreground mb-1">
+                            Answer
+                          </div>
+                          <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                            {evalAnswer || "No answer available."}
+                          </pre>
+                        </div>
                       </div>
                     </ScrollArea>
                   </SheetContent>
                 </Sheet>
-              )}
-              <Button variant="ghost" size="icon" onClick={onLeave}>
-                <X />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4 p-4">
-            {/* Instruction */}
-            <p className="text-foreground text-center px-3">{currentNugget.instruction}</p>
-
-            {/* Sheet music and Play button */}
-            <div className="flex flex-col items-center gap-1">
-              {sampleSequence?.notes?.length ? (
-                <div className="flex justify-center">
-                  <SheetMusic sequence={sampleSequence} compact noTitle noControls hasColor scale={1.1} />
-                </div>
-              ) : null}
-
-              {/* Play button visually attached to sheet */}
-              <Button variant="ghost" onClick={onPlaySample} disabled={isPlaying} className="gap-2">
-                <Play fill="currentColor" stroke="none" />
-                {t("tune.buttons.replay")}
-              </Button>
-            </div>
-
-            {/* Bottom section: StreakDisplay left, Previous/Next buttons right */}
-            <div className="flex items-center justify-between">
-              {/* Streak display bottom left */}
-              <StreakDisplay
-                lastEvaluation={lastEvaluation}
-                currentNuggetId={currentNugget.itemId}
-                messages={streakMessages}
-              />
-
-              {/* Next button bottom right */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={onPreviousNugget}
-                  className="gap-2"
-                  disabled={isFirstNugget}
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                  {t("tune.buttons.previous")}
-                </Button>
-                <Button
-                  variant={shouldPulse ? "default" : "ghost"}
-                  onClick={handleNextNugget}
-                  isPulsating={shouldPulse}
-                  className="gap-2"
-                >
-                  {t("tune.buttons.next")}
-                  <ArrowRight className="h-5 w-5" />
-                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+          </div>
+        </div>
+      </div>
 
-        <Card className="w-full flex-1">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold">{t("tune.comments.title")}</div>
-              {evaluationLabel ? (
-                <Badge variant="outline" className="text-xs">
-                  {evaluationLabel}
-                </Badge>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p
-              key={commentKey}
-              className="comment-typing text-sm leading-relaxed text-foreground/90 motion-reduce:animate-none"
-            >
-              {commentText}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {t("tune.comments.helper")}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={onPreviousNugget}
+          className="gap-2"
+          disabled={isFirstNugget}
+        >
+          <ArrowLeft className="h-5 w-5" />
+          {t("tune.buttons.previous")}
+        </Button>
+
+        <Button
+          variant={shouldPulse ? "default" : "ghost"}
+          onClick={handleNextNugget}
+          isPulsating={shouldPulse}
+          className="gap-2"
+        >
+          {t("tune.buttons.next")}
+          <ArrowRight className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );

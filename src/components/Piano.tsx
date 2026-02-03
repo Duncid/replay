@@ -40,6 +40,7 @@ interface PianoProps {
 export interface PianoHandle {
   playNote: (frequency: number, duration?: number) => void;
   ensureAudioReady: () => Promise<void>;
+  preload: () => Promise<void>;
   handleKeyPress: (
     noteKey: string,
     frequency: number,
@@ -319,6 +320,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     useImperativeHandle(ref, () => ({
       playNote: audio.playNote,
       ensureAudioReady: audio.ensureAudioReady,
+    preload: audio.preload,
       handleKeyPress,
       handleKeyRelease,
     }));

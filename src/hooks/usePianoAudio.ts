@@ -25,6 +25,10 @@ export function usePianoAudio(soundType: PianoSoundType | null = "classic") {
     if (tonePianoRef.current) await tonePianoRef.current.ensureAudioReady();
   }, []);
 
+  const preload = useCallback(async () => {
+    if (tonePianoRef.current) await tonePianoRef.current.preload();
+  }, []);
+
   const playNote = useCallback(async (frequency: number, duration: number = 0.3) => {
     if (!tonePianoRef.current) return;
     const noteKey = frequencyToNote(frequency);
@@ -45,6 +49,7 @@ export function usePianoAudio(soundType: PianoSoundType | null = "classic") {
   return {
     isLoaded: tonePiano?.isLoaded ?? false,
     ensureAudioReady,
+    preload,
     playNote,
     startNote,
     stopNote,

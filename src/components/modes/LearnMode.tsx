@@ -1,12 +1,12 @@
-import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { EvaluationDebugCard } from "@/components/EvaluationDebugCard";
 import { FeedbackScreen } from "@/components/FeedbackScreen";
-import { TeacherWelcome } from "@/components/TeacherWelcome";
+import { LessonDebugCard } from "@/components/LessonDebugCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { LessonPractice } from "@/components/modes/LessonPractice";
-import { LessonEvaluation } from "@/components/modes/LessonEvaluation";
 import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
+import { LessonEvaluation } from "@/components/modes/LessonEvaluation";
+import { LessonPractice } from "@/components/modes/LessonPractice";
 import { TuneMode } from "@/components/modes/TuneMode";
+import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,12 +19,17 @@ import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
+  DebugState,
+  EvaluationState,
+  useLessonEngine,
+} from "@/hooks/useLessonEngine";
+import {
   useEvaluateStructuredLesson,
   useRegenerateCurriculumLesson,
   useStartCurriculumLesson,
   useTeacherGreeting,
 } from "@/hooks/useLessonQueries";
-import { useQueryClient } from "@tanstack/react-query";
+import { useLessonState } from "@/hooks/useLessonState";
 import {
   LessonFeelPreset,
   LessonMetronomeSettings,
@@ -32,12 +37,17 @@ import {
   TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
-import { useCallback, useEffect, useRef, useState, type ComponentProps } from "react";
-import { useTranslation } from "react-i18next";
-import { useLessonState } from "@/hooks/useLessonState";
-import { useLessonEngine, DebugState, EvaluationState } from "@/hooks/useLessonEngine";
-import { ChevronDown } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
+import { ChevronDown } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react";
+import { useTranslation } from "react-i18next";
 
 interface LearnModeProps {
   isPlaying: boolean;
@@ -50,6 +60,10 @@ interface LearnModeProps {
   model: string;
   debugMode: boolean;
   localUserId?: string | null;
+  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (
+    handler: ((noteKey: string) => void) | null,
+  ) => void;
   // Metronome control props
   metronomeBpm: number;
   setMetronomeBpm: (bpm: number) => void;
@@ -73,6 +87,8 @@ export function LearnMode({
   model,
   debugMode,
   localUserId,
+  onRegisterNoteHandler,
+  onRegisterNoteOffHandler,
   metronomeBpm,
   setMetronomeBpm,
   metronomeTimeSignature,
@@ -115,7 +131,7 @@ export function LearnMode({
   const startCurriculumLessonMutation = useStartCurriculumLesson();
   const regenerateCurriculumLessonMutation = useRegenerateCurriculumLesson();
   const evaluateStructuredLessonMutation = useEvaluateStructuredLesson();
-  
+
   // Combined loading state from mutations
   const isLoading =
     startCurriculumLessonMutation.isPending ||
@@ -125,14 +141,14 @@ export function LearnMode({
   const [debugState, setDebugState] = useState<DebugState>(null);
   const [evaluationState, setEvaluationState] = useState<EvaluationState>(null);
   const [showEvaluationScreen, setShowEvaluationScreen] = useState(false);
-  
+
   // Tune practice state
   const [activeTuneKey, setActiveTuneKey] = useState<string | null>(null);
-  
+
   // Refs
   const hasEvaluatedRef = useRef(false);
   const userActionTokenRef = useRef<string>(crypto.randomUUID());
-  
+
   // Hooks
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -140,9 +156,7 @@ export function LearnMode({
 
   // Fetch teacher greeting when user clicks Start
   const handleStartTeacherGreet = useCallback(() => {
-    console.log(
-      `[LearnMode] Start clicked: user=${localUserId ?? "unknown"}`
-    );
+    console.log(`[LearnMode] Start clicked: user=${localUserId ?? "unknown"}`);
     setShouldFetchGreeting(true);
   }, [localUserId]);
 
@@ -150,14 +164,14 @@ export function LearnMode({
   // Show error toast if teacher greeting fails
   useEffect(() => {
     if (teacherGreetingError) {
-        toast({
-          title: "Error",
+      toast({
+        title: "Error",
         description:
           teacherGreetingError instanceof Error
             ? teacherGreetingError.message
             : "Failed to connect to teacher",
-          variant: "destructive",
-        });
+        variant: "destructive",
+      });
     }
   }, [teacherGreetingError, toast]);
 
@@ -188,7 +202,7 @@ export function LearnMode({
       setMetronomeIsPlaying,
       setMetronomeFeel,
       setMetronomeSoundType,
-    ]
+    ],
   );
 
   // === Business Logic ===
@@ -229,7 +243,7 @@ export function LearnMode({
       metronomeBpm,
       metronomeTimeSignature,
       localUserId,
-    }
+    },
   );
 
   // Extract functions from engine
@@ -270,7 +284,15 @@ export function LearnMode({
       hasEvaluatedRef.current = true;
       evaluateAttempt(userRecording);
     }
-  }, [lesson.phase, lessonMode, userRecording, isRecording, isEvaluating, evaluateAttempt, debugState]);
+  }, [
+    lesson.phase,
+    lessonMode,
+    userRecording,
+    isRecording,
+    isEvaluating,
+    evaluateAttempt,
+    debugState,
+  ]);
 
   // Enter evaluation mode or return to practice
   const handleEvaluate = useCallback(() => {
@@ -292,7 +314,13 @@ export function LearnMode({
       onClearRecording();
       hasEvaluatedRef.current = false;
     }
-  }, [lessonMode, onClearRecording, setMode, setEvaluationResult, setLessonState]);
+  }, [
+    lessonMode,
+    onClearRecording,
+    setMode,
+    setEvaluationResult,
+    setLessonState,
+  ]);
 
   // handleMakeEasier and handleMakeHarder are now in useLessonEngine hook
 
@@ -309,7 +337,16 @@ export function LearnMode({
     setActiveTuneKey(null); // Reset tune mode
     // Invalidate teacher greeting cache to force fresh suggestions on next Start
     queryClient.invalidateQueries({ queryKey: ["teacherGreeting"] });
-  }, [markUserAction, onClearRecording, resetLesson, setLessonState, setMode, setShouldFetchGreeting, queryClient, setMetronomeIsPlaying]);
+  }, [
+    markUserAction,
+    onClearRecording,
+    resetLesson,
+    setLessonState,
+    setMode,
+    setShouldFetchGreeting,
+    queryClient,
+    setMetronomeIsPlaying,
+  ]);
 
   // When a suggestion is clicked, fetch the debug prompt first (only in debug mode)
   const handleSelectActivity = useCallback(
@@ -357,7 +394,8 @@ export function LearnMode({
           console.error("Failed to fetch lesson debug:", err);
           toast({
             title: "Error",
-            description: err instanceof Error ? err.message : "Failed to prepare lesson",
+            description:
+              err instanceof Error ? err.message : "Failed to prepare lesson",
             variant: "destructive",
           });
         } finally {
@@ -368,7 +406,7 @@ export function LearnMode({
         generateLesson(lessonPrompt, 1, undefined, lessonKey);
       }
     },
-    [debugMode, language, toast, generateLesson, startCurriculumLessonMutation]
+    [debugMode, language, toast, generateLesson, startCurriculumLessonMutation],
   );
 
   // Start the actual lesson after seeing the debug prompt
@@ -396,7 +434,10 @@ export function LearnMode({
         console.error("Error in handleProceedEvaluation:", error);
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to evaluate performance",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to evaluate performance",
           variant: "destructive",
         });
       }
@@ -429,6 +470,9 @@ export function LearnMode({
           isPlayingSample={isPlaying}
           currentRecording={userRecording}
           isRecording={isRecording}
+          onRegisterNoteHandler={onRegisterNoteHandler}
+          onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+          onClearRecording={onClearRecording}
         />
       );
     }
@@ -449,18 +493,20 @@ export function LearnMode({
           />
         );
       }
-      
+
       // Loading: Generating lesson after selection
       if (isLoading || isLoadingLessonDebug) {
         return (
-          <LoadingSpinner 
-            message={isLoadingLessonDebug 
-              ? t("learnMode.preparingLesson") 
-              : t("learnMode.generatingLesson")} 
+          <LoadingSpinner
+            message={
+              isLoadingLessonDebug
+                ? t("learnMode.preparingLesson")
+                : t("learnMode.generatingLesson")
+            }
           />
         );
       }
-      
+
       // Default: Show teacher welcome with suggestions
       return (
         <TeacherWelcome
@@ -488,22 +534,41 @@ export function LearnMode({
             evaluationType={debugState.evaluationType}
             onProceed={handleProceedEvaluation}
             onCancel={handleCancelEvaluation}
-            evaluationOutput={evaluationState?.type === "structured" ? evaluationState.evaluationOutput : undefined}
+            evaluationOutput={
+              evaluationState?.type === "structured"
+                ? evaluationState.evaluationOutput
+                : undefined
+            }
           />
         );
       }
-      
+
       // Feedback: Show feedback screen after evaluation
       if (showEvaluationScreen) {
         return (
           <FeedbackScreen
-            evaluation={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.evaluation : "close"}
-            feedbackText={evaluationState?.type === "structured" ? evaluationState.evaluationOutput.feedbackText : ""}
-            awardedSkills={evaluationState?.type === "structured" && evaluationState.awardedSkillsWithTitles?.length 
-              ? evaluationState.awardedSkillsWithTitles
-              : undefined}
+            evaluation={
+              evaluationState?.type === "structured"
+                ? evaluationState.evaluationOutput.evaluation
+                : "close"
+            }
+            feedbackText={
+              evaluationState?.type === "structured"
+                ? evaluationState.evaluationOutput.feedbackText
+                : ""
+            }
+            awardedSkills={
+              evaluationState?.type === "structured" &&
+              evaluationState.awardedSkillsWithTitles?.length
+                ? evaluationState.awardedSkillsWithTitles
+                : undefined
+            }
             debugMode={debugMode}
-            evaluationOutput={evaluationState?.type === "structured" ? evaluationState.evaluationOutput : undefined}
+            evaluationOutput={
+              evaluationState?.type === "structured"
+                ? evaluationState.evaluationOutput
+                : undefined
+            }
             onReturnToPractice={() => {
               setShowEvaluationScreen(false);
               setMode("practice");
@@ -526,7 +591,7 @@ export function LearnMode({
           />
         );
       }
-      
+
       // Evaluation: User is recording their attempt
       if (lessonMode === "evaluation") {
         return (
@@ -544,7 +609,7 @@ export function LearnMode({
           />
         );
       }
-      
+
       // Practice: User is practicing the lesson
       return (
         <LessonPractice
@@ -560,7 +625,7 @@ export function LearnMode({
         />
       );
     }
-    
+
     return null;
   };
 
@@ -614,11 +679,7 @@ export function LearnModeActionBar({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="justify-between"
-          >
+          <Button variant="outline" size="sm" className="justify-between">
             {aiModels.llm.find((m) => m.value === selectedModel)?.label ||
               selectedModel}
             <ChevronDown className="h-4 w-4 opacity-50" />
@@ -649,11 +710,7 @@ export function LearnModeActionBar({
         />
       </div>
       {debugMode && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onEnableFreePractice}
-        >
+        <Button variant="outline" size="sm" onClick={onEnableFreePractice}>
           {t("learnMode.freePractice", "Free Practice")}
         </Button>
       )}
