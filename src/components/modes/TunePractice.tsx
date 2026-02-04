@@ -541,7 +541,7 @@ export function TunePractice({
             <Play fill="currentColor" stroke="none" />
           </Button>
 
-          <div className="w-fit max-w-lg rounded-2xl bg-muted/30 px-14 pb-12 pt-3 mt-12">
+          <div className="w-fit max-w-lg rounded-2xl bg-muted/30 px-12 pb-12 pt-3 mt-12">
             <StreakDisplay
               lastEvaluation={lastEvaluation}
               currentNuggetId={currentNugget.itemId}

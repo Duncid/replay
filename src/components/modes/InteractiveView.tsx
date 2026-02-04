@@ -1,5 +1,5 @@
-import { PianoSheetPixi, type NoteEvent, type SheetConfig } from "@/components/PianoSheetPixi";
-import { TabsContent } from "@/components/ui/tabs";
+import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
+import { PianoSheetPixi } from "@/components/PianoSheetPixi";
 import {
   Select,
   SelectContent,
@@ -7,10 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TabsContent } from "@/components/ui/tabs";
 import type { NoteSequence } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import {
-  getAssemblyDspXml,
   getAssemblyLh,
   getAssemblyNs,
   getAssemblyRh,
@@ -18,12 +18,10 @@ import {
   getLocalAssemblyIds,
   getLocalNuggetIds,
   getLocalTuneKeys,
-  getNuggetDspXml,
   getNuggetLh,
   getNuggetNs,
   getNuggetRh,
   getNuggetXml,
-  getTuneDspXml,
   getTuneLh,
   getTuneLhXml,
   getTuneNs,
@@ -31,8 +29,8 @@ import {
   getTuneRhXml,
   getTuneXml,
 } from "@/utils/tuneAssetBundler";
-import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout";
 
 type TargetType = "full" | "nuggets" | "assemblies";
 type HandType = "full" | "left" | "right";
@@ -60,11 +58,11 @@ export function InteractiveViewTabContent() {
 
   const nuggetIds = useMemo(
     () => (selectedTune ? getLocalNuggetIds(selectedTune) : []),
-    [selectedTune],
+    [selectedTune]
   );
   const assemblyIds = useMemo(
     () => (selectedTune ? getLocalAssemblyIds(selectedTune) : []),
-    [selectedTune],
+    [selectedTune]
   );
 
   useEffect(() => {
@@ -193,33 +191,33 @@ export function InteractiveViewTabContent() {
       if (selectedHand === "right") {
         return getTuneRhXml(selectedTune) ?? getTuneXml(selectedTune);
       }
-      return getTuneDspXml(selectedTune) ?? getTuneXml(selectedTune);
+      return getTuneXml(selectedTune);
     }
     if (selectedTarget === "assemblies") {
-      return (
-        getAssemblyDspXml(selectedTune, selectedItemId) ??
-        getAssemblyXml(selectedTune, selectedItemId)
-      );
+      return getAssemblyXml(selectedTune, selectedItemId);
     }
-    return (
-      getNuggetDspXml(selectedTune, selectedItemId) ??
-      getNuggetXml(selectedTune, selectedItemId)
-    );
+    return getNuggetXml(selectedTune, selectedItemId);
   }, [selectedHand, selectedItemId, selectedTarget, selectedTune]);
 
+  const bpm = useMemo(() => {
+    const tempo = sequence.tempos?.[0]?.qpm;
+    return Math.round(tempo ?? 120);
+  }, [sequence.tempos]);
+
   const config = useMemo<SheetConfig>(() => {
+    const baseUnit = 12;
     return {
-      pixelsPerUnit: 120,
-      noteHeight: 14,
-      noteCornerRadius: 6,
-      staffLineGap: 12,
-      staffTopY: 60,
-      leftPadding: 24,
-      rightPadding: 24,
-      viewWidth: size.width,
-      viewHeight: size.height,
-      minNoteWidth: 6,
-      midiRef: 64,
+      pixelsPerUnit: baseUnit * 4, // Horizontal scale: pixels per time unit
+      noteHeight: baseUnit, // Rect height for each note
+      noteCornerRadius: baseUnit / 2, // Rounded corner radius for notes
+      staffLineGap: baseUnit * 1.5, // Distance between staff lines
+      staffTopY: baseUnit * 4, // Y position of the top staff line
+      leftPadding: baseUnit * 1.5, // Left margin before first note
+      rightPadding: baseUnit * 1.5, // Right margin after last note
+      viewWidth: size.width, // Viewport width from container
+      viewHeight: size.height, // Viewport height from container
+      minNoteWidth: Math.max(6, baseUnit * 0.375), // Minimum rect width
+      midiRef: 64, // MIDI pitch anchored to bottom staff line
     };
   }, [size.height, size.width]);
 
@@ -295,6 +293,9 @@ export function InteractiveViewTabContent() {
               </SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="w-full flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span>BPM: {bpm}</span>
         </div>
         <div className="w-full h-[280px] rounded-lg border bg-background/50 overflow-auto">
           <OpenSheetMusicDisplayView

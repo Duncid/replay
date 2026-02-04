@@ -1,3 +1,5 @@
+import { getNoteColorForNoteName } from "@/constants/noteColors";
+import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import { Container, Graphics, Stage } from "@pixi/react";
 import { Texture } from "pixi.js";
 import {
@@ -9,76 +11,11 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { getNoteColorForNoteName } from "@/constants/noteColors";
-import { midiToNoteName } from "@/utils/noteSequenceUtils";
-
-export type Accidental = "sharp" | "flat" | "natural" | null;
-
-export interface NoteEvent {
-  id: string;
-  midi: number;
-  start: number;
-  dur: number;
-  accidental?: Accidental;
-}
-
-export interface SheetConfig {
-  pixelsPerUnit: number;
-  noteHeight: number;
-  noteCornerRadius: number;
-  staffLineGap: number;
-  staffTopY: number;
-  leftPadding: number;
-  rightPadding: number;
-  viewWidth: number;
-  viewHeight: number;
-  minNoteWidth: number;
-  midiRef: number;
-}
-
-export interface NoteRect {
-  id: string;
-  midi: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  accidental: Accidental;
-}
-
-export function computeLayout(notes: NoteEvent[], config: SheetConfig) {
-  const staffBottomLineY = config.staffTopY + 4 * config.staffLineGap;
-  let maxEnd = 0;
-
-  const noteRects: NoteRect[] = notes.map((note) => {
-    const end = note.start + note.dur;
-    maxEnd = Math.max(maxEnd, end);
-
-    const staffStep = (note.midi - config.midiRef) * 0.5;
-    const y =
-      staffBottomLineY - staffStep * (config.staffLineGap / 2);
-    const width = Math.max(config.minNoteWidth, note.dur * config.pixelsPerUnit);
-    const x = config.leftPadding + note.start * config.pixelsPerUnit;
-
-    const noteName = midiToNoteName(note.midi);
-    const inferredAccidental = noteName.includes("#") ? "sharp" : null;
-
-    return {
-      id: note.id,
-      midi: note.midi,
-      x,
-      y,
-      width,
-      height: config.noteHeight,
-      accidental: note.accidental ?? inferredAccidental,
-    };
-  });
-
-  const contentWidth =
-    config.leftPadding + maxEnd * config.pixelsPerUnit + config.rightPadding;
-
-  return { contentWidth, noteRects };
-}
+import {
+  computeLayout,
+  type NoteEvent,
+  type SheetConfig,
+} from "./PianoSheetPixiLayout";
 
 const gradientTextureCache = new Map<string, Texture>();
 
@@ -127,14 +64,14 @@ interface PianoSheetPixiProps {
 export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
   const { contentWidth, noteRects } = useMemo(
     () => computeLayout(notes, config),
-    [notes, config],
+    [notes, config]
   );
   const [viewportX, setViewportX] = useState(0);
   const maxScrollX = Math.max(0, contentWidth - config.viewWidth);
 
   const clampViewport = useCallback(
     (value: number) => Math.min(Math.max(value, 0), maxScrollX),
-    [maxScrollX],
+    [maxScrollX]
   );
 
   useEffect(() => {
@@ -158,7 +95,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
         dragging: true,
       };
     },
-    [viewportX],
+    [viewportX]
   );
 
   const handlePointerMove = useCallback(
@@ -168,7 +105,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
       const delta = event.clientX - state.startX;
       setViewportX(clampViewport(state.startViewportX - delta));
     },
-    [clampViewport],
+    [clampViewport]
   );
 
   const handlePointerUp = useCallback(
@@ -179,7 +116,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
       }
       event.currentTarget.releasePointerCapture(event.pointerId);
     },
-    [],
+    []
   );
 
   const handleWheel = useCallback(
@@ -191,7 +128,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
           : event.deltaY;
       setViewportX((prev) => clampViewport(prev + delta));
     },
-    [clampViewport],
+    [clampViewport]
   );
 
   const staffLines = useMemo(() => {
@@ -229,38 +166,42 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
           />
           {noteRects.map((note) => {
             const baseColor = getNoteColorFromMidi(note.midi);
-            const neighborColor =
-              note.accidental === "flat"
-                ? getNoteColorFromMidi(note.midi - 1)
-                : getNoteColorFromMidi(note.midi + 1);
+            const lowerNeighborColor = getNoteColorFromMidi(note.midi - 1);
             const hasGradient =
               note.accidental === "sharp" || note.accidental === "flat";
-            const texture = hasGradient
-              ? makeGradientTexture(baseColor, neighborColor)
-              : null;
 
             return (
-              <Graphics
-                key={note.id}
-                x={note.x}
-                y={note.y - note.height / 2}
-                draw={(g) => {
-                  g.clear();
-                  if (hasGradient && texture) {
-                    g.beginTextureFill({ texture });
-                  } else {
-                    g.beginFill(baseColor);
-                  }
-                  g.drawRoundedRect(
-                    0,
-                    0,
-                    note.width,
-                    note.height,
-                    config.noteCornerRadius,
-                  );
-                  g.endFill();
-                }}
-              />
+              <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
+                <Graphics
+                  draw={(g) => {
+                    g.clear();
+                    if (hasGradient) {
+                      g.beginFill(lowerNeighborColor);
+                    } else {
+                      g.beginFill(baseColor);
+                    }
+                    g.drawRoundedRect(
+                      0,
+                      0,
+                      note.width,
+                      note.height,
+                      config.noteCornerRadius
+                    );
+                    g.endFill();
+                    const strokeColor =
+                      note.accidental === "sharp" ? 0x4a4a4a : 0xffffff;
+                    g.lineStyle(1, strokeColor, 0.6);
+                    g.drawRoundedRect(
+                      0,
+                      0,
+                      note.width,
+                      note.height,
+                      config.noteCornerRadius
+                    );
+                    g.lineStyle(0);
+                  }}
+                />
+              </Container>
             );
           })}
         </Container>
