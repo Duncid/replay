@@ -26,7 +26,8 @@
     "play": "Play",
     "learn": "Learn",
     "quest": "Quest",
-    "lab": "Tune"
+    "lab": "Tune",
+    "interactive": "Interactive"
   },
   "piano": {
     "sound": "Piano Sound",

@@ -17,6 +17,10 @@ import {
   LearnModeTabContent,
 } from "@/components/modes/LearnMode";
 import {
+  InteractiveViewActionBar,
+  InteractiveViewTabContent,
+} from "@/components/modes/InteractiveView";
+import {
   PlayEntry,
   PlayMode,
   PlayModeActionBar,
@@ -113,7 +117,7 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
-type ActiveMode = "play" | "learn" | "quest" | "lab";
+type ActiveMode = "play" | "learn" | "quest" | "lab" | "interactive";
 
 // Normalize creativity (0-100) to model-specific temperature ranges
 const normalizeCreativityToRNN = (creativity: number): number => {
@@ -1862,6 +1866,7 @@ const Index = () => {
     ),
     quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
     lab: <TuneManagementActionBar />,
+    interactive: <InteractiveViewActionBar />,
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
@@ -1886,6 +1891,9 @@ const Index = () => {
                   <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
                   <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
                   <TabsTrigger value="lab">{t("tabs.lab")}</TabsTrigger>
+                  <TabsTrigger value="interactive">
+                    {t("tabs.interactive")}
+                  </TabsTrigger>
                 </TabsList>
                 {activeMode === "quest" && questHeaderTitle && (
                   <span className="text-sm text-muted-foreground ml-2">
@@ -1950,6 +1958,7 @@ const Index = () => {
               onRegisterNoteHandler={registerLabNoteHandler}
               onRegisterNoteOffHandler={registerLabNoteOffHandler}
             />
+            <InteractiveViewTabContent />
           </div>
         </Tabs>
 
@@ -2037,7 +2046,9 @@ const Index = () => {
                 appState === "waiting_for_ai"
               }
               soundType={pianoSoundType}
-              hasColor={isInTuneMode || activeMode === "lab"}
+              hasColor={
+                isInTuneMode || activeMode === "lab" || activeMode === "interactive"
+              }
               language={language}
               notationPreference={musicNotation}
               onNoteStart={handleNoteStart}
