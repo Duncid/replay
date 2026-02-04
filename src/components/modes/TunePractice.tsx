@@ -43,7 +43,7 @@ interface TunePracticeProps {
   dspXml?: string | null;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
   onRegisterNoteOffHandler?: (
-    handler: ((noteKey: string) => void) | null,
+    handler: ((noteKey: string) => void) | null
   ) => void;
   evalPrompt?: string | null;
   evalAnswer?: string | null;
@@ -256,7 +256,7 @@ function StreakDisplay({
           key={fireId}
           className={cn(
             "text-lg transition-opacity duration-300",
-            isRemovingFires ? "opacity-0" : "opacity-100",
+            isRemovingFires ? "opacity-0" : "opacity-100"
           )}
           style={{
             transitionDelay: isRemovingFires ? `${index * 500}ms` : "0ms",
@@ -274,7 +274,7 @@ function StreakDisplay({
             messageVisible ? "opacity-100" : "opacity-0",
             tempMessage === "success" && "text-green-600",
             tempMessage === "fail" && "text-orange-600",
-            tempMessage === "close" && "text-accent",
+            tempMessage === "close" && "text-accent"
           )}
         >
           {tempMessage === "success"
@@ -451,7 +451,7 @@ export function TunePractice({
                             "p-4 rounded-lg border",
                             isCurrent
                               ? "border-primary bg-primary/5"
-                              : "border-border bg-muted/30",
+                              : "border-border bg-muted/30"
                           )}
                         >
                           <div className="flex items-start justify-between gap-2 mb-2">
@@ -541,7 +541,7 @@ export function TunePractice({
             <Play fill="currentColor" stroke="none" />
           </Button>
 
-          <div className="w-fit max-w-lg rounded-2xl bg-muted/30 px-4 py-3 mt-12">
+          <div className="w-fit max-w-lg rounded-2xl bg-muted/30 px-14 pb-12 pt-3 mt-12">
             <StreakDisplay
               lastEvaluation={lastEvaluation}
               currentNuggetId={currentNugget.itemId}
