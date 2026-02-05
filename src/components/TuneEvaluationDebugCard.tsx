@@ -1,4 +1,5 @@
 import { DebugCard } from "@/components/DebugCard";
+import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -8,8 +9,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { TuneEvaluationDebugData, TuneEvaluationResponse } from "@/types/tunePractice";
-import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
+import type {
+  TuneEvaluationDebugData,
+  TuneEvaluationResponse,
+} from "@/types/tunePractice";
 import { useState } from "react";
 
 interface TuneEvaluationDebugCardProps {
@@ -44,7 +47,8 @@ ${promptText}
           {(debugData.targetSequence as { notes?: unknown[] })?.notes?.length ??
             0}{" "}
           notes, sending{" "}
-          {(debugData.userSequence as { notes?: unknown[] })?.notes?.length ?? 0}
+          {(debugData.userSequence as { notes?: unknown[] })?.notes?.length ??
+            0}
           .
         </p>
       </div>
@@ -53,7 +57,9 @@ ${promptText}
 
       {evaluationResult?.reasoning && (
         <div className="mt-3 pt-3 border-t">
-          <h4 className="text-sm font-medium mb-2 text-muted-foreground">LLM Reasoning</h4>
+          <h4 className="text-sm font-medium mb-2 text-muted-foreground">
+            LLM Reasoning
+          </h4>
           <pre className="text-xs bg-muted p-3 rounded whitespace-pre-wrap font-mono">
             {evaluationResult.reasoning}
           </pre>

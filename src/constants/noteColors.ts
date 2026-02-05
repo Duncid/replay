@@ -2,8 +2,8 @@ export const NOTE_COLORS = {
   C: "#E24A4A",
   D: "#F08A3C",
   E: "#F2C94C",
-  F: "#45B26B",
-  G: "#2FB7A7",
+  F: "#58BC6E",
+  G: "#1FA4B6",
   A: "#3A78D4",
   B: "#7A4DD8",
 } as const;
