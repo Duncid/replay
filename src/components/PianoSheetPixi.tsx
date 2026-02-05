@@ -1,7 +1,8 @@
 import { getNoteColorForNoteName } from "@/constants/noteColors";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
+import { WRAP_MODES } from "@pixi/constants";
+import { Texture } from "@pixi/core";
 import { Container, Graphics, Stage } from "@pixi/react";
-import { Texture } from "pixi.js";
 import {
   useCallback,
   useEffect,
@@ -15,39 +16,7 @@ import {
   computeLayout,
   type NoteEvent,
   type SheetConfig,
-} from "./PianoSheetPixiLayout";
-
-const gradientTextureCache = new Map<string, Texture>();
-
-function toHexColor(color: number) {
-  return `#${color.toString(16).padStart(6, "0")}`;
-}
-
-function makeGradientTexture(baseColor: number, neighborColor: number) {
-  const key = `${baseColor}-${neighborColor}`;
-  const cached = gradientTextureCache.get(key);
-  if (cached) return cached;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = 1;
-  canvas.height = 64;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    const fallback = Texture.EMPTY;
-    gradientTextureCache.set(key, fallback);
-    return fallback;
-  }
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, toHexColor(baseColor));
-  gradient.addColorStop(1, toHexColor(neighborColor));
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const texture = Texture.from(canvas);
-  gradientTextureCache.set(key, texture);
-  return texture;
-}
+} from "./PianoSheetPixiLayout.ts";
 
 function getNoteColorFromMidi(midi: number) {
   const noteName = midiToNoteName(midi);
@@ -56,16 +25,79 @@ function getNoteColorFromMidi(midi: number) {
   return parseInt(hex.replace("#", ""), 16);
 }
 
+function normalizeSharpNote(noteName: string) {
+  const base = noteName.replace(/[0-9]/g, "");
+  switch (base) {
+    case "C#":
+    case "D#":
+    case "F#":
+    case "G#":
+    case "A#":
+      return base;
+    case "Db":
+      return "C#";
+    case "Eb":
+      return "D#";
+    case "Gb":
+      return "F#";
+    case "Ab":
+      return "G#";
+    case "Bb":
+      return "A#";
+    default:
+      return null;
+  }
+}
+
+function createStripeTexture(baseHex: string, stripeHex: string) {
+  const lineWidth = 4;
+  const block = lineWidth * 4;
+  const size = block;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return Texture.EMPTY;
+
+  ctx.fillStyle = baseHex;
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = stripeHex;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = "butt";
+
+  for (let offset = -block; offset <= block; offset += block / 2) {
+    ctx.beginPath();
+    ctx.moveTo(offset - block / 2, -block / 2);
+    ctx.lineTo(offset + block + block / 2, block + block / 2);
+    ctx.stroke();
+  }
+
+  const texture = Texture.from(canvas);
+  texture.baseTexture.wrapMode = WRAP_MODES.REPEAT;
+  return texture;
+}
+
 interface PianoSheetPixiProps {
   notes: NoteEvent[];
   config: SheetConfig;
 }
 
 export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
-  const { contentWidth, noteRects } = useMemo(
+  const { contentWidth, noteRects, staffLines } = useMemo(
     () => computeLayout(notes, config),
     [notes, config]
   );
+  const stripeTextures = useMemo(() => {
+    const getHex = (note: string) =>
+      getNoteColorForNoteName(note) ?? "#9aa0a6";
+    const textures = new Map<string, Texture>();
+    textures.set("C#", createStripeTexture(getHex("C"), getHex("D")));
+    textures.set("D#", createStripeTexture(getHex("D"), getHex("E")));
+    textures.set("F#", createStripeTexture(getHex("F"), getHex("G")));
+    textures.set("G#", createStripeTexture(getHex("G"), getHex("A")));
+    textures.set("A#", createStripeTexture(getHex("A"), getHex("B")));
+    return textures;
+  }, []);
   const [viewportX, setViewportX] = useState(0);
   const maxScrollX = Math.max(0, contentWidth - config.viewWidth);
 
@@ -131,12 +163,22 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
     [clampViewport]
   );
 
-  const staffLines = useMemo(() => {
-    const positions = Array.from({ length: 5 }, (_, index) => {
-      return config.staffTopY + index * config.staffLineGap;
-    });
-    return positions;
-  }, [config.staffTopY, config.staffLineGap]);
+  const staffLineColor = useMemo(() => {
+    const value = getComputedStyle(document.documentElement)
+      .getPropertyValue("--foreground")
+      .trim();
+    if (value.startsWith("#")) {
+      return parseInt(value.slice(1), 16);
+    }
+    const match = value.match(/(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
+    if (match) {
+      const [, r, g, b] = match;
+      return (parseInt(r, 10) << 16) + (parseInt(g, 10) << 8) + parseInt(b, 10);
+    }
+    return 0xffffff;
+  }, []);
+  const staffLineAlpha = 0.2;
+  const extendedLineAlpha = 0.1;
 
   return (
     <div
@@ -157,8 +199,21 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
           <Graphics
             draw={(g) => {
               g.clear();
-              g.lineStyle(1, 0x5f6368, 0.6);
-              staffLines.forEach((y) => {
+              g.lineStyle(2, staffLineColor, extendedLineAlpha);
+              staffLines.treble.ledger.forEach((y) => {
+                g.moveTo(0, y);
+                g.lineTo(contentWidth, y);
+              });
+              staffLines.bass?.ledger.forEach((y) => {
+                g.moveTo(0, y);
+                g.lineTo(contentWidth, y);
+              });
+              g.lineStyle(2, staffLineColor, staffLineAlpha);
+              staffLines.treble.classic.forEach((y) => {
+                g.moveTo(0, y);
+                g.lineTo(contentWidth, y);
+              });
+              staffLines.bass?.classic.forEach((y) => {
                 g.moveTo(0, y);
                 g.lineTo(contentWidth, y);
               });
@@ -167,15 +222,23 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
           {noteRects.map((note) => {
             const baseColor = getNoteColorFromMidi(note.midi);
             const lowerNeighborColor = getNoteColorFromMidi(note.midi - 1);
+            const upperNeighborColor = getNoteColorFromMidi(note.midi + 1);
             const hasGradient =
               note.accidental === "sharp" || note.accidental === "flat";
+            const stripeKey = hasGradient
+              ? normalizeSharpNote(midiToNoteName(note.midi))
+              : null;
+            const stripeTexture =
+              stripeKey !== null ? stripeTextures.get(stripeKey) : null;
 
             return (
               <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
                 <Graphics
                   draw={(g) => {
                     g.clear();
-                    if (hasGradient) {
+                    if (stripeTexture) {
+                      g.beginTextureFill({ texture: stripeTexture });
+                    } else if (hasGradient) {
                       g.beginFill(lowerNeighborColor);
                     } else {
                       g.beginFill(baseColor);
@@ -188,15 +251,21 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
                       config.noteCornerRadius
                     );
                     g.endFill();
-                    const strokeColor =
-                      note.accidental === "sharp" ? 0x4a4a4a : 0xffffff;
-                    g.lineStyle(1, strokeColor, 0.6);
+                    const strokeColor = hasGradient
+                      ? lowerNeighborColor
+                      : baseColor;
+                    g.lineStyle({
+                      width: 2,
+                      color: strokeColor,
+                      alpha: 0.4,
+                      alignment: 0.5,
+                    });
                     g.drawRoundedRect(
-                      0,
-                      0,
-                      note.width,
-                      note.height,
-                      config.noteCornerRadius
+                      -1,
+                      -1,
+                      note.width + 2,
+                      note.height + 2,
+                      config.noteCornerRadius + 1
                     );
                     g.lineStyle(0);
                   }}

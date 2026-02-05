@@ -30,7 +30,7 @@ import {
   getTuneXml,
 } from "@/utils/tuneAssetBundler";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout";
+import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout.ts";
 
 type TargetType = "full" | "nuggets" | "assemblies";
 type HandType = "full" | "left" | "right";
@@ -205,19 +205,22 @@ export function InteractiveViewTabContent() {
   }, [sequence.tempos]);
 
   const config = useMemo<SheetConfig>(() => {
-    const baseUnit = 12;
+    const baseUnit = 16;
     return {
       pixelsPerUnit: baseUnit * 4, // Horizontal scale: pixels per time unit
       noteHeight: baseUnit, // Rect height for each note
       noteCornerRadius: baseUnit / 2, // Rounded corner radius for notes
       staffLineGap: baseUnit * 1.5, // Distance between staff lines
       staffTopY: baseUnit * 4, // Y position of the top staff line
+      bassStaffGap: baseUnit * 3, // Gap between treble and bass staves
       leftPadding: baseUnit * 1.5, // Left margin before first note
       rightPadding: baseUnit * 1.5, // Right margin after last note
       viewWidth: size.width, // Viewport width from container
       viewHeight: size.height, // Viewport height from container
       minNoteWidth: Math.max(6, baseUnit * 0.375), // Minimum rect width
-      midiRef: 64, // MIDI pitch anchored to bottom staff line
+      trebleMidiRef: 64, // Treble bottom line anchor (E4)
+      bassMidiRef: 43, // Bass bottom line anchor (G2)
+      twoStaffThresholdMidi: 60, // Show bass staff when notes go below this
     };
   }, [size.height, size.width]);
 
