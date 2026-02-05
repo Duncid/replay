@@ -205,7 +205,7 @@ export function InteractiveViewTabContent() {
   }, [sequence.tempos]);
 
   const config = useMemo<SheetConfig>(() => {
-    const baseUnit = 16;
+    const baseUnit = 12;
     return {
       pixelsPerUnit: baseUnit * 4, // Horizontal scale: pixels per time unit
       noteHeight: baseUnit, // Rect height for each note
