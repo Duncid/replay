@@ -50,7 +50,7 @@ function normalizeSharpNote(noteName: string) {
 }
 
 function createStripeTexture(baseHex: string, stripeHex: string) {
-  const lineWidth = 4;
+  const lineWidth = 3;
   const block = lineWidth * 4;
   const size = block;
   const canvas = document.createElement("canvas");
@@ -88,8 +88,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
     [notes, config]
   );
   const stripeTextures = useMemo(() => {
-    const getHex = (note: string) =>
-      getNoteColorForNoteName(note) ?? "#9aa0a6";
+    const getHex = (note: string) => getNoteColorForNoteName(note) ?? "#9aa0a6";
     const textures = new Map<string, Texture>();
     textures.set("C#", createStripeTexture(getHex("C"), getHex("D")));
     textures.set("D#", createStripeTexture(getHex("D"), getHex("E")));
