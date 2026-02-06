@@ -7,6 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import type { NoteSequence } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
@@ -31,6 +34,11 @@ import {
 } from "@/utils/tuneAssetBundler";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout.ts";
+import {
+  type InputNoteEvent,
+  type PlaybackMode,
+  useSheetPlaybackEngine,
+} from "@/hooks/useSheetPlaybackEngine";
 
 type TargetType = "full" | "nuggets" | "assemblies";
 type HandType = "full" | "left" | "right";
@@ -41,7 +49,17 @@ export function InteractiveViewActionBar() {
   return null;
 }
 
-export function InteractiveViewTabContent() {
+interface InteractiveViewTabContentProps {
+  inputEvents?: InputNoteEvent[];
+  onActivePitchesChange?: (pitches: Set<number>) => void;
+  onPlaybackNote?: (payload: { midi: number; durationSec: number }) => void;
+}
+
+export function InteractiveViewTabContent({
+  inputEvents = [],
+  onActivePitchesChange,
+  onPlaybackNote,
+}: InteractiveViewTabContentProps) {
   const localTuneKeys = useMemo(() => getLocalTuneKeys().sort(), []);
   const [selectedTune, setSelectedTune] = useState<string>("");
   const [selectedTarget, setSelectedTarget] = useState<TargetType>("full");
@@ -49,6 +67,8 @@ export function InteractiveViewTabContent() {
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [mode, setMode] = useState<PlaybackMode>("autoplay");
+  const [followPlayhead, setFollowPlayhead] = useState(false);
 
   useEffect(() => {
     if (!selectedTune && localTuneKeys.length > 0) {
@@ -182,6 +202,59 @@ export function InteractiveViewTabContent() {
     });
   }, [sequence.notes]);
 
+  const noteById = useMemo(() => {
+    return new Map(notes.map((note) => [note.id, note]));
+  }, [notes]);
+
+  const prevActiveNoteIdsRef = useRef<Set<string>>(new Set());
+
+  const playback = useSheetPlaybackEngine({
+    notes,
+    mode,
+    enabled: notes.length > 0,
+    inputEvents,
+  });
+
+  useEffect(() => {
+    const next = playback.activeNoteIds;
+    const prev = prevActiveNoteIdsRef.current;
+    const added: string[] = [];
+
+    next.forEach((id) => {
+      if (!prev.has(id)) {
+        added.push(id);
+      }
+    });
+
+    const activePitches = new Set<number>();
+    next.forEach((id) => {
+      const note = noteById.get(id);
+      if (note) activePitches.add(note.midi);
+    });
+    onActivePitchesChange?.(activePitches);
+
+    if (playback.isPlaying && onPlaybackNote) {
+      added.forEach((id) => {
+        const note = noteById.get(id);
+        if (!note) return;
+        const endTime = note.start + note.dur;
+        const durationSec = Math.max(0, endTime - playback.playheadTime);
+        if (durationSec > 0) {
+          onPlaybackNote({ midi: note.midi, durationSec });
+        }
+      });
+    }
+
+    prevActiveNoteIdsRef.current = new Set(next);
+  }, [
+    noteById,
+    onActivePitchesChange,
+    onPlaybackNote,
+    playback.activeNoteIds,
+    playback.isPlaying,
+    playback.playheadTime,
+  ]);
+
   const xml = useMemo(() => {
     if (!selectedTune) return null;
     if (selectedTarget === "full") {
@@ -210,17 +283,13 @@ export function InteractiveViewTabContent() {
       pixelsPerUnit: baseUnit * 4, // Horizontal scale: pixels per time unit
       noteHeight: baseUnit, // Rect height for each note
       noteCornerRadius: baseUnit / 2, // Rounded corner radius for notes
-      staffLineGap: baseUnit * 1.5, // Distance between staff lines
-      staffTopY: baseUnit * 4, // Y position of the top staff line
-      bassStaffGap: baseUnit * 3, // Gap between treble and bass staves
+      trackGap: baseUnit * 0, // Gap between note tracks
+      trackTopY: baseUnit * 2, // Y position of the top track
       leftPadding: baseUnit * 1.5, // Left margin before first note
       rightPadding: baseUnit * 1.5, // Right margin after last note
       viewWidth: size.width, // Viewport width from container
       viewHeight: size.height, // Viewport height from container
       minNoteWidth: Math.max(6, baseUnit * 0.375), // Minimum rect width
-      trebleMidiRef: 64, // Treble bottom line anchor (E4)
-      bassMidiRef: 43, // Bass bottom line anchor (G2)
-      twoStaffThresholdMidi: 60, // Show bass staff when notes go below this
     };
   }, [size.height, size.width]);
 
@@ -297,8 +366,59 @@ export function InteractiveViewTabContent() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-full flex items-center justify-between text-xs text-muted-foreground px-1">
+        <div className="w-full flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground px-1">
           <span>BPM: {bpm}</span>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="playback-mode" className="text-xs">
+              Player mode
+            </Label>
+            <Switch
+              id="playback-mode"
+              checked={mode === "player"}
+              onCheckedChange={(checked) =>
+                setMode(checked ? "player" : "autoplay")
+              }
+            />
+            <Label htmlFor="follow-playhead" className="text-xs">
+              Follow playhead
+            </Label>
+            <Switch
+              id="follow-playhead"
+              checked={followPlayhead}
+              onCheckedChange={setFollowPlayhead}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (playback.isPlaying) {
+                  playback.pause();
+                } else {
+                  playback.play();
+                }
+              }}
+              disabled={notes.length === 0}
+            >
+              {playback.isPlaying ? "Pause" : "Play"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={playback.stop}
+              disabled={notes.length === 0}
+            >
+              Stop
+            </Button>
+          </div>
+        </div>
+        <div className="w-full flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground px-1">
+          <div className="flex items-center gap-3">
+            <span>Phase: {playback.phase}</span>
+            <span>Gate: {notes.length > 0 ? playback.gateIndex + 1 : "-"}</span>
+            <span>t: {playback.playheadTime.toFixed(2)}s</span>
+          </div>
         </div>
         <div className="w-full h-[280px] rounded-lg border bg-background/50 overflow-auto">
           <OpenSheetMusicDisplayView
@@ -314,7 +434,16 @@ export function InteractiveViewTabContent() {
           className="w-full h-full min-h-[240px] rounded-lg border bg-background/50 overflow-hidden"
         >
           {size.width > 0 && size.height > 0 && (
-            <PianoSheetPixi notes={notes} config={config} />
+            <PianoSheetPixi
+              notes={notes}
+              config={config}
+              timeSignatures={sequence.timeSignatures}
+              qpm={bpm}
+              playheadTime={playback.playheadTime}
+              focusedNoteIds={playback.focusedNoteIds}
+              activeNoteIds={playback.activeNoteIds}
+              followPlayhead={followPlayhead}
+            />
           )}
         </div>
       </div>

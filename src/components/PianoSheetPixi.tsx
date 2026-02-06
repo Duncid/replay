@@ -1,4 +1,5 @@
 import { getNoteColorForNoteName } from "@/constants/noteColors";
+import type { TimeSignature } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import { WRAP_MODES } from "@pixi/constants";
 import { Texture } from "@pixi/core";
@@ -80,12 +81,34 @@ function createStripeTexture(baseHex: string, stripeHex: string) {
 interface PianoSheetPixiProps {
   notes: NoteEvent[];
   config: SheetConfig;
+  timeSignatures?: TimeSignature[];
+  qpm?: number;
+  playheadTime?: number;
+  focusedNoteIds?: Set<string>;
+  activeNoteIds?: Set<string>;
+  followPlayhead?: boolean;
 }
 
-export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
-  const { contentWidth, noteRects, staffLines } = useMemo(
-    () => computeLayout(notes, config),
-    [notes, config]
+export function PianoSheetPixi({
+  notes,
+  config,
+  timeSignatures,
+  qpm,
+  playheadTime = 0,
+  focusedNoteIds = new Set(),
+  activeNoteIds = new Set(),
+  followPlayhead = false,
+}: PianoSheetPixiProps) {
+  const {
+    contentWidth,
+    noteRects,
+    trackLines,
+    trackHeight,
+    beatLines,
+    measureLines,
+  } = useMemo(
+    () => computeLayout(notes, config, timeSignatures, qpm),
+    [notes, config, timeSignatures, qpm]
   );
   const stripeTextures = useMemo(() => {
     const getHex = (note: string) => getNoteColorForNoteName(note) ?? "#9aa0a6";
@@ -99,6 +122,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
   }, []);
   const [viewportX, setViewportX] = useState(0);
   const maxScrollX = Math.max(0, contentWidth - config.viewWidth);
+  const lastUserScrollMsRef = useRef<number | null>(null);
 
   const clampViewport = useCallback(
     (value: number) => Math.min(Math.max(value, 0), maxScrollX),
@@ -125,6 +149,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
         startViewportX: viewportX,
         dragging: true,
       };
+      lastUserScrollMsRef.current = performance.now();
     },
     [viewportX]
   );
@@ -135,6 +160,7 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
       if (!state.dragging || state.pointerId !== event.pointerId) return;
       const delta = event.clientX - state.startX;
       setViewportX(clampViewport(state.startViewportX - delta));
+      lastUserScrollMsRef.current = performance.now();
     },
     [clampViewport]
   );
@@ -158,26 +184,85 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
           ? event.deltaX
           : event.deltaY;
       setViewportX((prev) => clampViewport(prev + delta));
+      lastUserScrollMsRef.current = performance.now();
     },
     [clampViewport]
   );
 
-  const staffLineColor = useMemo(() => {
+  const trackLineColor = useMemo(() => {
     const value = getComputedStyle(document.documentElement)
       .getPropertyValue("--foreground")
       .trim();
     if (value.startsWith("#")) {
       return parseInt(value.slice(1), 16);
     }
-    const match = value.match(/(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
-    if (match) {
-      const [, r, g, b] = match;
-      return (parseInt(r, 10) << 16) + (parseInt(g, 10) << 8) + parseInt(b, 10);
+    const numbers = value.match(/-?\d*\.?\d+/g);
+    if (numbers && numbers.length >= 3) {
+      const [a, b, c] = numbers.map((item) => parseFloat(item));
+      if (value.includes("%")) {
+        const h = ((a % 360) + 360) % 360;
+        const s = Math.min(100, Math.max(0, b)) / 100;
+        const l = Math.min(100, Math.max(0, c)) / 100;
+        const cVal = (1 - Math.abs(2 * l - 1)) * s;
+        const x = cVal * (1 - Math.abs(((h / 60) % 2) - 1));
+        const m = l - cVal / 2;
+        let rPrime = 0;
+        let gPrime = 0;
+        let bPrime = 0;
+        if (h < 60) {
+          rPrime = cVal;
+          gPrime = x;
+        } else if (h < 120) {
+          rPrime = x;
+          gPrime = cVal;
+        } else if (h < 180) {
+          gPrime = cVal;
+          bPrime = x;
+        } else if (h < 240) {
+          gPrime = x;
+          bPrime = cVal;
+        } else if (h < 300) {
+          rPrime = x;
+          bPrime = cVal;
+        } else {
+          rPrime = cVal;
+          bPrime = x;
+        }
+        const r = Math.round((rPrime + m) * 255);
+        const g = Math.round((gPrime + m) * 255);
+        const bInt = Math.round((bPrime + m) * 255);
+        return (r << 16) + (g << 8) + bInt;
+      }
+      return (a << 16) + (b << 8) + c;
     }
     return 0xffffff;
   }, []);
-  const staffLineAlpha = 0.2;
-  const extendedLineAlpha = 0.1;
+  const whiteKeyAlpha = 0.1;
+  const blackKeyAlpha = 0;
+  const beatLineAlpha = 0.1;
+  const measureLineAlpha = 0.1;
+
+  useEffect(() => {
+    if (!followPlayhead) return;
+    const nowMs = performance.now();
+    const lastUserScrollMs = lastUserScrollMsRef.current;
+    if (lastUserScrollMs && nowMs - lastUserScrollMs < 2000) return;
+    const playheadX = config.leftPadding + playheadTime * config.pixelsPerUnit;
+    const targetViewportX = clampViewport(
+      playheadX - config.viewWidth * 0.33
+    );
+    setViewportX((prev) => {
+      const next = prev + (targetViewportX - prev) * 0.12;
+      return clampViewport(next);
+    });
+  }, [
+    clampViewport,
+    config.leftPadding,
+    config.pixelsPerUnit,
+    config.viewWidth,
+    followPlayhead,
+    playheadTime,
+  ]);
 
   return (
     <div
@@ -198,23 +283,28 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
           <Graphics
             draw={(g) => {
               g.clear();
-              g.lineStyle(2, staffLineColor, extendedLineAlpha);
-              staffLines.treble.ledger.forEach((y) => {
-                g.moveTo(0, y);
-                g.lineTo(contentWidth, y);
+              const topY = trackLines[0]?.y ?? config.trackTopY;
+              const bottomY =
+                trackLines.length > 0
+                  ? trackLines[trackLines.length - 1].y + trackHeight
+                  : topY;
+              trackLines.forEach((track) => {
+                g.beginFill(
+                  trackLineColor,
+                  track.isBlack ? blackKeyAlpha : whiteKeyAlpha
+                );
+                g.drawRect(0, track.y, contentWidth, trackHeight);
+                g.endFill();
               });
-              staffLines.bass?.ledger.forEach((y) => {
-                g.moveTo(0, y);
-                g.lineTo(contentWidth, y);
+              g.lineStyle(1, trackLineColor, beatLineAlpha);
+              beatLines.forEach((x) => {
+                g.moveTo(x, topY);
+                g.lineTo(x, bottomY);
               });
-              g.lineStyle(2, staffLineColor, staffLineAlpha);
-              staffLines.treble.classic.forEach((y) => {
-                g.moveTo(0, y);
-                g.lineTo(contentWidth, y);
-              });
-              staffLines.bass?.classic.forEach((y) => {
-                g.moveTo(0, y);
-                g.lineTo(contentWidth, y);
+              g.lineStyle(2, trackLineColor, measureLineAlpha);
+              measureLines.forEach((x) => {
+                g.moveTo(x, topY);
+                g.lineTo(x, bottomY);
               });
             }}
           />
@@ -230,17 +320,26 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
             const stripeTexture =
               stripeKey !== null ? stripeTextures.get(stripeKey) : null;
 
+            const isFocused = focusedNoteIds.has(note.id);
+            const isActive = activeNoteIds.has(note.id);
+            const fillAlpha = isFocused ? 1 : isActive ? 0.9 : 0.85;
+            const strokeWidth = isFocused ? 4 : 2;
+            const strokeAlpha = isFocused ? 1 : isActive ? 0.6 : 0.4;
+
             return (
               <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
                 <Graphics
                   draw={(g) => {
                     g.clear();
                     if (stripeTexture) {
-                      g.beginTextureFill({ texture: stripeTexture });
+                      g.beginTextureFill({
+                        texture: stripeTexture,
+                        alpha: fillAlpha,
+                      });
                     } else if (hasGradient) {
-                      g.beginFill(lowerNeighborColor);
+                      g.beginFill(lowerNeighborColor, fillAlpha);
                     } else {
-                      g.beginFill(baseColor);
+                      g.beginFill(baseColor, fillAlpha);
                     }
                     g.drawRoundedRect(
                       0,
@@ -254,17 +353,17 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
                       ? lowerNeighborColor
                       : baseColor;
                     g.lineStyle({
-                      width: 2,
+                      width: strokeWidth,
                       color: strokeColor,
-                      alpha: 0.4,
+                      alpha: strokeAlpha,
                       alignment: 0.5,
                     });
                     g.drawRoundedRect(
-                      -1,
-                      -1,
-                      note.width + 2,
-                      note.height + 2,
-                      config.noteCornerRadius + 1
+                      -strokeWidth / 2,
+                      -strokeWidth / 2,
+                      note.width + strokeWidth,
+                      note.height + strokeWidth,
+                      config.noteCornerRadius + strokeWidth / 2
                     );
                     g.lineStyle(0);
                   }}
@@ -272,6 +371,22 @@ export function PianoSheetPixi({ notes, config }: PianoSheetPixiProps) {
               </Container>
             );
           })}
+          <Graphics
+            draw={(g) => {
+              g.clear();
+              const topY = trackLines[0]?.y ?? config.trackTopY;
+              const bottomY =
+                trackLines.length > 0
+                  ? trackLines[trackLines.length - 1].y + trackHeight
+                  : topY;
+              const x =
+                config.leftPadding + playheadTime * config.pixelsPerUnit;
+              g.lineStyle(2, trackLineColor, 0.9);
+              g.moveTo(x, topY);
+              g.lineTo(x, bottomY);
+              g.lineStyle(0);
+            }}
+          />
         </Container>
       </Stage>
     </div>
