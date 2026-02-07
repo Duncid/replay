@@ -7,6 +7,7 @@ import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import { createStripeCanvas } from "@/utils/stripePattern";
 import { WRAP_MODES } from "@pixi/constants";
 import { Texture } from "@pixi/core";
+import { GlowFilter } from "@pixi/filter-glow";
 import { Container, Graphics, Stage } from "@pixi/react";
 import {
   useCallback,
@@ -320,25 +321,44 @@ export function PianoSheetPixi({
             const fillColor = hasGradient
               ? lowerNeighborColors[state]
               : noteColors[state];
-            const fillAlpha = state === "idle" ? 1 : 1;
-            const strokeWidth = isFocused ? 4 : 2;
-            const strokeAlpha = isFocused ? 0.9 : isActive ? 0.7 : 0;
-            const strokeColor = hasGradient
-              ? lowerNeighborColors[state]
-              : noteColors[state];
+            const glowFilter =
+              isFocused || isActive
+                ? new GlowFilter({
+                    distance: isFocused ? 8 : 6,
+                    outerStrength: isFocused ? 3 : 2,
+                    innerStrength: 0,
+                    color: fillColor,
+                    quality: 0.3,
+                    knockout: true,
+                  })
+                : null;
 
             return (
               <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
+                {glowFilter && (
+                  <Graphics
+                    filters={[glowFilter]}
+                    draw={(g) => {
+                      g.clear();
+                      g.beginFill(fillColor);
+                      g.drawRoundedRect(
+                        0,
+                        0,
+                        note.width,
+                        note.height,
+                        config.noteCornerRadius
+                      );
+                      g.endFill();
+                    }}
+                  />
+                )}
                 <Graphics
                   draw={(g) => {
                     g.clear();
                     if (stripeTexture && state === "idle") {
-                      g.beginTextureFill({
-                        texture: stripeTexture,
-                        alpha: fillAlpha,
-                      });
+                      g.beginTextureFill({ texture: stripeTexture });
                     } else {
-                      g.beginFill(fillColor, fillAlpha);
+                      g.beginFill(fillColor);
                     }
                     g.drawRoundedRect(
                       0,
@@ -348,20 +368,6 @@ export function PianoSheetPixi({
                       config.noteCornerRadius
                     );
                     g.endFill();
-                    g.lineStyle({
-                      width: strokeWidth,
-                      color: strokeColor,
-                      alpha: strokeAlpha,
-                      alignment: 0.5,
-                    });
-                    g.drawRoundedRect(
-                      -strokeWidth / 2,
-                      -strokeWidth / 2,
-                      note.width + strokeWidth,
-                      note.height + strokeWidth,
-                      config.noteCornerRadius + strokeWidth / 2
-                    );
-                    g.lineStyle(0);
                   }}
                 />
               </Container>

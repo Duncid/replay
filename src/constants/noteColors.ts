@@ -18,7 +18,9 @@ export const getBaseNoteLetter = (noteName: string): NoteLetter | null => {
   return null;
 };
 
-export const getNoteColorForNoteName = (noteName: string): string | undefined => {
+export const getNoteColorForNoteName = (
+  noteName: string
+): string | undefined => {
   const base = getBaseNoteLetter(noteName);
   return base ? NOTE_COLORS[base] : undefined;
 };
@@ -42,5 +44,5 @@ export const getNoteColorsForNoteName = (
   const base = getBaseNoteLetter(noteName);
   if (!base) return undefined;
   const shades = NOTE_COLOR_SHADES[base];
-  return { idle: shades[500], active: shades[400], focused: shades[300] };
+  return { idle: shades[500], active: shades[300], focused: shades[400] };
 };
