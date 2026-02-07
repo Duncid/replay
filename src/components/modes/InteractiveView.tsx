@@ -7,6 +7,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { TabsContent } from "@/components/ui/tabs";
 import type { NoteSequence } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
@@ -31,24 +39,25 @@ import {
 } from "@/utils/tuneAssetBundler";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout.ts";
+import {
+  type InputNoteEvent,
+  useSheetPlaybackEngine,
+} from "@/hooks/useSheetPlaybackEngine";
 
 type TargetType = "full" | "nuggets" | "assemblies";
 type HandType = "full" | "left" | "right";
 
 const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
 
-export function InteractiveViewActionBar() {
-  return null;
-}
+// ── Shared state hook ──────────────────────────────────────────────
 
-export function InteractiveViewTabContent() {
+export function useInteractiveState() {
   const localTuneKeys = useMemo(() => getLocalTuneKeys().sort(), []);
   const [selectedTune, setSelectedTune] = useState<string>("");
   const [selectedTarget, setSelectedTarget] = useState<TargetType>("full");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedTune && localTuneKeys.length > 0) {
@@ -110,18 +119,6 @@ export function InteractiveViewTabContent() {
     }
   }, [handAvailability.left, handAvailability.right, selectedHand]);
 
-  useLayoutEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      setSize({ width, height });
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
   const sequence = useMemo(() => {
     if (!selectedTune) return EMPTY_SEQUENCE;
     if (selectedTarget === "full") {
@@ -169,19 +166,6 @@ export function InteractiveViewTabContent() {
     );
   }, [selectedHand, selectedItemId, selectedTarget, selectedTune]);
 
-  const notes = useMemo<NoteEvent[]>(() => {
-    return sequence.notes.map((note, index) => {
-      const noteName = midiToNoteName(note.pitch);
-      return {
-        id: `${note.pitch}-${note.startTime}-${index}`,
-        midi: note.pitch,
-        start: note.startTime,
-        dur: Math.max(0, note.endTime - note.startTime),
-        accidental: noteName.includes("#") ? "sharp" : null,
-      };
-    });
-  }, [sequence.notes]);
-
   const xml = useMemo(() => {
     if (!selectedTune) return null;
     if (selectedTarget === "full") {
@@ -199,6 +183,255 @@ export function InteractiveViewTabContent() {
     return getNuggetXml(selectedTune, selectedItemId);
   }, [selectedHand, selectedItemId, selectedTarget, selectedTune]);
 
+  return {
+    localTuneKeys,
+    selectedTune,
+    setSelectedTune,
+    selectedTarget,
+    setSelectedTarget,
+    selectedItemId,
+    setSelectedItemId,
+    selectedHand,
+    setSelectedHand,
+    sheetOpen,
+    setSheetOpen,
+    nuggetIds,
+    assemblyIds,
+    handAvailability,
+    sequence,
+    xml,
+  };
+}
+
+export type InteractiveState = ReturnType<typeof useInteractiveState>;
+
+// ── Action bar (rendered in topbar) ────────────────────────────────
+
+interface InteractiveViewActionBarProps {
+  state: InteractiveState;
+}
+
+export function InteractiveViewActionBar({
+  state,
+}: InteractiveViewActionBarProps) {
+  const {
+    localTuneKeys,
+    selectedTune,
+    setSelectedTune,
+    selectedTarget,
+    setSelectedTarget,
+    selectedItemId,
+    setSelectedItemId,
+    selectedHand,
+    setSelectedHand,
+    sheetOpen,
+    setSheetOpen,
+    nuggetIds,
+    assemblyIds,
+    handAvailability,
+    xml,
+  } = state;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Select
+        value={selectedTune}
+        onValueChange={(value) => setSelectedTune(value)}
+      >
+        <SelectTrigger className="w-[220px] h-8">
+          <SelectValue placeholder="Select tune" />
+        </SelectTrigger>
+        <SelectContent>
+          {localTuneKeys.map((key) => (
+            <SelectItem key={key} value={key}>
+              {key}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={selectedTarget}
+        onValueChange={(value) => setSelectedTarget(value as TargetType)}
+      >
+        <SelectTrigger className="w-[140px] h-8">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="full">Full tune</SelectItem>
+          <SelectItem value="nuggets">Nuggets</SelectItem>
+          <SelectItem value="assemblies">Assemblies</SelectItem>
+        </SelectContent>
+      </Select>
+      {selectedTarget !== "full" && (
+        <Select
+          value={selectedItemId}
+          onValueChange={(value) => setSelectedItemId(value)}
+        >
+          <SelectTrigger className="w-[140px] h-8">
+            <SelectValue placeholder="Select part" />
+          </SelectTrigger>
+          <SelectContent>
+            {(selectedTarget === "assemblies" ? assemblyIds : nuggetIds).map(
+              (id) => (
+                <SelectItem key={id} value={id}>
+                  {id}
+                </SelectItem>
+              )
+            )}
+          </SelectContent>
+        </Select>
+      )}
+      <Select
+        value={selectedHand}
+        onValueChange={(value) => setSelectedHand(value as HandType)}
+      >
+        <SelectTrigger className="w-[120px] h-8">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="full">Full</SelectItem>
+          <SelectItem value="left" disabled={!handAvailability.left}>
+            Left hand
+          </SelectItem>
+          <SelectItem value="right" disabled={!handAvailability.right}>
+            Right hand
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetTrigger asChild>
+          <Button variant="outline" size="sm" disabled={!xml}>
+            Sheet
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-[50vw] sm:max-w-[50vw]">
+          <SheetHeader>
+            <SheetTitle>Sheet Music</SheetTitle>
+          </SheetHeader>
+          <div className="w-full h-full overflow-auto pt-4">
+            <OpenSheetMusicDisplayView
+              xml={xml}
+              hasColor
+              className="w-full h-full"
+              style={{ width: "100%", height: "100%" }}
+              centerHorizontally
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+// ── Tab content ────────────────────────────────────────────────────
+
+interface InteractiveViewTabContentProps {
+  state: InteractiveState;
+  onPlaybackInputEventRef?: React.MutableRefObject<
+    ((e: InputNoteEvent) => void) | null
+  >;
+  onActivePitchesChange?: (pitches: Set<number>) => void;
+  onPlaybackNote?: (payload: { midi: number; durationSec: number }) => void;
+}
+
+export function InteractiveViewTabContent({
+  state,
+  onPlaybackInputEventRef,
+  onActivePitchesChange,
+  onPlaybackNote,
+}: InteractiveViewTabContentProps) {
+  const { sequence } = state;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setSize({ width, height });
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const notes = useMemo<NoteEvent[]>(() => {
+    return sequence.notes.map((note, index) => {
+      const noteName = midiToNoteName(note.pitch);
+      return {
+        id: `${note.pitch}-${note.startTime}-${index}`,
+        midi: note.pitch,
+        start: note.startTime,
+        dur: Math.max(0, note.endTime - note.startTime),
+        accidental: noteName.includes("#") ? "sharp" : null,
+      };
+    });
+  }, [sequence.notes]);
+
+  const noteById = useMemo(() => {
+    return new Map(notes.map((note) => [note.id, note]));
+  }, [notes]);
+
+  const prevActiveNoteIdsRef = useRef<Set<string>>(new Set());
+
+  const playback = useSheetPlaybackEngine({
+    notes,
+    enabled: notes.length > 0,
+  });
+
+  useEffect(() => {
+    if (onPlaybackInputEventRef) {
+      onPlaybackInputEventRef.current = playback.handleInputEvent;
+    }
+    return () => {
+      if (onPlaybackInputEventRef) {
+        onPlaybackInputEventRef.current = null;
+      }
+    };
+  }, [onPlaybackInputEventRef, playback.handleInputEvent]);
+
+  useEffect(() => {
+    const next = playback.activeNoteIds;
+    const prev = prevActiveNoteIdsRef.current;
+    const added: string[] = [];
+
+    next.forEach((id) => {
+      if (!prev.has(id)) {
+        added.push(id);
+      }
+    });
+
+    const activePitches = new Set<number>();
+    next.forEach((id) => {
+      const note = noteById.get(id);
+      if (note) activePitches.add(note.midi);
+    });
+    onActivePitchesChange?.(activePitches);
+
+    if (playback.isAutoplay && onPlaybackNote) {
+      added.forEach((id) => {
+        const note = noteById.get(id);
+        if (!note) return;
+        const endTime = note.start + note.dur;
+        const durationSec = Math.max(0, endTime - playback.playheadTime);
+        if (durationSec > 0) {
+          onPlaybackNote({ midi: note.midi, durationSec });
+        }
+      });
+    }
+
+    prevActiveNoteIdsRef.current = new Set(next);
+  }, [
+    noteById,
+    onActivePitchesChange,
+    onPlaybackNote,
+    playback.activeNoteIds,
+    playback.isAutoplay,
+    playback.playheadTime,
+  ]);
+
   const bpm = useMemo(() => {
     const tempo = sequence.tempos?.[0]?.qpm;
     return Math.round(tempo ?? 120);
@@ -207,114 +440,75 @@ export function InteractiveViewTabContent() {
   const config = useMemo<SheetConfig>(() => {
     const baseUnit = 12;
     return {
-      pixelsPerUnit: baseUnit * 4, // Horizontal scale: pixels per time unit
-      noteHeight: baseUnit, // Rect height for each note
-      noteCornerRadius: baseUnit / 2, // Rounded corner radius for notes
-      staffLineGap: baseUnit * 1.5, // Distance between staff lines
-      staffTopY: baseUnit * 4, // Y position of the top staff line
-      bassStaffGap: baseUnit * 3, // Gap between treble and bass staves
-      leftPadding: baseUnit * 1.5, // Left margin before first note
-      rightPadding: baseUnit * 1.5, // Right margin after last note
-      viewWidth: size.width, // Viewport width from container
-      viewHeight: size.height, // Viewport height from container
-      minNoteWidth: Math.max(6, baseUnit * 0.375), // Minimum rect width
-      trebleMidiRef: 64, // Treble bottom line anchor (E4)
-      bassMidiRef: 43, // Bass bottom line anchor (G2)
-      twoStaffThresholdMidi: 60, // Show bass staff when notes go below this
+      pixelsPerUnit: baseUnit * 4,
+      noteHeight: baseUnit,
+      noteCornerRadius: baseUnit / 2,
+      trackGap: baseUnit * 0,
+      trackTopY: baseUnit * 2,
+      leftPadding: baseUnit * 1.5,
+      rightPadding: baseUnit * 1.5,
+      viewWidth: size.width,
+      viewHeight: size.height,
+      minNoteWidth: Math.max(6, baseUnit * 0.375),
     };
   }, [size.height, size.width]);
+
+  const isAtStart = playback.playheadTime < 0.01;
 
   return (
     <TabsContent
       value="interactive"
-      className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
+      forceMount
+      className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center data-[state=inactive]:hidden"
     >
-      <div className="w-full h-full min-h-[240px] p-4 flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={selectedTune}
-            onValueChange={(value) => setSelectedTune(value)}
+      <div className="w-full h-full flex flex-col">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (playback.isAutoplay) {
+                playback.pause();
+              } else {
+                playback.play();
+              }
+            }}
+            disabled={notes.length === 0}
           >
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Select tune" />
-            </SelectTrigger>
-            <SelectContent>
-              {localTuneKeys.map((key) => (
-                <SelectItem key={key} value={key}>
-                  {key}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={selectedTarget}
-            onValueChange={(value) => setSelectedTarget(value as TargetType)}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="full">Full tune</SelectItem>
-              <SelectItem value="nuggets">Nuggets</SelectItem>
-              <SelectItem value="assemblies">Assemblies</SelectItem>
-            </SelectContent>
-          </Select>
-          {selectedTarget !== "full" && (
-            <Select
-              value={selectedItemId}
-              onValueChange={(value) => setSelectedItemId(value)}
+            {playback.isAutoplay ? "Pause" : "Play"}
+          </Button>
+          {!isAtStart && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={playback.stop}
+              disabled={notes.length === 0}
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select part" />
-              </SelectTrigger>
-              <SelectContent>
-                {(selectedTarget === "assemblies"
-                  ? assemblyIds
-                  : nuggetIds
-                ).map((id) => (
-                  <SelectItem key={id} value={id}>
-                    {id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              Restart
+            </Button>
           )}
-          <Select
-            value={selectedHand}
-            onValueChange={(value) => setSelectedHand(value as HandType)}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="full">Full</SelectItem>
-              <SelectItem value="left" disabled={!handAvailability.left}>
-                Left hand
-              </SelectItem>
-              <SelectItem value="right" disabled={!handAvailability.right}>
-                Right hand
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-full flex items-center justify-between text-xs text-muted-foreground px-1">
-          <span>BPM: {bpm}</span>
-        </div>
-        <div className="w-full h-[280px] rounded-lg border bg-background/50 overflow-auto">
-          <OpenSheetMusicDisplayView
-            xml={xml}
-            hasColor
-            className="w-full h-full"
-            style={{ width: "100%", height: "100%" }}
-            centerHorizontally
-          />
+          <span className="ml-2">BPM: {bpm}</span>
+          <span>Phase: {playback.phase}</span>
+          <span>
+            Gate: {notes.length > 0 ? playback.gateIndex + 1 : "-"}
+          </span>
+          <span>t: {playback.playheadTime.toFixed(2)}s</span>
         </div>
         <div
           ref={containerRef}
-          className="w-full h-full min-h-[240px] rounded-lg border bg-background/50 overflow-hidden"
+          className="w-full flex-1 min-h-0 overflow-hidden"
         >
           {size.width > 0 && size.height > 0 && (
-            <PianoSheetPixi notes={notes} config={config} />
+            <PianoSheetPixi
+              notes={notes}
+              config={config}
+              timeSignatures={sequence.timeSignatures}
+              qpm={bpm}
+              playheadTime={playback.playheadTime}
+              focusedNoteIds={playback.focusedNoteIds}
+              activeNoteIds={playback.activeNoteIds}
+              followPlayhead
+            />
           )}
         </div>
       </div>

@@ -19,6 +19,7 @@ import {
 import {
   InteractiveViewActionBar,
   InteractiveViewTabContent,
+  useInteractiveState,
 } from "@/components/modes/InteractiveView";
 import {
   PlayEntry,
@@ -81,9 +82,11 @@ import {
   abcToNoteSequence,
   midiToFrequency,
   midiToNoteName,
+  noteNameToMidi,
   musicXmlToNoteSequence,
   noteSequenceToAbc,
 } from "@/utils/noteSequenceUtils";
+import type { InputNoteEvent } from "@/hooks/useSheetPlaybackEngine";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
 import JSZip from "jszip";
 import { ChevronDown } from "lucide-react";
@@ -186,6 +189,8 @@ const Index = () => {
   const [questHeaderActions, setQuestHeaderActions] = useState<ReactNode>(null);
   const [questHeaderTitle, setQuestHeaderTitle] = useState<string | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
+  const sheetInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
+  const interactiveState = useInteractiveState();
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
   const [musicNotation, setMusicNotation] = useLocalStorage<
@@ -1516,6 +1521,15 @@ const Index = () => {
         labNoteHandlerRef.current?.(noteKey);
       }
 
+      if (activeMode === "interactive") {
+        sheetInputEventRef.current?.({
+          type: "noteon",
+          midi: noteNameToMidi(noteKey),
+          timeMs: performance.now(),
+          velocity,
+        });
+      }
+
       if (activeMode === "play") {
         recordingManager.addNoteStart(noteKey, velocity);
       } else if (activeMode === "learn") {
@@ -1539,6 +1553,7 @@ const Index = () => {
     [
       appState,
       activeMode,
+      noteNameToMidi,
       recordingManager,
       learnMode.handleUserAction,
       learnMode.lesson.phase,
@@ -1551,10 +1566,38 @@ const Index = () => {
     ],
   );
 
+  const handleInteractiveActivePitchesChange = useCallback(
+    (pitches: Set<number>) => {
+      if (activeMode !== "interactive") return;
+      const nextKeys = new Set<string>();
+      pitches.forEach((pitch) => {
+        nextKeys.add(midiToNoteName(pitch));
+      });
+      setActiveKeys(nextKeys);
+    },
+    [activeMode],
+  );
+
+  const handleInteractivePlaybackNote = useCallback(
+    ({ midi, durationSec }: { midi: number; durationSec: number }) => {
+      if (activeMode !== "interactive") return;
+      const frequency = midiToFrequency(midi);
+      pianoRef.current?.playNote(frequency, durationSec);
+    },
+    [activeMode],
+  );
+
   const handleNoteEnd = useCallback(
     (noteKey: string, frequency: number) => {
       if (activeMode === "lab") {
         labNoteOffHandlerRef.current?.(noteKey);
+      }
+      if (activeMode === "interactive") {
+        sheetInputEventRef.current?.({
+          type: "noteoff",
+          midi: noteNameToMidi(noteKey),
+          timeMs: performance.now(),
+        });
       }
       if (activeMode === "play") {
         recordingManager.addNoteEnd(noteKey);
@@ -1579,6 +1622,7 @@ const Index = () => {
     },
     [
       activeMode,
+      noteNameToMidi,
       recordingManager,
       learnRecordingManager,
       freePracticeRecordingManager,
@@ -1866,7 +1910,7 @@ const Index = () => {
     ),
     quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
     lab: <TuneManagementActionBar />,
-    interactive: <InteractiveViewActionBar />,
+    interactive: <InteractiveViewActionBar state={interactiveState} />,
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
@@ -1958,7 +2002,12 @@ const Index = () => {
               onRegisterNoteHandler={registerLabNoteHandler}
               onRegisterNoteOffHandler={registerLabNoteOffHandler}
             />
-            <InteractiveViewTabContent />
+            <InteractiveViewTabContent
+              state={interactiveState}
+              onPlaybackInputEventRef={sheetInputEventRef}
+              onActivePitchesChange={handleInteractiveActivePitchesChange}
+              onPlaybackNote={handleInteractivePlaybackNote}
+            />
           </div>
         </Tabs>
 
