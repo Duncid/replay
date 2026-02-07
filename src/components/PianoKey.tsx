@@ -1,5 +1,6 @@
 import { getBaseNoteLetter } from "@/constants/noteColors";
 import { cn } from "@/lib/utils";
+import { getStripeDataUrls } from "@/utils/stripePattern";
 
 interface PianoKeyProps {
   note: string;
@@ -162,8 +163,22 @@ export const PianoKey = ({
           hasColor ? "px-2 py-0.5 rounded-full text-white" : "opacity-80",
           hasColor && (isActive ? "opacity-0" : "opacity-100"),
           !hasColor && (isBlack ? "text-foreground" : "text-muted-foreground"),
-          hasColor && noteColorClasses?.label,
+          hasColor && !isBlack && noteColorClasses?.label,
         )}
+        style={
+          hasColor && isBlack
+            ? (() => {
+                const sharpName = note.replace(/[0-9]/g, "");
+                const dataUrl = getStripeDataUrls().get(sharpName);
+                return dataUrl
+                  ? {
+                      backgroundImage: `url(${dataUrl})`,
+                      backgroundSize: "12px 12px",
+                    }
+                  : {};
+              })()
+            : undefined
+        }
       >
         {displayLabel ?? note}
       </span>

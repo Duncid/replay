@@ -19,6 +19,7 @@ import {
 import {
   InteractiveViewActionBar,
   InteractiveViewTabContent,
+  useInteractiveState,
 } from "@/components/modes/InteractiveView";
 import {
   PlayEntry,
@@ -189,6 +190,7 @@ const Index = () => {
   const [questHeaderTitle, setQuestHeaderTitle] = useState<string | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
   const sheetInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
+  const interactiveState = useInteractiveState();
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
   const [musicNotation, setMusicNotation] = useLocalStorage<
@@ -1908,7 +1910,7 @@ const Index = () => {
     ),
     quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
     lab: <TuneManagementActionBar />,
-    interactive: <InteractiveViewActionBar />,
+    interactive: <InteractiveViewActionBar state={interactiveState} />,
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
@@ -2001,6 +2003,7 @@ const Index = () => {
               onRegisterNoteOffHandler={registerLabNoteOffHandler}
             />
             <InteractiveViewTabContent
+              state={interactiveState}
               onPlaybackInputEventRef={sheetInputEventRef}
               onActivePitchesChange={handleInteractiveActivePitchesChange}
               onPlaybackNote={handleInteractivePlaybackNote}

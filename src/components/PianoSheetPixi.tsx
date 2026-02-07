@@ -1,6 +1,10 @@
-import { getNoteColorForNoteName } from "@/constants/noteColors";
+import {
+  getNoteColorForNoteName,
+  getNoteColorsForNoteName,
+} from "@/constants/noteColors";
 import type { TimeSignature } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
+import { createStripeCanvas } from "@/utils/stripePattern";
 import { WRAP_MODES } from "@pixi/constants";
 import { Texture } from "@pixi/core";
 import { Container, Graphics, Stage } from "@pixi/react";
@@ -19,11 +23,25 @@ import {
   type SheetConfig,
 } from "./PianoSheetPixiLayout.ts";
 
-function getNoteColorFromMidi(midi: number) {
-  const noteName = midiToNoteName(midi);
-  const hex = getNoteColorForNoteName(noteName);
-  if (!hex) return 0x9aa0a6;
+const DEFAULT_NOTE_COLORS = {
+  idle: 0x9aa0a6,
+  active: 0x9aa0a6,
+  focused: 0x9aa0a6,
+};
+
+function hexToInt(hex: string) {
   return parseInt(hex.replace("#", ""), 16);
+}
+
+function getNoteColorsFromMidi(midi: number) {
+  const noteName = midiToNoteName(midi);
+  const colors = getNoteColorsForNoteName(noteName);
+  if (!colors) return DEFAULT_NOTE_COLORS;
+  return {
+    idle: hexToInt(colors.idle),
+    active: hexToInt(colors.active),
+    focused: hexToInt(colors.focused),
+  };
 }
 
 function normalizeSharpNote(noteName: string) {
@@ -51,28 +69,7 @@ function normalizeSharpNote(noteName: string) {
 }
 
 function createStripeTexture(baseHex: string, stripeHex: string) {
-  const lineWidth = 3;
-  const block = lineWidth * 4;
-  const size = block;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return Texture.EMPTY;
-
-  ctx.fillStyle = baseHex;
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = stripeHex;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = "butt";
-
-  for (let offset = -block; offset <= block; offset += block / 2) {
-    ctx.beginPath();
-    ctx.moveTo(offset - block / 2, -block / 2);
-    ctx.lineTo(offset + block + block / 2, block + block / 2);
-    ctx.stroke();
-  }
-
+  const canvas = createStripeCanvas(baseHex, stripeHex);
   const texture = Texture.from(canvas);
   texture.baseTexture.wrapMode = WRAP_MODES.REPEAT;
   return texture;
@@ -248,9 +245,7 @@ export function PianoSheetPixi({
     const lastUserScrollMs = lastUserScrollMsRef.current;
     if (lastUserScrollMs && nowMs - lastUserScrollMs < 2000) return;
     const playheadX = config.leftPadding + playheadTime * config.pixelsPerUnit;
-    const targetViewportX = clampViewport(
-      playheadX - config.viewWidth * 0.33
-    );
+    const targetViewportX = clampViewport(playheadX - config.viewWidth * 0.33);
     setViewportX((prev) => {
       const next = prev + (targetViewportX - prev) * 0.12;
       return clampViewport(next);
@@ -309,9 +304,8 @@ export function PianoSheetPixi({
             }}
           />
           {noteRects.map((note) => {
-            const baseColor = getNoteColorFromMidi(note.midi);
-            const lowerNeighborColor = getNoteColorFromMidi(note.midi - 1);
-            const upperNeighborColor = getNoteColorFromMidi(note.midi + 1);
+            const noteColors = getNoteColorsFromMidi(note.midi);
+            const lowerNeighborColors = getNoteColorsFromMidi(note.midi - 1);
             const hasGradient =
               note.accidental === "sharp" || note.accidental === "flat";
             const stripeKey = hasGradient
@@ -322,24 +316,29 @@ export function PianoSheetPixi({
 
             const isFocused = focusedNoteIds.has(note.id);
             const isActive = activeNoteIds.has(note.id);
-            const fillAlpha = isFocused ? 1 : isActive ? 0.9 : 0.85;
+            const state = isFocused ? "focused" : isActive ? "active" : "idle";
+            const fillColor = hasGradient
+              ? lowerNeighborColors[state]
+              : noteColors[state];
+            const fillAlpha = state === "idle" ? 1 : 1;
             const strokeWidth = isFocused ? 4 : 2;
-            const strokeAlpha = isFocused ? 1 : isActive ? 0.6 : 0.4;
+            const strokeAlpha = isFocused ? 0.9 : isActive ? 0.7 : 0;
+            const strokeColor = hasGradient
+              ? lowerNeighborColors[state]
+              : noteColors[state];
 
             return (
               <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
                 <Graphics
                   draw={(g) => {
                     g.clear();
-                    if (stripeTexture) {
+                    if (stripeTexture && state === "idle") {
                       g.beginTextureFill({
                         texture: stripeTexture,
                         alpha: fillAlpha,
                       });
-                    } else if (hasGradient) {
-                      g.beginFill(lowerNeighborColor, fillAlpha);
                     } else {
-                      g.beginFill(baseColor, fillAlpha);
+                      g.beginFill(fillColor, fillAlpha);
                     }
                     g.drawRoundedRect(
                       0,
@@ -349,9 +348,6 @@ export function PianoSheetPixi({
                       config.noteCornerRadius
                     );
                     g.endFill();
-                    const strokeColor = hasGradient
-                      ? lowerNeighborColor
-                      : baseColor;
                     g.lineStyle({
                       width: strokeWidth,
                       color: strokeColor,

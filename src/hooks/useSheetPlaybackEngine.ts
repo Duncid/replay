@@ -257,6 +257,19 @@ export function useSheetPlaybackEngine({
           }
         }
 
+        // Look-ahead: if advancing toward a gate and the pressed pitch
+        // matches the next gate, snap the playhead forward to it
+        if (phaseRef.current === "running" && !isAutoplayRef.current) {
+          const nextGate = gates[gateIndexRef.current];
+          if (nextGate && nextGate.requiredPitches.includes(event.midi)) {
+            tRef.current = nextGate.t;
+            setPlayheadTime(nextGate.t);
+            recomputeActiveNotes(nextGate.t);
+            enterWaiting(event.timeMs);
+            // Now fall through to the waiting block below
+          }
+        }
+
         // Process gate satisfaction — works whenever we're waiting at a gate
         if (phaseRef.current === "waiting") {
           const gate = gates[gateIndexRef.current];
@@ -285,7 +298,7 @@ export function useSheetPlaybackEngine({
         heldPitchesRef.current.delete(event.midi);
       }
     },
-    [advanceGateIfSatisfied, chordWindowMs, enterWaiting, gates]
+    [advanceGateIfSatisfied, chordWindowMs, enterWaiting, gates, recomputeActiveNotes]
   );
 
   const processInputEventRef = useRef(processInputEvent);
