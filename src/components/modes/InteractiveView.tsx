@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import type { NoteSequence } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
@@ -36,7 +35,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout.ts";
 import {
   type InputNoteEvent,
-  type PlaybackMode,
   useSheetPlaybackEngine,
 } from "@/hooks/useSheetPlaybackEngine";
 
@@ -50,13 +48,13 @@ export function InteractiveViewActionBar() {
 }
 
 interface InteractiveViewTabContentProps {
-  inputEvents?: InputNoteEvent[];
+  onPlaybackInputEventRef?: React.MutableRefObject<((e: InputNoteEvent) => void) | null>;
   onActivePitchesChange?: (pitches: Set<number>) => void;
   onPlaybackNote?: (payload: { midi: number; durationSec: number }) => void;
 }
 
 export function InteractiveViewTabContent({
-  inputEvents = [],
+  onPlaybackInputEventRef,
   onActivePitchesChange,
   onPlaybackNote,
 }: InteractiveViewTabContentProps) {
@@ -67,7 +65,6 @@ export function InteractiveViewTabContent({
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [mode, setMode] = useState<PlaybackMode>("autoplay");
   const [followPlayhead, setFollowPlayhead] = useState(false);
 
   useEffect(() => {
@@ -210,10 +207,19 @@ export function InteractiveViewTabContent({
 
   const playback = useSheetPlaybackEngine({
     notes,
-    mode,
     enabled: notes.length > 0,
-    inputEvents,
   });
+
+  useEffect(() => {
+    if (onPlaybackInputEventRef) {
+      onPlaybackInputEventRef.current = playback.handleInputEvent;
+    }
+    return () => {
+      if (onPlaybackInputEventRef) {
+        onPlaybackInputEventRef.current = null;
+      }
+    };
+  }, [onPlaybackInputEventRef, playback.handleInputEvent]);
 
   useEffect(() => {
     const next = playback.activeNoteIds;
@@ -233,7 +239,7 @@ export function InteractiveViewTabContent({
     });
     onActivePitchesChange?.(activePitches);
 
-    if (playback.isPlaying && onPlaybackNote) {
+    if (playback.isAutoplay && onPlaybackNote) {
       added.forEach((id) => {
         const note = noteById.get(id);
         if (!note) return;
@@ -251,7 +257,7 @@ export function InteractiveViewTabContent({
     onActivePitchesChange,
     onPlaybackNote,
     playback.activeNoteIds,
-    playback.isPlaying,
+    playback.isAutoplay,
     playback.playheadTime,
   ]);
 
@@ -369,23 +375,15 @@ export function InteractiveViewTabContent({
         <div className="w-full flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground px-1">
           <span>BPM: {bpm}</span>
           <div className="flex items-center gap-2">
-            <Label htmlFor="playback-mode" className="text-xs">
-              Player mode
-            </Label>
-            <Switch
-              id="playback-mode"
-              checked={mode === "player"}
-              onCheckedChange={(checked) =>
-                setMode(checked ? "player" : "autoplay")
-              }
-            />
             <Label htmlFor="follow-playhead" className="text-xs">
               Follow playhead
             </Label>
-            <Switch
+            <input
               id="follow-playhead"
+              type="checkbox"
               checked={followPlayhead}
-              onCheckedChange={setFollowPlayhead}
+              onChange={(e) => setFollowPlayhead(e.target.checked)}
+              className="h-4 w-4"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -393,7 +391,7 @@ export function InteractiveViewTabContent({
               variant="outline"
               size="sm"
               onClick={() => {
-                if (playback.isPlaying) {
+                if (playback.isAutoplay) {
                   playback.pause();
                 } else {
                   playback.play();
@@ -401,7 +399,7 @@ export function InteractiveViewTabContent({
               }}
               disabled={notes.length === 0}
             >
-              {playback.isPlaying ? "Pause" : "Play"}
+              {playback.isAutoplay ? "Pause" : "Play"}
             </Button>
             <Button
               variant="outline"

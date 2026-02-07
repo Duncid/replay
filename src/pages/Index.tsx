@@ -188,7 +188,7 @@ const Index = () => {
   const [questHeaderActions, setQuestHeaderActions] = useState<ReactNode>(null);
   const [questHeaderTitle, setQuestHeaderTitle] = useState<string | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
-  const [sheetInputEvents, setSheetInputEvents] = useState<InputNoteEvent[]>([]);
+  const sheetInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
   const [musicNotation, setMusicNotation] = useLocalStorage<
@@ -1520,15 +1520,12 @@ const Index = () => {
       }
 
       if (activeMode === "interactive") {
-        setSheetInputEvents((prev) => [
-          ...prev,
-          {
-            type: "noteon",
-            midi: noteNameToMidi(noteKey),
-            timeMs: performance.now(),
-            velocity,
-          },
-        ]);
+        sheetInputEventRef.current?.({
+          type: "noteon",
+          midi: noteNameToMidi(noteKey),
+          timeMs: performance.now(),
+          velocity,
+        });
       }
 
       if (activeMode === "play") {
@@ -1594,14 +1591,11 @@ const Index = () => {
         labNoteOffHandlerRef.current?.(noteKey);
       }
       if (activeMode === "interactive") {
-        setSheetInputEvents((prev) => [
-          ...prev,
-          {
-            type: "noteoff",
-            midi: noteNameToMidi(noteKey),
-            timeMs: performance.now(),
-          },
-        ]);
+        sheetInputEventRef.current?.({
+          type: "noteoff",
+          midi: noteNameToMidi(noteKey),
+          timeMs: performance.now(),
+        });
       }
       if (activeMode === "play") {
         recordingManager.addNoteEnd(noteKey);
@@ -2007,7 +2001,7 @@ const Index = () => {
               onRegisterNoteOffHandler={registerLabNoteOffHandler}
             />
             <InteractiveViewTabContent
-              inputEvents={sheetInputEvents}
+              onPlaybackInputEventRef={sheetInputEventRef}
               onActivePitchesChange={handleInteractiveActivePitchesChange}
               onPlaybackNote={handleInteractivePlaybackNote}
             />
