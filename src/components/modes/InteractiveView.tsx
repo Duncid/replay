@@ -415,7 +415,7 @@ export function InteractiveViewTabContent({
         const note = noteById.get(id);
         if (!note) return;
         const endTime = note.start + note.dur;
-        const durationSec = Math.max(0, endTime - playback.playheadTime);
+        const durationSec = Math.max(0, endTime - (playback.playheadTimeRef.current ?? 0));
         if (durationSec > 0) {
           onPlaybackNote({ midi: note.midi, durationSec });
         }
@@ -429,7 +429,7 @@ export function InteractiveViewTabContent({
     onPlaybackNote,
     playback.activeNoteIds,
     playback.isAutoplay,
-    playback.playheadTime,
+    playback.playheadTimeRef,
   ]);
 
   const bpm = useMemo(() => {
@@ -453,7 +453,7 @@ export function InteractiveViewTabContent({
     };
   }, [size.height, size.width]);
 
-  const isAtStart = playback.playheadTime < 0.01;
+  const isAtStart = playback.playheadTime < 0.01 && (playback.playheadTimeRef.current ?? 0) < 0.01;
 
   return (
     <TabsContent
@@ -504,10 +504,11 @@ export function InteractiveViewTabContent({
               config={config}
               timeSignatures={sequence.timeSignatures}
               qpm={bpm}
-              playheadTime={playback.playheadTime}
+              playheadTimeRef={playback.playheadTimeRef}
               focusedNoteIds={playback.focusedNoteIds}
               activeNoteIds={playback.activeNoteIds}
               followPlayhead
+              isAutoplay={playback.isAutoplay}
             />
           )}
         </div>

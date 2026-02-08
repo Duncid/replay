@@ -30,12 +30,12 @@ export const PianoKey = ({
   disabled,
   gridColumn,
 }: PianoKeyProps) => {
-  // Debug logging
-  if (isActive) {
-    console.log(
-      `PianoKey ${note}: isActive=${isActive}, isSustained=${isSustained}`,
-    );
-  }
+  // // Debug logging
+  // if (isActive) {
+  //   console.log(
+  //     `PianoKey ${note}: isActive=${isActive}, isSustained=${isSustained}`,
+  //   );
+  // }
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault(); // Prevent ghost clicks and scrolling

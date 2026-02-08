@@ -81,10 +81,11 @@ interface PianoSheetPixiProps {
   config: SheetConfig;
   timeSignatures?: TimeSignature[];
   qpm?: number;
-  playheadTime?: number;
+  playheadTimeRef: React.RefObject<number>;
   focusedNoteIds?: Set<string>;
   activeNoteIds?: Set<string>;
   followPlayhead?: boolean;
+  isAutoplay?: boolean;
 }
 
 export function PianoSheetPixi({
@@ -92,10 +93,11 @@ export function PianoSheetPixi({
   config,
   timeSignatures,
   qpm,
-  playheadTime = 0,
+  playheadTimeRef,
   focusedNoteIds = new Set(),
   activeNoteIds = new Set(),
   followPlayhead = false,
+  isAutoplay = false,
 }: PianoSheetPixiProps) {
   const {
     contentWidth,
@@ -118,7 +120,27 @@ export function PianoSheetPixi({
     textures.set("A#", createStripeTexture(getHex("A"), getHex("B")));
     return textures;
   }, []);
+  // Cache GlowFilter instances per note to avoid re-creating WebGL shaders
+  const glowFilterCache = useRef(new Map<string, GlowFilter>());
+
+  // Clean up stale filter entries when notes change
+  useEffect(() => {
+    const validIds = new Set(noteRects.map((n) => n.id));
+    glowFilterCache.current.forEach((_, id) => {
+      if (!validIds.has(id)) {
+        glowFilterCache.current.delete(id);
+      }
+    });
+  }, [noteRects]);
+
+  // Ref for the playhead PixiJS container — position is updated
+  // imperatively from the RAF loop, bypassing React re-renders.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const playheadContainerRef = useRef<any>(null);
+
   const [viewportX, setViewportX] = useState(0);
+  const viewportXRef = useRef(0);
+  const lastFollowMsRef = useRef<number | null>(null);
   const maxScrollX = Math.max(0, contentWidth - config.viewWidth);
   const lastUserScrollMsRef = useRef<number | null>(null);
 
@@ -128,7 +150,11 @@ export function PianoSheetPixi({
   );
 
   useEffect(() => {
-    setViewportX((prev) => clampViewport(prev));
+    setViewportX((prev) => {
+      const clamped = clampViewport(prev);
+      viewportXRef.current = clamped;
+      return clamped;
+    });
   }, [clampViewport]);
 
   const dragState = useRef<{
@@ -157,7 +183,9 @@ export function PianoSheetPixi({
       const state = dragState.current;
       if (!state.dragging || state.pointerId !== event.pointerId) return;
       const delta = event.clientX - state.startX;
-      setViewportX(clampViewport(state.startViewportX - delta));
+      const newX = clampViewport(state.startViewportX - delta);
+      viewportXRef.current = newX;
+      setViewportX(newX);
       lastUserScrollMsRef.current = performance.now();
     },
     [clampViewport]
@@ -181,7 +209,11 @@ export function PianoSheetPixi({
         Math.abs(event.deltaX) > Math.abs(event.deltaY)
           ? event.deltaX
           : event.deltaY;
-      setViewportX((prev) => clampViewport(prev + delta));
+      setViewportX((prev) => {
+        const next = clampViewport(prev + delta);
+        viewportXRef.current = next;
+        return next;
+      });
       lastUserScrollMsRef.current = performance.now();
     },
     [clampViewport]
@@ -240,25 +272,67 @@ export function PianoSheetPixi({
   const beatLineAlpha = 0.1;
   const measureLineAlpha = 0.1;
 
+  // Store latest values in refs so the RAF loop can access them
+  // without being in the dependency array.
+  const configRef = useRef(config);
+  configRef.current = config;
+  const clampViewportRef = useRef(clampViewport);
+  clampViewportRef.current = clampViewport;
+  const isAutoplayRef = useRef(isAutoplay);
+  isAutoplayRef.current = isAutoplay;
+
   useEffect(() => {
     if (!followPlayhead) return;
-    const nowMs = performance.now();
-    const lastUserScrollMs = lastUserScrollMsRef.current;
-    if (lastUserScrollMs && nowMs - lastUserScrollMs < 2000) return;
-    const playheadX = config.leftPadding + playheadTime * config.pixelsPerUnit;
-    const targetViewportX = clampViewport(playheadX - config.viewWidth * 0.33);
-    setViewportX((prev) => {
-      const next = prev + (targetViewportX - prev) * 0.12;
-      return clampViewport(next);
-    });
-  }, [
-    clampViewport,
-    config.leftPadding,
-    config.pixelsPerUnit,
-    config.viewWidth,
-    followPlayhead,
-    playheadTime,
-  ]);
+    let rafId: number;
+    const loop = (nowMs: number) => {
+      const cfg = configRef.current;
+      const clamp = clampViewportRef.current;
+      const playheadX =
+        cfg.leftPadding + (playheadTimeRef.current ?? 0) * cfg.pixelsPerUnit;
+
+      // Update playhead container position directly on the PixiJS object
+      const phContainer = playheadContainerRef.current;
+      if (phContainer) {
+        phContainer.x = playheadX;
+      }
+
+      // Skip viewport follow if user scrolled recently
+      const lastUserScrollMs = lastUserScrollMsRef.current;
+      if (lastUserScrollMs && nowMs - lastUserScrollMs < 2000) {
+        lastFollowMsRef.current = null;
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+
+      const target = clamp(playheadX - cfg.viewWidth * 0.33);
+      const prev = viewportXRef.current;
+
+      let next: number;
+      if (isAutoplayRef.current) {
+        // During autoplay the playhead moves at constant speed —
+        // snap the viewport directly so there is zero chase lag.
+        next = target;
+      } else {
+        // Interactive / gate mode: smooth follow with frame-rate-independent damping
+        const dtSec = lastFollowMsRef.current
+          ? Math.min((nowMs - lastFollowMsRef.current) / 1000, 0.1)
+          : 0;
+        const damping = 8;
+        const factor = dtSec > 0 ? 1 - Math.exp(-damping * dtSec) : 1;
+        next = clamp(prev + (target - prev) * factor);
+      }
+      lastFollowMsRef.current = nowMs;
+
+      if (Math.abs(next - prev) > 0.5) {
+        viewportXRef.current = next;
+        setViewportX(next);
+      }
+
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [followPlayhead, playheadTimeRef]);
 
   return (
     <div
@@ -321,37 +395,45 @@ export function PianoSheetPixi({
             const fillColor = hasGradient
               ? lowerNeighborColors[state]
               : noteColors[state];
-            const glowFilter =
-              isFocused || isActive
-                ? new GlowFilter({
-                    distance: isFocused ? 8 : 6,
-                    outerStrength: isFocused ? 3 : 2,
-                    innerStrength: 0,
-                    color: fillColor,
-                    quality: 0.3,
-                    knockout: true,
-                  })
-                : null;
+
+            const showGlow = isFocused || isActive;
+
+            // Reuse or create a cached GlowFilter for this note
+            let filter = glowFilterCache.current.get(note.id);
+            if (!filter) {
+              filter = new GlowFilter({
+                distance: 8,
+                outerStrength: 2,
+                innerStrength: 0,
+                color: 0,
+                quality: 0.3,
+                knockout: true,
+              });
+              glowFilterCache.current.set(note.id, filter);
+            }
+            // Update mutable filter properties to match current state
+            filter.color = fillColor;
+            filter.outerStrength = isFocused ? 3 : 2;
 
             return (
               <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
-                {glowFilter && (
-                  <Graphics
-                    filters={[glowFilter]}
-                    draw={(g) => {
-                      g.clear();
-                      g.beginFill(fillColor);
-                      g.drawRoundedRect(
-                        0,
-                        0,
-                        note.width,
-                        note.height,
-                        config.noteCornerRadius
-                      );
-                      g.endFill();
-                    }}
-                  />
-                )}
+                <Graphics
+                  visible={showGlow}
+                  filters={showGlow ? [filter] : []}
+                  draw={(g) => {
+                    g.clear();
+                    if (!showGlow) return;
+                    g.beginFill(fillColor);
+                    g.drawRoundedRect(
+                      0,
+                      0,
+                      note.width,
+                      note.height,
+                      config.noteCornerRadius
+                    );
+                    g.endFill();
+                  }}
+                />
                 <Graphics
                   draw={(g) => {
                     g.clear();
@@ -373,22 +455,22 @@ export function PianoSheetPixi({
               </Container>
             );
           })}
-          <Graphics
-            draw={(g) => {
-              g.clear();
-              const topY = trackLines[0]?.y ?? config.trackTopY;
-              const bottomY =
-                trackLines.length > 0
-                  ? trackLines[trackLines.length - 1].y + trackHeight
-                  : topY;
-              const x =
-                config.leftPadding + playheadTime * config.pixelsPerUnit;
-              g.lineStyle(2, trackLineColor, 0.9);
-              g.moveTo(x, topY);
-              g.lineTo(x, bottomY);
-              g.lineStyle(0);
-            }}
-          />
+          <Container ref={playheadContainerRef}>
+            <Graphics
+              draw={(g) => {
+                g.clear();
+                const topY = trackLines[0]?.y ?? config.trackTopY;
+                const bottomY =
+                  trackLines.length > 0
+                    ? trackLines[trackLines.length - 1].y + trackHeight
+                    : topY;
+                g.lineStyle(2, trackLineColor, 0.9);
+                g.moveTo(0, topY);
+                g.lineTo(0, bottomY);
+                g.lineStyle(0);
+              }}
+            />
+          </Container>
         </Container>
       </Stage>
     </div>

@@ -130,11 +130,18 @@ export function useSheetPlaybackEngine({
   // the engine advances through silence gaps until the next gate).
   const playerAdvancingRef = useRef(false);
 
+  const activeNoteIdsRef = useRef<Set<string>>(new Set());
+
   const recomputeActiveNotes = useCallback(
-    (timeSec: number) => {
+    (timeSec: number): boolean => {
+      const prev = activeNoteIdsRef.current;
       if (notes.length === 0) {
-        setActiveNoteIds(new Set());
-        return;
+        if (prev.size > 0) {
+          activeNoteIdsRef.current = new Set();
+          setActiveNoteIds(activeNoteIdsRef.current);
+          return true;
+        }
+        return false;
       }
       const active = new Set<string>();
       notes.forEach((note) => {
@@ -145,25 +152,50 @@ export function useSheetPlaybackEngine({
           active.add(note.id);
         }
       });
-      setActiveNoteIds(active);
+      // Only update state if the content actually changed
+      if (
+        active.size !== prev.size ||
+        Array.from(active).some((id) => !prev.has(id))
+      ) {
+        activeNoteIdsRef.current = active;
+        setActiveNoteIds(active);
+        return true;
+      }
+      return false;
     },
     [notes]
   );
 
+  const focusedNoteIdsRef = useRef<Set<string>>(new Set());
+
+  const setFocusedIfChanged = useCallback(
+    (next: Set<string>) => {
+      const prev = focusedNoteIdsRef.current;
+      if (
+        next.size !== prev.size ||
+        Array.from(next).some((id) => !prev.has(id))
+      ) {
+        focusedNoteIdsRef.current = next;
+        setFocusedNoteIds(next);
+      }
+    },
+    []
+  );
+
   const updateFocus = useCallback(() => {
     if (isAutoplayRef.current) {
-      setFocusedNoteIds(new Set());
+      setFocusedIfChanged(new Set());
       return;
     }
     if (phaseRef.current === "waiting") {
       const gate = gates[gateIndexRef.current];
       if (gate) {
-        setFocusedNoteIds(new Set(gate.noteIds));
+        setFocusedIfChanged(new Set(gate.noteIds));
         return;
       }
     }
-    setFocusedNoteIds(new Set());
-  }, [gates]);
+    setFocusedIfChanged(new Set());
+  }, [gates, setFocusedIfChanged]);
 
   useEffect(() => {
     if (!enabled) {
@@ -181,7 +213,7 @@ export function useSheetPlaybackEngine({
       const gate = gates[gateIndexRef.current];
       if (!gate) {
         gateProgressRef.current = null;
-        setFocusedNoteIds(new Set());
+        setFocusedIfChanged(new Set());
         return;
       }
       const satisfied = new Set<number>();
@@ -211,7 +243,7 @@ export function useSheetPlaybackEngine({
         updateFocus();
       }
     },
-    [gates, updateFocus]
+    [gates, setFocusedIfChanged, updateFocus]
   );
 
   const advanceGateIfSatisfied = useCallback(() => {
@@ -368,8 +400,10 @@ export function useSheetPlaybackEngine({
       }
 
       tRef.current = nextTime;
-      setPlayheadTime(nextTime);
-      recomputeActiveNotes(nextTime);
+      const activeChanged = recomputeActiveNotes(nextTime);
+      if (activeChanged) {
+        setPlayheadTime(nextTime);
+      }
       updateFocus();
 
       if (nextTime >= endTime - EPSILON) {
@@ -412,8 +446,8 @@ export function useSheetPlaybackEngine({
     phaseRef.current = "running";
     setPhase("running");
     gateProgressRef.current = null;
-    setFocusedNoteIds(new Set());
-  }, [enabled]);
+    setFocusedIfChanged(new Set());
+  }, [enabled, setFocusedIfChanged]);
 
   const pause = useCallback(() => {
     isAutoplayRef.current = false;
@@ -437,8 +471,10 @@ export function useSheetPlaybackEngine({
     gateIndexRef.current = 0;
     setGateIndex(0);
     gateProgressRef.current = null;
-    setFocusedNoteIds(new Set());
-    setActiveNoteIds(new Set());
+    focusedNoteIdsRef.current = new Set();
+    setFocusedNoteIds(focusedNoteIdsRef.current);
+    activeNoteIdsRef.current = new Set();
+    setActiveNoteIds(activeNoteIdsRef.current);
   }, []);
 
   const seek = useCallback(
@@ -456,6 +492,7 @@ export function useSheetPlaybackEngine({
 
   return {
     playheadTime,
+    playheadTimeRef: tRef,
     focusedNoteIds,
     activeNoteIds,
     isAutoplay,
