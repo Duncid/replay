@@ -140,12 +140,12 @@ export const PianoKey = ({
       className={cn(
         "relative ease-out select-none touch-none",
         isBlack
-          ? "h-[66.6667%] rounded-b-md shadow-lg z-20 pointer-events-auto col-span-2"
+          ? "h-[56%] rounded-b-md shadow-lg z-20 pointer-events-auto col-span-2"
           : "h-full rounded-b-lg shadow-md",
         getKeyColor(),
         (!isPlayable || disabled) && "cursor-not-allowed",
         !isPlayable &&
-          (isBlack ? "bg-key-black-disabled" : "bg-key-white-disabled"),
+          (isBlack ? "bg-key-black-disabled" : "bg-key-white-disabled")
       )}
       style={{
         transition: `background-color ${getTransitionDuration()} ease-out, box-shadow ${getTransitionDuration()} ease-out`,
@@ -163,7 +163,7 @@ export const PianoKey = ({
           hasColor ? "px-2 py-0.5 rounded-full text-white" : "opacity-80",
           hasColor && (isActive ? "opacity-0" : "opacity-100"),
           !hasColor && (isBlack ? "text-foreground" : "text-muted-foreground"),
-          hasColor && !isBlack && noteColorClasses?.label,
+          hasColor && !isBlack && noteColorClasses?.label
         )}
         style={
           hasColor && isBlack

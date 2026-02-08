@@ -425,11 +425,24 @@ export function useSheetPlaybackEngine({
       updateFocus();
 
       if (nextTime >= endTime - EPSILON) {
-        if (autoplay) {
-          setIsAutoplay(false);
-          isAutoplayRef.current = false;
-        }
+        // Reached end of track — reset to start
+        isAutoplayRef.current = false;
+        setIsAutoplay(false);
         playerAdvancingRef.current = false;
+        tRef.current = 0;
+        setPlayheadTime(0);
+        phaseRef.current = "running";
+        setPhase("running");
+        gateIndexRef.current = 0;
+        setGateIndex(0);
+        gateProgressRef.current = null;
+        focusedNoteIdsRef.current = new Set();
+        setFocusedNoteIds(focusedNoteIdsRef.current);
+        activeNoteIdsRef.current = new Set();
+        setActiveNoteIds(activeNoteIdsRef.current);
+        // Fire onTick at time 0 so playhead and viewport snap back
+        onTickRef.current?.(0);
+        return;
       }
 
       onTickRef.current?.(tRef.current);
