@@ -81,7 +81,7 @@ interface PianoSheetPixiProps {
   config: SheetConfig;
   timeSignatures?: TimeSignature[];
   qpm?: number;
-  playheadTimeRef: React.RefObject<number>;
+  onTickRef: React.MutableRefObject<((timeSec: number) => void) | null>;
   focusedNoteIds?: Set<string>;
   activeNoteIds?: Set<string>;
   followPlayhead?: boolean;
@@ -93,7 +93,7 @@ export function PianoSheetPixi({
   config,
   timeSignatures,
   qpm,
-  playheadTimeRef,
+  onTickRef,
   focusedNoteIds = new Set(),
   activeNoteIds = new Set(),
   followPlayhead = false,
@@ -272,43 +272,33 @@ export function PianoSheetPixi({
   const beatLineAlpha = 0.1;
   const measureLineAlpha = 0.1;
 
-  // Store latest values in refs so the RAF loop can access them
-  // without being in the dependency array.
-  const configRef = useRef(config);
-  configRef.current = config;
-  const clampViewportRef = useRef(clampViewport);
-  clampViewportRef.current = clampViewport;
-  const isAutoplayRef = useRef(isAutoplay);
-  isAutoplayRef.current = isAutoplay;
-
+  // Register the onTick handler — called synchronously from the engine's
+  // RAF loop so playhead and viewport update in the same frame, zero lag.
   useEffect(() => {
-    if (!followPlayhead) return;
-    let rafId: number;
-    const loop = (nowMs: number) => {
-      const cfg = configRef.current;
-      const clamp = clampViewportRef.current;
-      const playheadX =
-        cfg.leftPadding + (playheadTimeRef.current ?? 0) * cfg.pixelsPerUnit;
+    onTickRef.current = (timeSec: number) => {
+      const cfg = config;
+      const playheadX = cfg.leftPadding + timeSec * cfg.pixelsPerUnit;
 
       // Update playhead container position directly on the PixiJS object
-      const phContainer = playheadContainerRef.current;
-      if (phContainer) {
-        phContainer.x = playheadX;
+      if (playheadContainerRef.current) {
+        playheadContainerRef.current.x = playheadX;
       }
 
-      // Skip viewport follow if user scrolled recently
+      // Viewport follow
+      if (!followPlayhead) return;
+
+      const nowMs = performance.now();
       const lastUserScrollMs = lastUserScrollMsRef.current;
       if (lastUserScrollMs && nowMs - lastUserScrollMs < 2000) {
         lastFollowMsRef.current = null;
-        rafId = requestAnimationFrame(loop);
         return;
       }
 
-      const target = clamp(playheadX - cfg.viewWidth * 0.33);
+      const target = clampViewport(playheadX - cfg.viewWidth * 0.33);
       const prev = viewportXRef.current;
 
       let next: number;
-      if (isAutoplayRef.current) {
+      if (isAutoplay) {
         // During autoplay the playhead moves at constant speed —
         // snap the viewport directly so there is zero chase lag.
         next = target;
@@ -319,7 +309,7 @@ export function PianoSheetPixi({
           : 0;
         const damping = 8;
         const factor = dtSec > 0 ? 1 - Math.exp(-damping * dtSec) : 1;
-        next = clamp(prev + (target - prev) * factor);
+        next = clampViewport(prev + (target - prev) * factor);
       }
       lastFollowMsRef.current = nowMs;
 
@@ -327,12 +317,11 @@ export function PianoSheetPixi({
         viewportXRef.current = next;
         setViewportX(next);
       }
-
-      rafId = requestAnimationFrame(loop);
     };
-    rafId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(rafId);
-  }, [followPlayhead, playheadTimeRef]);
+    return () => {
+      onTickRef.current = null;
+    };
+  }, [config, followPlayhead, isAutoplay, clampViewport, onTickRef]);
 
   return (
     <div

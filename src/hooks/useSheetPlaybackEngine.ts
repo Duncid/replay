@@ -30,6 +30,7 @@ type UseSheetPlaybackEngineOptions = {
   enabled: boolean;
   speed?: number;
   chordWindowMs?: number;
+  onTick?: (timeSec: number) => void;
 };
 
 const DEFAULT_SPEED = 1;
@@ -96,6 +97,7 @@ export function useSheetPlaybackEngine({
   enabled,
   speed = DEFAULT_SPEED,
   chordWindowMs = DEFAULT_CHORD_WINDOW_MS,
+  onTick,
 }: UseSheetPlaybackEngineOptions) {
   const gates = useMemo(() => buildGates(notes), [notes]);
   const endTime = useMemo(() => {
@@ -129,6 +131,15 @@ export function useSheetPlaybackEngine({
   // Whether player-mode advancement is active (after a gate is satisfied,
   // the engine advances through silence gaps until the next gate).
   const playerAdvancingRef = useRef(false);
+
+  // Wall-clock anchors for autoplay — time is computed as a pure function
+  // of performance.now() so it's deterministic and sync-free.
+  const autoplayStartMsRef = useRef(0);
+  const autoplayStartOffsetRef = useRef(0);
+
+  // onTick callback ref — always up-to-date without causing re-renders
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
 
   const activeNoteIdsRef = useRef<Set<string>>(new Set());
 
@@ -360,19 +371,24 @@ export function useSheetPlaybackEngine({
             enterWaiting(nowMs);
           }
         }
+        onTickRef.current?.(tRef.current);
         return;
       }
-
-      const lastMs = lastFrameMsRef.current ?? nowMs;
-      const dt = Math.max(0, (nowMs - lastMs) / 1000);
-      lastFrameMsRef.current = nowMs;
 
       let nextTime = tRef.current;
 
       if (autoplay) {
-        // Autoplay: advance continuously, no gate stops
-        nextTime = Math.min(endTime, nextTime + dt * speed);
+        // Autoplay: compute time from wall clock — deterministic, no drift
+        const elapsed =
+          ((nowMs - autoplayStartMsRef.current) / 1000) * speed;
+        nextTime = Math.min(
+          endTime,
+          autoplayStartOffsetRef.current + elapsed
+        );
       } else {
+        const lastMs = lastFrameMsRef.current ?? nowMs;
+        const dt = Math.max(0, (nowMs - lastMs) / 1000);
+        lastFrameMsRef.current = nowMs;
         // Player advancing: move through silence gaps, stop at next gate
         const nextGate = gates[gateIndexRef.current];
         if (phaseRef.current === "running") {
@@ -384,6 +400,7 @@ export function useSheetPlaybackEngine({
               setPlayheadTime(nextTime);
               recomputeActiveNotes(nextTime);
               enterWaiting(nowMs);
+              onTickRef.current?.(tRef.current);
               return;
             }
           } else {
@@ -395,6 +412,7 @@ export function useSheetPlaybackEngine({
           }
         } else {
           // Waiting at gate — don't advance time
+          onTickRef.current?.(tRef.current);
           return;
         }
       }
@@ -413,6 +431,8 @@ export function useSheetPlaybackEngine({
         }
         playerAdvancingRef.current = false;
       }
+
+      onTickRef.current?.(tRef.current);
     },
     [endTime, enterWaiting, gates, recomputeActiveNotes, speed, updateFocus]
   );
@@ -442,6 +462,9 @@ export function useSheetPlaybackEngine({
     setIsAutoplay(true);
     playerAdvancingRef.current = false;
     lastFrameMsRef.current = null;
+    // Record wall-clock anchor for deterministic autoplay time
+    autoplayStartMsRef.current = performance.now();
+    autoplayStartOffsetRef.current = tRef.current;
     // Clear gate waiting state so autoplay runs freely
     phaseRef.current = "running";
     setPhase("running");

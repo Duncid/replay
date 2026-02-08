@@ -37,7 +37,7 @@ import {
   getTuneRhXml,
   getTuneXml,
 } from "@/utils/tuneAssetBundler";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout.ts";
 import {
   type InputNoteEvent,
@@ -376,9 +376,18 @@ export function InteractiveViewTabContent({
 
   const prevActiveNoteIdsRef = useRef<Set<string>>(new Set());
 
+  // Ref that PianoSheetPixi registers its handler on — called
+  // synchronously from the engine's RAF loop for zero-lag updates.
+  const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+
+  const onTick = useCallback((t: number) => {
+    onTickRef.current?.(t);
+  }, []);
+
   const playback = useSheetPlaybackEngine({
     notes,
     enabled: notes.length > 0,
+    onTick,
   });
 
   useEffect(() => {
@@ -504,7 +513,7 @@ export function InteractiveViewTabContent({
               config={config}
               timeSignatures={sequence.timeSignatures}
               qpm={bpm}
-              playheadTimeRef={playback.playheadTimeRef}
+              onTickRef={onTickRef}
               focusedNoteIds={playback.focusedNoteIds}
               activeNoteIds={playback.activeNoteIds}
               followPlayhead
