@@ -26,6 +26,7 @@ interface OpenSheetMusicDisplayViewProps {
   className?: string;
   style?: React.CSSProperties;
   centerHorizontally?: boolean;
+  renderSingleHorizontalStaffline?: boolean;
 }
 
 export type OpenSheetMusicDisplayViewHandle = {
@@ -108,6 +109,7 @@ export const OpenSheetMusicDisplayView = forwardRef<
       className,
       style,
       centerHorizontally = false,
+      renderSingleHorizontalStaffline = false,
     },
     ref,
   ) => {
@@ -545,6 +547,9 @@ export const OpenSheetMusicDisplayView = forwardRef<
 
           const osmd = new OpenSheetMusicDisplay(container, options);
           await osmd.load(xml);
+          if (renderSingleHorizontalStaffline) {
+            osmd.EngravingRules.RenderSingleHorizontalStaffline = true;
+          }
           if (hasColor) {
             applyPerNoteColors(osmd);
           }
@@ -597,6 +602,7 @@ export const OpenSheetMusicDisplayView = forwardRef<
       resolveThemeColors,
       notifyCursorElement,
       centerHorizontally,
+      renderSingleHorizontalStaffline,
     ]);
 
     useEffect(() => {

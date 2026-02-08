@@ -1,3 +1,4 @@
+import { PianoSheetPixi } from "@/components/PianoSheetPixi";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,8 +27,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TabsContent } from "@/components/ui/tabs";
-import { useOsmdCursorPlayback } from "@/components/useOsmdCursorPlayback";
 import { useToast } from "@/hooks/use-toast";
+import {
+  useSheetPlaybackEngine,
+  type InputNoteEvent,
+} from "@/hooks/useSheetPlaybackEngine";
 import { usePublishedTuneKeys, useTuneAssets } from "@/hooks/useTuneQueries";
 import { supabase } from "@/integrations/supabase/client";
 import type { NoteSequence } from "@/types/noteSequence";
@@ -36,6 +40,7 @@ import type {
   TuneBriefing,
   TuneNugget,
 } from "@/types/tuneAssets";
+import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import {
   bundleSingleTuneAssets,
   getAssemblyDspXml,
@@ -51,7 +56,6 @@ import {
   getNuggetNs,
   getNuggetRh,
   getNuggetXml,
-  
   getTuneDspXml,
   getTuneLh,
   getTuneLhXml,
@@ -70,13 +74,13 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import {
   createContext,
   Fragment,
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -86,13 +90,14 @@ import {
   OpenSheetMusicDisplayView,
   type OpenSheetMusicDisplayViewHandle,
 } from "../OpenSheetMusicDisplayView";
+import type { NoteEvent } from "../PianoSheetPixiLayout.ts";
 
 interface TuneManagementProps {
-  onPlaySequence?: (sequence: NoteSequence) => void;
-  onStopPlayback?: () => void;
-  isPlaying?: boolean;
-  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
-  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onPlaybackInputEventRef?: React.MutableRefObject<
+    ((e: InputNoteEvent) => void) | null
+  >;
+  onActivePitchesChange?: (pitches: Set<number>) => void;
+  onPlaybackNote?: (payload: { midi: number; durationSec: number }) => void;
 }
 
 const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
@@ -155,19 +160,37 @@ type TuneManagementContextValue = {
   handlePublish: () => Promise<void>;
   getHandAvailability: (
     target: TargetType,
-    itemId: string,
+    itemId: string
   ) => { left: boolean; right: boolean };
+  // Playback state bridged from TuneManagement to ActionBar
+  playbackStatus: {
+    isAutoplay: boolean;
+    isAtStart: boolean;
+    hasNotes: boolean;
+  };
+  setPlaybackStatus: React.Dispatch<
+    React.SetStateAction<{
+      isAutoplay: boolean;
+      isAtStart: boolean;
+      hasNotes: boolean;
+    }>
+  >;
+  playbackActionsRef: React.MutableRefObject<{
+    play: () => void;
+    pause: () => void;
+    stop: () => void;
+  } | null>;
 };
 
 const TuneManagementContext = createContext<TuneManagementContextValue | null>(
-  null,
+  null
 );
 
 function useTuneManagementContext() {
   const context = useContext(TuneManagementContext);
   if (!context) {
     throw new Error(
-      "TuneManagementContext is missing. Wrap with TuneManagementProvider.",
+      "TuneManagementContext is missing. Wrap with TuneManagementProvider."
     );
   }
   return context;
@@ -195,6 +218,18 @@ function useTuneManagementState(): TuneManagementContextValue {
   const [publishedFilter, setPublishedFilter] = useState("");
   const [unpublishedFilter, setUnpublishedFilter] = useState("");
 
+  // Playback state bridged from TuneManagement component to ActionBar
+  const [playbackStatus, setPlaybackStatus] = useState({
+    isAutoplay: false,
+    isAtStart: true,
+    hasNotes: false,
+  });
+  const playbackActionsRef = useRef<{
+    play: () => void;
+    pause: () => void;
+    stop: () => void;
+  } | null>(null);
+
   // Rename dialog state
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [renameTarget, setRenameTarget] = useState("");
@@ -210,7 +245,7 @@ function useTuneManagementState(): TuneManagementContextValue {
   const { data: tuneList, isLoading: isLoadingList } = usePublishedTuneKeys();
   const publishedTuneKeys = useMemo(
     () => new Set(tuneList?.map((t) => t.tune_key) ?? []),
-    [tuneList],
+    [tuneList]
   );
 
   // Get local tune keys from file system
@@ -229,7 +264,7 @@ function useTuneManagementState(): TuneManagementContextValue {
     if (!unpublishedFilter.trim()) return unpublishedTuneKeys;
     const lower = unpublishedFilter.toLowerCase();
     return unpublishedTuneKeys.filter((key) =>
-      key.toLowerCase().includes(lower),
+      key.toLowerCase().includes(lower)
     );
   }, [unpublishedTuneKeys, unpublishedFilter]);
 
@@ -249,7 +284,7 @@ function useTuneManagementState(): TuneManagementContextValue {
 
   // Fetch tune assets from database (only when published source)
   const { data: tuneAssets, isLoading: isLoadingAssets } = useTuneAssets(
-    selectedSource === "published" ? selectedTune : null,
+    selectedSource === "published" ? selectedTune : null
   );
 
   // Derive nugget/assembly IDs based on source
@@ -278,7 +313,7 @@ function useTuneManagementState(): TuneManagementContextValue {
       }
       return getLocalNuggetIds(tuneKey);
     },
-    [tuneList],
+    [tuneList]
   );
 
   const getAssemblyIdsForTune = useCallback(
@@ -289,7 +324,7 @@ function useTuneManagementState(): TuneManagementContextValue {
       }
       return getLocalAssemblyIds(tuneKey);
     },
-    [tuneList],
+    [tuneList]
   );
 
   const getHandAvailability = useCallback(
@@ -339,7 +374,7 @@ function useTuneManagementState(): TuneManagementContextValue {
         right: Boolean(getNuggetRh(selectedTune, itemId)),
       };
     },
-    [selectedSource, selectedTune, tuneAssets],
+    [selectedSource, selectedTune, tuneAssets]
   );
 
   // Reset item selection when tune or target changes
@@ -859,6 +894,9 @@ function useTuneManagementState(): TuneManagementContextValue {
     handleDelete,
     handlePublish,
     getHandAvailability,
+    playbackStatus,
+    setPlaybackStatus,
+    playbackActionsRef,
   };
 }
 
@@ -872,21 +910,13 @@ export function TuneManagementProvider({ children }: { children: ReactNode }) {
 }
 
 export const TuneManagement = ({
-  onPlaySequence,
-  onStopPlayback,
-  isPlaying = false,
-  onRegisterNoteHandler,
-  onRegisterNoteOffHandler,
+  onPlaybackInputEventRef,
+  onActivePitchesChange,
+  onPlaybackNote,
 }: TuneManagementProps) => {
   const {
     selectedSource,
     selectedTune,
-    selectedTarget,
-    setSelectedTarget,
-    selectedItemId,
-    setSelectedItemId,
-    selectedHand,
-    setSelectedHand,
     showPublishDialog,
     setShowPublishDialog,
     publishMode,
@@ -907,100 +937,154 @@ export const TuneManagement = ({
     isLoadingList,
     publishedTuneKeys,
     unpublishedTuneKeys,
-    tuneAssets,
     isLoadingAssets,
     labSequence,
-    nuggetIds,
-    assemblyIds,
     xmlFull,
-    xmlDsp,
-    targetLabel,
     handleRename,
     handleDelete,
     handlePublish,
-    getHandAvailability,
+    setPlaybackStatus,
+    playbackActionsRef,
   } = useTuneManagementContext();
 
-  // Cursor and playback refs
-  const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
   const osmdViewRef = useRef<OpenSheetMusicDisplayViewHandle | null>(null);
-  const {
-    osmdViewRef: osmdDspViewRef,
-    handleOsmdReady: handleOsmdDspReady,
-    handleCursorElementReady: handleCursorElementReadyDsp,
-    scheduleCursorPlayback,
-    clearCursorTimers,
-    showCursorAtStart,
-    resetExpectedTracking,
-  } = useOsmdCursorPlayback({
-    sequence: labSequence,
-    onRegisterNoteHandler,
-    onRegisterNoteOffHandler,
-    isPlaying,
-    resetKey: `${selectedTarget}:${selectedItemId}:${selectedTune ?? ""}`,
+
+  // ── Interactive playback engine ──────────────────────────────────
+
+  const notes = useMemo<NoteEvent[]>(() => {
+    return labSequence.notes.map((note, index) => {
+      const noteName = midiToNoteName(note.pitch);
+      return {
+        id: `${note.pitch}-${note.startTime}-${index}`,
+        midi: note.pitch,
+        start: note.startTime,
+        dur: Math.max(0, note.endTime - note.startTime),
+        accidental: noteName.includes("#") ? "sharp" : null,
+      };
+    });
+  }, [labSequence.notes]);
+
+  const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+
+  const onTick = useCallback((t: number) => {
+    onTickRef.current?.(t);
+  }, []);
+
+  const noteById = useMemo(() => {
+    return new Map(notes.map((note) => [note.id, note]));
+  }, [notes]);
+
+  const prevActiveNoteIdsRef = useRef<Set<string>>(new Set());
+
+  const playback = useSheetPlaybackEngine({
+    notes,
+    enabled: notes.length > 0,
+    onTick,
   });
 
-  const handLabel = useCallback((hand: HandType) => {
-    return hand === "left" ? "Left hand" : "Right hand";
-  }, []);
+  useEffect(() => {
+    if (onPlaybackInputEventRef) {
+      onPlaybackInputEventRef.current = playback.handleInputEvent;
+    }
+    return () => {
+      if (onPlaybackInputEventRef) {
+        onPlaybackInputEventRef.current = null;
+      }
+    };
+  }, [onPlaybackInputEventRef, playback.handleInputEvent]);
 
-  const fullHandAvailability = useMemo(
-    () => getHandAvailability("full", ""),
-    [getHandAvailability],
-  );
+  // Track active notes to highlight piano keys and play sound
+  useEffect(() => {
+    const next = playback.activeNoteIds;
+    const prev = prevActiveNoteIdsRef.current;
+    const added: string[] = [];
 
-  const nuggetHandAvailability = useMemo(() => {
-    return new Map(
-      nuggetIds.map((id) => [id, getHandAvailability("nuggets", id)]),
-    );
-  }, [getHandAvailability, nuggetIds]);
+    next.forEach((id) => {
+      if (!prev.has(id)) {
+        added.push(id);
+      }
+    });
 
-  const assemblyHandAvailability = useMemo(() => {
-    return new Map(
-      assemblyIds.map((id) => [id, getHandAvailability("assemblies", id)]),
-    );
-  }, [assemblyIds, getHandAvailability]);
+    const activePitches = new Set<number>();
+    next.forEach((id) => {
+      const note = noteById.get(id);
+      if (note) activePitches.add(note.midi);
+    });
+    onActivePitchesChange?.(activePitches);
 
-  const handlePlayToggle = useCallback(() => {
-    if (isPlaying) {
-      onStopPlayback?.();
-      clearCursorTimers();
-      showCursorAtStart();
-      resetExpectedTracking();
-      return;
+    if (playback.isAutoplay && onPlaybackNote) {
+      added.forEach((id) => {
+        const note = noteById.get(id);
+        if (!note) return;
+        const endTime = note.start + note.dur;
+        const durationSec = Math.max(
+          0,
+          endTime - (playback.playheadTimeRef.current ?? 0)
+        );
+        if (durationSec > 0) {
+          onPlaybackNote({ midi: note.midi, durationSec });
+        }
+      });
     }
 
-    if (!onPlaySequence || labSequence.notes.length === 0) return;
-    scheduleCursorPlayback();
-    onPlaySequence(labSequence);
+    prevActiveNoteIdsRef.current = new Set(next);
   }, [
-    clearCursorTimers,
-    isPlaying,
-    labSequence,
-    onPlaySequence,
-    onStopPlayback,
-    resetExpectedTracking,
-    scheduleCursorPlayback,
-    showCursorAtStart,
+    noteById,
+    onActivePitchesChange,
+    onPlaybackNote,
+    playback.activeNoteIds,
+    playback.isAutoplay,
+    playback.playheadTimeRef,
   ]);
 
-  const handleOsmdReady = useCallback((osmd: OpenSheetMusicDisplay) => {
-    osmdRef.current = osmd;
-    if (osmd.cursor) {
-      osmd.cursor.hide();
-    }
+  const bpm = useMemo(() => {
+    const tempo = labSequence.tempos?.[0]?.qpm;
+    return Math.round(tempo ?? 120);
+  }, [labSequence.tempos]);
+
+  // ── PianoSheetPixi sizing ────────────────────────────────────────
+
+  const pixiContainerRef = useRef<HTMLDivElement>(null);
+  const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    if (!pixiContainerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setPixiSize({ width, height });
+    });
+    observer.observe(pixiContainerRef.current);
+    return () => observer.disconnect();
   }, []);
 
-  const selectTarget = useCallback(
-    (target: TargetType, itemId: string, hand: HandType) => {
-      setSelectedTarget(target);
-      setSelectedItemId(itemId);
-      setSelectedHand(hand);
-    },
-    [setSelectedHand, setSelectedItemId, setSelectedTarget],
-  );
+  const isAtStart =
+    playback.playheadTime < 0.01 &&
+    (playback.playheadTimeRef.current ?? 0) < 0.01;
 
-  // Loading state
+  // Sync playback state to context so the ActionBar can read it
+  useEffect(() => {
+    setPlaybackStatus({
+      isAutoplay: playback.isAutoplay,
+      isAtStart,
+      hasNotes: notes.length > 0,
+    });
+  }, [playback.isAutoplay, isAtStart, notes.length, setPlaybackStatus]);
+
+  useEffect(() => {
+    playbackActionsRef.current = {
+      play: playback.play,
+      pause: playback.pause,
+      stop: playback.stop,
+    };
+    return () => {
+      playbackActionsRef.current = null;
+    };
+  }, [playback.play, playback.pause, playback.stop, playbackActionsRef]);
+
+  // ── Early returns ────────────────────────────────────────────────
+
   if (isLoadingList) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -1009,7 +1093,6 @@ export const TuneManagement = ({
     );
   }
 
-  // Empty state - no tunes at all
   if (publishedTuneKeys.size === 0 && unpublishedTuneKeys.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -1021,200 +1104,19 @@ export const TuneManagement = ({
   }
 
   return (
-    <div className="w-full h-full max-w-3xl mx-auto flex flex-col flex-1 items-stretch justify-start">
-      <div className="w-full flex flex-wrap items-center gap-2 mb-3">
-        {/* Play/Stop Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePlayToggle}
-          disabled={
-            !labSequence.notes.length ||
-            (selectedSource === "published" && isLoadingAssets)
-          }
-        >
-          {isPlaying ? (
-            <>
-              <Pause fill="currentColor" stroke="none" />
-              Stop
-            </>
-          ) : (
-            <>
-              <Play fill="currentColor" stroke="none" />
-              Play
-            </>
-          )}
-        </Button>
-
-        {/* Target Selector Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" disabled={!selectedTune}>
-              {targetLabel}
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-popover">
-            <DropdownMenuItem
-              onClick={() => {
-                selectTarget("full", "", "full");
-              }}
-            >
-              <span className="flex-1">Full</span>
-              {selectedTarget === "full" && selectedHand === "full" && (
-                <Check className="h-4 w-4 ml-2" />
-              )}
-            </DropdownMenuItem>
-            {fullHandAvailability.left && (
-              <DropdownMenuItem
-                onClick={() => selectTarget("full", "", "left")}
-              >
-                <span className="flex-1">Full, {handLabel("left")}</span>
-                {selectedTarget === "full" && selectedHand === "left" && (
-                  <Check className="h-4 w-4 ml-2" />
-                )}
-              </DropdownMenuItem>
-            )}
-            {fullHandAvailability.right && (
-              <DropdownMenuItem
-                onClick={() => selectTarget("full", "", "right")}
-              >
-                <span className="flex-1">Full, {handLabel("right")}</span>
-                {selectedTarget === "full" && selectedHand === "right" && (
-                  <Check className="h-4 w-4 ml-2" />
-                )}
-              </DropdownMenuItem>
-            )}
-
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
-                {nuggetIds.length > 0 ? (
-                  nuggetIds.map((id) => (
-                    <Fragment key={id}>
-                      <DropdownMenuItem
-                        key={`${id}-full`}
-                        onClick={() => selectTarget("nuggets", id, "full")}
-                      >
-                        <span className="flex-1">{id}</span>
-                        {selectedTarget === "nuggets" &&
-                          selectedItemId === id &&
-                          selectedHand === "full" && (
-                            <Check className="h-4 w-4 ml-2" />
-                          )}
-                      </DropdownMenuItem>
-                      {nuggetHandAvailability.get(id)?.left && (
-                        <DropdownMenuItem
-                          key={`${id}-left`}
-                          onClick={() => selectTarget("nuggets", id, "left")}
-                        >
-                          <span className="flex-1">
-                            {id}, {handLabel("left")}
-                          </span>
-                          {selectedTarget === "nuggets" &&
-                            selectedItemId === id &&
-                            selectedHand === "left" && (
-                              <Check className="h-4 w-4 ml-2" />
-                            )}
-                        </DropdownMenuItem>
-                      )}
-                      {nuggetHandAvailability.get(id)?.right && (
-                        <DropdownMenuItem
-                          key={`${id}-right`}
-                          onClick={() => selectTarget("nuggets", id, "right")}
-                        >
-                          <span className="flex-1">
-                            {id}, {handLabel("right")}
-                          </span>
-                          {selectedTarget === "nuggets" &&
-                            selectedItemId === id &&
-                            selectedHand === "right" && (
-                              <Check className="h-4 w-4 ml-2" />
-                            )}
-                        </DropdownMenuItem>
-                      )}
-                    </Fragment>
-                  ))
-                ) : (
-                  <DropdownMenuItem disabled>No nuggets</DropdownMenuItem>
-                )}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
-                {assemblyIds.length > 0 ? (
-                  assemblyIds.map((id) => (
-                    <Fragment key={id}>
-                      <DropdownMenuItem
-                        key={`${id}-full`}
-                        onClick={() => selectTarget("assemblies", id, "full")}
-                      >
-                        <span className="flex-1">{id}</span>
-                        {selectedTarget === "assemblies" &&
-                          selectedItemId === id &&
-                          selectedHand === "full" && (
-                            <Check className="h-4 w-4 ml-2" />
-                          )}
-                      </DropdownMenuItem>
-                      {assemblyHandAvailability.get(id)?.left && (
-                        <DropdownMenuItem
-                          key={`${id}-left`}
-                          onClick={() => selectTarget("assemblies", id, "left")}
-                        >
-                          <span className="flex-1">
-                            {id}, {handLabel("left")}
-                          </span>
-                          {selectedTarget === "assemblies" &&
-                            selectedItemId === id &&
-                            selectedHand === "left" && (
-                              <Check className="h-4 w-4 ml-2" />
-                            )}
-                        </DropdownMenuItem>
-                      )}
-                      {assemblyHandAvailability.get(id)?.right && (
-                        <DropdownMenuItem
-                          key={`${id}-right`}
-                          onClick={() =>
-                            selectTarget("assemblies", id, "right")
-                          }
-                        >
-                          <span className="flex-1">
-                            {id}, {handLabel("right")}
-                          </span>
-                          {selectedTarget === "assemblies" &&
-                            selectedItemId === id &&
-                            selectedHand === "right" && (
-                              <Check className="h-4 w-4 ml-2" />
-                            )}
-                        </DropdownMenuItem>
-                      )}
-                    </Fragment>
-                  ))
-                ) : (
-                  <DropdownMenuItem disabled>No assemblies</DropdownMenuItem>
-                )}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Sheet music displays */}
-      <div className="w-full space-y-6">
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-muted-foreground">
-            Full xml
-          </div>
+    <div className="w-full h-full flex flex-col">
+      {/* Top section: Full XML */}
+      <div className="w-full shrink-0 px-2">
+        {/* Full XML — single horizontal line, scrollable */}
+        <div className="overflow-x-auto overflow-y-hidden my-6">
           {xmlFull ? (
             <OpenSheetMusicDisplayView
               ref={osmdViewRef}
               xml={xmlFull}
               compactness="compacttight"
               hasColor
-              className="relative w-full"
-              onOsmdReady={handleOsmdReady}
+              className="relative"
+              renderSingleHorizontalStaffline
             />
           ) : (
             <div className="p-4 text-sm text-muted-foreground border rounded">
@@ -1224,28 +1126,27 @@ export const TuneManagement = ({
             </div>
           )}
         </div>
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-muted-foreground">
-            Simplified xml
-          </div>
-          {xmlDsp ? (
-            <OpenSheetMusicDisplayView
-              ref={osmdDspViewRef}
-              xml={xmlDsp}
-              compactness="compacttight"
-              hasColor
-              className="relative w-full"
-              onOsmdReady={handleOsmdDspReady}
-              onCursorElementReady={handleCursorElementReadyDsp}
-            />
-          ) : (
-            <div className="p-4 text-sm text-muted-foreground border rounded">
-              {selectedSource === "published" && isLoadingAssets
-                ? "Loading DSP XML..."
-                : "No DSP XML available"}
-            </div>
-          )}
-        </div>
+      </div>
+
+      {/* Bottom section: full width interactive view */}
+      <div
+        ref={pixiContainerRef}
+        className="w-full flex-1 min-h-0 overflow-hidden"
+      >
+        {pixiSize.width > 0 && pixiSize.height > 0 && (
+          <PianoSheetPixi
+            notes={notes}
+            width={pixiSize.width}
+            height={pixiSize.height}
+            timeSignatures={labSequence.timeSignatures}
+            qpm={bpm}
+            onTickRef={onTickRef}
+            focusedNoteIds={playback.focusedNoteIds}
+            activeNoteIds={playback.activeNoteIds}
+            followPlayhead
+            isAutoplay={playback.isAutoplay}
+          />
+        )}
       </div>
 
       {/* Publish Dialog */}
@@ -1388,10 +1289,96 @@ export function TuneManagementActionBar() {
     openRenameDialog,
     openDeleteDialog,
     setShowPublishDialog,
+    // Playback state
+    playbackStatus,
+    playbackActionsRef,
+    // Target / part selector
+    selectedTarget,
+    selectedItemId,
+    selectedHand,
+    setSelectedTarget,
+    setSelectedItemId,
+    setSelectedHand,
+    targetLabel,
+    nuggetIds,
+    assemblyIds,
+    getHandAvailability,
   } = useTuneManagementContext();
+
+  const selectTarget = useCallback(
+    (target: TargetType, itemId: string, hand: HandType) => {
+      setSelectedTarget(target);
+      setSelectedItemId(itemId);
+      setSelectedHand(hand);
+    },
+    [setSelectedHand, setSelectedItemId, setSelectedTarget]
+  );
+
+  const handLabel = useCallback((hand: HandType) => {
+    return hand === "left" ? "Left hand" : "Right hand";
+  }, []);
+
+  const fullHandAvailability = useMemo(
+    () => getHandAvailability("full", ""),
+    [getHandAvailability]
+  );
+
+  const nuggetHandAvailability = useMemo(() => {
+    return new Map(
+      nuggetIds.map((id) => [id, getHandAvailability("nuggets", id)])
+    );
+  }, [getHandAvailability, nuggetIds]);
+
+  const assemblyHandAvailability = useMemo(() => {
+    return new Map(
+      assemblyIds.map((id) => [id, getHandAvailability("assemblies", id)])
+    );
+  }, [assemblyIds, getHandAvailability]);
 
   return (
     <>
+      {/* Play / Pause */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          if (playbackStatus.isAutoplay) {
+            playbackActionsRef.current?.pause();
+          } else {
+            playbackActionsRef.current?.play();
+          }
+        }}
+        disabled={
+          !playbackStatus.hasNotes ||
+          (selectedSource === "published" && isLoadingAssets)
+        }
+      >
+        {playbackStatus.isAutoplay ? (
+          <>
+            <Pause fill="currentColor" stroke="none" />
+            Pause
+          </>
+        ) : (
+          <>
+            <Play fill="currentColor" stroke="none" />
+            Play
+          </>
+        )}
+      </Button>
+
+      {/* Restart */}
+      {!playbackStatus.isAtStart && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => playbackActionsRef.current?.stop()}
+          disabled={!playbackStatus.hasNotes}
+        >
+          Restart
+        </Button>
+      )}
+
+      {/* Tune Select */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -1410,7 +1397,6 @@ export function TuneManagementActionBar() {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Published</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-              {/* Filter Input */}
               <div className="px-2 py-1.5 sticky top-0 bg-popover">
                 <Input
                   placeholder="Filter..."
@@ -1445,7 +1431,6 @@ export function TuneManagementActionBar() {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Un-Published</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-              {/* Filter Input */}
               <div className="px-2 py-1.5 sticky top-0 bg-popover">
                 <Input
                   placeholder="Filter..."
@@ -1477,6 +1462,151 @@ export function TuneManagementActionBar() {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* Part / Target Selector */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" disabled={!selectedTune}>
+            {targetLabel}
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-popover">
+          <DropdownMenuItem onClick={() => selectTarget("full", "", "full")}>
+            <span className="flex-1">Full</span>
+            {selectedTarget === "full" && selectedHand === "full" && (
+              <Check className="h-4 w-4 ml-2" />
+            )}
+          </DropdownMenuItem>
+          {fullHandAvailability.left && (
+            <DropdownMenuItem onClick={() => selectTarget("full", "", "left")}>
+              <span className="flex-1">Full, {handLabel("left")}</span>
+              {selectedTarget === "full" && selectedHand === "left" && (
+                <Check className="h-4 w-4 ml-2" />
+              )}
+            </DropdownMenuItem>
+          )}
+          {fullHandAvailability.right && (
+            <DropdownMenuItem onClick={() => selectTarget("full", "", "right")}>
+              <span className="flex-1">Full, {handLabel("right")}</span>
+              {selectedTarget === "full" && selectedHand === "right" && (
+                <Check className="h-4 w-4 ml-2" />
+              )}
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
+              {nuggetIds.length > 0 ? (
+                nuggetIds.map((id) => (
+                  <Fragment key={id}>
+                    <DropdownMenuItem
+                      key={`${id}-full`}
+                      onClick={() => selectTarget("nuggets", id, "full")}
+                    >
+                      <span className="flex-1">{id}</span>
+                      {selectedTarget === "nuggets" &&
+                        selectedItemId === id &&
+                        selectedHand === "full" && (
+                          <Check className="h-4 w-4 ml-2" />
+                        )}
+                    </DropdownMenuItem>
+                    {nuggetHandAvailability.get(id)?.left && (
+                      <DropdownMenuItem
+                        key={`${id}-left`}
+                        onClick={() => selectTarget("nuggets", id, "left")}
+                      >
+                        <span className="flex-1">
+                          {id}, {handLabel("left")}
+                        </span>
+                        {selectedTarget === "nuggets" &&
+                          selectedItemId === id &&
+                          selectedHand === "left" && (
+                            <Check className="h-4 w-4 ml-2" />
+                          )}
+                      </DropdownMenuItem>
+                    )}
+                    {nuggetHandAvailability.get(id)?.right && (
+                      <DropdownMenuItem
+                        key={`${id}-right`}
+                        onClick={() => selectTarget("nuggets", id, "right")}
+                      >
+                        <span className="flex-1">
+                          {id}, {handLabel("right")}
+                        </span>
+                        {selectedTarget === "nuggets" &&
+                          selectedItemId === id &&
+                          selectedHand === "right" && (
+                            <Check className="h-4 w-4 ml-2" />
+                          )}
+                      </DropdownMenuItem>
+                    )}
+                  </Fragment>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>No nuggets</DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
+              {assemblyIds.length > 0 ? (
+                assemblyIds.map((id) => (
+                  <Fragment key={id}>
+                    <DropdownMenuItem
+                      key={`${id}-full`}
+                      onClick={() => selectTarget("assemblies", id, "full")}
+                    >
+                      <span className="flex-1">{id}</span>
+                      {selectedTarget === "assemblies" &&
+                        selectedItemId === id &&
+                        selectedHand === "full" && (
+                          <Check className="h-4 w-4 ml-2" />
+                        )}
+                    </DropdownMenuItem>
+                    {assemblyHandAvailability.get(id)?.left && (
+                      <DropdownMenuItem
+                        key={`${id}-left`}
+                        onClick={() => selectTarget("assemblies", id, "left")}
+                      >
+                        <span className="flex-1">
+                          {id}, {handLabel("left")}
+                        </span>
+                        {selectedTarget === "assemblies" &&
+                          selectedItemId === id &&
+                          selectedHand === "left" && (
+                            <Check className="h-4 w-4 ml-2" />
+                          )}
+                      </DropdownMenuItem>
+                    )}
+                    {assemblyHandAvailability.get(id)?.right && (
+                      <DropdownMenuItem
+                        key={`${id}-right`}
+                        onClick={() => selectTarget("assemblies", id, "right")}
+                      >
+                        <span className="flex-1">
+                          {id}, {handLabel("right")}
+                        </span>
+                        {selectedTarget === "assemblies" &&
+                          selectedItemId === id &&
+                          selectedHand === "right" && (
+                            <Check className="h-4 w-4 ml-2" />
+                          )}
+                      </DropdownMenuItem>
+                    )}
+                  </Fragment>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>No assemblies</DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Edit / Publish */}
       {selectedTune &&
         (selectedSource === "published" ? (
           <DropdownMenu>
@@ -1516,31 +1646,28 @@ export function TuneManagementActionBar() {
 }
 
 interface TuneManagementTabContentProps {
-  onPlaySequence?: (sequence: NoteSequence) => void;
-  onStopPlayback?: () => void;
-  isPlaying?: boolean;
-  onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
-  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onPlaybackInputEventRef?: React.MutableRefObject<
+    ((e: InputNoteEvent) => void) | null
+  >;
+  onActivePitchesChange?: (pitches: Set<number>) => void;
+  onPlaybackNote?: (payload: { midi: number; durationSec: number }) => void;
 }
 
 export function TuneManagementTabContent({
-  onPlaySequence,
-  onStopPlayback,
-  isPlaying,
-  onRegisterNoteHandler,
-  onRegisterNoteOffHandler,
+  onPlaybackInputEventRef,
+  onActivePitchesChange,
+  onPlaybackNote,
 }: TuneManagementTabContentProps) {
   return (
     <TabsContent
       value="lab"
-      className="w-full h-full flex-1 min-h-0 flex items-start justify-start overflow-auto"
+      forceMount
+      className="w-full h-full flex-1 min-h-0 flex items-stretch justify-start data-[state=inactive]:hidden"
     >
       <TuneManagement
-        onPlaySequence={onPlaySequence}
-        onStopPlayback={onStopPlayback}
-        isPlaying={isPlaying}
-        onRegisterNoteHandler={onRegisterNoteHandler}
-        onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+        onPlaybackInputEventRef={onPlaybackInputEventRef}
+        onActivePitchesChange={onActivePitchesChange}
+        onPlaybackNote={onPlaybackNote}
       />
     </TabsContent>
   );

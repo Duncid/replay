@@ -38,7 +38,7 @@ import {
   getTuneXml,
 } from "@/utils/tuneAssetBundler";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout.ts";
+import type { NoteEvent } from "../PianoSheetPixiLayout.ts";
 import {
   type InputNoteEvent,
   useSheetPlaybackEngine,
@@ -446,22 +446,6 @@ export function InteractiveViewTabContent({
     return Math.round(tempo ?? 120);
   }, [sequence.tempos]);
 
-  const config = useMemo<SheetConfig>(() => {
-    const baseUnit = 12;
-    return {
-      pixelsPerUnit: baseUnit * 4,
-      noteHeight: baseUnit,
-      noteCornerRadius: baseUnit / 2,
-      trackGap: baseUnit * 0,
-      trackTopY: baseUnit * 2,
-      leftPadding: baseUnit * 1.5,
-      rightPadding: baseUnit * 1.5,
-      viewWidth: size.width,
-      viewHeight: size.height,
-      minNoteWidth: Math.max(6, baseUnit * 0.375),
-    };
-  }, [size.height, size.width]);
-
   const isAtStart = playback.playheadTime < 0.01 && (playback.playheadTimeRef.current ?? 0) < 0.01;
 
   return (
@@ -510,7 +494,8 @@ export function InteractiveViewTabContent({
           {size.width > 0 && size.height > 0 && (
             <PianoSheetPixi
               notes={notes}
-              config={config}
+              width={size.width}
+              height={size.height}
               timeSignatures={sequence.timeSignatures}
               qpm={bpm}
               onTickRef={onTickRef}

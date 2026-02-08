@@ -190,6 +190,7 @@ const Index = () => {
   const [questHeaderTitle, setQuestHeaderTitle] = useState<string | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
   const sheetInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
+  const labInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
   const interactiveState = useInteractiveState();
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
@@ -1518,6 +1519,12 @@ const Index = () => {
 
       if (activeMode === "lab") {
         labNoteHandlerRef.current?.(noteKey);
+        labInputEventRef.current?.({
+          type: "noteon",
+          midi: noteNameToMidi(noteKey),
+          timeMs: performance.now(),
+          velocity,
+        });
       }
 
       if (activeMode === "interactive") {
@@ -1586,10 +1593,36 @@ const Index = () => {
     [activeMode]
   );
 
+  const handleLabActivePitchesChange = useCallback(
+    (pitches: Set<number>) => {
+      if (activeMode !== "lab") return;
+      const nextKeys = new Set<string>();
+      pitches.forEach((pitch) => {
+        nextKeys.add(midiToNoteName(pitch));
+      });
+      setActiveKeys(nextKeys);
+    },
+    [activeMode]
+  );
+
+  const handleLabPlaybackNote = useCallback(
+    ({ midi, durationSec }: { midi: number; durationSec: number }) => {
+      if (activeMode !== "lab") return;
+      const frequency = midiToFrequency(midi);
+      pianoRef.current?.playNote(frequency, durationSec);
+    },
+    [activeMode]
+  );
+
   const handleNoteEnd = useCallback(
     (noteKey: string, frequency: number) => {
       if (activeMode === "lab") {
         labNoteOffHandlerRef.current?.(noteKey);
+        labInputEventRef.current?.({
+          type: "noteoff",
+          midi: noteNameToMidi(noteKey),
+          timeMs: performance.now(),
+        });
       }
       if (activeMode === "interactive") {
         sheetInputEventRef.current?.({
@@ -1995,11 +2028,9 @@ const Index = () => {
               onHeaderTitleChange={setQuestHeaderTitle}
             />
             <TuneManagementTabContent
-              onPlaySequence={handleLabPlaySequence}
-              onStopPlayback={stopAiPlayback}
-              isPlaying={isPlaying}
-              onRegisterNoteHandler={registerLabNoteHandler}
-              onRegisterNoteOffHandler={registerLabNoteOffHandler}
+              onPlaybackInputEventRef={labInputEventRef}
+              onActivePitchesChange={handleLabActivePitchesChange}
+              onPlaybackNote={handleLabPlaybackNote}
             />
             <InteractiveViewTabContent
               state={interactiveState}

@@ -76,9 +76,21 @@ function createStripeTexture(baseHex: string, stripeHex: string) {
   return texture;
 }
 
+export type PianoSheetSize = "xs" | "sm" | "md";
+export type PianoSheetAlign = "start" | "center" | "end";
+
+const BASE_UNITS: Record<PianoSheetSize, number> = {
+  xs: 8,
+  sm: 10,
+  md: 12,
+};
+
 interface PianoSheetPixiProps {
   notes: NoteEvent[];
-  config: SheetConfig;
+  width: number;
+  height: number;
+  size?: PianoSheetSize;
+  align?: PianoSheetAlign;
   timeSignatures?: TimeSignature[];
   qpm?: number;
   onTickRef: React.MutableRefObject<((timeSec: number) => void) | null>;
@@ -90,7 +102,10 @@ interface PianoSheetPixiProps {
 
 export function PianoSheetPixi({
   notes,
-  config,
+  width,
+  height,
+  size: sizeProp = "md",
+  align = "center",
   timeSignatures,
   qpm,
   onTickRef,
@@ -99,6 +114,47 @@ export function PianoSheetPixi({
   followPlayhead = false,
   isAutoplay = false,
 }: PianoSheetPixiProps) {
+  const config = useMemo<SheetConfig>(() => {
+    const baseUnit = BASE_UNITS[sizeProp];
+    const noteHeight = baseUnit;
+    const trackGap = 0;
+    const trackStep = noteHeight + trackGap;
+
+    // Compute MIDI range to determine total track height for alignment
+    const minMidi = notes.length
+      ? Math.min(...notes.map((n) => n.midi))
+      : 0;
+    const maxMidi = notes.length
+      ? Math.max(...notes.map((n) => n.midi))
+      : 0;
+    const trackCount = notes.length ? maxMidi - minMidi + 1 : 0;
+    const totalTrackHeight = trackCount * trackStep;
+
+    const minTopY = baseUnit * 2;
+    let trackTopY: number;
+    if (align === "center") {
+      trackTopY = Math.max(minTopY, (height - totalTrackHeight) / 2);
+    } else if (align === "end") {
+      trackTopY = Math.max(minTopY, height - totalTrackHeight - minTopY);
+    } else {
+      // "start"
+      trackTopY = minTopY;
+    }
+
+    return {
+      pixelsPerUnit: baseUnit * 4,
+      noteHeight,
+      noteCornerRadius: baseUnit / 2,
+      trackGap,
+      trackTopY,
+      leftPadding: baseUnit * 1.5,
+      rightPadding: baseUnit * 1.5,
+      viewWidth: width,
+      viewHeight: height,
+      minNoteWidth: Math.max(6, baseUnit * 0.375),
+    };
+  }, [sizeProp, align, width, height, notes]);
+
   const {
     contentWidth,
     noteRects,
