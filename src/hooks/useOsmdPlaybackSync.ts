@@ -33,9 +33,9 @@ export function useOsmdPlaybackSync({
   // Track the last targetTs we seeked to, to detect actual backward seeks
   const lastTargetTsRef = useRef(-1);
 
-  // Scroll damping state (mirrors PianoSheetPixi)
-  const lastFollowMsRef = useRef<number | null>(null);
+  // Scroll state
   const lastUserScrollMsRef = useRef<number | null>(null);
+  const scrollingRef = useRef(false);
 
   // ── Cursor helpers ──────────────────────────────────────────────
 
@@ -91,17 +91,21 @@ export function useOsmdPlaybackSync({
       cursor.reset(); // internally calls update() → handles position/size
       cursor.show(); // internally calls update() + adjustToBackgroundColor()
       patchCursorElement();
-      console.log("[OSMD-SYNC] resetCursorToStart — cursor shown");
-    } else {
-      console.log("[OSMD-SYNC] resetCursorToStart — no cursor available");
     }
     cursorInitializedRef.current = true;
     lastTimeSecRef.current = -1;
     lastTargetTsRef.current = -1;
-    lastFollowMsRef.current = null;
-  }, [configureCursor, patchCursorElement]);
+    scrollingRef.current = false;
 
-  // ── Scroll logic (1/3 rule, matching PianoSheetPixi) ────────────
+    // Scroll container back to start
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTo({ left: 0, behavior: "smooth" });
+  }, [configureCursor, patchCursorElement, scrollContainerRef]);
+
+  // ── Scroll logic (pagination-style) ─────────────────────────────
+  //
+  // Do nothing while cursor is in the left 75% of the viewport.
+  // When it crosses 75%, smooth-scroll so it lands at 25%.
 
   const scrollTowardsCursor = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -111,37 +115,38 @@ export function useOsmdPlaybackSync({
     // Pause auto-scroll when the user recently scrolled manually
     const nowMs = performance.now();
     const lastUserMs = lastUserScrollMsRef.current;
-    if (lastUserMs && nowMs - lastUserMs < 2000) {
-      lastFollowMsRef.current = null;
-      return;
-    }
+    if (lastUserMs && nowMs - lastUserMs < 2000) return;
+
+    // Don't re-trigger while a smooth scroll is in flight
+    if (scrollingRef.current) return;
 
     const cursorX = cursorEl.offsetLeft;
     const containerWidth = container.clientWidth;
-    const maxScroll = container.scrollWidth - containerWidth;
-    const target = Math.max(
-      0,
-      Math.min(maxScroll, cursorX - containerWidth * 0.33),
-    );
-    const prev = container.scrollLeft;
+    const cursorViewportX = cursorX - container.scrollLeft;
 
-    if (isAutoplayRef.current) {
-      // Snap directly — zero chase lag
-      container.scrollLeft = target;
-    } else {
-      // Smooth follow — frame-rate-independent exponential damping
-      const dtSec = lastFollowMsRef.current
-        ? Math.min((nowMs - lastFollowMsRef.current) / 1000, 0.1)
-        : 0;
-      const damping = 8;
-      const factor = dtSec > 0 ? 1 - Math.exp(-damping * dtSec) : 1;
-      const next = prev + (target - prev) * factor;
-      if (Math.abs(next - prev) > 0.5) {
-        container.scrollLeft = next;
-      }
-    }
-    lastFollowMsRef.current = nowMs;
-  }, [scrollContainerRef, isAutoplayRef]);
+    // Cursor still in the comfortable zone — do nothing
+    if (cursorViewportX < containerWidth * 0.75) return;
+
+    // Cursor crossed 75% — paginate so it lands at 25%
+    const maxScroll = container.scrollWidth - containerWidth;
+    const targetScroll = Math.max(
+      0,
+      Math.min(maxScroll, cursorX - containerWidth * 0.25),
+    );
+
+    scrollingRef.current = true;
+    container.scrollTo({ left: targetScroll, behavior: "smooth" });
+
+    // Reset scrolling flag when the animation finishes.
+    // Use scrollend event with a timeout fallback (scrollend isn't universal).
+    const onDone = () => {
+      scrollingRef.current = false;
+      container.removeEventListener("scrollend", onDone);
+      clearTimeout(fallback);
+    };
+    container.addEventListener("scrollend", onDone, { once: true });
+    const fallback = setTimeout(onDone, 600);
+  }, [scrollContainerRef]);
 
   // ── Per-frame tick (timestamp-based) ────────────────────────────
 
@@ -170,19 +175,7 @@ export function useOsmdPlaybackSync({
       // Read the cursor's current OSMD timestamp
       const currentTs = cursor.iterator?.currentTimeStamp?.RealValue ?? -1;
 
-      // Debug: log every ~1s of playback
-      if (Math.floor(timeSec) !== Math.floor(timeSec - 0.016)) {
-        console.log(
-          "[OSMD-TICK] timeSec:",
-          timeSec.toFixed(2),
-          "qpm:",
-          currentQpm,
-          "targetTs:",
-          targetTs.toFixed(4),
-          "cursorTs:",
-          currentTs.toFixed(4),
-        );
-      }
+
 
       // Only reset (seek backwards) if the TARGET has actually decreased,
       // i.e. the user seeked backwards. Don't reset just because the cursor
@@ -242,10 +235,6 @@ export function useOsmdPlaybackSync({
 
   const handleOsmdReady = useCallback(
     (osmd: OpenSheetMusicDisplay) => {
-      console.log(
-        "[OSMD-SYNC] handleOsmdReady called, cursor:",
-        !!osmd?.cursor,
-      );
       osmdRef.current = osmd;
       cursorInitializedRef.current = false;
       lastTargetTsRef.current = -1;
@@ -272,5 +261,6 @@ export function useOsmdPlaybackSync({
     handleOsmdReady,
     onOsmdTick,
     handleUserScroll,
+    resetCursorToStart,
   };
 }

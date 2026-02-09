@@ -1,5 +1,4 @@
 import { PianoSheetPixi } from "@/components/PianoSheetPixi";
-import { useOsmdPlaybackSync } from "@/hooks/useOsmdPlaybackSync";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useOsmdPlaybackSync } from "@/hooks/useOsmdPlaybackSync";
 import {
   useSheetPlaybackEngine,
   type InputNoteEvent,
@@ -161,7 +161,7 @@ type TuneManagementContextValue = {
   handlePublish: () => Promise<void>;
   getHandAvailability: (
     target: TargetType,
-    itemId: string
+    itemId: string,
   ) => { left: boolean; right: boolean };
   // Playback state bridged from TuneManagement to ActionBar
   playbackStatus: {
@@ -184,14 +184,14 @@ type TuneManagementContextValue = {
 };
 
 const TuneManagementContext = createContext<TuneManagementContextValue | null>(
-  null
+  null,
 );
 
 function useTuneManagementContext() {
   const context = useContext(TuneManagementContext);
   if (!context) {
     throw new Error(
-      "TuneManagementContext is missing. Wrap with TuneManagementProvider."
+      "TuneManagementContext is missing. Wrap with TuneManagementProvider.",
     );
   }
   return context;
@@ -204,8 +204,7 @@ function useTuneManagementState(): TuneManagementContextValue {
   // Selection state
   const [selectedSource, setSelectedSource] = useState<TuneSource>("published");
   const [selectedTune, setSelectedTune] = useState<string>("");
-  const [selectedTarget, setSelectedTarget] =
-    useState<TargetType>("full");
+  const [selectedTarget, setSelectedTarget] = useState<TargetType>("full");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
 
@@ -246,7 +245,7 @@ function useTuneManagementState(): TuneManagementContextValue {
   const { data: tuneList, isLoading: isLoadingList } = usePublishedTuneKeys();
   const publishedTuneKeys = useMemo(
     () => new Set(tuneList?.map((t) => t.tune_key) ?? []),
-    [tuneList]
+    [tuneList],
   );
 
   // Get local tune keys from file system
@@ -265,7 +264,7 @@ function useTuneManagementState(): TuneManagementContextValue {
     if (!unpublishedFilter.trim()) return unpublishedTuneKeys;
     const lower = unpublishedFilter.toLowerCase();
     return unpublishedTuneKeys.filter((key) =>
-      key.toLowerCase().includes(lower)
+      key.toLowerCase().includes(lower),
     );
   }, [unpublishedTuneKeys, unpublishedFilter]);
 
@@ -274,11 +273,14 @@ function useTuneManagementState(): TuneManagementContextValue {
     if (!selectedTune) {
       if (publishedTuneKeys.size > 0) {
         const keys = Array.from(publishedTuneKeys);
-        const preferred = keys.find((k) => k.toLowerCase() === "intro") ?? keys[0];
+        const preferred =
+          keys.find((k) => k.toLowerCase() === "intro") ?? keys[0];
         setSelectedTune(preferred);
         setSelectedSource("published");
       } else if (unpublishedTuneKeys.length > 0) {
-        const preferred = unpublishedTuneKeys.find((k) => k.toLowerCase() === "intro") ?? unpublishedTuneKeys[0];
+        const preferred =
+          unpublishedTuneKeys.find((k) => k.toLowerCase() === "intro") ??
+          unpublishedTuneKeys[0];
         setSelectedTune(preferred);
         setSelectedSource("local");
       }
@@ -287,7 +289,7 @@ function useTuneManagementState(): TuneManagementContextValue {
 
   // Fetch tune assets from database (only when published source)
   const { data: tuneAssets, isLoading: isLoadingAssets } = useTuneAssets(
-    selectedSource === "published" ? selectedTune : null
+    selectedSource === "published" ? selectedTune : null,
   );
 
   // Derive nugget/assembly IDs based on source
@@ -316,7 +318,7 @@ function useTuneManagementState(): TuneManagementContextValue {
       }
       return getLocalNuggetIds(tuneKey);
     },
-    [tuneList]
+    [tuneList],
   );
 
   const getAssemblyIdsForTune = useCallback(
@@ -327,7 +329,7 @@ function useTuneManagementState(): TuneManagementContextValue {
       }
       return getLocalAssemblyIds(tuneKey);
     },
-    [tuneList]
+    [tuneList],
   );
 
   const getHandAvailability = useCallback(
@@ -377,7 +379,7 @@ function useTuneManagementState(): TuneManagementContextValue {
         right: Boolean(getNuggetRh(selectedTune, itemId)),
       };
     },
-    [selectedSource, selectedTune, tuneAssets]
+    [selectedSource, selectedTune, tuneAssets],
   );
 
   // Reset item selection when tune or target changes
@@ -686,8 +688,8 @@ function useTuneManagementState(): TuneManagementContextValue {
       selectedHand === "full"
         ? ""
         : selectedHand === "left"
-        ? ", Left hand"
-        : ", Right hand";
+          ? ", Left hand"
+          : ", Right hand";
     return `${baseLabel}${handSuffix}`;
   }, [selectedHand, selectedItemId, selectedTarget]);
 
@@ -1024,7 +1026,7 @@ export const TuneManagement = ({
         const endTime = note.start + note.dur;
         const durationSec = Math.max(
           0,
-          endTime - (playback.playheadTimeRef.current ?? 0)
+          endTime - (playback.playheadTimeRef.current ?? 0),
         );
         if (durationSec > 0) {
           onPlaybackNote({ midi: note.midi, durationSec });
@@ -1057,7 +1059,7 @@ export const TuneManagement = ({
   isAutoplayRef.current = playback.isAutoplay;
   qpmRef.current = bpm;
 
-  const { handleOsmdReady, onOsmdTick, handleUserScroll } =
+  const { handleOsmdReady, onOsmdTick, handleUserScroll, resetCursorToStart } =
     useOsmdPlaybackSync({
       qpmRef,
       scrollContainerRef: osmdScrollRef,
@@ -1068,7 +1070,6 @@ export const TuneManagement = ({
   // Wire OSMD tick into the per-frame callback chain
   osmdTickRef.current = onOsmdTick;
 
-  console.log("[OSMD-SYNC] hook wired, bpm:", bpm, "isAutoplay:", playback.isAutoplay);
 
   // ── PianoSheetPixi sizing ────────────────────────────────────────
 
@@ -1077,22 +1078,29 @@ export const TuneManagement = ({
 
   // Re-run when the component transitions past early returns
   // (isLoadingList starts true on mount → pixi div isn't in DOM yet)
-  const showMainContent = !isLoadingList && (publishedTuneKeys.size > 0 || unpublishedTuneKeys.length > 0);
+  const showMainContent =
+    !isLoadingList &&
+    (publishedTuneKeys.size > 0 || unpublishedTuneKeys.length > 0);
 
   useLayoutEffect(() => {
     const el = pixiContainerRef.current;
-    console.log("[PIXI-DEBUG] useLayoutEffect, showMainContent:", showMainContent, "el:", !!el, "rect:", el?.getBoundingClientRect());
+    console.log(
+      "[PIXI-DEBUG] useLayoutEffect, showMainContent:",
+      showMainContent,
+      "el:",
+      !!el,
+      "rect:",
+      el?.getBoundingClientRect(),
+    );
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
       const { width, height } = entry.contentRect;
-      console.log("[PIXI-DEBUG] ResizeObserver:", { width, height });
       setPixiSize({ width, height });
     });
     observer.observe(el);
     return () => {
-      console.log("[PIXI-DEBUG] ResizeObserver disconnected");
       observer.disconnect();
     };
   }, [showMainContent]);
@@ -1100,6 +1108,16 @@ export const TuneManagement = ({
   const isAtStart =
     playback.playheadTime < 0.01 &&
     (playback.playheadTimeRef.current ?? 0) < 0.01;
+
+  // Reset OSMD cursor when playback returns to start (Restart button or end-of-track)
+  const prevIsAtStartRef = useRef(true);
+  useEffect(() => {
+    // Only fire on transition to isAtStart (not on initial mount)
+    if (isAtStart && !prevIsAtStartRef.current) {
+      resetCursorToStart();
+    }
+    prevIsAtStartRef.current = isAtStart;
+  }, [isAtStart, resetCursorToStart]);
 
   // Sync playback state to context so the ActionBar can read it
   useEffect(() => {
@@ -1144,7 +1162,7 @@ export const TuneManagement = ({
   return (
     <div className="w-full h-full flex flex-col">
       {/* Top section: Full XML */}
-      <div className="w-full shrink-0 px-2">
+      <div className="w-full shrink-0">
         {/* Full XML — single horizontal line, scrollable */}
         <div
           ref={osmdScrollRef}
@@ -1355,7 +1373,7 @@ export function TuneManagementActionBar() {
       setSelectedItemId(itemId);
       setSelectedHand(hand);
     },
-    [setSelectedHand, setSelectedItemId, setSelectedTarget]
+    [setSelectedHand, setSelectedItemId, setSelectedTarget],
   );
 
   const handLabel = useCallback((hand: HandType) => {
@@ -1364,18 +1382,18 @@ export function TuneManagementActionBar() {
 
   const fullHandAvailability = useMemo(
     () => getHandAvailability("full", ""),
-    [getHandAvailability]
+    [getHandAvailability],
   );
 
   const nuggetHandAvailability = useMemo(() => {
     return new Map(
-      nuggetIds.map((id) => [id, getHandAvailability("nuggets", id)])
+      nuggetIds.map((id) => [id, getHandAvailability("nuggets", id)]),
     );
   }, [getHandAvailability, nuggetIds]);
 
   const assemblyHandAvailability = useMemo(() => {
     return new Map(
-      assemblyIds.map((id) => [id, getHandAvailability("assemblies", id)])
+      assemblyIds.map((id) => [id, getHandAvailability("assemblies", id)]),
     );
   }, [assemblyIds, getHandAvailability]);
 
