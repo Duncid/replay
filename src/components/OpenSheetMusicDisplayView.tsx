@@ -27,6 +27,8 @@ interface OpenSheetMusicDisplayViewProps {
   style?: React.CSSProperties;
   centerHorizontally?: boolean;
   renderSingleHorizontalStaffline?: boolean;
+  /** When true, skip all custom cursor styling and use OSMD's default cursor appearance. */
+  disableCustomCursorStyle?: boolean;
 }
 
 export type OpenSheetMusicDisplayViewHandle = {
@@ -110,6 +112,7 @@ export const OpenSheetMusicDisplayView = forwardRef<
       style,
       centerHorizontally = false,
       renderSingleHorizontalStaffline = false,
+      disableCustomCursorStyle = false,
     },
     ref,
   ) => {
@@ -194,6 +197,7 @@ export const OpenSheetMusicDisplayView = forwardRef<
     }, []);
 
     const applyCursorStyle = useCallback(() => {
+      if (disableCustomCursorStyle) return;
       const cursor = osmdRef.current?.cursor as
         | unknown
         | {
@@ -261,7 +265,7 @@ export const OpenSheetMusicDisplayView = forwardRef<
       cursorElement.style.animation = "osmdCursorPulse 2s ease-in-out infinite";
       cursorElement.style.boxShadow = "0 0 0 1px var(--osmd-cursor-ring-color)";
       Object.assign(cursorElement.style, baseStyle);
-    }, [resolveThemeColors, cursorColor, notifyCursorElement, withAlpha]);
+    }, [resolveThemeColors, cursorColor, notifyCursorElement, withAlpha, disableCustomCursorStyle]);
 
     useImperativeHandle(
       ref,

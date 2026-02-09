@@ -1,4 +1,5 @@
 import { PianoSheetPixi } from "@/components/PianoSheetPixi";
+import { useOsmdPlaybackSync } from "@/hooks/useOsmdPlaybackSync";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -204,7 +205,7 @@ function useTuneManagementState(): TuneManagementContextValue {
   const [selectedSource, setSelectedSource] = useState<TuneSource>("published");
   const [selectedTune, setSelectedTune] = useState<string>("");
   const [selectedTarget, setSelectedTarget] =
-    useState<TargetType>("assemblies");
+    useState<TargetType>("full");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
 
@@ -268,15 +269,17 @@ function useTuneManagementState(): TuneManagementContextValue {
     );
   }, [unpublishedTuneKeys, unpublishedFilter]);
 
-  // Auto-select first tune when list loads
+  // Auto-select first tune when list loads (prefer "intro" if available)
   useEffect(() => {
     if (!selectedTune) {
       if (publishedTuneKeys.size > 0) {
-        const firstPublished = Array.from(publishedTuneKeys)[0];
-        setSelectedTune(firstPublished);
+        const keys = Array.from(publishedTuneKeys);
+        const preferred = keys.find((k) => k.toLowerCase() === "intro") ?? keys[0];
+        setSelectedTune(preferred);
         setSelectedSource("published");
       } else if (unpublishedTuneKeys.length > 0) {
-        setSelectedTune(unpublishedTuneKeys[0]);
+        const preferred = unpublishedTuneKeys.find((k) => k.toLowerCase() === "intro") ?? unpublishedTuneKeys[0];
+        setSelectedTune(preferred);
         setSelectedSource("local");
       }
     }
@@ -965,9 +968,11 @@ export const TuneManagement = ({
   }, [labSequence.notes]);
 
   const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+  const osmdTickRef = useRef<((timeSec: number) => void) | null>(null);
 
   const onTick = useCallback((t: number) => {
     onTickRef.current?.(t);
+    osmdTickRef.current?.(t);
   }, []);
 
   const noteById = useMemo(() => {
@@ -1042,22 +1047,55 @@ export const TuneManagement = ({
     return Math.round(tempo ?? 120);
   }, [labSequence.tempos]);
 
+  // ── OSMD cursor sync ──────────────────────────────────────────────
+
+  const osmdScrollRef = useRef<HTMLDivElement>(null);
+  const isAutoplayRef = useRef(false);
+  const qpmRef = useRef(120);
+
+  // Keep refs up-to-date (no-op render cost, avoids callback re-creation)
+  isAutoplayRef.current = playback.isAutoplay;
+  qpmRef.current = bpm;
+
+  const { handleOsmdReady, onOsmdTick, handleUserScroll } =
+    useOsmdPlaybackSync({
+      qpmRef,
+      scrollContainerRef: osmdScrollRef,
+      isAutoplayRef,
+      cursorColor: "#FFECB3",
+    });
+
+  // Wire OSMD tick into the per-frame callback chain
+  osmdTickRef.current = onOsmdTick;
+
+  console.log("[OSMD-SYNC] hook wired, bpm:", bpm, "isAutoplay:", playback.isAutoplay);
+
   // ── PianoSheetPixi sizing ────────────────────────────────────────
 
   const pixiContainerRef = useRef<HTMLDivElement>(null);
   const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
 
+  // Re-run when the component transitions past early returns
+  // (isLoadingList starts true on mount → pixi div isn't in DOM yet)
+  const showMainContent = !isLoadingList && (publishedTuneKeys.size > 0 || unpublishedTuneKeys.length > 0);
+
   useLayoutEffect(() => {
-    if (!pixiContainerRef.current) return;
+    const el = pixiContainerRef.current;
+    console.log("[PIXI-DEBUG] useLayoutEffect, showMainContent:", showMainContent, "el:", !!el, "rect:", el?.getBoundingClientRect());
+    if (!el) return;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
       const { width, height } = entry.contentRect;
+      console.log("[PIXI-DEBUG] ResizeObserver:", { width, height });
       setPixiSize({ width, height });
     });
-    observer.observe(pixiContainerRef.current);
-    return () => observer.disconnect();
-  }, []);
+    observer.observe(el);
+    return () => {
+      console.log("[PIXI-DEBUG] ResizeObserver disconnected");
+      observer.disconnect();
+    };
+  }, [showMainContent]);
 
   const isAtStart =
     playback.playheadTime < 0.01 &&
@@ -1108,7 +1146,11 @@ export const TuneManagement = ({
       {/* Top section: Full XML */}
       <div className="w-full shrink-0 px-2">
         {/* Full XML — single horizontal line, scrollable */}
-        <div className="overflow-x-auto overflow-y-hidden my-6">
+        <div
+          ref={osmdScrollRef}
+          className="overflow-x-auto overflow-y-hidden my-6"
+          onScroll={handleUserScroll}
+        >
           {xmlFull ? (
             <OpenSheetMusicDisplayView
               ref={osmdViewRef}
@@ -1117,6 +1159,8 @@ export const TuneManagement = ({
               hasColor
               className="relative"
               renderSingleHorizontalStaffline
+              onOsmdReady={handleOsmdReady}
+              disableCustomCursorStyle
             />
           ) : (
             <div className="p-4 text-sm text-muted-foreground border rounded">

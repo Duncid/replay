@@ -2044,7 +2044,7 @@ const Index = () => {
         {activeMode !== "quest" && (
           <div className="w-full h-[320px] z-30 bg-key-black border-t rounded-t-2xl flex flex-col">
             {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
-            <div className="w-full flex items-center justify-between gap-4 px-2 py-0 shrink-0">
+            <div className="w-full flex items-center justify-between gap-4 p-1 shrink-0">
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
