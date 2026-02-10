@@ -1,17 +1,21 @@
-import React, { useEffect, useCallback, useState, useRef, useMemo } from "react";
-import { toast } from "sonner";
-import { useTuneState } from "@/hooks/useTuneState";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { TuneDebugCard } from "@/components/TuneDebugCard";
 import {
-  useStartTunePractice,
   useEvaluateTuneAttempt,
+  useStartTunePractice,
   useTuneAssets,
 } from "@/hooks/useTuneQueries";
-import { TunePractice } from "./TunePractice";
-import { TuneDebugCard } from "@/components/TuneDebugCard";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
-import type { TuneDebugData, TuneEvaluationDebugData, TuneCoachResponse } from "@/types/tunePractice";
+import { useTuneState } from "@/hooks/useTuneState";
+import type {
+  TuneCoachResponse,
+  TuneDebugData,
+  TuneEvaluationDebugData,
+} from "@/types/tunePractice";
 import type { INoteSequence } from "@magenta/music/es6";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { TunePractice } from "./TunePractice";
 
 interface TuneModeProps {
   tuneKey: string;
@@ -24,7 +28,9 @@ interface TuneModeProps {
   currentRecording?: INoteSequence | null;
   isRecording?: boolean;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
-  onRegisterNoteOffHandler?: (handler: ((noteKey: string) => void) | null) => void;
+  onRegisterNoteOffHandler?: (
+    handler: ((noteKey: string) => void) | null,
+  ) => void;
   onClearRecording?: () => void;
 }
 
@@ -43,15 +49,29 @@ export function TuneMode({
   onClearRecording,
 }: TuneModeProps) {
   const { t } = useTranslation();
-  const { state, currentNugget, setPhase, setPracticePlan, updateEvaluation, clearEvaluation, nextNugget, previousNugget, setError } = useTuneState(tuneKey);
-  
+  const {
+    state,
+    currentNugget,
+    setPhase,
+    setPracticePlan,
+    updateEvaluation,
+    clearEvaluation,
+    nextNugget,
+    previousNugget,
+    setError,
+  } = useTuneState(tuneKey);
+
   const startPractice = useStartTunePractice();
   const evaluateAttempt = useEvaluateTuneAttempt();
   const { data: tuneAssets } = useTuneAssets(tuneKey);
 
-  const [coachDebugData, setCoachDebugData] = useState<TuneDebugData | null>(null);
-  const [evalDebugData, setEvalDebugData] = useState<TuneEvaluationDebugData | null>(null);
-  const [pendingCoachResponse, setPendingCoachResponse] = useState<TuneCoachResponse | null>(null);
+  const [coachDebugData, setCoachDebugData] = useState<TuneDebugData | null>(
+    null,
+  );
+  const [evalDebugData, setEvalDebugData] =
+    useState<TuneEvaluationDebugData | null>(null);
+  const [pendingCoachResponse, setPendingCoachResponse] =
+    useState<TuneCoachResponse | null>(null);
   const [lastEvalPrompt, setLastEvalPrompt] = useState<string | null>(null);
   const [lastEvalAnswer, setLastEvalAnswer] = useState<string | null>(null);
   const [lastEvalDecision, setLastEvalDecision] = useState<string | null>(null);
@@ -65,29 +85,20 @@ export function TuneMode({
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
   const preEvalTimer = useRef<NodeJS.Timeout | null>(null);
   const lastAutoPlayKey = useRef<string | null>(null);
-  
+
   // Evaluation indexing to handle out-of-order responses
   const evalIndexRef = useRef(0);
   const latestReceivedIndexRef = useRef(0);
-  const [pendingEvalIndex, setPendingEvalIndex] = useState<number | undefined>(undefined);
-  
+  const [pendingEvalIndex, setPendingEvalIndex] = useState<number | undefined>(
+    undefined,
+  );
+
   // Track evaluation state for inline indicator
   const [isEvaluating, setIsEvaluating] = useState(false);
 
-  const dspXml = useMemo(() => {
-    if (!tuneAssets || !currentNugget) return null;
-    if (currentNugget.itemType === "full_tune") {
-      return tuneAssets.tune_dsp_xml ?? tuneAssets.tune_xml ?? null;
-    }
-    if (currentNugget.itemType === "assembly") {
-      const xmls = tuneAssets.assembly_dsp_xmls as Record<string, string> | null;
-      return xmls?.[currentNugget.itemId] ?? null;
-    }
-    const xmls = tuneAssets.nugget_dsp_xmls as Record<string, string> | null;
-    return xmls?.[currentNugget.itemId] ?? null;
-  }, [currentNugget, tuneAssets]);
-
-  const sanitizeNoteSequence = (sequence?: INoteSequence | null): INoteSequence | undefined => {
+  const sanitizeNoteSequence = (
+    sequence?: INoteSequence | null,
+  ): INoteSequence | undefined => {
     if (!sequence) return undefined;
     const notes = (sequence.notes || []).map((note) => ({
       pitch: note.pitch,
@@ -111,205 +122,225 @@ export function TuneMode({
     return { noteCount, totalTime };
   }, []);
 
-  const getRecordingSignature = useCallback((recording: INoteSequence) => {
-    const notes = recording.notes ?? [];
-    const firstStart = notes[0]?.startTime ?? 0;
-    const lastEnd = notes[notes.length - 1]?.endTime ?? notes[notes.length - 1]?.startTime ?? 0;
-    const { noteCount, totalTime } = getRecordingStats(recording);
-    return `${noteCount}:${totalTime.toFixed(3)}:${firstStart.toFixed(3)}:${lastEnd.toFixed(3)}`;
-  }, [getRecordingStats]);
+  const getRecordingSignature = useCallback(
+    (recording: INoteSequence) => {
+      const notes = recording.notes ?? [];
+      const firstStart = notes[0]?.startTime ?? 0;
+      const lastEnd =
+        notes[notes.length - 1]?.endTime ??
+        notes[notes.length - 1]?.startTime ??
+        0;
+      const { noteCount, totalTime } = getRecordingStats(recording);
+      return `${noteCount}:${totalTime.toFixed(3)}:${firstStart.toFixed(3)}:${lastEnd.toFixed(3)}`;
+    },
+    [getRecordingStats],
+  );
 
   const getRecordingId = useCallback((recording?: INoteSequence | null) => {
     if (!recording) return null;
-    return (recording as INoteSequence & { recordingId?: string }).recordingId ?? null;
+    return (
+      (recording as INoteSequence & { recordingId?: string }).recordingId ??
+      null
+    );
   }, []);
 
-  const handleEvaluate = useCallback(async (recording: INoteSequence) => {
-    if (!currentNugget) return;
+  const handleEvaluate = useCallback(
+    async (recording: INoteSequence) => {
+      if (!currentNugget) return;
 
-    // Get the note sequence from nugget, assembly, or full tune
-    const targetSequence = (
-      currentNugget.nugget?.noteSequence || 
-      currentNugget.assembly?.noteSequence ||
-      currentNugget.fullTune?.noteSequence
-    ) as INoteSequence | undefined;
-    const targetNoteCount = targetSequence?.notes?.length || 8;
-    const maxNotes = targetNoteCount * 2;
-    
-    let trimmedRecording = recording;
-    if (recording.notes && recording.notes.length > maxNotes) {
-      const trimmedNotes = recording.notes.slice(-maxNotes); // Keep LAST notes
-      trimmedRecording = {
-        ...recording,
-        notes: trimmedNotes,
-        totalTime: trimmedNotes.length > 0 
-          ? Math.max(...trimmedNotes.map(n => n.endTime || 0)) 
-          : 0,
-      };
-      console.log(`[TuneMode] Trimmed recording from ${recording.notes.length} to ${trimmedNotes.length} notes (target: ${targetNoteCount})`);
-    }
+      // Get the note sequence from nugget, assembly, or full tune
+      const targetSequence = (currentNugget.nugget?.noteSequence ||
+        currentNugget.assembly?.noteSequence ||
+        currentNugget.fullTune?.noteSequence) as INoteSequence | undefined;
+      const targetNoteCount = targetSequence?.notes?.length || 8;
+      const maxNotes = targetNoteCount * 2;
 
-    const sanitizedTargetSequence = sanitizeNoteSequence(targetSequence) ?? targetSequence;
-    const sanitizedRecording = sanitizeNoteSequence(trimmedRecording) ?? trimmedRecording;
-
-    // Don't change phase - stay on practice screen
-    setIsEvaluating(true);
-    
-    // Increment eval index and track pending
-    evalIndexRef.current += 1;
-    const currentEvalIndex = evalIndexRef.current;
-    setPendingEvalIndex(currentEvalIndex);
-
-    try {
-      if (debugMode) {
-        const debugResponse = await evaluateAttempt.mutateAsync({
-          tuneKey,
-          nuggetId: currentNugget.itemId,
-          userSequence: sanitizedRecording,
-          localUserId,
-          language,
-          debug: true,
-          evalIndex: currentEvalIndex,
-        });
-
-        setEvalDebugData({
-          tuneKey,
-          nuggetId: currentNugget.itemId,
-          targetSequence: sanitizedTargetSequence,
-          userSequence: sanitizedRecording,
-          prompt: (debugResponse as any).prompt,
-          request: (debugResponse as any).request,
-        });
-        const promptText =
-          (debugResponse as { prompt?: string }).prompt ||
-          JSON.stringify(
-            (debugResponse as { request?: unknown }).request,
-            null,
-            2,
-          );
-        setLastEvalPrompt(promptText ?? null);
-
-        const response = await evaluateAttempt.mutateAsync({
-          tuneKey,
-          nuggetId: currentNugget.itemId,
-          userSequence: sanitizedRecording,
-          localUserId,
-          language,
-          debug: false,
-          evalIndex: currentEvalIndex,
-        });
-
-        setIsEvaluating(false);
-        setPendingEvalIndex(undefined);
-        
-        // Check if this response is stale
-        if (response.evalIndex === undefined) {
-          console.warn("[TuneMode] Eval response missing evalIndex.");
-        } else if (response.evalIndex < latestReceivedIndexRef.current) {
-          console.log(`[TuneMode] Ignoring stale eval response (index ${response.evalIndex}, latest: ${latestReceivedIndexRef.current})`);
-          return;
-        }
-        
-        // Update latest received index
-        latestReceivedIndexRef.current = Math.max(latestReceivedIndexRef.current, response.evalIndex ?? 0);
-        
-        // Update evaluation inline - no phase change
-        updateEvaluation(response);
-        setLastEvalAnswer(JSON.stringify(response, null, 2));
-        onClearRecording?.();
-
-        // Celebratory toast for tune acquisition
-        if (response.tuneAcquired) {
-          toast.success(t("tune.tuneAcquired", { title: state.tuneTitle }));
-        }
-
-        // Celebratory toast for skill unlocks from tune
-        if (response.awardedSkills && response.awardedSkills.length > 0) {
-          const skillNames = response.awardedSkills.join(", ");
-          toast.success(t("tune.skillUnlocked", { skills: skillNames }));
-        }
-
-        // Suggest moving to next nugget if streak threshold reached
-        if (
-          response.suggestNewNugget &&
-          state.currentIndex < state.practicePlan.length - 1
-        ) {
-          toast.info(t("tune.nextSectionHint"), { duration: 4000 });
-        }
-      } else {
-        const response = await evaluateAttempt.mutateAsync({
-          tuneKey,
-          nuggetId: currentNugget.itemId,
-          userSequence: sanitizedRecording,
-          localUserId,
-          language,
-          debug: false,
-          evalIndex: currentEvalIndex,
-        });
-
-        setIsEvaluating(false);
-        setPendingEvalIndex(undefined);
-
-        // Check if this response is stale
-        if (response.evalIndex === undefined) {
-          console.warn("[TuneMode] Eval response missing evalIndex.");
-        } else if (response.evalIndex < latestReceivedIndexRef.current) {
-          console.log(
-            `[TuneMode] Ignoring stale eval response (index ${response.evalIndex}, latest: ${latestReceivedIndexRef.current})`,
-          );
-          return;
-        }
-
-        // Update latest received index
-        latestReceivedIndexRef.current = Math.max(
-          latestReceivedIndexRef.current,
-          response.evalIndex ?? 0,
+      let trimmedRecording = recording;
+      if (recording.notes && recording.notes.length > maxNotes) {
+        const trimmedNotes = recording.notes.slice(-maxNotes); // Keep LAST notes
+        trimmedRecording = {
+          ...recording,
+          notes: trimmedNotes,
+          totalTime:
+            trimmedNotes.length > 0
+              ? Math.max(...trimmedNotes.map((n) => n.endTime || 0))
+              : 0,
+        };
+        console.log(
+          `[TuneMode] Trimmed recording from ${recording.notes.length} to ${trimmedNotes.length} notes (target: ${targetNoteCount})`,
         );
-
-        // Update evaluation inline - no phase change
-        updateEvaluation(response);
-        setLastEvalAnswer(JSON.stringify(response, null, 2));
-        onClearRecording?.();
-
-        // Celebratory toast for tune acquisition
-        if (response.tuneAcquired) {
-          toast.success(t("tune.tuneAcquired", { title: state.tuneTitle }));
-        }
-
-        // Celebratory toast for skill unlocks from tune
-        if (response.awardedSkills && response.awardedSkills.length > 0) {
-          const skillNames = response.awardedSkills.join(", ");
-          toast.success(t("tune.skillUnlocked", { skills: skillNames }));
-        }
-
-        // Suggest moving to next nugget if streak threshold reached
-        if (
-          response.suggestNewNugget &&
-          state.currentIndex < state.practicePlan.length - 1
-        ) {
-          toast.info(t("tune.nextSectionHint"), { duration: 4000 });
-        }
       }
-    } catch (error) {
-      console.error("Error evaluating attempt:", error);
-      setIsEvaluating(false);
-      setPendingEvalIndex(undefined);
-      toast.error(t("tune.evaluateFailed"));
-    }
-  }, [
-    debugMode,
-    tuneKey,
-    currentNugget,
-    localUserId,
-    language,
-    evaluateAttempt,
-    updateEvaluation,
-    onClearRecording,
-    state.tuneTitle,
-    state.currentIndex,
-    state.practicePlan.length,
-    t,
-  ]);
+
+      const sanitizedTargetSequence =
+        sanitizeNoteSequence(targetSequence) ?? targetSequence;
+      const sanitizedRecording =
+        sanitizeNoteSequence(trimmedRecording) ?? trimmedRecording;
+
+      // Don't change phase - stay on practice screen
+      setIsEvaluating(true);
+
+      // Increment eval index and track pending
+      evalIndexRef.current += 1;
+      const currentEvalIndex = evalIndexRef.current;
+      setPendingEvalIndex(currentEvalIndex);
+
+      try {
+        if (debugMode) {
+          const debugResponse = await evaluateAttempt.mutateAsync({
+            tuneKey,
+            nuggetId: currentNugget.itemId,
+            userSequence: sanitizedRecording,
+            localUserId,
+            language,
+            debug: true,
+            evalIndex: currentEvalIndex,
+          });
+
+          setEvalDebugData({
+            tuneKey,
+            nuggetId: currentNugget.itemId,
+            targetSequence: sanitizedTargetSequence,
+            userSequence: sanitizedRecording,
+            prompt: (debugResponse as any).prompt,
+            request: (debugResponse as any).request,
+          });
+          const promptText =
+            (debugResponse as { prompt?: string }).prompt ||
+            JSON.stringify(
+              (debugResponse as { request?: unknown }).request,
+              null,
+              2,
+            );
+          setLastEvalPrompt(promptText ?? null);
+
+          const response = await evaluateAttempt.mutateAsync({
+            tuneKey,
+            nuggetId: currentNugget.itemId,
+            userSequence: sanitizedRecording,
+            localUserId,
+            language,
+            debug: false,
+            evalIndex: currentEvalIndex,
+          });
+
+          setIsEvaluating(false);
+          setPendingEvalIndex(undefined);
+
+          // Check if this response is stale
+          if (response.evalIndex === undefined) {
+            console.warn("[TuneMode] Eval response missing evalIndex.");
+          } else if (response.evalIndex < latestReceivedIndexRef.current) {
+            console.log(
+              `[TuneMode] Ignoring stale eval response (index ${response.evalIndex}, latest: ${latestReceivedIndexRef.current})`,
+            );
+            return;
+          }
+
+          // Update latest received index
+          latestReceivedIndexRef.current = Math.max(
+            latestReceivedIndexRef.current,
+            response.evalIndex ?? 0,
+          );
+
+          // Update evaluation inline - no phase change
+          updateEvaluation(response);
+          setLastEvalAnswer(JSON.stringify(response, null, 2));
+          onClearRecording?.();
+
+          // Celebratory toast for tune acquisition
+          if (response.tuneAcquired) {
+            toast.success(t("tune.tuneAcquired", { title: state.tuneTitle }));
+          }
+
+          // Celebratory toast for skill unlocks from tune
+          if (response.awardedSkills && response.awardedSkills.length > 0) {
+            const skillNames = response.awardedSkills.join(", ");
+            toast.success(t("tune.skillUnlocked", { skills: skillNames }));
+          }
+
+          // Suggest moving to next nugget if streak threshold reached
+          if (
+            response.suggestNewNugget &&
+            state.currentIndex < state.practicePlan.length - 1
+          ) {
+            toast.info(t("tune.nextSectionHint"), { duration: 4000 });
+          }
+        } else {
+          const response = await evaluateAttempt.mutateAsync({
+            tuneKey,
+            nuggetId: currentNugget.itemId,
+            userSequence: sanitizedRecording,
+            localUserId,
+            language,
+            debug: false,
+            evalIndex: currentEvalIndex,
+          });
+
+          setIsEvaluating(false);
+          setPendingEvalIndex(undefined);
+
+          // Check if this response is stale
+          if (response.evalIndex === undefined) {
+            console.warn("[TuneMode] Eval response missing evalIndex.");
+          } else if (response.evalIndex < latestReceivedIndexRef.current) {
+            console.log(
+              `[TuneMode] Ignoring stale eval response (index ${response.evalIndex}, latest: ${latestReceivedIndexRef.current})`,
+            );
+            return;
+          }
+
+          // Update latest received index
+          latestReceivedIndexRef.current = Math.max(
+            latestReceivedIndexRef.current,
+            response.evalIndex ?? 0,
+          );
+
+          // Update evaluation inline - no phase change
+          updateEvaluation(response);
+          setLastEvalAnswer(JSON.stringify(response, null, 2));
+          onClearRecording?.();
+
+          // Celebratory toast for tune acquisition
+          if (response.tuneAcquired) {
+            toast.success(t("tune.tuneAcquired", { title: state.tuneTitle }));
+          }
+
+          // Celebratory toast for skill unlocks from tune
+          if (response.awardedSkills && response.awardedSkills.length > 0) {
+            const skillNames = response.awardedSkills.join(", ");
+            toast.success(t("tune.skillUnlocked", { skills: skillNames }));
+          }
+
+          // Suggest moving to next nugget if streak threshold reached
+          if (
+            response.suggestNewNugget &&
+            state.currentIndex < state.practicePlan.length - 1
+          ) {
+            toast.info(t("tune.nextSectionHint"), { duration: 4000 });
+          }
+        }
+      } catch (error) {
+        console.error("Error evaluating attempt:", error);
+        setIsEvaluating(false);
+        setPendingEvalIndex(undefined);
+        toast.error(t("tune.evaluateFailed"));
+      }
+    },
+    [
+      debugMode,
+      tuneKey,
+      currentNugget,
+      localUserId,
+      language,
+      evaluateAttempt,
+      updateEvaluation,
+      onClearRecording,
+      state.tuneTitle,
+      state.currentIndex,
+      state.practicePlan.length,
+      t,
+    ],
+  );
 
   // Auto-evaluate when recording stops (silence detected)
   useEffect(() => {
@@ -326,8 +357,12 @@ export function TuneMode({
       }
       return;
     }
-    
-    if (!isRecording && currentRecording && currentRecording !== lastProcessedRecording.current) {
+
+    if (
+      !isRecording &&
+      currentRecording &&
+      currentRecording !== lastProcessedRecording.current
+    ) {
       // Recording just stopped, start silence timer
       if (silenceTimer.current) {
         clearTimeout(silenceTimer.current);
@@ -335,24 +370,25 @@ export function TuneMode({
       if (preEvalTimer.current) {
         clearTimeout(preEvalTimer.current);
       }
-      
+
       // Show "Evaluating..." after 0.5s of silence
       preEvalTimer.current = setTimeout(() => {
         setIsEvaluating(true);
       }, 500);
-      
+
       silenceTimer.current = setTimeout(() => {
-        if (state.phase !== "practicing" || !currentNugget || !currentRecording) return;
+        if (state.phase !== "practicing" || !currentNugget || !currentRecording)
+          return;
         const recordingId = getRecordingId(currentRecording);
         const signature = getRecordingSignature(currentRecording);
-        if (recordingId && lastProcessedRecordingIdRef.current === recordingId) return;
-        if (!recordingId && lastProcessedSignatureRef.current === signature) return;
+        if (recordingId && lastProcessedRecordingIdRef.current === recordingId)
+          return;
+        if (!recordingId && lastProcessedSignatureRef.current === signature)
+          return;
 
-        const targetSequence = (
-          currentNugget.nugget?.noteSequence ||
+        const targetSequence = (currentNugget.nugget?.noteSequence ||
           currentNugget.assembly?.noteSequence ||
-          currentNugget.fullTune?.noteSequence
-        ) as INoteSequence | undefined;
+          currentNugget.fullTune?.noteSequence) as INoteSequence | undefined;
         const targetNoteCount = targetSequence?.notes?.length || 8;
         const minNotes = Math.min(
           targetNoteCount,
@@ -385,7 +421,17 @@ export function TuneMode({
         clearTimeout(preEvalTimer.current);
       }
     };
-  }, [isRecording, currentRecording, state.phase, currentNugget, debugMode, getRecordingId, getRecordingSignature, getRecordingStats, handleEvaluate]);
+  }, [
+    isRecording,
+    currentRecording,
+    state.phase,
+    currentNugget,
+    debugMode,
+    getRecordingId,
+    getRecordingSignature,
+    getRecordingStats,
+    handleEvaluate,
+  ]);
 
   // Initial load - fetch practice plan
   useEffect(() => {
@@ -395,12 +441,15 @@ export function TuneMode({
   }, [state.phase]);
 
   // Track whether this is a regeneration (plan was exhausted)
-  const isRegeneration = state.practicePlan.length === 0 && state.currentIndex === 0 && state.phase === "loading";
+  const isRegeneration =
+    state.practicePlan.length === 0 &&
+    state.currentIndex === 0 &&
+    state.phase === "loading";
 
   const fetchPracticePlan = async () => {
     try {
       setPhase("coaching");
-      
+
       if (debugMode) {
         // In debug mode, fetch with debug flag to get prompt preview
         const debugResponse = await startPractice.mutateAsync({
@@ -409,7 +458,7 @@ export function TuneMode({
           language,
           debug: true,
         });
-        
+
         setCoachDebugData({
           tuneKey,
           tuneTitle: (debugResponse as any).tuneTitle || tuneKey,
@@ -419,7 +468,7 @@ export function TuneMode({
           prompt: (debugResponse as any).prompt,
           request: (debugResponse as any).request,
         });
-        
+
         // Store raw nuggets for later use
         setPendingCoachResponse(debugResponse as any);
       } else {
@@ -429,14 +478,14 @@ export function TuneMode({
           language,
           debug: false,
         });
-        
+
         if (response.practicePlan && response.practicePlan.length > 0) {
           setPracticePlan(response.practicePlan, response.tuneTitle);
           // Show different message for regeneration vs first load
           toast.success(
-            isRegeneration 
+            isRegeneration
               ? t("tune.planReady")
-              : (response.encouragement || t("tune.letsPractice"))
+              : response.encouragement || t("tune.letsPractice"),
           );
         } else {
           throw new Error("No practice plan received");
@@ -444,14 +493,16 @@ export function TuneMode({
       }
     } catch (error) {
       console.error("Error fetching practice plan:", error);
-      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
+      setError(
+        error instanceof Error ? error.message : t("tune.loadPlanFailed"),
+      );
       toast.error(t("tune.loadPlanFailed"));
     }
   };
 
   const proceedFromCoachDebug = async () => {
     setCoachDebugData(null);
-    
+
     try {
       const response = await startPractice.mutateAsync({
         tuneKey,
@@ -459,7 +510,7 @@ export function TuneMode({
         language,
         debug: false,
       });
-      
+
       if (response.practicePlan && response.practicePlan.length > 0) {
         setPracticePlan(response.practicePlan, response.tuneTitle);
         toast.success(response.encouragement || t("tune.letsPractice"));
@@ -468,33 +519,41 @@ export function TuneMode({
       }
     } catch (error) {
       console.error("Error fetching practice plan:", error);
-      setError(error instanceof Error ? error.message : t("tune.loadPlanFailed"));
+      setError(
+        error instanceof Error ? error.message : t("tune.loadPlanFailed"),
+      );
       toast.error(t("tune.loadPlanFailed"));
     }
   };
 
-  const handlePlaySample = useCallback((markInteraction = false) => {
-    if (markInteraction) {
-      setHasUserInteracted(true);
-    }
-    // Reset recording state when playing sample
-    lastProcessedRecording.current = null;
-    setIsEvaluating(false);
-    if (preEvalTimer.current) {
-      clearTimeout(preEvalTimer.current);
-      preEvalTimer.current = null;
-    }
-    if (silenceTimer.current) {
-      clearTimeout(silenceTimer.current);
-      silenceTimer.current = null;
-    }
-    
-    // Get note sequence from nugget, assembly, or full tune
-    const noteSequence = currentNugget?.nugget?.noteSequence || currentNugget?.assembly?.noteSequence || currentNugget?.fullTune?.noteSequence;
-    if (noteSequence) {
-      onPlaySample(noteSequence as INoteSequence);
-    }
-  }, [currentNugget, onPlaySample]);
+  const handlePlaySample = useCallback(
+    (markInteraction = false) => {
+      if (markInteraction) {
+        setHasUserInteracted(true);
+      }
+      // Reset recording state when playing sample
+      lastProcessedRecording.current = null;
+      setIsEvaluating(false);
+      if (preEvalTimer.current) {
+        clearTimeout(preEvalTimer.current);
+        preEvalTimer.current = null;
+      }
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current);
+        silenceTimer.current = null;
+      }
+
+      // Get note sequence from nugget, assembly, or full tune
+      const noteSequence =
+        currentNugget?.nugget?.noteSequence ||
+        currentNugget?.assembly?.noteSequence ||
+        currentNugget?.fullTune?.noteSequence;
+      if (noteSequence) {
+        onPlaySample(noteSequence as INoteSequence);
+      }
+    },
+    [currentNugget, onPlaySample],
+  );
 
   const handleSwitchNugget = useCallback(() => {
     setHasUserInteracted(true);
@@ -560,7 +619,14 @@ export function TuneMode({
     if (!hasUserInteracted || isPlayingSample || isRecording) return;
     lastAutoPlayKey.current = autoPlayKey;
     handlePlaySample();
-  }, [currentNugget?.itemId, autoPlayTrigger, isPlayingSample, isRecording, handlePlaySample, hasUserInteracted]);
+  }, [
+    currentNugget?.itemId,
+    autoPlayTrigger,
+    isPlayingSample,
+    isRecording,
+    handlePlaySample,
+    hasUserInteracted,
+  ]);
 
   // Render based on phase
   if (state.error) {
@@ -588,9 +654,11 @@ export function TuneMode({
   // Loading states
   if (state.phase === "loading" || state.phase === "coaching") {
     return (
-      <LoadingSpinner 
+      <LoadingSpinner
         message={
-          state.phase === "loading" ? t("tune.loadingTune") : t("tune.preparingPlan")
+          state.phase === "loading"
+            ? t("tune.loadingTune")
+            : t("tune.preparingPlan")
         }
       />
     );
@@ -617,7 +685,6 @@ export function TuneMode({
         practicePlan={state.practicePlan}
         currentEvalIndex={state.currentEvalIndex}
         pendingEvalIndex={pendingEvalIndex}
-        dspXml={dspXml}
         onRegisterNoteHandler={onRegisterNoteHandler}
         onRegisterNoteOffHandler={onRegisterNoteOffHandler}
         evalPrompt={lastEvalPrompt}
@@ -632,7 +699,10 @@ export function TuneMode({
   return (
     <div className="flex flex-col items-center justify-center h-full p-6">
       <p className="text-foreground mb-4">{t("tune.practiceComplete")}</p>
-      <button onClick={fetchPracticePlan} className="text-primary hover:underline">
+      <button
+        onClick={fetchPracticePlan}
+        className="text-primary hover:underline"
+      >
         {t("tune.getNewPlan")}
       </button>
     </div>

@@ -198,6 +198,8 @@ export function PianoSheetPixi({
   const viewportXRef = useRef(0);
   const lastFollowMsRef = useRef<number | null>(null);
   const maxScrollX = Math.max(0, contentWidth - config.viewWidth);
+  const centerOffsetX =
+    contentWidth < config.viewWidth ? (config.viewWidth - contentWidth) / 2 : 0;
   const lastUserScrollMsRef = useRef<number | null>(null);
 
   const clampViewport = useCallback(
@@ -394,7 +396,7 @@ export function PianoSheetPixi({
         height={config.viewHeight}
         options={{ antialias: true, backgroundAlpha: 0 }}
       >
-        <Container x={-viewportX}>
+        <Container x={centerOffsetX - viewportX}>
           <Graphics
             draw={(g) => {
               g.clear();
