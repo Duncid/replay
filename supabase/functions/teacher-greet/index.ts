@@ -334,8 +334,40 @@ serve(async (req) => {
       (acquiredTunes || []).map((a) => a.tune_key)
     );
 
+    // Fetch tune practice runs (recent attempts)
+    let tunePracticeRunsQuery = supabase
+      .from("tune_practice_runs")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(50);
+
+    if (localUserId) {
+      tunePracticeRunsQuery = tunePracticeRunsQuery.eq("local_user_id", localUserId);
+    }
+
+    const { data: tunePracticeRuns, error: tunePracticeRunsError } = await tunePracticeRunsQuery;
+
+    if (tunePracticeRunsError) {
+      console.error("Error fetching tune practice runs:", tunePracticeRunsError);
+    }
+
+    // Fetch tune nugget state (aggregate mastery per nugget)
+    let tuneNuggetStateQuery = supabase
+      .from("tune_nugget_state")
+      .select("*");
+
+    if (localUserId) {
+      tuneNuggetStateQuery = tuneNuggetStateQuery.eq("local_user_id", localUserId);
+    }
+
+    const { data: tuneNuggetStates, error: tuneNuggetStateError } = await tuneNuggetStateQuery;
+
+    if (tuneNuggetStateError) {
+      console.error("Error fetching tune nugget state:", tuneNuggetStateError);
+    }
+
     console.log(
-      `[teacher-greet] Acquired items for user ${localUserId || "all"}: ${acquiredLessonKeys.size} lessons, ${acquiredTuneKeys.size} tunes`
+      `[teacher-greet] Acquired items for user ${localUserId || "all"}: ${acquiredLessonKeys.size} lessons, ${acquiredTuneKeys.size} tunes, ${(tunePracticeRuns || []).length} tune practice runs, ${(tuneNuggetStates || []).length} tune nugget states`
     );
 
     // 3. Compute accessible activities (lessons and tunes) per track
@@ -469,12 +501,17 @@ serve(async (req) => {
     // 4. Calculate signals and prepare practice history
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // Consider both lesson runs and tune practice runs for last practice time
+    const lastLessonTime = lessonRuns.length > 0
+      ? new Date(lessonRuns[0].started_at).getTime()
+      : 0;
+    const lastTuneTime = (tunePracticeRuns || []).length > 0 && tunePracticeRuns![0].started_at
+      ? new Date(tunePracticeRuns![0].started_at).getTime()
+      : 0;
+    const lastPracticeTime = Math.max(lastLessonTime, lastTuneTime);
     const timeSinceLastPracticeHours =
-      lessonRuns.length > 0
-        ? Math.round(
-            (now.getTime() - new Date(lessonRuns[0].started_at).getTime()) /
-              (1000 * 60 * 60)
-          )
+      lastPracticeTime > 0
+        ? Math.round((now.getTime() - lastPracticeTime) / (1000 * 60 * 60))
         : null;
 
     // Group runs by lesson
@@ -512,18 +549,58 @@ serve(async (req) => {
         };
       });
 
-    // Add tunes to history with acquisition status
+    // Group tune practice runs by tune_key
+    const tunePracticeRunsByTune: Map<string, typeof tunePracticeRuns> = new Map();
+    for (const run of tunePracticeRuns || []) {
+      const key = run.tune_key;
+      if (!tunePracticeRunsByTune.has(key)) {
+        tunePracticeRunsByTune.set(key, []);
+      }
+      tunePracticeRunsByTune.get(key)!.push(run);
+    }
+
+    // Group tune nugget states by tune_key
+    const tuneNuggetStatesByTune: Map<string, typeof tuneNuggetStates> = new Map();
+    for (const state of tuneNuggetStates || []) {
+      const key = state.tune_key;
+      if (!tuneNuggetStatesByTune.has(key)) {
+        tuneNuggetStatesByTune.set(key, []);
+      }
+      tuneNuggetStatesByTune.get(key)!.push(state);
+    }
+
+    // Add tunes to history with acquisition status AND practice data
     const tuneHistory = availableActivities
       .filter((a) => a.activityType === "tune")
-      .map((activity) => ({
-        activityKey: activity.activityKey,
-        activityType: activity.activityType,
-        title: activity.title,
-        trackTitle: activity.trackTitle,
-        musicRef: activity.musicRef,
-        level: activity.level,
-        acquired: acquiredTuneKeys.has(activity.activityKey),
-      }));
+      .map((activity) => {
+        const runs = tunePracticeRunsByTune.get(activity.activityKey) || [];
+        const nuggetStates = tuneNuggetStatesByTune.get(activity.activityKey) || [];
+        const attemptsLast7Days = runs.filter(
+          (r) => r.started_at && new Date(r.started_at) >= sevenDaysAgo
+        ).length;
+        const lastRun = runs[0];
+        const totalAttempts = nuggetStates.reduce((sum, s) => sum + (s.attempt_count || 0), 0);
+        const totalPasses = nuggetStates.reduce((sum, s) => sum + (s.pass_count || 0), 0);
+        const nuggetCount = nuggetStates.length;
+        const masteredNuggets = nuggetStates.filter((s) => (s.best_streak || 0) >= 3).length;
+
+        return {
+          activityKey: activity.activityKey,
+          activityType: activity.activityType,
+          title: activity.title,
+          trackTitle: activity.trackTitle,
+          musicRef: activity.musicRef,
+          level: activity.level,
+          acquired: acquiredTuneKeys.has(activity.activityKey),
+          lastPracticed: lastRun?.started_at || null,
+          lastEvaluation: lastRun?.evaluation || null,
+          attemptsTotal: totalAttempts,
+          attemptsLast7Days,
+          nuggetProgress: nuggetCount > 0
+            ? `${masteredNuggets}/${nuggetCount} nuggets mastered, ${totalPasses} passes out of ${totalAttempts} attempts`
+            : null,
+        };
+      });
 
     const lessonRunsSummary = lessonRuns.slice(0, 20).map((r) => ({
       lessonKey: r.lesson_node_key,
@@ -583,7 +660,7 @@ ${JSON.stringify(availableActivities, null, 2)}
 LESSON PRACTICE HISTORY:
 ${JSON.stringify(practiceHistory, null, 2)}
 
-AVAILABLE TUNES (with acquisition status):
+TUNE PRACTICE HISTORY (with acquisition status and practice data):
 ${JSON.stringify(tuneHistory, null, 2)}
 
 RECENT LESSON RUNS (chronological list):
