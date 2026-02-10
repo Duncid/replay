@@ -127,8 +127,8 @@ const normalizeCreativityToRNN = (creativity: number): number => {
   const temperature = 0.1 + (creativity / 100) * (2.0 - 0.1);
   console.log(
     `[Creativity] RNN - Creativity: ${creativity}, Temperature: ${temperature.toFixed(
-      3
-    )} (range: 0.1-2.0)`
+      3,
+    )} (range: 0.1-2.0)`,
   );
   return temperature;
 };
@@ -137,8 +137,8 @@ const normalizeCreativityToVAE = (creativity: number): number => {
   const temperature = 0.1 + (creativity / 100) * (1.5 - 0.1);
   console.log(
     `[Creativity] VAE - Creativity: ${creativity}, Temperature: ${temperature.toFixed(
-      3
-    )} (range: 0.1-1.5)`
+      3,
+    )} (range: 0.1-1.5)`,
   );
   return temperature;
 };
@@ -150,15 +150,15 @@ const Index = () => {
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(
     STORAGE_KEYS.ACTIVE_MODE,
-    "play"
+    "play",
   );
   const [isAutoreplyActive, setIsAutoreplyActive] = useLocalStorage<boolean>(
     STORAGE_KEYS.AUTOREPLY,
-    false
+    false,
   );
   const [selectedModel, setSelectedModel] = useLocalStorage(
     STORAGE_KEYS.AI_MODEL,
-    "magenta/music-rnn"
+    "magenta/music-rnn",
   );
   const [isAskLoading, setIsAskLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -168,7 +168,7 @@ const Index = () => {
   const [generationLabel, setGenerationLabel] = useState<string | null>(null);
   const [partitionDialogOpen, setPartitionDialogOpen] = useState(false);
   const [editingEntryIndex, setEditingEntryIndex] = useState<number | null>(
-    null
+    null,
   );
   const [editDialogMode, setEditDialogMode] = useState<"add" | "edit">("add");
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -201,19 +201,19 @@ const Index = () => {
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(
     STORAGE_KEYS.INSTRUMENT,
-    "classic"
+    "classic",
   );
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(
     STORAGE_KEYS.BPM,
-    120
+    120,
   );
   const [metronomeTimeSignature, setMetronomeTimeSignature] = useLocalStorage(
     STORAGE_KEYS.TIME_SIGNATURE,
-    "4/4"
+    "4/4",
   );
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
   const [metronomeStartTime, setMetronomeStartTime] = useState<number | null>(
-    null
+    null,
   );
   const [metronomeFeel, setMetronomeFeel] =
     useState<FeelPreset>("straight_beats");
@@ -222,18 +222,18 @@ const Index = () => {
   // Creativity slider: 0-100 (stored as magentaTemperature for backward compatibility)
   const [magentaTemperature, setMagentaTemperature] = useLocalStorage<number>(
     STORAGE_KEYS.MAGENTA_TEMPERATURE,
-    40
+    40,
   );
   // Debug mode
   const [debugMode, setDebugMode] = useLocalStorage<boolean>(
     STORAGE_KEYS.DEBUG_MODE,
-    false
+    false,
   );
 
   // Log initial creativity value
   useEffect(() => {
     console.log(
-      `[Creativity] Initialized with value: ${magentaTemperature} (0-100 scale)`
+      `[Creativity] Initialized with value: ${magentaTemperature} (0-100 scale)`,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only log once on mount
@@ -245,7 +245,7 @@ const Index = () => {
     try {
       return (
         window.localStorage.getItem(
-          `${STORAGE_KEYS.MAGENTA_TEMPERATURE}_migrated`
+          `${STORAGE_KEYS.MAGENTA_TEMPERATURE}_migrated`,
         ) === "true"
       );
     } catch {
@@ -268,7 +268,7 @@ const Index = () => {
         const creativity = ((oldTemp - 0.1) / (2.0 - 0.1)) * 100;
         const migrated = Math.round(Math.max(0, Math.min(100, creativity)));
         console.log(
-          `[Creativity] Migrating old temperature ${oldTemp} to creativity ${migrated}`
+          `[Creativity] Migrating old temperature ${oldTemp} to creativity ${migrated}`,
         );
         setMagentaTemperature(migrated);
       }
@@ -276,11 +276,11 @@ const Index = () => {
       try {
         window.localStorage.setItem(
           `${STORAGE_KEYS.MAGENTA_TEMPERATURE}_migrated`,
-          "true"
+          "true",
         );
         setMigrationDone(true);
         console.log(
-          `[Creativity] Migration complete. Current creativity value: ${magentaTemperature}`
+          `[Creativity] Migration complete. Current creativity value: ${magentaTemperature}`,
         );
       } catch (error) {
         console.warn("[Creativity] Failed to save migration flag:", error);
@@ -292,7 +292,7 @@ const Index = () => {
   // Persisted history
   const [savedPlayHistory, setSavedPlayHistory] = useLocalStorage<PlayEntry[]>(
     STORAGE_KEYS.PLAY_HISTORY,
-    []
+    [],
   );
   const [isMusicXmlImporting, setIsMusicXmlImporting] = useState(false);
 
@@ -325,7 +325,7 @@ const Index = () => {
       setPianoSoundType,
       setMetronomeBpm,
       setMetronomeTimeSignature,
-    ]
+    ],
   );
 
   const compositions = useCompositions({
@@ -382,7 +382,7 @@ const Index = () => {
   // (they will be initialized after those functions are defined)
 
   const [playingSequence, setPlayingSequence] = useState<NoteSequence | null>(
-    null
+    null,
   );
 
   // Refs for circular dependency handling
@@ -402,7 +402,7 @@ const Index = () => {
   >("curriculum");
   const tuneNoteHandlerRef = useRef<((noteKey: string) => void) | null>(null);
   const tuneNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(
-    null
+    null,
   );
   const labNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(null);
 
@@ -427,7 +427,7 @@ const Index = () => {
         }
       }
     },
-    [activeMode, isAutoreplyActive]
+    [activeMode, isAutoreplyActive],
   );
 
   const handleRecordingUpdate = useCallback((notes: Note[]) => {
@@ -457,28 +457,28 @@ const Index = () => {
     (handler: ((noteKey: string) => void) | null) => {
       labNoteHandlerRef.current = handler;
     },
-    []
+    [],
   );
 
   const registerLabNoteOffHandler = useCallback(
     (handler: ((noteKey: string) => void) | null) => {
       labNoteOffHandlerRef.current = handler;
     },
-    []
+    [],
   );
 
   const registerTuneNoteHandler = useCallback(
     (handler: ((noteKey: string) => void) | null) => {
       tuneNoteHandlerRef.current = handler;
     },
-    []
+    [],
   );
 
   const registerTuneNoteOffHandler = useCallback(
     (handler: ((noteKey: string) => void) | null) => {
       tuneNoteOffHandlerRef.current = handler;
     },
-    []
+    [],
   );
 
   // MIDI note handlers - memoized to ensure stable references for useMidiInput
@@ -492,7 +492,7 @@ const Index = () => {
       midiPressedKeysRef.current.add(noteKey);
       pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
     },
-    [appState]
+    [appState],
   );
 
   const handleMidiNoteOff = useCallback(
@@ -501,7 +501,7 @@ const Index = () => {
       midiPressedKeysRef.current.delete(noteKey);
       pianoRef.current?.handleKeyRelease(noteKey, frequency);
     },
-    []
+    [],
   );
 
   const handleNoMidiDevices = () => {
@@ -520,7 +520,7 @@ const Index = () => {
         variant: "destructive",
       });
     },
-    [toast]
+    [toast],
   );
 
   const {
@@ -533,7 +533,7 @@ const Index = () => {
     handleMidiNoteOn,
     handleMidiNoteOff,
     handleNoMidiDevices,
-    handleMidiError
+    handleMidiError,
   );
 
   const stopAiPlayback = useCallback(() => {
@@ -557,7 +557,7 @@ const Index = () => {
       sequence: NoteSequence,
       requestId?: string,
       isReplay: boolean = false,
-      segments?: PlaybackSegment[]
+      segments?: PlaybackSegment[],
     ) => {
       setIsReplaying(isReplay);
       const playbackId = Math.random().toString(36).substring(7);
@@ -569,7 +569,7 @@ const Index = () => {
 
       if (isPlayingRef.current) {
         console.log(
-          `[Playback ${playbackId}] Already playing, stopping previous`
+          `[Playback ${playbackId}] Already playing, stopping previous`,
         );
       }
 
@@ -592,7 +592,7 @@ const Index = () => {
       console.log(
         `[Playback ${playbackId}] Starting: ${
           normalizedSequence.notes.length
-        } notes, ${normalizedSequence.totalTime.toFixed(3)}s`
+        } notes, ${normalizedSequence.totalTime.toFixed(3)}s`,
       );
       const playbackStartTime = Date.now();
 
@@ -635,7 +635,7 @@ const Index = () => {
 
           const segmentStartTime = Math.max(
             0,
-            segment.startTime - minStartTime
+            segment.startTime - minStartTime,
           );
           const segmentEndTime = Math.max(0, segment.endTime - minStartTime);
 
@@ -651,7 +651,7 @@ const Index = () => {
           const endTimeout = setTimeout(() => {
             if (!shouldStopAiRef.current) {
               setPlayingSequence((prev) =>
-                prev === segment.originalSequence ? null : prev
+                prev === segment.originalSequence ? null : prev,
               );
             }
           }, segmentEndTime * 1000);
@@ -691,7 +691,7 @@ const Index = () => {
         if (!shouldStopAiRef.current) {
           const elapsed = (Date.now() - playbackStartTime) / 1000;
           console.log(
-            `[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`
+            `[Playback ${playbackId}] Complete: ${elapsed.toFixed(3)}s`,
           );
           setAppState("idle");
           setPlayingSequence(null);
@@ -703,7 +703,7 @@ const Index = () => {
         }
       }, normalizedSequence.totalTime * 1000);
     },
-    []
+    [],
   );
 
   const handleLabPlaySequence = useCallback(
@@ -714,7 +714,7 @@ const Index = () => {
       pianoRef.current?.ensureAudioReady();
       setTimeout(() => playSequence(sequence, undefined, true), 50);
     },
-    [playSequence, stopAiPlayback]
+    [playSequence, stopAiPlayback],
   );
 
   function handleReplaySequence(sequence: NoteSequence) {
@@ -745,10 +745,10 @@ const Index = () => {
       pianoRef.current?.ensureAudioReady();
       setTimeout(
         () => playSequence(combinedSequence, undefined, true, segments),
-        50
+        50,
       );
     },
-    [playSequence]
+    [playSequence],
   );
 
   // Handle upload ABC file
@@ -843,7 +843,7 @@ const Index = () => {
               const containerText = await containerFile.async("string");
               const containerDoc = new DOMParser().parseFromString(
                 containerText,
-                "application/xml"
+                "application/xml",
               );
               if (
                 containerDoc.getElementsByTagName("parsererror").length === 0
@@ -867,7 +867,7 @@ const Index = () => {
               (name) =>
                 (name.endsWith(".xml") || name.endsWith(".musicxml")) &&
                 !name.startsWith("META-INF/") &&
-                !zip.files[name].dir
+                !zip.files[name].dir,
             );
 
             if (xmlFiles.length === 0) {
@@ -877,7 +877,7 @@ const Index = () => {
             // Prefer MusicXML files in the root directory, or use the first one
             const rootXmlFiles = xmlFiles.filter((name) => !name.includes("/"));
             const rootMusicXmlFiles = rootXmlFiles.filter((name) =>
-              name.endsWith(".musicxml")
+              name.endsWith(".musicxml"),
             );
             const preferredRoot = rootMusicXmlFiles[0] ?? rootXmlFiles[0];
             mainXmlPath = preferredRoot ?? xmlFiles[0];
@@ -1150,7 +1150,7 @@ const Index = () => {
           startTime: note.startTime as number,
           endTime: note.endTime as number,
           velocity: normalizeVelocity(note.velocity as number),
-        })
+        }),
       );
 
       const totalTime =
@@ -1292,7 +1292,7 @@ const Index = () => {
       setPendingCompositionToLoad(null);
       setSaveBeforeOpenDialogOpen(false);
     },
-    [compositions, toast]
+    [compositions, toast],
   );
 
   const handleContinueWithoutSaving = useCallback(() => {
@@ -1309,7 +1309,7 @@ const Index = () => {
       playMode.history,
       pianoSoundType,
       metronomeBpm,
-      metronomeTimeSignature
+      metronomeTimeSignature,
     );
 
     if (success) {
@@ -1353,7 +1353,7 @@ const Index = () => {
         : false,
     metronomeStartTime:
       activeMode === "learn" && learnModeType === "curriculum"
-        ? metronomeStartTime ?? undefined
+        ? (metronomeStartTime ?? undefined)
         : undefined,
   });
 
@@ -1374,7 +1374,7 @@ const Index = () => {
         : false,
     metronomeStartTime:
       activeMode === "learn" && learnModeType === "free-practice"
-        ? metronomeStartTime ?? undefined
+        ? (metronomeStartTime ?? undefined)
         : undefined,
   });
 
@@ -1434,7 +1434,7 @@ const Index = () => {
       previousUserIdRef.current !== currentUserId
     ) {
       console.log(
-        `[UserSwitch] Switched user from ${previousUserIdRef.current} to ${currentUserId}`
+        `[UserSwitch] Switched user from ${previousUserIdRef.current} to ${currentUserId}`,
       );
       stopAiPlayback();
       recordingManager.cancelRecording();
@@ -1569,7 +1569,7 @@ const Index = () => {
       learnModeType,
       isInTuneMode,
       stopAiPlayback,
-    ]
+    ],
   );
 
   const handleInteractiveActivePitchesChange = useCallback(
@@ -1581,7 +1581,7 @@ const Index = () => {
       });
       setActiveKeys(nextKeys);
     },
-    [activeMode]
+    [activeMode],
   );
 
   const handleInteractivePlaybackNote = useCallback(
@@ -1590,7 +1590,7 @@ const Index = () => {
       const frequency = midiToFrequency(midi);
       pianoRef.current?.playNote(frequency, durationSec);
     },
-    [activeMode]
+    [activeMode],
   );
 
   const handleLabActivePitchesChange = useCallback(
@@ -1602,7 +1602,7 @@ const Index = () => {
       });
       setActiveKeys(nextKeys);
     },
-    [activeMode]
+    [activeMode],
   );
 
   const handleLabPlaybackNote = useCallback(
@@ -1611,7 +1611,7 @@ const Index = () => {
       const frequency = midiToFrequency(midi);
       pianoRef.current?.playNote(frequency, durationSec);
     },
-    [activeMode]
+    [activeMode],
   );
 
   const handleNoteEnd = useCallback(
@@ -1662,7 +1662,7 @@ const Index = () => {
       learnMode.lessonMode,
       learnModeType,
       isInTuneMode,
-    ]
+    ],
   );
 
   // Automatic AI reply handling
@@ -1681,7 +1681,7 @@ const Index = () => {
         const creativity = magentaTemperature ?? 40;
         const modelName = selectedModel === "magenta/music-rnn" ? "RNN" : "VAE";
         console.log(
-          `[Creativity] Using creativity ${creativity} for model: ${modelName}`
+          `[Creativity] Using creativity ${creativity} for model: ${modelName}`,
         );
         const temperature =
           selectedModel === "magenta/music-rnn"
@@ -1693,7 +1693,7 @@ const Index = () => {
           selectedModel as MagentaModelType,
           metronomeBpm,
           metronomeTimeSignature,
-          { temperature }
+          { temperature },
         );
 
         if (currentRequestIdRef.current !== requestId) return;
@@ -1728,7 +1728,7 @@ const Index = () => {
         const elapsed = Date.now() - requestStartTimeRef.current;
         if (elapsed < MIN_WAIT_TIME_MS) {
           await new Promise((resolve) =>
-            setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed)
+            setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed),
           );
         }
 
@@ -1763,7 +1763,7 @@ const Index = () => {
   async function handleManualAiRequest(
     userSequence: NoteSequence,
     modelType: MagentaModelType,
-    requestLabel: string
+    requestLabel: string,
   ) {
     const requestId = crypto.randomUUID();
     currentRequestIdRef.current = requestId;
@@ -1771,7 +1771,7 @@ const Index = () => {
 
     setAppState("waiting_for_ai");
     setGenerationLabel(
-      modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging..."
+      modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging...",
     );
 
     try {
@@ -1779,7 +1779,7 @@ const Index = () => {
       const creativity = magentaTemperature ?? 40;
       const modelName = modelType === "magenta/music-rnn" ? "RNN" : "VAE";
       console.log(
-        `[Creativity] Manual request - Using creativity ${creativity} for model: ${modelName}`
+        `[Creativity] Manual request - Using creativity ${creativity} for model: ${modelName}`,
       );
       const temperature =
         modelType === "magenta/music-rnn"
@@ -1791,7 +1791,7 @@ const Index = () => {
         modelType,
         metronomeBpm,
         metronomeTimeSignature,
-        { temperature }
+        { temperature },
       );
 
       if (currentRequestIdRef.current !== requestId) return;
@@ -1800,7 +1800,7 @@ const Index = () => {
       const elapsed = Date.now() - requestStartTimeRef.current;
       if (elapsed < MIN_WAIT_TIME_MS) {
         await new Promise((resolve) =>
-          setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed)
+          setTimeout(resolve, MIN_WAIT_TIME_MS - elapsed),
         );
       }
 
@@ -1842,7 +1842,7 @@ const Index = () => {
         playMode.history,
         pianoSoundType,
         metronomeBpm,
-        metronomeTimeSignature
+        metronomeTimeSignature,
       );
       return;
     }
@@ -1867,7 +1867,7 @@ const Index = () => {
     const seq = playMode.getCombinedSequence();
     if (seq?.sequence) {
       await navigator.clipboard.writeText(
-        JSON.stringify(seq.sequence, null, 2)
+        JSON.stringify(seq.sequence, null, 2),
       );
       toast({ title: "Copied as NoteSequence" });
     }
@@ -1887,7 +1887,7 @@ const Index = () => {
       playMode.history.length,
       setPendingCompositionToLoad,
       setSaveBeforeOpenDialogOpen,
-    ]
+    ],
   );
 
   const handlePlayMenuDeleteComposition = useCallback(() => {
@@ -2116,7 +2116,7 @@ const Index = () => {
             </div>
 
             <Piano
-              className="flex-1 min-h-0 border-t"
+              className="flex-1 min-h-0"
               ref={pianoRef}
               activeKeys={activeKeys}
               allowInput={
@@ -2285,7 +2285,7 @@ const Index = () => {
                 playMode.history,
                 pianoSoundType,
                 metronomeBpm,
-                metronomeTimeSignature
+                metronomeTimeSignature,
               );
             }
             setSaveModalOpen(false);

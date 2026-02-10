@@ -44,7 +44,7 @@ export interface PianoHandle {
   handleKeyPress: (
     noteKey: string,
     frequency: number,
-    velocity?: number
+    velocity?: number,
   ) => void;
   handleKeyRelease: (noteKey: string, frequency: number) => void;
 }
@@ -62,10 +62,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       notationPreference,
       className,
     },
-    ref
+    ref,
   ) => {
     const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(
-      new Set()
+      new Set(),
     );
     const [sustainedKeys, setSustainedKeys] = useState<Set<string>>(new Set());
     const pressedKeysRef = useRef<Set<string>>(new Set());
@@ -102,7 +102,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         const midi = noteToMidi(noteKey);
         return midi >= noteToMidi(range.min) && midi <= noteToMidi(range.max);
       },
-      [noteToMidi, soundType]
+      [noteToMidi, soundType],
     );
 
     // AZERTY keyboard mapping - C4 centered on 'e'
@@ -193,7 +193,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
         onNoteStart?.(noteKey, frequency, velocity);
       },
-      [allowInput, audio, isNotePlayable, onNoteStart]
+      [allowInput, audio, isNotePlayable, onNoteStart],
     );
 
     const handleKeyRelease = useCallback(
@@ -209,7 +209,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
         onNoteEnd?.(noteKey, frequency);
       },
-      [allowInput, audio, isNotePlayable, onNoteEnd]
+      [allowInput, audio, isNotePlayable, onNoteEnd],
     );
 
     // Manage sustained key state for visual feedback
@@ -346,7 +346,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
     const getBlackKeyColumn = (blackNote: PianoNote) => {
       const noteIndex = notes.findIndex(
-        (n) => `${n.note}${n.octave}` === `${blackNote.note}${blackNote.octave}`
+        (n) =>
+          `${n.note}${n.octave}` === `${blackNote.note}${blackNote.octave}`,
       );
       return notes.slice(0, noteIndex).filter((n) => !n.isBlack).length;
     };
@@ -363,7 +364,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       <div
         className={cn(
           "relative w-full h-full select-none flex flex-col px-1 mb-1  overflow-hidden bg-key-black",
-          className
+          className,
         )}
       >
         {!audio.isLoaded && (
@@ -374,7 +375,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
             </div>
           </div>
         )}
-        <div className="relative h-full rounded-t-lg overflow-hidden">
+        <div className="relative h-full rounded-t-lg overflow-hidden border-t">
           <div className="absolute inset-0 grid grid-cols-22 gap-px">
             {whiteKeys.map((note) => {
               const noteKey = `${note.note}${note.octave}`;
@@ -435,7 +436,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         </div>
       </div>
     );
-  }
+  },
 );
 
 Piano.displayName = "Piano";
