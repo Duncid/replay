@@ -37,8 +37,8 @@ import {
   getTuneRhXml,
   getTuneXml,
 } from "@/utils/tuneAssetBundler";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { NoteEvent, SheetConfig } from "../PianoSheetPixiLayout.ts";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { NoteEvent } from "../PianoSheetPixiLayout.ts";
 import {
   type InputNoteEvent,
   useSheetPlaybackEngine,
@@ -376,9 +376,18 @@ export function InteractiveViewTabContent({
 
   const prevActiveNoteIdsRef = useRef<Set<string>>(new Set());
 
+  // Ref that PianoSheetPixi registers its handler on — called
+  // synchronously from the engine's RAF loop for zero-lag updates.
+  const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+
+  const onTick = useCallback((t: number) => {
+    onTickRef.current?.(t);
+  }, []);
+
   const playback = useSheetPlaybackEngine({
     notes,
     enabled: notes.length > 0,
+    onTick,
   });
 
   useEffect(() => {
@@ -415,7 +424,7 @@ export function InteractiveViewTabContent({
         const note = noteById.get(id);
         if (!note) return;
         const endTime = note.start + note.dur;
-        const durationSec = Math.max(0, endTime - playback.playheadTime);
+        const durationSec = Math.max(0, endTime - (playback.playheadTimeRef.current ?? 0));
         if (durationSec > 0) {
           onPlaybackNote({ midi: note.midi, durationSec });
         }
@@ -429,7 +438,7 @@ export function InteractiveViewTabContent({
     onPlaybackNote,
     playback.activeNoteIds,
     playback.isAutoplay,
-    playback.playheadTime,
+    playback.playheadTimeRef,
   ]);
 
   const bpm = useMemo(() => {
@@ -437,23 +446,7 @@ export function InteractiveViewTabContent({
     return Math.round(tempo ?? 120);
   }, [sequence.tempos]);
 
-  const config = useMemo<SheetConfig>(() => {
-    const baseUnit = 12;
-    return {
-      pixelsPerUnit: baseUnit * 4,
-      noteHeight: baseUnit,
-      noteCornerRadius: baseUnit / 2,
-      trackGap: baseUnit * 0,
-      trackTopY: baseUnit * 2,
-      leftPadding: baseUnit * 1.5,
-      rightPadding: baseUnit * 1.5,
-      viewWidth: size.width,
-      viewHeight: size.height,
-      minNoteWidth: Math.max(6, baseUnit * 0.375),
-    };
-  }, [size.height, size.width]);
-
-  const isAtStart = playback.playheadTime < 0.01;
+  const isAtStart = playback.playheadTime < 0.01 && (playback.playheadTimeRef.current ?? 0) < 0.01;
 
   return (
     <TabsContent
@@ -501,13 +494,15 @@ export function InteractiveViewTabContent({
           {size.width > 0 && size.height > 0 && (
             <PianoSheetPixi
               notes={notes}
-              config={config}
+              width={size.width}
+              height={size.height}
               timeSignatures={sequence.timeSignatures}
               qpm={bpm}
-              playheadTime={playback.playheadTime}
+              onTickRef={onTickRef}
               focusedNoteIds={playback.focusedNoteIds}
               activeNoteIds={playback.activeNoteIds}
               followPlayhead
+              isAutoplay={playback.isAutoplay}
             />
           )}
         </div>

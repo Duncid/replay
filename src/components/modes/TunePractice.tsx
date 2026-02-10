@@ -1,4 +1,5 @@
-import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
+import { PianoSheetPixi } from "@/components/PianoSheetPixi";
+import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
 import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useOsmdCursorPlayback } from "@/components/useOsmdCursorPlayback";
+import { useSheetPlaybackEngine } from "@/hooks/useSheetPlaybackEngine";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
 import type {
@@ -18,8 +19,16 @@ import type {
   TuneEvaluationDebugData,
   TuneEvaluationResponse,
 } from "@/types/tunePractice";
+import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
 import { ArrowLeft, ArrowRight, List, Minus, Play, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 interface TunePracticeProps {
@@ -40,10 +49,9 @@ interface TunePracticeProps {
   practicePlan?: PracticePlanItem[];
   currentEvalIndex?: number;
   pendingEvalIndex?: number;
-  dspXml?: string | null;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
   onRegisterNoteOffHandler?: (
-    handler: ((noteKey: string) => void) | null
+    handler: ((noteKey: string) => void) | null,
   ) => void;
   evalPrompt?: string | null;
   evalAnswer?: string | null;
@@ -177,14 +185,17 @@ function StreakDisplay({
       const initialDelay = 1200;
       const fireDelay = 350;
       for (let i = 0; i < successCount; i += 1) {
-        const timer = setTimeout(() => {
-          const fireId = nextFireIdRef.current++;
-          setFires((prev) => [...prev, fireId]);
-          if (i === successCount - 1) {
-            setTempMessage(null);
-            setMessageVisible(false);
-          }
-        }, initialDelay + i * fireDelay);
+        const timer = setTimeout(
+          () => {
+            const fireId = nextFireIdRef.current++;
+            setFires((prev) => [...prev, fireId]);
+            if (i === successCount - 1) {
+              setTempMessage(null);
+              setMessageVisible(false);
+            }
+          },
+          initialDelay + i * fireDelay,
+        );
         timeoutRefs.current.push(timer);
       }
     } else if (evaluation === "fail") {
@@ -209,18 +220,21 @@ function StreakDisplay({
           setIsRemovingFires(true);
           const firesCopy = [...currentFires];
           firesCopy.forEach((fireId, index) => {
-            const timer = setTimeout(() => {
-              setFires((prev) => {
-                const updated = prev.filter((id) => id !== fireId);
-                if (index === firesCopy.length - 1) {
-                  // Last fire removed
-                  setIsRemovingFires(false);
-                  setTempMessage(null);
-                  setMessageVisible(false);
-                }
-                return updated;
-              });
-            }, (index + 1) * 500);
+            const timer = setTimeout(
+              () => {
+                setFires((prev) => {
+                  const updated = prev.filter((id) => id !== fireId);
+                  if (index === firesCopy.length - 1) {
+                    // Last fire removed
+                    setIsRemovingFires(false);
+                    setTempMessage(null);
+                    setMessageVisible(false);
+                  }
+                  return updated;
+                });
+              },
+              (index + 1) * 500,
+            );
             timeoutRefs.current.push(timer);
           });
         }
@@ -249,14 +263,14 @@ function StreakDisplay({
   }, [lastEvaluation]);
 
   return (
-    <div className={cn("flex items-center gap-2 min-h-[24px]", className)}>
+    <div className={cn("flex items-center gap-2", className)}>
       {/* Fires */}
       {fires.map((fireId, index) => (
         <span
           key={fireId}
           className={cn(
             "text-lg transition-opacity duration-300",
-            isRemovingFires ? "opacity-0" : "opacity-100"
+            isRemovingFires ? "opacity-0" : "opacity-100",
           )}
           style={{
             transitionDelay: isRemovingFires ? `${index * 500}ms` : "0ms",
@@ -274,14 +288,14 @@ function StreakDisplay({
             messageVisible ? "opacity-100" : "opacity-0",
             tempMessage === "success" && "text-green-600",
             tempMessage === "fail" && "text-orange-600",
-            tempMessage === "close" && "text-accent"
+            tempMessage === "close" && "text-accent",
           )}
         >
           {tempMessage === "success"
             ? messages.success
             : tempMessage === "fail"
-            ? messages.fail
-            : messages.close}
+              ? messages.fail
+              : messages.close}
         </span>
       )}
     </div>
@@ -304,7 +318,6 @@ export function TunePractice({
   practicePlan = [],
   currentEvalIndex,
   pendingEvalIndex,
-  dspXml,
   onRegisterNoteHandler,
   onRegisterNoteOffHandler,
   evalPrompt,
@@ -365,8 +378,8 @@ export function TunePractice({
     ? lastEvaluation.evaluation === "pass"
       ? t("tune.feedback.pass")
       : lastEvaluation.evaluation === "close"
-      ? t("tune.feedback.close")
-      : t("tune.feedback.tryAgain")
+        ? t("tune.feedback.close")
+        : t("tune.feedback.tryAgain")
     : null;
 
   useEffect(() => {
@@ -393,15 +406,98 @@ export function TunePractice({
       return () => clearTimeout(timer);
     }
   }, [streakComplete, currentStreak, pulsedStreak]);
-  const { osmdViewRef, handleOsmdReady, handleCursorElementReady } =
-    useOsmdCursorPlayback({
-      sequence: (sampleSequence ?? { notes: [], totalTime: 0 }) as NoteSequence,
-      onRegisterNoteHandler,
-      onRegisterNoteOffHandler,
-      isPlaying,
-      autoScheduleOnPlay: true,
-      resetKey: currentNugget.itemId,
+
+  // ── PianoSheetPixi: convert NoteSequence → NoteEvent[] ────────────
+  const notes = useMemo<NoteEvent[]>(() => {
+    if (!sampleSequence) return [];
+    return sampleSequence.notes.map((note, index) => ({
+      id: `${note.pitch}-${note.startTime}-${index}`,
+      midi: note.pitch,
+      start: note.startTime,
+      dur: Math.max(0, note.endTime - note.startTime),
+      accidental: midiToNoteName(note.pitch).includes("#")
+        ? ("sharp" as const)
+        : null,
+    }));
+  }, [sampleSequence]);
+
+  // ── PianoSheetPixi: ResizeObserver sizing ─────────────────────────
+  const pixiContainerRef = useRef<HTMLDivElement>(null);
+  const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    const el = pixiContainerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setPixiSize({ width, height });
     });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // ── PianoSheetPixi: playback engine ───────────────────────────────
+  const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+
+  const onTick = useCallback((t: number) => {
+    onTickRef.current?.(t);
+  }, []);
+
+  const playback = useSheetPlaybackEngine({
+    notes,
+    enabled: notes.length > 0,
+    onTick,
+  });
+
+  const bpm = useMemo(() => {
+    const seq = sampleSequence ?? { notes: [], totalTime: 0 };
+    const tempo = (seq as NoteSequence).tempos?.[0]?.qpm;
+    return Math.round(tempo ?? 120);
+  }, [sampleSequence]);
+
+  // Sync visual playback with external audio playback
+  const wasPlayingRef = useRef(false);
+  useEffect(() => {
+    if (isPlaying && !wasPlayingRef.current) {
+      // Audio just started → start visual playback
+      playback.play();
+    } else if (!isPlaying && wasPlayingRef.current) {
+      // Audio just stopped → reset visual playback
+      playback.stop();
+    }
+    wasPlayingRef.current = isPlaying;
+  }, [isPlaying, playback]);
+
+  // Wire up note handlers for user input → playback engine
+  useEffect(() => {
+    if (!onRegisterNoteHandler) return;
+    const handler = (noteKey: string) => {
+      const midi = noteNameToMidi(noteKey);
+      playback.handleInputEvent({
+        type: "noteon",
+        midi,
+        timeMs: performance.now(),
+      });
+    };
+    onRegisterNoteHandler(handler);
+    return () => onRegisterNoteHandler(null);
+  }, [onRegisterNoteHandler, playback]);
+
+  useEffect(() => {
+    if (!onRegisterNoteOffHandler) return;
+    const handler = (noteKey: string) => {
+      const midi = noteNameToMidi(noteKey);
+      playback.handleInputEvent({
+        type: "noteoff",
+        midi,
+        timeMs: performance.now(),
+      });
+    };
+    onRegisterNoteOffHandler(handler);
+    return () => onRegisterNoteOffHandler(null);
+  }, [onRegisterNoteOffHandler, playback]);
 
   const handleNextNugget = () => {
     setShouldPulse(false);
@@ -410,8 +506,8 @@ export function TunePractice({
   };
 
   return (
-    <div className="flex h-full w-full flex-col gap-4 px-6 py-4">
-      <div className="flex items-center justify-between">
+    <div className="relative flex h-full w-full flex-col gap-4 py-2">
+      <div className="absolute top-0 left-0 flex items-center justify-between p-2 gap-2">
         <StatusDisplay
           isRecording={isRecording}
           isEvaluating={isEvaluating}
@@ -425,8 +521,8 @@ export function TunePractice({
           {debugMode && practicePlan.length > 0 && (
             <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" title="View Practice Plan">
-                  <List className="h-4 w-4" />
+                <Button variant="ghost" size="sm" title="View Practice Plan">
+                  <List />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
@@ -441,8 +537,8 @@ export function TunePractice({
                         item.itemType === "nugget"
                           ? "Nugget"
                           : item.itemType === "assembly"
-                          ? "Assembly"
-                          : "Full Tune";
+                            ? "Assembly"
+                            : "Full Tune";
 
                       return (
                         <div
@@ -451,7 +547,7 @@ export function TunePractice({
                             "p-4 rounded-lg border",
                             isCurrent
                               ? "border-primary bg-primary/5"
-                              : "border-border bg-muted/30"
+                              : "border-border bg-muted/30",
                           )}
                         >
                           <div className="flex items-start justify-between gap-2 mb-2">
@@ -502,147 +598,146 @@ export function TunePractice({
               </SheetContent>
             </Sheet>
           )}
-          <Button variant="ghost" size="icon" onClick={onLeave}>
-            <X />
-          </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col items-center gap-6">
-        <p className="text-foreground text-center text-base px-3">
-          {currentNugget.instruction}
-        </p>
-
-        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
-          {dspXml ? (
-            <OpenSheetMusicDisplayView
-              ref={osmdViewRef}
-              xml={dspXml}
-              compactness="compacttight"
-              hasColor
-              className="relative w-full"
-              centerHorizontally
-              onOsmdReady={handleOsmdReady}
-              onCursorElementReady={handleCursorElementReady}
-            />
-          ) : (
-            <div className="w-full rounded-lg border p-4 text-sm text-muted-foreground">
-              No DSP XML available
-            </div>
-          )}
-
+      <div className="flex flex-1 flex-col items-center gap-2">
+        <div className="flex flex-col items-center justify-end gap-4 pt-12">
+          <p
+            key={commentKey}
+            className="text-foreground text-center text-base px-3 comment-typing motion-reduce:animate-none"
+          >
+            {lastEvaluation ? commentText : currentNugget.instruction}
+          </p>
           <Button
             variant="default"
             size="play"
             onClick={onPlaySample}
             disabled={isPlaying}
-            className="gap-2"
           >
             <Play fill="currentColor" stroke="none" />
           </Button>
+        </div>
 
-          <div className="w-fit max-w-lg rounded-2xl bg-muted/30 px-12 pb-12 pt-3 mt-12">
-            <StreakDisplay
-              lastEvaluation={lastEvaluation}
-              currentNuggetId={currentNugget.itemId}
-              messages={streakMessages}
-              className="justify-center mb-2"
-            />
-            <div
-              key={commentKey}
-              className="comment-typing text-sm text-center leading-relaxed text-lg text-foreground/90 motion-reduce:animate-none"
-            >
-              {commentText}
-            </div>
-            {debugMode && (
-              <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                <div className="flex flex-col gap-1">
-                  <span>
-                    Eval index: {lastEvaluation?.evalIndex ?? "-"} /{" "}
-                    {currentEvalIndex ?? "-"}
-                  </span>
-                  {evalDecision ? (
-                    <span className="text-[10px] text-muted-foreground/80">
-                      {evalDecision}
-                    </span>
-                  ) : null}
-                </div>
-                <Sheet open={showEvalDebug} onOpenChange={setShowEvalDebug}>
-                  <SheetTrigger asChild>
-                    <Button size="sm" variant="outline">
-                      Debug
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent
-                    side="right"
-                    className="w-[520px] sm:max-w-[520px]"
-                  >
-                    <SheetHeader>
-                      <div className="flex items-center justify-between gap-3">
-                        <SheetTitle>Eval debug</SheetTitle>
-                      </div>
-                    </SheetHeader>
-                    <ScrollArea className="h-[calc(100vh-140px)] mt-4">
-                      <div className="space-y-3">
-                        {evalDebugData ? (
-                          <TuneEvaluationNotesTable debugData={evalDebugData} />
-                        ) : null}
-                        <div className="flex justify-end items-end">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleCopyEvalDebug}
-                          >
-                            Copy
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-4 text-sm">
-                        <div>
-                          <div className="text-xs font-semibold text-muted-foreground mb-1">
-                            Prompt
-                          </div>
-                          <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
-                            {evalPrompt || "No prompt available."}
-                          </pre>
-                        </div>
-                        <div>
-                          <div className="text-xs font-semibold text-muted-foreground mb-1">
-                            Answer
-                          </div>
-                          <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
-                            {evalAnswer || "No answer available."}
-                          </pre>
-                        </div>
-                      </div>
-                    </ScrollArea>
-                  </SheetContent>
-                </Sheet>
-              </div>
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
+          <div
+            ref={pixiContainerRef}
+            className="w-full flex-1 min-h-0 overflow-hidden"
+          >
+            {pixiSize.width > 0 && pixiSize.height > 0 && notes.length > 0 && (
+              <PianoSheetPixi
+                notes={notes}
+                width={pixiSize.width}
+                height={pixiSize.height}
+                timeSignatures={sampleSequence?.timeSignatures}
+                qpm={bpm}
+                onTickRef={onTickRef}
+                focusedNoteIds={playback.focusedNoteIds}
+                activeNoteIds={playback.activeNoteIds}
+                followPlayhead
+                isAutoplay={playback.isAutoplay}
+              />
             )}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={onPreviousNugget}
-          className="gap-2"
-          disabled={isFirstNugget}
-        >
-          <ArrowLeft className="h-5 w-5" />
-          {t("tune.buttons.previous")}
-        </Button>
-
+      <div className="flex shrink-0 items-center justify-between px-2">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={onLeave} size="sm">
+            <X /> Leave
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onPreviousNugget}
+            size="sm"
+            disabled={isFirstNugget}
+          >
+            <ArrowLeft />
+            {t("tune.buttons.previous")}
+          </Button>
+        </div>
+        <div className="flex items-center gap-3">
+          <StreakDisplay
+            lastEvaluation={lastEvaluation}
+            currentNuggetId={currentNugget.itemId}
+            messages={streakMessages}
+          />
+          {debugMode && (
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex flex-col gap-1">
+                <span>
+                  Eval index: {lastEvaluation?.evalIndex ?? "-"} /{" "}
+                  {currentEvalIndex ?? "-"}
+                </span>
+                {evalDecision ? (
+                  <span className="text-[10px] text-muted-foreground/80">
+                    {evalDecision}
+                  </span>
+                ) : null}
+              </div>
+              <Sheet open={showEvalDebug} onOpenChange={setShowEvalDebug}>
+                <SheetTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    Debug
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="right"
+                  className="w-[520px] sm:max-w-[520px]"
+                >
+                  <SheetHeader>
+                    <div className="flex items-center justify-between gap-3">
+                      <SheetTitle>Eval debug</SheetTitle>
+                    </div>
+                  </SheetHeader>
+                  <ScrollArea className="h-[calc(100vh-140px)] mt-4">
+                    <div className="space-y-3">
+                      {evalDebugData ? (
+                        <TuneEvaluationNotesTable debugData={evalDebugData} />
+                      ) : null}
+                      <div className="flex justify-end items-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCopyEvalDebug}
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <div className="text-xs font-semibold text-muted-foreground mb-1">
+                          Prompt
+                        </div>
+                        <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                          {evalPrompt || "No prompt available."}
+                        </pre>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-muted-foreground mb-1">
+                          Answer
+                        </div>
+                        <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                          {evalAnswer || "No answer available."}
+                        </pre>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
+        </div>
         <Button
           variant={shouldPulse ? "default" : "ghost"}
           onClick={handleNextNugget}
           isPulsating={shouldPulse}
-          className="gap-2"
+          size="sm"
         >
           {t("tune.buttons.next")}
-          <ArrowRight className="h-5 w-5" />
+          <ArrowRight />
         </Button>
       </div>
     </div>

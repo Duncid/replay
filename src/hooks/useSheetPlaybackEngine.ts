@@ -30,6 +30,7 @@ type UseSheetPlaybackEngineOptions = {
   enabled: boolean;
   speed?: number;
   chordWindowMs?: number;
+  onTick?: (timeSec: number) => void;
 };
 
 const DEFAULT_SPEED = 1;
@@ -96,6 +97,7 @@ export function useSheetPlaybackEngine({
   enabled,
   speed = DEFAULT_SPEED,
   chordWindowMs = DEFAULT_CHORD_WINDOW_MS,
+  onTick,
 }: UseSheetPlaybackEngineOptions) {
   const gates = useMemo(() => buildGates(notes), [notes]);
   const endTime = useMemo(() => {
@@ -130,11 +132,27 @@ export function useSheetPlaybackEngine({
   // the engine advances through silence gaps until the next gate).
   const playerAdvancingRef = useRef(false);
 
+  // Wall-clock anchors for autoplay — time is computed as a pure function
+  // of performance.now() so it's deterministic and sync-free.
+  const autoplayStartMsRef = useRef(0);
+  const autoplayStartOffsetRef = useRef(0);
+
+  // onTick callback ref — always up-to-date without causing re-renders
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
+
+  const activeNoteIdsRef = useRef<Set<string>>(new Set());
+
   const recomputeActiveNotes = useCallback(
-    (timeSec: number) => {
+    (timeSec: number): boolean => {
+      const prev = activeNoteIdsRef.current;
       if (notes.length === 0) {
-        setActiveNoteIds(new Set());
-        return;
+        if (prev.size > 0) {
+          activeNoteIdsRef.current = new Set();
+          setActiveNoteIds(activeNoteIdsRef.current);
+          return true;
+        }
+        return false;
       }
       const active = new Set<string>();
       notes.forEach((note) => {
@@ -145,25 +163,50 @@ export function useSheetPlaybackEngine({
           active.add(note.id);
         }
       });
-      setActiveNoteIds(active);
+      // Only update state if the content actually changed
+      if (
+        active.size !== prev.size ||
+        Array.from(active).some((id) => !prev.has(id))
+      ) {
+        activeNoteIdsRef.current = active;
+        setActiveNoteIds(active);
+        return true;
+      }
+      return false;
     },
     [notes]
   );
 
+  const focusedNoteIdsRef = useRef<Set<string>>(new Set());
+
+  const setFocusedIfChanged = useCallback(
+    (next: Set<string>) => {
+      const prev = focusedNoteIdsRef.current;
+      if (
+        next.size !== prev.size ||
+        Array.from(next).some((id) => !prev.has(id))
+      ) {
+        focusedNoteIdsRef.current = next;
+        setFocusedNoteIds(next);
+      }
+    },
+    []
+  );
+
   const updateFocus = useCallback(() => {
     if (isAutoplayRef.current) {
-      setFocusedNoteIds(new Set());
+      setFocusedIfChanged(new Set());
       return;
     }
     if (phaseRef.current === "waiting") {
       const gate = gates[gateIndexRef.current];
       if (gate) {
-        setFocusedNoteIds(new Set(gate.noteIds));
+        setFocusedIfChanged(new Set(gate.noteIds));
         return;
       }
     }
-    setFocusedNoteIds(new Set());
-  }, [gates]);
+    setFocusedIfChanged(new Set());
+  }, [gates, setFocusedIfChanged]);
 
   useEffect(() => {
     if (!enabled) {
@@ -181,7 +224,7 @@ export function useSheetPlaybackEngine({
       const gate = gates[gateIndexRef.current];
       if (!gate) {
         gateProgressRef.current = null;
-        setFocusedNoteIds(new Set());
+        setFocusedIfChanged(new Set());
         return;
       }
       const satisfied = new Set<number>();
@@ -211,7 +254,7 @@ export function useSheetPlaybackEngine({
         updateFocus();
       }
     },
-    [gates, updateFocus]
+    [gates, setFocusedIfChanged, updateFocus]
   );
 
   const advanceGateIfSatisfied = useCallback(() => {
@@ -328,19 +371,24 @@ export function useSheetPlaybackEngine({
             enterWaiting(nowMs);
           }
         }
+        onTickRef.current?.(tRef.current);
         return;
       }
-
-      const lastMs = lastFrameMsRef.current ?? nowMs;
-      const dt = Math.max(0, (nowMs - lastMs) / 1000);
-      lastFrameMsRef.current = nowMs;
 
       let nextTime = tRef.current;
 
       if (autoplay) {
-        // Autoplay: advance continuously, no gate stops
-        nextTime = Math.min(endTime, nextTime + dt * speed);
+        // Autoplay: compute time from wall clock — deterministic, no drift
+        const elapsed =
+          ((nowMs - autoplayStartMsRef.current) / 1000) * speed;
+        nextTime = Math.min(
+          endTime,
+          autoplayStartOffsetRef.current + elapsed
+        );
       } else {
+        const lastMs = lastFrameMsRef.current ?? nowMs;
+        const dt = Math.max(0, (nowMs - lastMs) / 1000);
+        lastFrameMsRef.current = nowMs;
         // Player advancing: move through silence gaps, stop at next gate
         const nextGate = gates[gateIndexRef.current];
         if (phaseRef.current === "running") {
@@ -352,6 +400,7 @@ export function useSheetPlaybackEngine({
               setPlayheadTime(nextTime);
               recomputeActiveNotes(nextTime);
               enterWaiting(nowMs);
+              onTickRef.current?.(tRef.current);
               return;
             }
           } else {
@@ -363,22 +412,40 @@ export function useSheetPlaybackEngine({
           }
         } else {
           // Waiting at gate — don't advance time
+          onTickRef.current?.(tRef.current);
           return;
         }
       }
 
       tRef.current = nextTime;
-      setPlayheadTime(nextTime);
-      recomputeActiveNotes(nextTime);
+      const activeChanged = recomputeActiveNotes(nextTime);
+      if (activeChanged) {
+        setPlayheadTime(nextTime);
+      }
       updateFocus();
 
       if (nextTime >= endTime - EPSILON) {
-        if (autoplay) {
-          setIsAutoplay(false);
-          isAutoplayRef.current = false;
-        }
+        // Reached end of track — reset to start
+        isAutoplayRef.current = false;
+        setIsAutoplay(false);
         playerAdvancingRef.current = false;
+        tRef.current = 0;
+        setPlayheadTime(0);
+        phaseRef.current = "running";
+        setPhase("running");
+        gateIndexRef.current = 0;
+        setGateIndex(0);
+        gateProgressRef.current = null;
+        focusedNoteIdsRef.current = new Set();
+        setFocusedNoteIds(focusedNoteIdsRef.current);
+        activeNoteIdsRef.current = new Set();
+        setActiveNoteIds(activeNoteIdsRef.current);
+        // Fire onTick at time 0 so playhead and viewport snap back
+        onTickRef.current?.(0);
+        return;
       }
+
+      onTickRef.current?.(tRef.current);
     },
     [endTime, enterWaiting, gates, recomputeActiveNotes, speed, updateFocus]
   );
@@ -408,12 +475,15 @@ export function useSheetPlaybackEngine({
     setIsAutoplay(true);
     playerAdvancingRef.current = false;
     lastFrameMsRef.current = null;
+    // Record wall-clock anchor for deterministic autoplay time
+    autoplayStartMsRef.current = performance.now();
+    autoplayStartOffsetRef.current = tRef.current;
     // Clear gate waiting state so autoplay runs freely
     phaseRef.current = "running";
     setPhase("running");
     gateProgressRef.current = null;
-    setFocusedNoteIds(new Set());
-  }, [enabled]);
+    setFocusedIfChanged(new Set());
+  }, [enabled, setFocusedIfChanged]);
 
   const pause = useCallback(() => {
     isAutoplayRef.current = false;
@@ -437,8 +507,10 @@ export function useSheetPlaybackEngine({
     gateIndexRef.current = 0;
     setGateIndex(0);
     gateProgressRef.current = null;
-    setFocusedNoteIds(new Set());
-    setActiveNoteIds(new Set());
+    focusedNoteIdsRef.current = new Set();
+    setFocusedNoteIds(focusedNoteIdsRef.current);
+    activeNoteIdsRef.current = new Set();
+    setActiveNoteIds(activeNoteIdsRef.current);
   }, []);
 
   const seek = useCallback(
@@ -456,6 +528,7 @@ export function useSheetPlaybackEngine({
 
   return {
     playheadTime,
+    playheadTimeRef: tRef,
     focusedNoteIds,
     activeNoteIds,
     isAutoplay,

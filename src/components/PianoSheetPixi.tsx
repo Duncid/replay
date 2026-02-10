@@ -76,27 +76,85 @@ function createStripeTexture(baseHex: string, stripeHex: string) {
   return texture;
 }
 
+export type PianoSheetSize = "xs" | "sm" | "md";
+export type PianoSheetAlign = "start" | "center" | "end";
+
+const BASE_UNITS: Record<PianoSheetSize, number> = {
+  xs: 8,
+  sm: 10,
+  md: 12,
+};
+
 interface PianoSheetPixiProps {
   notes: NoteEvent[];
-  config: SheetConfig;
+  width: number;
+  height: number;
+  size?: PianoSheetSize;
+  align?: PianoSheetAlign;
   timeSignatures?: TimeSignature[];
   qpm?: number;
-  playheadTime?: number;
+  onTickRef: React.MutableRefObject<((timeSec: number) => void) | null>;
   focusedNoteIds?: Set<string>;
   activeNoteIds?: Set<string>;
   followPlayhead?: boolean;
+  isAutoplay?: boolean;
 }
 
 export function PianoSheetPixi({
   notes,
-  config,
+  width,
+  height,
+  size: sizeProp = "md",
+  align = "center",
   timeSignatures,
   qpm,
-  playheadTime = 0,
+  onTickRef,
   focusedNoteIds = new Set(),
   activeNoteIds = new Set(),
   followPlayhead = false,
+  isAutoplay = false,
 }: PianoSheetPixiProps) {
+  const config = useMemo<SheetConfig>(() => {
+    const baseUnit = BASE_UNITS[sizeProp];
+    const noteHeight = baseUnit;
+    const trackGap = 0;
+    const trackStep = noteHeight + trackGap;
+
+    // Compute MIDI range to determine total track height for alignment
+    const minMidi = notes.length
+      ? Math.min(...notes.map((n) => n.midi))
+      : 0;
+    const maxMidi = notes.length
+      ? Math.max(...notes.map((n) => n.midi))
+      : 0;
+    const trackCount = notes.length ? maxMidi - minMidi + 1 : 0;
+    const totalTrackHeight = trackCount * trackStep;
+
+    const minTopY = baseUnit * 2;
+    let trackTopY: number;
+    if (align === "center") {
+      trackTopY = Math.max(minTopY, (height - totalTrackHeight) / 2);
+    } else if (align === "end") {
+      trackTopY = Math.max(minTopY, height - totalTrackHeight - minTopY);
+    } else {
+      // "start"
+      trackTopY = minTopY;
+    }
+
+    return {
+      pixelsPerUnit: baseUnit * 4,
+      noteHeight,
+      noteCornerRadius: baseUnit / 2,
+      trackGap,
+      trackTopY,
+      leftPadding: baseUnit * 1.5,
+      rightPadding: baseUnit * 1.5,
+      viewWidth: width,
+      viewHeight: height,
+      minNoteWidth: Math.max(6, baseUnit * 0.375),
+    };
+  }, [sizeProp, align, width, height, notes]);
+
   const {
     contentWidth,
     noteRects,
@@ -118,8 +176,30 @@ export function PianoSheetPixi({
     textures.set("A#", createStripeTexture(getHex("A"), getHex("B")));
     return textures;
   }, []);
+  // Cache GlowFilter instances per note to avoid re-creating WebGL shaders
+  const glowFilterCache = useRef(new Map<string, GlowFilter>());
+
+  // Clean up stale filter entries when notes change
+  useEffect(() => {
+    const validIds = new Set(noteRects.map((n) => n.id));
+    glowFilterCache.current.forEach((_, id) => {
+      if (!validIds.has(id)) {
+        glowFilterCache.current.delete(id);
+      }
+    });
+  }, [noteRects]);
+
+  // Ref for the playhead PixiJS container — position is updated
+  // imperatively from the RAF loop, bypassing React re-renders.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const playheadContainerRef = useRef<any>(null);
+
   const [viewportX, setViewportX] = useState(0);
+  const viewportXRef = useRef(0);
+  const lastFollowMsRef = useRef<number | null>(null);
   const maxScrollX = Math.max(0, contentWidth - config.viewWidth);
+  const centerOffsetX =
+    contentWidth < config.viewWidth ? (config.viewWidth - contentWidth) / 2 : 0;
   const lastUserScrollMsRef = useRef<number | null>(null);
 
   const clampViewport = useCallback(
@@ -128,7 +208,11 @@ export function PianoSheetPixi({
   );
 
   useEffect(() => {
-    setViewportX((prev) => clampViewport(prev));
+    setViewportX((prev) => {
+      const clamped = clampViewport(prev);
+      viewportXRef.current = clamped;
+      return clamped;
+    });
   }, [clampViewport]);
 
   const dragState = useRef<{
@@ -157,7 +241,9 @@ export function PianoSheetPixi({
       const state = dragState.current;
       if (!state.dragging || state.pointerId !== event.pointerId) return;
       const delta = event.clientX - state.startX;
-      setViewportX(clampViewport(state.startViewportX - delta));
+      const newX = clampViewport(state.startViewportX - delta);
+      viewportXRef.current = newX;
+      setViewportX(newX);
       lastUserScrollMsRef.current = performance.now();
     },
     [clampViewport]
@@ -181,7 +267,11 @@ export function PianoSheetPixi({
         Math.abs(event.deltaX) > Math.abs(event.deltaY)
           ? event.deltaX
           : event.deltaY;
-      setViewportX((prev) => clampViewport(prev + delta));
+      setViewportX((prev) => {
+        const next = clampViewport(prev + delta);
+        viewportXRef.current = next;
+        return next;
+      });
       lastUserScrollMsRef.current = performance.now();
     },
     [clampViewport]
@@ -240,25 +330,56 @@ export function PianoSheetPixi({
   const beatLineAlpha = 0.1;
   const measureLineAlpha = 0.1;
 
+  // Register the onTick handler — called synchronously from the engine's
+  // RAF loop so playhead and viewport update in the same frame, zero lag.
   useEffect(() => {
-    if (!followPlayhead) return;
-    const nowMs = performance.now();
-    const lastUserScrollMs = lastUserScrollMsRef.current;
-    if (lastUserScrollMs && nowMs - lastUserScrollMs < 2000) return;
-    const playheadX = config.leftPadding + playheadTime * config.pixelsPerUnit;
-    const targetViewportX = clampViewport(playheadX - config.viewWidth * 0.33);
-    setViewportX((prev) => {
-      const next = prev + (targetViewportX - prev) * 0.12;
-      return clampViewport(next);
-    });
-  }, [
-    clampViewport,
-    config.leftPadding,
-    config.pixelsPerUnit,
-    config.viewWidth,
-    followPlayhead,
-    playheadTime,
-  ]);
+    onTickRef.current = (timeSec: number) => {
+      const cfg = config;
+      const playheadX = cfg.leftPadding + timeSec * cfg.pixelsPerUnit;
+
+      // Update playhead container position directly on the PixiJS object
+      if (playheadContainerRef.current) {
+        playheadContainerRef.current.x = playheadX;
+      }
+
+      // Viewport follow
+      if (!followPlayhead) return;
+
+      const nowMs = performance.now();
+      const lastUserScrollMs = lastUserScrollMsRef.current;
+      if (lastUserScrollMs && nowMs - lastUserScrollMs < 2000) {
+        lastFollowMsRef.current = null;
+        return;
+      }
+
+      const target = clampViewport(playheadX - cfg.viewWidth * 0.33);
+      const prev = viewportXRef.current;
+
+      let next: number;
+      if (isAutoplay) {
+        // During autoplay the playhead moves at constant speed —
+        // snap the viewport directly so there is zero chase lag.
+        next = target;
+      } else {
+        // Interactive / gate mode: smooth follow with frame-rate-independent damping
+        const dtSec = lastFollowMsRef.current
+          ? Math.min((nowMs - lastFollowMsRef.current) / 1000, 0.1)
+          : 0;
+        const damping = 8;
+        const factor = dtSec > 0 ? 1 - Math.exp(-damping * dtSec) : 1;
+        next = clampViewport(prev + (target - prev) * factor);
+      }
+      lastFollowMsRef.current = nowMs;
+
+      if (Math.abs(next - prev) > 0.5) {
+        viewportXRef.current = next;
+        setViewportX(next);
+      }
+    };
+    return () => {
+      onTickRef.current = null;
+    };
+  }, [config, followPlayhead, isAutoplay, clampViewport, onTickRef]);
 
   return (
     <div
@@ -275,7 +396,7 @@ export function PianoSheetPixi({
         height={config.viewHeight}
         options={{ antialias: true, backgroundAlpha: 0 }}
       >
-        <Container x={-viewportX}>
+        <Container x={centerOffsetX - viewportX}>
           <Graphics
             draw={(g) => {
               g.clear();
@@ -321,37 +442,45 @@ export function PianoSheetPixi({
             const fillColor = hasGradient
               ? lowerNeighborColors[state]
               : noteColors[state];
-            const glowFilter =
-              isFocused || isActive
-                ? new GlowFilter({
-                    distance: isFocused ? 8 : 6,
-                    outerStrength: isFocused ? 3 : 2,
-                    innerStrength: 0,
-                    color: fillColor,
-                    quality: 0.3,
-                    knockout: true,
-                  })
-                : null;
+
+            const showGlow = isFocused || isActive;
+
+            // Reuse or create a cached GlowFilter for this note
+            let filter = glowFilterCache.current.get(note.id);
+            if (!filter) {
+              filter = new GlowFilter({
+                distance: 8,
+                outerStrength: 2,
+                innerStrength: 0,
+                color: 0,
+                quality: 0.3,
+                knockout: true,
+              });
+              glowFilterCache.current.set(note.id, filter);
+            }
+            // Update mutable filter properties to match current state
+            filter.color = fillColor;
+            filter.outerStrength = isFocused ? 3 : 2;
 
             return (
               <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
-                {glowFilter && (
-                  <Graphics
-                    filters={[glowFilter]}
-                    draw={(g) => {
-                      g.clear();
-                      g.beginFill(fillColor);
-                      g.drawRoundedRect(
-                        0,
-                        0,
-                        note.width,
-                        note.height,
-                        config.noteCornerRadius
-                      );
-                      g.endFill();
-                    }}
-                  />
-                )}
+                <Graphics
+                  visible={showGlow}
+                  filters={showGlow ? [filter] : []}
+                  draw={(g) => {
+                    g.clear();
+                    if (!showGlow) return;
+                    g.beginFill(fillColor);
+                    g.drawRoundedRect(
+                      0,
+                      0,
+                      note.width,
+                      note.height,
+                      config.noteCornerRadius
+                    );
+                    g.endFill();
+                  }}
+                />
                 <Graphics
                   draw={(g) => {
                     g.clear();
@@ -373,22 +502,22 @@ export function PianoSheetPixi({
               </Container>
             );
           })}
-          <Graphics
-            draw={(g) => {
-              g.clear();
-              const topY = trackLines[0]?.y ?? config.trackTopY;
-              const bottomY =
-                trackLines.length > 0
-                  ? trackLines[trackLines.length - 1].y + trackHeight
-                  : topY;
-              const x =
-                config.leftPadding + playheadTime * config.pixelsPerUnit;
-              g.lineStyle(2, trackLineColor, 0.9);
-              g.moveTo(x, topY);
-              g.lineTo(x, bottomY);
-              g.lineStyle(0);
-            }}
-          />
+          <Container ref={playheadContainerRef}>
+            <Graphics
+              draw={(g) => {
+                g.clear();
+                const topY = trackLines[0]?.y ?? config.trackTopY;
+                const bottomY =
+                  trackLines.length > 0
+                    ? trackLines[trackLines.length - 1].y + trackHeight
+                    : topY;
+                g.lineStyle(2, trackLineColor, 0.9);
+                g.moveTo(0, topY);
+                g.lineTo(0, bottomY);
+                g.lineStyle(0);
+              }}
+            />
+          </Container>
         </Container>
       </Stage>
     </div>
