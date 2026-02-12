@@ -436,6 +436,10 @@ export function useSheetPlaybackEngine({
         gateIndexRef.current = 0;
         setGateIndex(0);
         gateProgressRef.current = null;
+        // Clear held pitches so keys held during playback don't
+        // immediately satisfy the first gate after reset
+        heldPitchesRef.current.clear();
+        lastNoteOnMsRef.current.clear();
         focusedNoteIdsRef.current = new Set();
         setFocusedNoteIds(focusedNoteIdsRef.current);
         activeNoteIdsRef.current = new Set();
