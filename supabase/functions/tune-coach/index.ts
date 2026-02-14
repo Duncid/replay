@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface TuneMotif {
@@ -89,14 +90,27 @@ function getMeasureRange(n: TuneNugget): string {
   return "unknown";
 }
 
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { tuneKey, localUserId = null, language = "en", debug = false } = await req.json();
+    const {
+      tuneKey,
+      localUserId = null,
+      language = "en",
+      notationPreference: rawNotation = "auto",
+      debug = false,
+    } = await req.json();
+
+    // Resolve effective notation (same as Piano / tune-evaluate: auto -> by language)
+    const effectiveNotation =
+      rawNotation === "auto"
+        ? language === "fr"
+          ? "solfege"
+          : "abc"
+        : rawNotation;
 
     if (!tuneKey) {
       return new Response(JSON.stringify({ error: "tuneKey is required" }), {
@@ -105,7 +119,9 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[tune-coach] Request - tuneKey: ${tuneKey}, user: ${localUserId}, debug: ${debug}`);
+    console.log(
+      `[tune-coach] Request - tuneKey: ${tuneKey}, user: ${localUserId}, debug: ${debug}`,
+    );
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -115,14 +131,16 @@ serve(async (req) => {
     // This ensures we use assets from a successfully published version, not failed/partial publishes
     const { data: tuneAsset, error: tuneError } = await supabase
       .from("tune_assets")
-      .select(`
+      .select(
+        `
         *,
         curriculum_versions!inner (
           id,
           status,
           published_at
         )
-      `)
+      `,
+      )
       .eq("tune_key", tuneKey)
       .eq("curriculum_versions.status", "published")
       .order("curriculum_versions(published_at)", { ascending: false })
@@ -139,14 +157,16 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      
+
       if (fallbackError || !fallbackAsset) {
         return new Response(JSON.stringify({ error: "Tune not found" }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      console.warn(`[tune-coach] Using fallback query for ${tuneKey} - no published version found`);
+      console.warn(
+        `[tune-coach] Using fallback query for ${tuneKey} - no published version found`,
+      );
     }
 
     const briefing = tuneAsset.briefing as TuneBriefing;
@@ -166,7 +186,10 @@ serve(async (req) => {
     );
 
     // 2. Fetch user's nugget/assembly states for this tune
-    let nuggetStatesQuery = supabase.from("tune_nugget_state").select("*").eq("tune_key", tuneKey);
+    let nuggetStatesQuery = supabase
+      .from("tune_nugget_state")
+      .select("*")
+      .eq("tune_key", tuneKey);
 
     if (localUserId) {
       nuggetStatesQuery = nuggetStatesQuery.eq("local_user_id", localUserId);
@@ -233,13 +256,18 @@ serve(async (req) => {
 
     // Motifs info section (raw data, no pass/fail flags)
     const motifsInfoText = (briefing.motifs || [])
-      .map((m) => `- ${m.id} "${m.label}" [importance: ${m.importance}]: ${m.description}`)
+      .map(
+        (m) =>
+          `- ${m.id} "${m.label}" [importance: ${m.importance}]: ${m.description}`,
+      )
       .join("\n");
 
     // Nugget history section (raw data)
     const nuggetHistoryText = practiceHistory
       .map(
-        (h) => `- ${h.nuggetId} "${h.label}" (measures ${h.measureRange}) [motifs: ${h.dependsOn.join(", ") || "none"}]
+        (
+          h,
+        ) => `- ${h.nuggetId} "${h.label}" (measures ${h.measureRange}) [motifs: ${h.dependsOn.join(", ") || "none"}]
     attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}, last practiced: ${h.lastPracticedAt || "never"}`,
       )
       .join("\n");
@@ -247,7 +275,9 @@ serve(async (req) => {
     // Assembly history section (raw data)
     const assemblyHistoryText = assemblyHistory
       .map(
-        (h) => `- ${h.assemblyId} "${h.label}" (Tier ${h.tier}, nuggets: ${h.nuggetIds.join("+")})
+        (
+          h,
+        ) => `- ${h.assemblyId} "${h.label}" (Tier ${h.tier}, nuggets: ${h.nuggetIds.join("+")})
     attempts: ${h.attemptCount}, passes: ${h.passCount}, streak: ${h.currentStreak}/${h.bestStreak}, last practiced: ${h.lastPracticedAt || "never"}`,
       )
       .join("\n");
@@ -256,9 +286,12 @@ serve(async (req) => {
     const fullTuneHistoryText = `- FULL_TUNE "${fullTune.label}"
     attempts: ${fullTuneHistory.attemptCount}, passes: ${fullTuneHistory.passCount}, streak: ${fullTuneHistory.currentStreak}/${fullTuneHistory.bestStreak}, last practiced: ${fullTuneHistory.lastPracticedAt || "never"}`;
 
-    const notationInstruction = language === "fr"
-      ? "NOTE NOTATION: When mentioning notes, use solfège (Do, Ré, Mi, Fa, Sol, La, Si). Do not use ABC letter names."
-      : "NOTE NOTATION: When mentioning notes, use letter names (C, D, E, F, G, A, B).";
+    const notationConvention =
+      effectiveNotation === "abc"
+        ? "Use letter names with octave, e.g. C4, D#5, G3."
+        : language === "fr"
+          ? "Use solfège: Do, Ré, Mi, Fa, Sol, La, Si (with octave), e.g. Do4, Ré5."
+          : "Use solfège: Do, Re, Mi, Fa, Sol, La, Si (with octave), e.g. Do4, Re5.";
 
     const systemPrompt = `You are a piano teacher planning the next practice session for a student learning "${briefing.title}".
 
@@ -276,10 +309,12 @@ PLAN LENGTH:
 
 - ID: ${localUserId || "anonymous"}
 - Language: ${language}
+- Music notation: ${effectiveNotation}. ${notationConvention}
 LANGUAGE INSTRUCTION:
 - Respond in ${language}. Do not mix languages.
 - Keep instructions and encouragement brief.
-${notationInstruction}
+
+USER-FACING TEXT: Never use internal references (nugget IDs like N1, N2, assembly IDs like A1, A2, etc.) in the instruction or encouragement you return. The student does not see these IDs. Use musical language only: refer to measures, phrases, motifs, "the opening", "the section you just practiced", "connecting the short sections", etc.
 
 ---
 
@@ -360,7 +395,8 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
         type: "function",
         function: {
           name: "submit_practice_plan",
-          description: "Submit the practice plan with prioritized items (nuggets and assemblies)",
+          description:
+            "Submit the practice plan with prioritized items (nuggets and assemblies)",
           parameters: {
             type: "object",
             properties: {
@@ -371,26 +407,35 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
                   properties: {
                     itemId: {
                       type: "string",
-                      description: "The nugget/assembly ID (e.g., N1, A2, B1) or FULL_TUNE for full-tune practice",
+                      description:
+                        "The nugget/assembly ID (e.g., N1, A2, B1) or FULL_TUNE for full-tune practice",
                     },
                     itemType: {
                       type: "string",
                       enum: ["nugget", "assembly", "full_tune"],
-                      description: "Whether this is a nugget, assembly, or full tune",
+                      description:
+                        "Whether this is a nugget, assembly, or full tune",
                     },
                     instruction: {
                       type: "string",
-                      description: "Brief instruction/goal for this item (1-2 sentences)",
+                      description:
+                        "Brief instruction for this item (1-2 sentences). Do not mention nugget/assembly IDs (N1, A2, etc.), user do not know them.",
                     },
-                    motifs: { type: "array", items: { type: "string" }, description: "Motif IDs this item practices" },
+                    motifs: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Motif IDs this item practices",
+                    },
                   },
                   required: ["itemId", "itemType", "instruction", "motifs"],
                 },
-                description: "Ordered list of practice items - target about 16 items early in learning, fewer if full tune is included or learner is near mastery",
+                description:
+                  "Ordered list of practice items - target about 16 items early in learning, fewer if full tune is included or learner is near mastery",
               },
               encouragement: {
                 type: "string",
-                description: "Brief encouraging message for the student (1 sentence)",
+                description:
+                  "Brief encouraging message for the student (1 sentence). Do not use nugget or assembly IDs, user do not know them.",
               },
             },
             required: ["practicePlan", "encouragement"],
@@ -406,7 +451,10 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
         { role: "user", content: userPrompt },
       ],
       tools: toolsDefinition,
-      tool_choice: { type: "function", function: { name: "submit_practice_plan" } },
+      tool_choice: {
+        type: "function",
+        function: { name: "submit_practice_plan" },
+      },
     };
 
     // Debug mode: return prompt without LLM call
@@ -449,14 +497,17 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const llmResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
+    const llmResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(debugRequest),
       },
-      body: JSON.stringify(debugRequest),
-    });
+    );
 
     if (!llmResponse.ok) {
       const errorText = await llmResponse.text();
@@ -533,9 +584,14 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
     );
   } catch (error) {
     console.error("[tune-coach] Error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

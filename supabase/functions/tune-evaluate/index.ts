@@ -59,9 +59,16 @@ serve(async (req) => {
       userSequence,
       localUserId = null,
       language = "en",
+      notationPreference: rawNotation = "auto",
       debug = false,
       evalIndex = null,
     } = await req.json();
+
+    // Resolve effective notation (same as Piano: auto -> by language)
+    const effectiveNotation =
+      rawNotation === "auto"
+        ? (language === "fr" ? "solfege" : "abc")
+        : rawNotation;
 
     if (!tuneKey || !nuggetId || !userSequence) {
       return new Response(
@@ -242,6 +249,22 @@ serve(async (req) => {
     const skillsToAward = availableSkills.filter((sk) => !unlockedSkills.includes(sk));
     const isTier3OrFullTune = isAssembly && (assemblyTier === 3 || nuggetId === "FULL_TUNE");
 
+    // Note-name convention for reasoning and feedback (never use MIDI numbers)
+    const noteNameRule =
+      "When referring to pitches in reasoning and feedback, ALWAYS use note names. NEVER use MIDI numbers (e.g. 60, 72).";
+    const notationConvention =
+      effectiveNotation === "abc"
+        ? "Use letter names with octave, e.g. C4, D#5, G3."
+        : language === "fr"
+          ? "Use solfège: Do, Ré, Mi, Fa, Sol, La, Si (with octave), e.g. Do4, Ré5."
+          : "Use solfège: Do, Re, Mi, Fa, Sol, La, Si (with octave), e.g. Do4, Re5.";
+    const reasoningExample =
+      effectiveNotation === "abc"
+        ? "Segment [start-end]: Note 1: C4 vs C4 (good), Note 2: D4 vs D4 (good), Note 3: C4 vs D4 (mistake(D4)), Note 4: (addition), Note 5: (missing G3)"
+        : language === "fr"
+          ? "Segment [start-end]: Note 1: Do4 vs Do4 (good), Note 2: Ré4 vs Ré4 (good), Note 3: Do4 vs Ré4 (mistake(Ré4)), Note 4: (addition), Note 5: (missing Sol3)"
+          : "Segment [start-end]: Note 1: Do4 vs Do4 (good), Note 2: Re4 vs Re4 (good), Note 3: Do4 vs Re4 (mistake(Re4)), Note 4: (addition), Note 5: (missing Sol3)";
+
     // 5. Build LLM prompt
 
     const systemPrompt = `You are a piano practice evaluator. Evaluate the student's performance on a small section (nugget) or assembly of a piece.
@@ -249,6 +272,8 @@ serve(async (req) => {
 STUDENT CONTEXT:
 ${localUserId ? `- Student ID: ${localUserId}` : "- Anonymous student"}
 - Language preference: ${language}
+- Music notation: ${effectiveNotation}. ${notationConvention}
+- ${noteNameRule}
 ${evaluationGuidance ? `
 TUNE-LEVEL EVALUATION GUIDANCE:
 ${evaluationGuidance}
@@ -293,12 +318,13 @@ GRADING:
 
 REASONING REQUIREMENT (CRITICAL):
 Before giving your evaluation, you MUST show your note-by-note comparison in the "reasoning" field.
-Format: "Segment [start-end]: Note 1: [user pitch] vs [target pitch] (good/mistake), Note 2: ..."
+Use note names only (e.g. C4 or Do4). Do not use pitch numbers.
+Format: "${reasoningExample}"
 For each note, mark as:
 - "good" if pitches match exactly
-- "mistake([expected])" if pitch is wrong, showing what was expected
+- "mistake([expected])" if pitch is wrong, showing what was expected (use note name)
 - "(addition)" if user played an extra note not in target
-- "(missing [pitch])" if a target note was not played
+- "(missing [note name])" if a target note was not played
 Then briefly note timing observations.
 Your evaluation grade MUST be consistent with this analysis. If all notes are marked "good", the evaluation MUST be "pass" (assuming timing is acceptable).
 
@@ -310,7 +336,7 @@ FEEDBACK STYLE:
 - If they passed, acknowledge what they did well
 - User is playing, the feedback MUST BE very brief and focused. A few words, referencing specific aspects of their performance.
 - Focus on the one or two most important aspects to improve.
-- If there is a problem with notes, mention which notes (by name and index number in the sample) were incorrect or missing.
+- If there is a problem with notes, mention which notes (by name and index number in the sample) were incorrect or missing. Always use note names (never MIDI numbers).
 - Be factual, avoid judgemental language.
 - If there were multiple attempts, mention consistency (or inconsistency) briefly`;
 
@@ -330,7 +356,8 @@ FEEDBACK STYLE:
               reasoning: {
                 type: "string",
                 description: `REQUIRED FIRST: Show your work by comparing the chosen segment note-by-note.
-Format for pitch analysis: "Segment [start-end]: Note 1: 72 vs 72 (good), Note 2: 73 vs 73 (good), Note 3: 71 vs 72 (mistake), Note 4: (addition), Note 5: (missing 66)"
+Use note names only (e.g. C4 or Do4). Do not use pitch numbers.
+Format: "${reasoningExample}"
 Then briefly explain timing assessment.
 This field MUST be completed before deciding the evaluation grade.
 Your final evaluation MUST be consistent with this analysis.`,

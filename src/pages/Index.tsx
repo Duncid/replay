@@ -1403,6 +1403,7 @@ const Index = () => {
     },
     onCompleteRecordingNow: () => learnRecordingManager.completeNow(),
     language,
+    notationPreference: musicNotation,
     model: selectedModel,
     debugMode,
     localUserId: currentUserId,
