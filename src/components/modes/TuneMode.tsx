@@ -522,14 +522,6 @@ export function TuneMode({
       // Reset recording state when playing sample
       lastProcessedRecording.current = null;
       setIsEvaluating(false);
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-        preEvalTimer.current = null;
-      }
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-        silenceTimer.current = null;
-      }
 
       // Get note sequence from nugget, assembly, or full tune
       const noteSequence =
@@ -560,14 +552,6 @@ export function TuneMode({
     setEvalDebugData(null);
     lastProcessedRecordingIdRef.current = null;
     lastProcessedSignatureRef.current = null;
-    if (preEvalTimer.current) {
-      clearTimeout(preEvalTimer.current);
-      preEvalTimer.current = null;
-    }
-    if (silenceTimer.current) {
-      clearTimeout(silenceTimer.current);
-      silenceTimer.current = null;
-    }
   }, [nextNugget, currentRecording, clearEvaluation]);
 
   const handlePreviousNugget = useCallback(() => {
@@ -590,14 +574,6 @@ export function TuneMode({
     setEvalDebugData(null);
     lastProcessedRecordingIdRef.current = null;
     lastProcessedSignatureRef.current = null;
-    if (preEvalTimer.current) {
-      clearTimeout(preEvalTimer.current);
-      preEvalTimer.current = null;
-    }
-    if (silenceTimer.current) {
-      clearTimeout(silenceTimer.current);
-      silenceTimer.current = null;
-    }
   }, [previousNugget, currentRecording, clearEvaluation, state.currentIndex]);
 
   useEffect(() => {

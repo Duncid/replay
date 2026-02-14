@@ -66,36 +66,18 @@ interface TunePracticeProps {
 
 const STREAK_THRESHOLD = 3;
 
-// Status display for top left: only "Evaluating" when sending, nothing when listening
+// Status display for top left: only "Sending" when sending, nothing when listening
 function StatusDisplay({
   isEvaluating,
   labels,
-  debugMode,
-  currentEvalIndex,
-  pendingEvalIndex,
 }: {
   isEvaluating: boolean;
   labels: { sending: string };
-  debugMode?: boolean;
-  currentEvalIndex?: number;
-  pendingEvalIndex?: number;
 }) {
   if (isEvaluating) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
         <span className="text-sm font-medium">{labels.sending}</span>
-        {debugMode && pendingEvalIndex !== undefined && (
-          <span className="text-xs font-mono text-muted-foreground/70">
-            #{pendingEvalIndex}
-          </span>
-        )}
-      </div>
-    );
-  }
-  if (debugMode && currentEvalIndex !== undefined) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground min-h-[24px]">
-        <span className="text-xs font-mono">Eval #{currentEvalIndex}</span>
       </div>
     );
   }
@@ -209,7 +191,7 @@ function StreakDisplay({
   }, [totalWins, fires.length, lastEvaluation]);
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-2 h-8", className)}>
       {fires.map((fireId) => (
         <span key={fireId} className="text-lg">
           🔥
@@ -445,17 +427,11 @@ export function TunePractice({
   return (
     <div className="relative flex h-full w-full flex-col gap-4 py-2">
       <div className="absolute top-0 left-0 flex items-center justify-between p-2 gap-2">
-        <StatusDisplay
-          isEvaluating={isEvaluating}
-          labels={statusLabels}
-          debugMode={debugMode}
-          currentEvalIndex={currentEvalIndex}
-          pendingEvalIndex={pendingEvalIndex}
-        />
+        <StatusDisplay isEvaluating={isEvaluating} labels={statusLabels} />
       </div>
 
       <div className="flex flex-1 flex-col items-center gap-2">
-        <div className="flex flex-col items-center justify-end gap-4 pt-12">
+        <div className="flex flex-col items-center justify-end px-3">
           <StreakDisplay
             totalWins={totalWins}
             lastEvaluation={lastEvaluation}
@@ -619,7 +595,7 @@ export function TunePractice({
         </SheetContent>
       </Sheet>
 
-      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-4 my-1 p-1">
+      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-4">
         <div className="flex items-center justify-start gap-1">
           <Button
             variant="ghost"
@@ -632,14 +608,15 @@ export function TunePractice({
           </Button>
         </div>
         <div className="flex items-center justify-center gap-1">
-          <div className="bg-key-black p-2 border border-border rounded-xl ">
+          <div className="bg-key-black p-1 border border-border rounded-2xl ">
             <Button
               variant="default"
               onClick={onPlaySample}
               disabled={isPlaying}
               size="sm"
             >
-              <Play fill="currentColor" stroke="none" /> {t("tune.buttons.replay")}
+              <Play fill="currentColor" stroke="none" />{" "}
+              {t("tune.buttons.replay")}
             </Button>
             <Button
               variant="ghost"
