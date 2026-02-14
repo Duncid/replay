@@ -7,6 +7,7 @@ interface StartTunePracticeParams {
   tuneKey: string;
   localUserId?: string | null;
   language?: string;
+  notationPreference?: "auto" | "abc" | "solfege";
   debug?: boolean;
 }
 
@@ -16,6 +17,7 @@ interface EvaluateTuneAttemptParams {
   userSequence: unknown;
   localUserId?: string | null;
   language?: string;
+  notationPreference?: "auto" | "abc" | "solfege";
   debug?: boolean;
   evalIndex?: number;
 }
@@ -28,6 +30,7 @@ export function useStartTunePractice() {
           tuneKey: params.tuneKey,
           localUserId: params.localUserId,
           language: params.language || "en",
+          notationPreference: params.notationPreference ?? "auto",
           debug: params.debug || false,
         },
       });
@@ -51,6 +54,7 @@ export function useEvaluateTuneAttempt() {
           userSequence: params.userSequence,
           localUserId: params.localUserId,
           language: params.language || "en",
+          notationPreference: params.notationPreference ?? "auto",
           debug: params.debug || false,
           evalIndex: params.evalIndex,
         },

@@ -81,6 +81,7 @@ interface LearnModeProps {
   /** When provided (tune mode), complete the current recording immediately (e.g. when playhead reaches end). */
   onCompleteRecordingNow?: () => void;
   language: string;
+  notationPreference?: "auto" | "abc" | "solfege";
   model: string;
   debugMode: boolean;
   localUserId?: string | null;
@@ -108,6 +109,7 @@ export function LearnMode({
   onClearRecording,
   onCompleteRecordingNow,
   language,
+  notationPreference,
   model,
   debugMode,
   localUserId,
@@ -579,6 +581,7 @@ export function LearnMode({
           tuneKey={activeTuneKey}
           localUserId={localUserId}
           language={language}
+          notationPreference={notationPreference}
           debugMode={debugMode}
           onLeave={handleLeave}
           onPlaySample={onPlaySequence}

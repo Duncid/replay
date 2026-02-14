@@ -30,6 +30,7 @@ interface TuneModeProps {
   tuneKey: string;
   localUserId?: string | null;
   language?: string;
+  notationPreference?: "auto" | "abc" | "solfege";
   debugMode?: boolean;
   onLeave: () => void;
   onPlaySample: (sequence: INoteSequence) => void;
@@ -50,6 +51,7 @@ export function TuneMode({
   tuneKey,
   localUserId,
   language = "en",
+  notationPreference = "auto",
   debugMode = false,
   onLeave,
   onPlaySample,
@@ -233,6 +235,7 @@ export function TuneMode({
             userSequence: sanitizedRecording,
             localUserId,
             language,
+            notationPreference,
             debug: true,
             evalIndex: currentEvalIndex,
           });
@@ -260,6 +263,7 @@ export function TuneMode({
             userSequence: sanitizedRecording,
             localUserId,
             language,
+            notationPreference,
             debug: false,
             evalIndex: currentEvalIndex,
           });
@@ -313,6 +317,7 @@ export function TuneMode({
             userSequence: sanitizedRecording,
             localUserId,
             language,
+            notationPreference,
             debug: false,
             evalIndex: currentEvalIndex,
           });
@@ -464,6 +469,7 @@ export function TuneMode({
         tuneKey,
         localUserId,
         language,
+        notationPreference,
         debug: false,
       });
 
@@ -492,6 +498,7 @@ export function TuneMode({
           tuneKey,
           localUserId,
           language,
+          notationPreference,
           debug: true,
         }).then((debugResponse) => {
           const promptText = (debugResponse as any).prompt;
