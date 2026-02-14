@@ -1,4 +1,8 @@
-import { PianoSheetPixi } from "@/components/PianoSheetPixi";
+import {
+  getRecommendedPianoSheetSize,
+  PianoSheetPixi,
+  type PianoSheetSize,
+} from "@/components/PianoSheetPixi";
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
 import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
 import { Badge } from "@/components/ui/badge";
@@ -338,6 +342,13 @@ export function TunePractice({
   const pixiContainerRef = useRef<HTMLDivElement>(null);
   const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
 
+  const updatePixiSizeFromRef = useCallback(() => {
+    const el = pixiContainerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    setPixiSize({ width, height });
+  }, []);
+
   useLayoutEffect(() => {
     const el = pixiContainerRef.current;
     if (!el) return;
@@ -348,8 +359,62 @@ export function TunePractice({
       setPixiSize({ width, height });
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    // Initial measurement in case the first callback had zero size
+    const raf = requestAnimationFrame(() => {
+      const { width, height } = el.getBoundingClientRect();
+      setPixiSize((prev) =>
+        prev.width === width && prev.height === height ? prev : { width, height }
+      );
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
   }, []);
+
+  // Re-measure when notes appear so we get correct size after layout settles
+  useEffect(() => {
+    if (notes.length === 0) return;
+    const raf = requestAnimationFrame(() => updatePixiSizeFromRef());
+    return () => cancelAnimationFrame(raf);
+  }, [notes.length, updatePixiSizeFromRef]);
+
+  // Fallback: window resize — read container size after reflow so canvas gets correct dimensions.
+  // ResizeObserver may not fire when only the window changes; read after rAF so layout is applied.
+  const resizeDebounceMs = 80;
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
+    const onResize = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        // Read after the next frame so flex layout has been recalculated
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          updatePixiSizeFromRef();
+        });
+      }, resizeDebounceMs);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [updatePixiSizeFromRef]);
+
+  // Adaptive size: pick largest preset that fits available height
+  const trackCount = useMemo(() => {
+    if (notes.length === 0) return 0;
+    const minMidi = Math.min(...notes.map((n) => n.midi));
+    const maxMidi = Math.max(...notes.map((n) => n.midi));
+    return maxMidi - minMidi + 1;
+  }, [notes]);
+  const pianoSheetSize = useMemo((): PianoSheetSize => {
+    if (pixiSize.height <= 0) return "md";
+    return getRecommendedPianoSheetSize(pixiSize.height, trackCount);
+  }, [pixiSize.height, trackCount]);
 
   // ── PianoSheetPixi: playback engine ───────────────────────────────
   const onTickRef = useRef<((timeSec: number) => void) | null>(null);
@@ -442,24 +507,28 @@ export function TunePractice({
         </div>
 
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
+          {/* Outer div is sized by flex only; inner div + canvas are out-of-flow so they don't prevent shrinking */}
           <div
             ref={pixiContainerRef}
-            className="w-full flex-1 min-h-0 overflow-hidden"
+            className="relative w-full flex-1 min-h-0 overflow-hidden"
           >
-            {pixiSize.width > 0 && pixiSize.height > 0 && notes.length > 0 && (
-              <PianoSheetPixi
-                notes={notes}
-                width={pixiSize.width}
-                height={pixiSize.height}
-                timeSignatures={sampleSequence?.timeSignatures}
-                qpm={bpm}
-                onTickRef={onTickRef}
-                focusedNoteIds={playback.focusedNoteIds}
-                activeNoteIds={playback.activeNoteIds}
-                followPlayhead
-                isAutoplay={playback.isAutoplay}
-              />
-            )}
+            <div className="absolute inset-0 w-full h-full">
+              {pixiSize.width > 0 && pixiSize.height > 0 && notes.length > 0 && (
+                <PianoSheetPixi
+                  notes={notes}
+                  width={pixiSize.width}
+                  height={pixiSize.height}
+                  size={pianoSheetSize}
+                  timeSignatures={sampleSequence?.timeSignatures}
+                  qpm={bpm}
+                  onTickRef={onTickRef}
+                  focusedNoteIds={playback.focusedNoteIds}
+                  activeNoteIds={playback.activeNoteIds}
+                  followPlayhead
+                  isAutoplay={playback.isAutoplay}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

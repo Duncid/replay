@@ -625,40 +625,44 @@ export function TuneMode({
   }
 
   // Practice phase - THE MAIN CONTINUOUS SCREEN
+  // Wrapper gives TunePractice a proper height chain (TabsContent uses items-center;
+  // without this, the pixi container can get 0 or wrong size on resize).
   if (state.phase === "practicing" && currentNugget) {
     return (
       <>
-        <TunePractice
-          tuneTitle={state.tuneTitle}
-          currentNugget={currentNugget}
-          currentIndex={state.currentIndex}
-          totalNuggets={state.practicePlan.length}
-          currentStreak={state.currentStreak}
-          totalWins={state.totalWins}
-          lastEvaluation={state.lastEvaluation}
-          onPlaySample={() => handlePlaySample(true)}
-          onSwitchNugget={handleSwitchNugget}
-          onPreviousNugget={handlePreviousNugget}
-          onLeave={onLeave}
-          isPlaying={isPlayingSample}
-          isEvaluating={isEvaluating}
-          isRecording={isRecording}
-          onPlayheadReachedEnd={onPlayheadReachedEnd}
-          debugMode={debugMode}
-          practicePlan={state.practicePlan}
-          currentEvalIndex={state.currentEvalIndex}
-          pendingEvalIndex={pendingEvalIndex}
-          onRegisterNoteHandler={onRegisterNoteHandler}
-          onRegisterNoteOffHandler={onRegisterNoteOffHandler}
-          evalPrompt={lastEvalPrompt}
-          evalAnswer={lastEvalAnswer}
-          evalDecision={lastEvalDecision}
-          evalDebugData={evalDebugData}
-          showPlanSheet={showPlanSheet}
-          onShowPlanSheetChange={setShowPlanSheet}
-          showEvalDebug={showEvalDebug}
-          onShowEvalDebugChange={setShowEvalDebug}
-        />
+        <div className="w-full h-full min-h-0 flex flex-col">
+          <TunePractice
+            tuneTitle={state.tuneTitle}
+            currentNugget={currentNugget}
+            currentIndex={state.currentIndex}
+            totalNuggets={state.practicePlan.length}
+            currentStreak={state.currentStreak}
+            totalWins={state.totalWins}
+            lastEvaluation={state.lastEvaluation}
+            onPlaySample={() => handlePlaySample(true)}
+            onSwitchNugget={handleSwitchNugget}
+            onPreviousNugget={handlePreviousNugget}
+            onLeave={onLeave}
+            isPlaying={isPlayingSample}
+            isEvaluating={isEvaluating}
+            isRecording={isRecording}
+            onPlayheadReachedEnd={onPlayheadReachedEnd}
+            debugMode={debugMode}
+            practicePlan={state.practicePlan}
+            currentEvalIndex={state.currentEvalIndex}
+            pendingEvalIndex={pendingEvalIndex}
+            onRegisterNoteHandler={onRegisterNoteHandler}
+            onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+            evalPrompt={lastEvalPrompt}
+            evalAnswer={lastEvalAnswer}
+            evalDecision={lastEvalDecision}
+            evalDebugData={evalDebugData}
+            showPlanSheet={showPlanSheet}
+            onShowPlanSheetChange={setShowPlanSheet}
+            showEvalDebug={showEvalDebug}
+            onShowEvalDebugChange={setShowEvalDebug}
+          />
+        </div>
         {/* Coach LLM Call Sheet (opened from action bar debug dropdown) */}
         <DebugLLMSheet
           title="Coach LLM Call"
