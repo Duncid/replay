@@ -9,7 +9,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { useSheetPlaybackEngine } from "@/hooks/useSheetPlaybackEngine";
 import { cn } from "@/lib/utils";
@@ -20,7 +19,7 @@ import type {
   TuneEvaluationResponse,
 } from "@/types/tunePractice";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { ArrowLeft, ArrowRight, List, Minus, Play, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, RotateCcw, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -37,8 +36,10 @@ interface TunePracticeProps {
   currentIndex: number;
   totalNuggets: number;
   currentStreak: number;
+  totalWins: number;
   lastEvaluation?: TuneEvaluationResponse | null;
   onPlaySample: () => void;
+  onPlayheadReachedEnd?: () => void;
   onSwitchNugget: () => void;
   onPreviousNugget: () => void;
   onLeave: () => void;
@@ -57,116 +58,70 @@ interface TunePracticeProps {
   evalAnswer?: string | null;
   evalDecision?: string | null;
   evalDebugData?: TuneEvaluationDebugData | null;
+  showPlanSheet?: boolean;
+  onShowPlanSheetChange?: (open: boolean) => void;
+  showEvalDebug?: boolean;
+  onShowEvalDebugChange?: (open: boolean) => void;
 }
 
 const STREAK_THRESHOLD = 3;
 
-// Status display for top left (Playing, Sending, or Close evaluation)
+// Status display for top left: only "Sending" when sending, nothing when listening
 function StatusDisplay({
-  isRecording,
   isEvaluating,
-  lastEvaluation,
   labels,
-  debugMode,
-  currentEvalIndex,
-  pendingEvalIndex,
 }: {
-  isRecording: boolean;
   isEvaluating: boolean;
-  lastEvaluation?: TuneEvaluationResponse | null;
-  labels: { playing: string; sending: string; close: string };
-  debugMode?: boolean;
-  currentEvalIndex?: number;
-  pendingEvalIndex?: number;
+  labels: { sending: string };
 }) {
-  if (isRecording && !isEvaluating) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <span className="text-sm font-medium">{labels.playing}</span>
-      </div>
-    );
-  }
-
   if (isEvaluating) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
         <span className="text-sm font-medium">{labels.sending}</span>
-        {debugMode && pendingEvalIndex !== undefined && (
-          <span className="text-xs font-mono text-muted-foreground/70">
-            #{pendingEvalIndex}
-          </span>
-        )}
       </div>
     );
   }
-
-  // Only show "close" evaluation (pass/fail are shown in streak display)
-  if (lastEvaluation?.evaluation === "close") {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
-        <Minus className="h-4 w-4" />
-        <span className="text-sm font-medium">{labels.close}</span>
-        {debugMode && currentEvalIndex !== undefined && (
-          <span className="text-xs font-mono opacity-70">
-            #{currentEvalIndex}
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  // Show eval index in debug mode when there's a recent evaluation
-  if (debugMode && currentEvalIndex !== undefined && lastEvaluation) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground min-h-[24px]">
-        <span className="text-xs font-mono">Eval #{currentEvalIndex}</span>
-      </div>
-    );
-  }
-
   return <div className="min-h-[24px]" />;
 }
 
-// Streak display component for bottom left
+// Wins display: totalWins flames; on pass add new ones with animation, on fail/close only show message (no removal)
 function StreakDisplay({
+  totalWins,
   lastEvaluation,
   currentNuggetId,
   messages,
   className,
 }: {
+  totalWins: number;
   lastEvaluation?: TuneEvaluationResponse | null;
   currentNuggetId: string;
   messages: { success: string; fail: string; close: string };
   className?: string;
 }) {
-  const [fires, setFires] = useState<number[]>([]); // Array of unique IDs for fires to enable staggered removal
+  const [fires, setFires] = useState<number[]>([]);
   const [tempMessage, setTempMessage] = useState<
     "success" | "fail" | "close" | null
   >(null);
   const [messageVisible, setMessageVisible] = useState(false);
-  const [isRemovingFires, setIsRemovingFires] = useState(false);
   const nextFireIdRef = useRef(0);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const prevTotalWinsRef = useRef(0);
 
   // Reset on nugget change
   useEffect(() => {
-    // Clear all timeouts
     timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
     timeoutRefs.current = [];
-
     setFires([]);
     setTempMessage(null);
     setMessageVisible(false);
-    setIsRemovingFires(false);
+    prevTotalWinsRef.current = 0;
   }, [currentNuggetId]);
 
-  // Handle evaluation changes
+  // Handle evaluation: on pass add new flames with animation; on fail/close show message only
   useEffect(() => {
     if (!lastEvaluation) {
       return;
     }
-
-    // Clear any existing timeouts
     timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
     timeoutRefs.current = [];
 
@@ -174,12 +129,8 @@ function StreakDisplay({
 
     if (evaluation === "pass") {
       const successCount = Math.max(1, lastEvaluation.successCount ?? 1);
-      // Success: show "success", then add fire(s)
       setTempMessage("success");
-      // Trigger fade-in after a tiny delay to ensure transition
-      const fadeInTimer = setTimeout(() => {
-        setMessageVisible(true);
-      }, 10);
+      const fadeInTimer = setTimeout(() => setMessageVisible(true), 10);
       timeoutRefs.current.push(fadeInTimer);
 
       const initialDelay = 1200;
@@ -198,61 +149,24 @@ function StreakDisplay({
         );
         timeoutRefs.current.push(timer);
       }
+      prevTotalWinsRef.current = totalWins;
     } else if (evaluation === "fail") {
-      // Fail: show "woops", then remove fires one by one
       setTempMessage("fail");
-      const fadeInTimer = setTimeout(() => {
-        setMessageVisible(true);
-      }, 10);
+      const fadeInTimer = setTimeout(() => setMessageVisible(true), 10);
       timeoutRefs.current.push(fadeInTimer);
-
-      // Get current fires to schedule removal
-      setFires((currentFires) => {
-        if (currentFires.length === 0) {
-          // If no fires, just hide message after showing
-          const timer = setTimeout(() => {
-            setTempMessage(null);
-            setMessageVisible(false);
-          }, 2000);
-          timeoutRefs.current.push(timer);
-        } else {
-          // Remove fires one by one with 500ms delay
-          setIsRemovingFires(true);
-          const firesCopy = [...currentFires];
-          firesCopy.forEach((fireId, index) => {
-            const timer = setTimeout(
-              () => {
-                setFires((prev) => {
-                  const updated = prev.filter((id) => id !== fireId);
-                  if (index === firesCopy.length - 1) {
-                    // Last fire removed
-                    setIsRemovingFires(false);
-                    setTempMessage(null);
-                    setMessageVisible(false);
-                  }
-                  return updated;
-                });
-              },
-              (index + 1) * 500,
-            );
-            timeoutRefs.current.push(timer);
-          });
-        }
-        return currentFires; // Return unchanged for now, removal happens in timeouts
-      });
-    } else if (evaluation === "close") {
-      // Close: show "Close!" but don't change fires
-      setTempMessage("close");
-      const fadeInTimer = setTimeout(() => {
-        setMessageVisible(true);
-      }, 10);
-      timeoutRefs.current.push(fadeInTimer);
-
       const timer = setTimeout(() => {
         setTempMessage(null);
         setMessageVisible(false);
       }, 2000);
-
+      timeoutRefs.current.push(timer);
+    } else if (evaluation === "close") {
+      setTempMessage("close");
+      const fadeInTimer = setTimeout(() => setMessageVisible(true), 10);
+      timeoutRefs.current.push(fadeInTimer);
+      const timer = setTimeout(() => {
+        setTempMessage(null);
+        setMessageVisible(false);
+      }, 2000);
       timeoutRefs.current.push(timer);
     }
 
@@ -260,27 +174,29 @@ function StreakDisplay({
       timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
       timeoutRefs.current = [];
     };
-  }, [lastEvaluation]);
+  }, [lastEvaluation, totalWins]);
+
+  // Sync fires length to totalWins when we're behind (e.g. initial load or state sync)
+  useEffect(() => {
+    if (fires.length < totalWins && !lastEvaluation) {
+      const toAdd = totalWins - fires.length;
+      setFires((prev) => {
+        const next = [...prev];
+        for (let i = 0; i < toAdd; i++) {
+          next.push(nextFireIdRef.current++);
+        }
+        return next;
+      });
+    }
+  }, [totalWins, fires.length, lastEvaluation]);
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      {/* Fires */}
-      {fires.map((fireId, index) => (
-        <span
-          key={fireId}
-          className={cn(
-            "text-lg transition-opacity duration-300",
-            isRemovingFires ? "opacity-0" : "opacity-100",
-          )}
-          style={{
-            transitionDelay: isRemovingFires ? `${index * 500}ms` : "0ms",
-          }}
-        >
+    <div className={cn("flex items-center gap-2 h-8", className)}>
+      {fires.map((fireId) => (
+        <span key={fireId} className="text-lg">
           🔥
         </span>
       ))}
-
-      {/* Temporary message */}
       {tempMessage && (
         <span
           className={cn(
@@ -306,6 +222,7 @@ export function TunePractice({
   currentNugget,
   currentIndex,
   currentStreak,
+  totalWins,
   lastEvaluation,
   onPlaySample,
   onSwitchNugget,
@@ -314,6 +231,7 @@ export function TunePractice({
   isPlaying = false,
   isEvaluating = false,
   isRecording = false,
+  onPlayheadReachedEnd,
   debugMode = false,
   practicePlan = [],
   currentEvalIndex,
@@ -324,14 +242,16 @@ export function TunePractice({
   evalAnswer,
   evalDecision,
   evalDebugData,
+  showPlanSheet = false,
+  onShowPlanSheetChange,
+  showEvalDebug = false,
+  onShowEvalDebugChange,
 }: TunePracticeProps) {
   const { t } = useTranslation();
-  const streakComplete = currentStreak >= STREAK_THRESHOLD;
+  const streakComplete = totalWins >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
-  const [showPlanSheet, setShowPlanSheet] = useState(false);
   const [commentKey, setCommentKey] = useState(0);
-  const [showEvalDebug, setShowEvalDebug] = useState(false);
   const isFirstNugget = currentIndex === 0;
   const handleCopyEvalDebug = async () => {
     const promptText = evalPrompt?.trim() ?? "";
@@ -357,9 +277,7 @@ export function TunePractice({
     document.body.removeChild(textarea);
   };
   const statusLabels = {
-    playing: t("tune.status.playing"),
     sending: t("tune.status.sending"),
-    close: t("tune.status.close"),
   };
   const streakMessages = {
     success: t("tune.feedback.greatJob"),
@@ -449,6 +367,7 @@ export function TunePractice({
     notes,
     enabled: notes.length > 0,
     onTick,
+    onReachedEnd: onPlayheadReachedEnd,
   });
 
   const bpm = useMemo(() => {
@@ -508,115 +427,23 @@ export function TunePractice({
   return (
     <div className="relative flex h-full w-full flex-col gap-4 py-2">
       <div className="absolute top-0 left-0 flex items-center justify-between p-2 gap-2">
-        <StatusDisplay
-          isRecording={isRecording}
-          isEvaluating={isEvaluating}
-          lastEvaluation={lastEvaluation}
-          labels={statusLabels}
-          debugMode={debugMode}
-          currentEvalIndex={currentEvalIndex}
-          pendingEvalIndex={pendingEvalIndex}
-        />
-        <div className="flex items-center gap-2">
-          {debugMode && practicePlan.length > 0 && (
-            <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" title="View Practice Plan">
-                  <List />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
-                <SheetHeader>
-                  <SheetTitle>Practice Plan</SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-100px)] mt-4">
-                  <div className="space-y-4 pr-4">
-                    {practicePlan.map((item, index) => {
-                      const isCurrent = index === currentIndex;
-                      const itemTypeLabel =
-                        item.itemType === "nugget"
-                          ? "Nugget"
-                          : item.itemType === "assembly"
-                            ? "Assembly"
-                            : "Full Tune";
-
-                      return (
-                        <div
-                          key={`${item.itemId}-${index}`}
-                          className={cn(
-                            "p-4 rounded-lg border",
-                            isCurrent
-                              ? "border-primary bg-primary/5"
-                              : "border-border bg-muted/30",
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-mono text-muted-foreground">
-                                {index + 1}.
-                              </span>
-                              <span className="font-medium font-mono text-sm">
-                                {item.itemId}
-                              </span>
-                              <Badge
-                                variant={isCurrent ? "default" : "outline"}
-                                className="text-xs"
-                              >
-                                {itemTypeLabel}
-                              </Badge>
-                              {isCurrent && (
-                                <Badge variant="default" className="text-xs">
-                                  Current
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-sm text-foreground mb-2">
-                            {item.instruction}
-                          </p>
-                          {item.motifs && item.motifs.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              <span className="text-xs text-muted-foreground">
-                                Motifs:
-                              </span>
-                              {item.motifs.map((motif) => (
-                                <Badge
-                                  key={motif}
-                                  variant="secondary"
-                                  className="text-xs"
-                                >
-                                  {motif}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </SheetContent>
-            </Sheet>
-          )}
-        </div>
+        <StatusDisplay isEvaluating={isEvaluating} labels={statusLabels} />
       </div>
 
       <div className="flex flex-1 flex-col items-center gap-2">
-        <div className="flex flex-col items-center justify-end gap-4 pt-12">
+        <div className="flex flex-col items-center justify-end px-3">
+          <StreakDisplay
+            totalWins={totalWins}
+            lastEvaluation={lastEvaluation}
+            currentNuggetId={currentNugget.itemId}
+            messages={streakMessages}
+          />
           <p
             key={commentKey}
             className="text-foreground text-center text-base px-3 comment-typing motion-reduce:animate-none"
           >
             {lastEvaluation ? commentText : currentNugget.instruction}
           </p>
-          <Button
-            variant="default"
-            size="play"
-            onClick={onPlaySample}
-            disabled={isPlaying}
-          >
-            <Play fill="currentColor" stroke="none" />
-          </Button>
         </div>
 
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
@@ -642,11 +469,134 @@ export function TunePractice({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center justify-between px-2">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={onLeave} size="sm">
-            <X /> Leave
-          </Button>
+      {/* Practice Plan Sheet (opened from action bar debug dropdown) */}
+      <Sheet
+        open={showPlanSheet}
+        onOpenChange={(open) => onShowPlanSheetChange?.(open)}
+      >
+        <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+          <SheetHeader>
+            <SheetTitle>Practice Plan</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100vh-100px)] mt-4">
+            <div className="space-y-4 pr-4">
+              {practicePlan.map((item, index) => {
+                const isCurrent = index === currentIndex;
+                const itemTypeLabel =
+                  item.itemType === "nugget"
+                    ? "Nugget"
+                    : item.itemType === "assembly"
+                      ? "Assembly"
+                      : "Full Tune";
+
+                return (
+                  <div
+                    key={`${item.itemId}-${index}`}
+                    className={cn(
+                      "p-4 rounded-lg border",
+                      isCurrent
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-muted/30",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-mono text-muted-foreground">
+                          {index + 1}.
+                        </span>
+                        <span className="font-medium font-mono text-sm">
+                          {item.itemId}
+                        </span>
+                        <Badge
+                          variant={isCurrent ? "default" : "outline"}
+                          className="text-xs"
+                        >
+                          {itemTypeLabel}
+                        </Badge>
+                        {isCurrent && (
+                          <Badge variant="default" className="text-xs">
+                            Current
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-foreground mb-2">
+                      {item.instruction}
+                    </p>
+                    {item.motifs && item.motifs.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <span className="text-xs text-muted-foreground">
+                          Motifs:
+                        </span>
+                        {item.motifs.map((motif) => (
+                          <Badge
+                            key={motif}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            {motif}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Eval Debug Sheet (opened from action bar debug dropdown) */}
+      <Sheet
+        open={showEvalDebug}
+        onOpenChange={(open) => onShowEvalDebugChange?.(open)}
+      >
+        <SheetContent side="right" className="w-[520px] sm:max-w-[520px]">
+          <SheetHeader>
+            <div className="flex items-center justify-between gap-3">
+              <SheetTitle>Eval debug</SheetTitle>
+            </div>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100vh-140px)] mt-4">
+            <div className="space-y-3">
+              {evalDebugData ? (
+                <TuneEvaluationNotesTable debugData={evalDebugData} />
+              ) : null}
+              <div className="flex justify-end items-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyEvalDebug}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-4 text-sm">
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground mb-1">
+                  Prompt
+                </div>
+                <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                  {evalPrompt || "No prompt available."}
+                </pre>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground mb-1">
+                  Answer
+                </div>
+                <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                  {evalAnswer || "No answer available."}
+                </pre>
+              </div>
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-4">
+        <div className="flex items-center justify-start gap-1">
           <Button
             variant="ghost"
             onClick={onPreviousNugget}
@@ -657,88 +607,42 @@ export function TunePractice({
             {t("tune.buttons.previous")}
           </Button>
         </div>
-        <div className="flex items-center gap-3">
-          <StreakDisplay
-            lastEvaluation={lastEvaluation}
-            currentNuggetId={currentNugget.itemId}
-            messages={streakMessages}
-          />
-          {debugMode && (
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex flex-col gap-1">
-                <span>
-                  Eval index: {lastEvaluation?.evalIndex ?? "-"} /{" "}
-                  {currentEvalIndex ?? "-"}
-                </span>
-                {evalDecision ? (
-                  <span className="text-[10px] text-muted-foreground/80">
-                    {evalDecision}
-                  </span>
-                ) : null}
-              </div>
-              <Sheet open={showEvalDebug} onOpenChange={setShowEvalDebug}>
-                <SheetTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    Debug
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  side="right"
-                  className="w-[520px] sm:max-w-[520px]"
-                >
-                  <SheetHeader>
-                    <div className="flex items-center justify-between gap-3">
-                      <SheetTitle>Eval debug</SheetTitle>
-                    </div>
-                  </SheetHeader>
-                  <ScrollArea className="h-[calc(100vh-140px)] mt-4">
-                    <div className="space-y-3">
-                      {evalDebugData ? (
-                        <TuneEvaluationNotesTable debugData={evalDebugData} />
-                      ) : null}
-                      <div className="flex justify-end items-end">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleCopyEvalDebug}
-                        >
-                          Copy
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-4 text-sm">
-                      <div>
-                        <div className="text-xs font-semibold text-muted-foreground mb-1">
-                          Prompt
-                        </div>
-                        <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
-                          {evalPrompt || "No prompt available."}
-                        </pre>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold text-muted-foreground mb-1">
-                          Answer
-                        </div>
-                        <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
-                          {evalAnswer || "No answer available."}
-                        </pre>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </SheetContent>
-              </Sheet>
-            </div>
-          )}
+        <div className="flex items-center justify-center gap-1">
+          <div className="bg-key-black p-1 border border-border rounded-2xl ">
+            <Button
+              variant="default"
+              onClick={onPlaySample}
+              disabled={isPlaying}
+              size="sm"
+            >
+              <Play fill="currentColor" stroke="none" />{" "}
+              {t("tune.buttons.replay")}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => playback.stop()}
+              size="sm"
+              title={t("tune.buttons.restart")}
+            >
+              <RotateCcw /> {t("tune.buttons.restart")}
+            </Button>
+          </div>
         </div>
-        <Button
-          variant={shouldPulse ? "default" : "ghost"}
-          onClick={handleNextNugget}
-          isPulsating={shouldPulse}
-          size="sm"
-        >
-          {t("tune.buttons.next")}
-          <ArrowRight />
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" onClick={onLeave} size="sm">
+            Leave <X />
+          </Button>
+          <div className="w-px h-4 bg-border" />
+          <Button
+            variant={shouldPulse ? "default" : "ghost"}
+            onClick={handleNextNugget}
+            isPulsating={shouldPulse}
+            size="sm"
+          >
+            {t("tune.buttons.next")}
+            <ArrowRight />
+          </Button>
+        </div>
       </div>
     </div>
   );

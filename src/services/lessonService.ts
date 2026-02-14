@@ -281,10 +281,11 @@ export async function evaluateFreeFormLesson(
 
 /**
  * Fetch teacher greeting with suggestions
+ * In debug mode, returns raw data (contains prompt, curriculum, signals) instead of TeacherGreetingResponse
  */
 export async function fetchTeacherGreeting(
   params: FetchTeacherGreetingParams
-): Promise<TeacherGreetingResponse> {
+): Promise<TeacherGreetingResponse | { prompt: string; [key: string]: unknown }> {
   const { data, error } = await supabase.functions.invoke("teacher-greet", {
     body: {
       language: params.language,
@@ -295,6 +296,11 @@ export async function fetchTeacherGreeting(
 
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
+
+  // In debug mode, return raw data (contains prompt, curriculum, signals)
+  if (params.debug) {
+    return data as { prompt: string; [key: string]: unknown };
+  }
 
   // Transform backend response to match TeacherGreetingResponse type
   // The backend now returns activityKey/activityType, but we need to ensure backwards compatibility

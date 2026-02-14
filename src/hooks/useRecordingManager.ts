@@ -30,6 +30,8 @@ interface UseRecordingManagerOptions {
   resumeGapMs?: number; // Gap to add when resuming after pause (default: 1000ms)
   metronomeIsPlaying?: boolean; // Whether metronome is currently playing
   metronomeStartTime?: number; // Tone.now() value when metronome started
+  /** When true, silence never auto-completes; parent must call completeNow() to finish. */
+  completeOnlyOnDemand?: boolean;
 }
 
 export function useRecordingManager({
@@ -41,6 +43,7 @@ export function useRecordingManager({
   resumeGapMs = 1000,
   metronomeIsPlaying = false,
   metronomeStartTime,
+  completeOnlyOnDemand = false,
 }: UseRecordingManagerOptions) {
   const [isRecording, setIsRecording] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -374,8 +377,9 @@ export function useRecordingManager({
         onRecordingUpdateRef.current([...recordingRef.current.notes]);
       }
 
-      // Start pause timeout when all keys are released
+      // Start pause timeout when all keys are released (unless complete only on demand)
       if (
+        !completeOnlyOnDemand &&
         heldKeysCountRef.current === 0 &&
         recordingRef.current.notes.length > 0
       ) {
@@ -385,6 +389,7 @@ export function useRecordingManager({
       return note;
     },
     [
+      completeOnlyOnDemand,
       getCurrentVirtualTime,
       startPauseTimeout,
       metronomeIsPlaying,
@@ -440,6 +445,11 @@ export function useRecordingManager({
     return [...recordingRef.current.notes];
   }, []);
 
+  /** Complete the current take now (e.g. when playhead reaches end). No-op if no notes. */
+  const completeNow = useCallback(() => {
+    completeRecording();
+  }, [completeRecording]);
+
   return {
     isRecording,
     showProgress,
@@ -452,6 +462,7 @@ export function useRecordingManager({
     restoreLastRecording,
     hideProgress,
     completeRecording,
+    completeNow,
     getCurrentNotes,
   };
 }

@@ -17,6 +17,7 @@ import {
   StartCurriculumLessonParams,
   StartFreeFormLessonParams,
 } from "@/services/lessonService";
+import { TeacherGreetingResponse } from "@/types/learningSession";
 import { SkillToUnlock } from "@/components/LessonCard";
 
 /**
@@ -34,12 +35,15 @@ export function useTeacherGreeting(
 ) {
   return useQuery({
     queryKey: ["teacherGreeting", language, localUserId],
-    queryFn: () =>
-      fetchTeacherGreeting({
+    queryFn: async (): Promise<TeacherGreetingResponse> => {
+      // This hook always calls with debug: false, so the return type is always TeacherGreetingResponse
+      const data = await fetchTeacherGreeting({
         language,
         localUserId,
         debug: false,
-      }),
+      });
+      return data as TeacherGreetingResponse;
+    },
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

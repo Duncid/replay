@@ -128,6 +128,7 @@
     },
     "buttons": {
       "replay": "Rejouer",
+      "restart": "Recommencer",
       "previous": "Précédent",
       "next": "Suivant"
     },

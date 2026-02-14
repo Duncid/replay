@@ -1,5 +1,5 @@
+import { DebugLLMSheet } from "@/components/DebugLLMSheet";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { TuneDebugCard } from "@/components/TuneDebugCard";
 import {
   useEvaluateTuneAttempt,
   useStartTunePractice,
@@ -7,8 +7,6 @@ import {
 } from "@/hooks/useTuneQueries";
 import { useTuneState } from "@/hooks/useTuneState";
 import type {
-  TuneCoachResponse,
-  TuneDebugData,
   TuneEvaluationDebugData,
 } from "@/types/tunePractice";
 import type { INoteSequence } from "@magenta/music/es6";
@@ -16,6 +14,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { TunePractice } from "./TunePractice";
+
+export interface TuneDebugMenuState {
+  evalIndex?: number;
+  currentEvalIndex?: number;
+  evalDecision?: string | null;
+  hasPracticePlan: boolean;
+  hasCoachPrompt?: boolean;
+  openPlanSheet: () => void;
+  openEvalDebug: () => void;
+  openCoachPrompt?: () => void;
+}
 
 interface TuneModeProps {
   tuneKey: string;
@@ -32,6 +41,9 @@ interface TuneModeProps {
     handler: ((noteKey: string) => void) | null,
   ) => void;
   onClearRecording?: () => void;
+  /** When playhead reaches end of track (user-driven), parent completes recording; we then send. */
+  onPlayheadReachedEnd?: () => void;
+  onTuneDebugMenuChange?: (menu: TuneDebugMenuState | null) => void;
 }
 
 export function TuneMode({
@@ -47,6 +59,8 @@ export function TuneMode({
   onRegisterNoteHandler,
   onRegisterNoteOffHandler,
   onClearRecording,
+  onPlayheadReachedEnd,
+  onTuneDebugMenuChange,
 }: TuneModeProps) {
   const { t } = useTranslation();
   const {
@@ -65,25 +79,52 @@ export function TuneMode({
   const evaluateAttempt = useEvaluateTuneAttempt();
   const { data: tuneAssets } = useTuneAssets(tuneKey);
 
-  const [coachDebugData, setCoachDebugData] = useState<TuneDebugData | null>(
-    null,
-  );
+  const [coachDebugCall, setCoachDebugCall] = useState<{ request?: string; response?: string } | null>(null);
+  const [showCoachPromptSheet, setShowCoachPromptSheet] = useState(false);
   const [evalDebugData, setEvalDebugData] =
     useState<TuneEvaluationDebugData | null>(null);
-  const [pendingCoachResponse, setPendingCoachResponse] =
-    useState<TuneCoachResponse | null>(null);
   const [lastEvalPrompt, setLastEvalPrompt] = useState<string | null>(null);
   const [lastEvalAnswer, setLastEvalAnswer] = useState<string | null>(null);
   const [lastEvalDecision, setLastEvalDecision] = useState<string | null>(null);
   const [autoPlayTrigger, setAutoPlayTrigger] = useState(0);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
+  // Sheet state (lifted from TunePractice so the action bar dropdown can open them)
+  const [showPlanSheet, setShowPlanSheet] = useState(false);
+  const [showEvalDebug, setShowEvalDebug] = useState(false);
+
+  // Report debug menu state to parent (for action bar dropdown)
+  useEffect(() => {
+    if (!onTuneDebugMenuChange || !debugMode) return;
+    onTuneDebugMenuChange({
+      evalIndex: state.lastEvaluation?.evalIndex,
+      currentEvalIndex: state.currentEvalIndex,
+      evalDecision: lastEvalDecision,
+      hasPracticePlan: state.practicePlan.length > 0,
+      hasCoachPrompt: !!(coachDebugCall?.request || coachDebugCall?.response),
+      openPlanSheet: () => setShowPlanSheet(true),
+      openEvalDebug: () => setShowEvalDebug(true),
+      openCoachPrompt: () => setShowCoachPromptSheet(true),
+    });
+  }, [
+    onTuneDebugMenuChange,
+    debugMode,
+    state.lastEvaluation?.evalIndex,
+    state.currentEvalIndex,
+    lastEvalDecision,
+    state.practicePlan.length,
+    coachDebugCall,
+  ]);
+
+  // Clear debug menu on unmount
+  useEffect(() => {
+    return () => onTuneDebugMenuChange?.(null);
+  }, [onTuneDebugMenuChange]);
+
   // Track if we've processed the current recording
   const lastProcessedRecording = useRef<INoteSequence | null>(null);
   const lastProcessedSignatureRef = useRef<string | null>(null);
   const lastProcessedRecordingIdRef = useRef<string | null>(null);
-  const silenceTimer = useRef<NodeJS.Timeout | null>(null);
-  const preEvalTimer = useRef<NodeJS.Timeout | null>(null);
   const lastAutoPlayKey = useRef<string | null>(null);
 
   // Evaluation indexing to handle out-of-order responses
@@ -342,85 +383,53 @@ export function TuneMode({
     ],
   );
 
-  // Auto-evaluate when recording stops (silence detected)
+  // Send for evaluation when recording completes (playhead reached end → parent called completeNow)
   useEffect(() => {
-    // Reset when recording starts
     if (isRecording) {
       setIsEvaluating(false);
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-        preEvalTimer.current = null;
-      }
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-        silenceTimer.current = null;
-      }
       return;
     }
 
     if (
-      !isRecording &&
-      currentRecording &&
-      currentRecording !== lastProcessedRecording.current
+      !currentRecording ||
+      currentRecording === lastProcessedRecording.current ||
+      state.phase !== "practicing" ||
+      !currentNugget
     ) {
-      // Recording just stopped, start silence timer
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-      }
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-      }
-
-      // Show "Evaluating..." after 0.5s of silence
-      preEvalTimer.current = setTimeout(() => {
-        setIsEvaluating(true);
-      }, 500);
-
-      silenceTimer.current = setTimeout(() => {
-        if (state.phase !== "practicing" || !currentNugget || !currentRecording)
-          return;
-        const recordingId = getRecordingId(currentRecording);
-        const signature = getRecordingSignature(currentRecording);
-        if (recordingId && lastProcessedRecordingIdRef.current === recordingId)
-          return;
-        if (!recordingId && lastProcessedSignatureRef.current === signature)
-          return;
-
-        const targetSequence = (currentNugget.nugget?.noteSequence ||
-          currentNugget.assembly?.noteSequence ||
-          currentNugget.fullTune?.noteSequence) as INoteSequence | undefined;
-        const targetNoteCount = targetSequence?.notes?.length || 8;
-        const minNotes = Math.min(
-          targetNoteCount,
-          Math.max(2, Math.ceil(targetNoteCount * 0.5)),
-        );
-        const minDurationSec = 0.3;
-        const { noteCount, totalTime } = getRecordingStats(currentRecording);
-        const shouldSend = noteCount >= minNotes && totalTime >= minDurationSec;
-        const decision = `rec=${recordingId ?? "none"} notes ${noteCount}/${targetNoteCount}, duration ${totalTime.toFixed(2)}s (min ${minNotes}, ${minDurationSec}s) -> ${shouldSend ? "send" : "skip"}`;
-        setLastEvalDecision(decision);
-        if (debugMode) {
-          console.log(`[TuneMode] Eval gate: ${decision}`);
-        }
-        lastProcessedSignatureRef.current = signature;
-        lastProcessedRecordingIdRef.current = recordingId;
-        if (!shouldSend) {
-          setIsEvaluating(false);
-          return;
-        }
-        lastProcessedRecording.current = currentRecording;
-        handleEvaluate(currentRecording);
-      }, 1500); // 1.5 second delay after recording stops
+      return;
     }
 
-    return () => {
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-      }
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-      }
-    };
+    const recordingId = getRecordingId(currentRecording);
+    const signature = getRecordingSignature(currentRecording);
+    if (recordingId && lastProcessedRecordingIdRef.current === recordingId)
+      return;
+    if (!recordingId && lastProcessedSignatureRef.current === signature)
+      return;
+
+    const targetSequence = (currentNugget.nugget?.noteSequence ||
+      currentNugget.assembly?.noteSequence ||
+      currentNugget.fullTune?.noteSequence) as INoteSequence | undefined;
+    const targetNoteCount = targetSequence?.notes?.length || 8;
+    const minNotes = Math.min(
+      targetNoteCount,
+      Math.max(2, Math.ceil(targetNoteCount * 0.5)),
+    );
+    const minDurationSec = 0.3;
+    const { noteCount, totalTime } = getRecordingStats(currentRecording);
+    const shouldSend = noteCount >= minNotes && totalTime >= minDurationSec;
+    const decision = `rec=${recordingId ?? "none"} notes ${noteCount}/${targetNoteCount}, duration ${totalTime.toFixed(2)}s (min ${minNotes}, ${minDurationSec}s) -> ${shouldSend ? "send" : "skip"}`;
+    setLastEvalDecision(decision);
+    if (debugMode) {
+      console.log(`[TuneMode] Eval gate: ${decision}`);
+    }
+    lastProcessedSignatureRef.current = signature;
+    lastProcessedRecordingIdRef.current = recordingId;
+    lastProcessedRecording.current = currentRecording;
+
+    if (!shouldSend) return;
+
+    setIsEvaluating(true);
+    handleEvaluate(currentRecording);
   }, [
     isRecording,
     currentRecording,
@@ -450,60 +459,7 @@ export function TuneMode({
     try {
       setPhase("coaching");
 
-      if (debugMode) {
-        // In debug mode, fetch with debug flag to get prompt preview
-        const debugResponse = await startPractice.mutateAsync({
-          tuneKey,
-          localUserId,
-          language,
-          debug: true,
-        });
-
-        setCoachDebugData({
-          tuneKey,
-          tuneTitle: (debugResponse as any).tuneTitle || tuneKey,
-          motifsCount: (debugResponse as any).motifsCount || 0,
-          nuggetsCount: (debugResponse as any).nuggetsCount || 0,
-          practiceHistory: (debugResponse as any).practiceHistory || [],
-          prompt: (debugResponse as any).prompt,
-          request: (debugResponse as any).request,
-        });
-
-        // Store raw nuggets for later use
-        setPendingCoachResponse(debugResponse as any);
-      } else {
-        const response = await startPractice.mutateAsync({
-          tuneKey,
-          localUserId,
-          language,
-          debug: false,
-        });
-
-        if (response.practicePlan && response.practicePlan.length > 0) {
-          setPracticePlan(response.practicePlan, response.tuneTitle);
-          // Show different message for regeneration vs first load
-          toast.success(
-            isRegeneration
-              ? t("tune.planReady")
-              : response.encouragement || t("tune.letsPractice"),
-          );
-        } else {
-          throw new Error("No practice plan received");
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching practice plan:", error);
-      setError(
-        error instanceof Error ? error.message : t("tune.loadPlanFailed"),
-      );
-      toast.error(t("tune.loadPlanFailed"));
-    }
-  };
-
-  const proceedFromCoachDebug = async () => {
-    setCoachDebugData(null);
-
-    try {
+      // Always proceed directly with the real call
       const response = await startPractice.mutateAsync({
         tuneKey,
         localUserId,
@@ -513,9 +469,41 @@ export function TuneMode({
 
       if (response.practicePlan && response.practicePlan.length > 0) {
         setPracticePlan(response.practicePlan, response.tuneTitle);
-        toast.success(response.encouragement || t("tune.letsPractice"));
+        // Show different message for regeneration vs first load
+        toast.success(
+          isRegeneration
+            ? t("tune.planReady")
+            : response.encouragement || t("tune.letsPractice"),
+        );
       } else {
         throw new Error("No practice plan received");
+      }
+
+      // In debug mode, capture the response and fire a parallel call for the request
+      if (debugMode) {
+        // Save the normal response
+        setCoachDebugCall((prev) => ({
+          ...prev,
+          response: JSON.stringify(response, null, 2),
+        }));
+
+        // Fire a parallel call to capture the coach prompt (non-blocking)
+        startPractice.mutateAsync({
+          tuneKey,
+          localUserId,
+          language,
+          debug: true,
+        }).then((debugResponse) => {
+          const promptText = (debugResponse as any).prompt;
+          if (promptText) {
+            setCoachDebugCall((prev) => ({
+              ...prev,
+              request: promptText,
+            }));
+          }
+        }).catch((err) => {
+          console.error("Failed to fetch coach debug prompt:", err);
+        });
       }
     } catch (error) {
       console.error("Error fetching practice plan:", error);
@@ -534,14 +522,6 @@ export function TuneMode({
       // Reset recording state when playing sample
       lastProcessedRecording.current = null;
       setIsEvaluating(false);
-      if (preEvalTimer.current) {
-        clearTimeout(preEvalTimer.current);
-        preEvalTimer.current = null;
-      }
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-        silenceTimer.current = null;
-      }
 
       // Get note sequence from nugget, assembly, or full tune
       const noteSequence =
@@ -572,14 +552,6 @@ export function TuneMode({
     setEvalDebugData(null);
     lastProcessedRecordingIdRef.current = null;
     lastProcessedSignatureRef.current = null;
-    if (preEvalTimer.current) {
-      clearTimeout(preEvalTimer.current);
-      preEvalTimer.current = null;
-    }
-    if (silenceTimer.current) {
-      clearTimeout(silenceTimer.current);
-      silenceTimer.current = null;
-    }
   }, [nextNugget, currentRecording, clearEvaluation]);
 
   const handlePreviousNugget = useCallback(() => {
@@ -602,14 +574,6 @@ export function TuneMode({
     setEvalDebugData(null);
     lastProcessedRecordingIdRef.current = null;
     lastProcessedSignatureRef.current = null;
-    if (preEvalTimer.current) {
-      clearTimeout(preEvalTimer.current);
-      preEvalTimer.current = null;
-    }
-    if (silenceTimer.current) {
-      clearTimeout(silenceTimer.current);
-      silenceTimer.current = null;
-    }
   }, [previousNugget, currentRecording, clearEvaluation, state.currentIndex]);
 
   useEffect(() => {
@@ -640,17 +604,6 @@ export function TuneMode({
     );
   }
 
-  // Debug cards
-  if (coachDebugData) {
-    return (
-      <TuneDebugCard
-        debugData={coachDebugData}
-        onProceed={proceedFromCoachDebug}
-        onCancel={onLeave}
-      />
-    );
-  }
-
   // Loading states
   if (state.phase === "loading" || state.phase === "coaching") {
     return (
@@ -667,31 +620,46 @@ export function TuneMode({
   // Practice phase - THE MAIN CONTINUOUS SCREEN
   if (state.phase === "practicing" && currentNugget) {
     return (
-      <TunePractice
-        tuneTitle={state.tuneTitle}
-        currentNugget={currentNugget}
-        currentIndex={state.currentIndex}
-        totalNuggets={state.practicePlan.length}
-        currentStreak={state.currentStreak}
-        lastEvaluation={state.lastEvaluation}
-        onPlaySample={() => handlePlaySample(true)}
-        onSwitchNugget={handleSwitchNugget}
-        onPreviousNugget={handlePreviousNugget}
-        onLeave={onLeave}
-        isPlaying={isPlayingSample}
-        isEvaluating={isEvaluating}
-        isRecording={isRecording}
-        debugMode={debugMode}
-        practicePlan={state.practicePlan}
-        currentEvalIndex={state.currentEvalIndex}
-        pendingEvalIndex={pendingEvalIndex}
-        onRegisterNoteHandler={onRegisterNoteHandler}
-        onRegisterNoteOffHandler={onRegisterNoteOffHandler}
-        evalPrompt={lastEvalPrompt}
-        evalAnswer={lastEvalAnswer}
-        evalDecision={lastEvalDecision}
-        evalDebugData={evalDebugData}
-      />
+      <>
+        <TunePractice
+          tuneTitle={state.tuneTitle}
+          currentNugget={currentNugget}
+          currentIndex={state.currentIndex}
+          totalNuggets={state.practicePlan.length}
+          currentStreak={state.currentStreak}
+          totalWins={state.totalWins}
+          lastEvaluation={state.lastEvaluation}
+          onPlaySample={() => handlePlaySample(true)}
+          onSwitchNugget={handleSwitchNugget}
+          onPreviousNugget={handlePreviousNugget}
+          onLeave={onLeave}
+          isPlaying={isPlayingSample}
+          isEvaluating={isEvaluating}
+          isRecording={isRecording}
+          onPlayheadReachedEnd={onPlayheadReachedEnd}
+          debugMode={debugMode}
+          practicePlan={state.practicePlan}
+          currentEvalIndex={state.currentEvalIndex}
+          pendingEvalIndex={pendingEvalIndex}
+          onRegisterNoteHandler={onRegisterNoteHandler}
+          onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+          evalPrompt={lastEvalPrompt}
+          evalAnswer={lastEvalAnswer}
+          evalDecision={lastEvalDecision}
+          evalDebugData={evalDebugData}
+          showPlanSheet={showPlanSheet}
+          onShowPlanSheetChange={setShowPlanSheet}
+          showEvalDebug={showEvalDebug}
+          onShowEvalDebugChange={setShowEvalDebug}
+        />
+        {/* Coach LLM Call Sheet (opened from action bar debug dropdown) */}
+        <DebugLLMSheet
+          title="Coach LLM Call"
+          open={showCoachPromptSheet}
+          onOpenChange={setShowCoachPromptSheet}
+          debugCall={coachDebugCall ?? undefined}
+        />
+      </>
     );
   }
 
