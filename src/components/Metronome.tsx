@@ -195,7 +195,7 @@ const getDefaultBeatUnit = (timeSignature: string): BeatUnit => {
 
 const normalizeBeatUnitForSignature = (
   beatUnit: BeatUnit,
-  timeSignature: string
+  timeSignature: string,
 ): BeatUnit => {
   const { numerator, denominator } = parseTimeSignature(timeSignature);
   if (denominator === 4) return "quarter";
@@ -221,7 +221,7 @@ const mapAccentBeatsToBeatUnit = (
   accents: number[],
   timeSignature: string,
   beatUnit: BeatUnit,
-  beatsPerBar: number
+  beatsPerBar: number,
 ): Set<number> => {
   const { numerator, denominator } = parseTimeSignature(timeSignature);
 
@@ -231,13 +231,13 @@ const mapAccentBeatsToBeatUnit = (
     numerator % 3 === 0
   ) {
     const mapped = accents.map((beat) =>
-      Math.min(beatsPerBar, Math.max(1, Math.ceil(beat / 3)))
+      Math.min(beatsPerBar, Math.max(1, Math.ceil(beat / 3))),
     );
     return new Set(mapped);
   }
 
   const clamped = accents.map((beat) =>
-    Math.min(beatsPerBar, Math.max(1, beat))
+    Math.min(beatsPerBar, Math.max(1, beat)),
   );
   return new Set(clamped);
 };
@@ -249,7 +249,7 @@ const createStepPlan = (
   accentBeats: Set<number>,
   useCustomAccents: boolean,
   customAccentLevels: number[] | null,
-  swingAmount: number
+  swingAmount: number,
 ): StepPlan => {
   const beatDuration = 60 / bpm;
   const stepsPerBar = beatsPerBar * subdivision;
@@ -328,15 +328,15 @@ export const Metronome = ({
 }: MetronomeProps) => {
   const [volume, setVolume] = useLocalStorage(
     STORAGE_KEYS.METRONOME_VOLUME,
-    70
+    70,
   );
   const [beatUnit, setBeatUnit] = useLocalStorage<BeatUnit>(
     STORAGE_KEYS.METRONOME_BEAT_UNIT,
-    getDefaultBeatUnit(timeSignature)
+    getDefaultBeatUnit(timeSignature),
   );
   const [localFeel, setLocalFeel] = useLocalStorage<FeelPreset>(
     STORAGE_KEYS.METRONOME_FEEL,
-    "straight_beats"
+    "straight_beats",
   );
 
   // Use controlled value if provided, otherwise use local state
@@ -349,10 +349,10 @@ export const Metronome = ({
     1 | 2 | 3 | 4 | undefined
   >(undefined);
   const [advancedSwing, setAdvancedSwing] = useState<number | undefined>(
-    undefined
+    undefined,
   );
   const [customAccentLevels, setCustomAccentLevels] = useState<number[] | null>(
-    null
+    null,
   );
   const [useCustomAccents, setUseCustomAccents] = useState(false);
 
@@ -372,7 +372,7 @@ export const Metronome = ({
   const [storedSoundType, setStoredSoundType] =
     useLocalStorage<MetronomeSoundType>(
       STORAGE_KEYS.METRONOME_SOUND,
-      "classic"
+      "classic",
     );
 
   const {
@@ -459,7 +459,7 @@ export const Metronome = ({
   const { numerator, denominator } = parseTimeSignature(timeSignature);
   const normalizedBeatUnit = normalizeBeatUnitForSignature(
     beatUnit,
-    timeSignature
+    timeSignature,
   );
   const beatsPerBar = getBeatsPerBar(timeSignature, normalizedBeatUnit);
   const feelConfig = feelConfigMap[feel] ?? feelConfigMap.straight_beats;
@@ -467,11 +467,11 @@ export const Metronome = ({
   const isSwingFeel =
     feelConfig.subdivision === 2 && (feelConfig.swingAmount ?? 0) > 0;
   const swingAmount =
-    subdivision === 2 ? advancedSwing ?? feelConfig.swingAmount ?? 0 : 0;
+    subdivision === 2 ? (advancedSwing ?? feelConfig.swingAmount ?? 0) : 0;
 
   const accentPresets = useMemo(
     () => accentPresetOptions[timeSignature] ?? [],
-    [timeSignature]
+    [timeSignature],
   );
   const currentAccentPresetId =
     accentPresetBySignature[timeSignature] ?? accentPresets[0]?.id ?? "";
@@ -485,21 +485,21 @@ export const Metronome = ({
         currentAccentPreset?.accents ?? [1],
         timeSignature,
         normalizedBeatUnit,
-        beatsPerBar
+        beatsPerBar,
       ),
     [
       beatsPerBar,
       currentAccentPreset?.accents,
       normalizedBeatUnit,
       timeSignature,
-    ]
+    ],
   );
 
   const stepsPerBar = beatsPerBar * subdivision;
 
   const currentFeelOption = useMemo(
     () => feelOptions.find((option) => option.id === feel) ?? feelOptions[0],
-    [feel]
+    [feel],
   );
 
   useEffect(() => {
@@ -512,7 +512,7 @@ export const Metronome = ({
       if (prev.length === stepsPerBar) return prev;
       const resized = Array.from(
         { length: stepsPerBar },
-        (_, idx) => prev[idx % prev.length] ?? 1
+        (_, idx) => prev[idx % prev.length] ?? 1,
       );
       return resized;
     });
@@ -526,7 +526,7 @@ export const Metronome = ({
       accentBeats,
       useCustomAccents,
       customAccentLevels,
-      swingAmount
+      swingAmount,
     );
   }, [
     accentBeats,
@@ -554,7 +554,7 @@ export const Metronome = ({
         }
       }, delayMs);
     },
-    [playClick]
+    [playClick],
   );
 
   const scheduler = useCallback(
@@ -566,7 +566,7 @@ export const Metronome = ({
         scheduleStep(
           currentScheduledStepRef.current,
           nextStepTimeRef.current,
-          plan
+          plan,
         );
         const stepDuration =
           plan.stepDurations[
@@ -577,7 +577,7 @@ export const Metronome = ({
           (currentScheduledStepRef.current + 1) % plan.stepsPerBar;
       }
     },
-    [scheduleStep]
+    [scheduleStep],
   );
 
   const startMetronome = useCallback(
@@ -599,10 +599,10 @@ export const Metronome = ({
       scheduler(plan);
       schedulerIntervalRef.current = setInterval(
         () => scheduler(plan),
-        LOOKAHEAD_INTERVAL
+        LOOKAHEAD_INTERVAL,
       );
     },
-    [ensureAudioReady, scheduler, onMetronomeStartTimeChange]
+    [ensureAudioReady, scheduler, onMetronomeStartTimeChange],
   );
 
   const stopMetronome = useCallback(() => {
@@ -678,287 +678,312 @@ export const Metronome = ({
   );
 
   return (
-    <div className="flex items-center gap-6 flex-wrap">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            {bpm}, {timeSignature}
-            <ChevronDown className="h-4 w-4 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          className="w-72 bg-popover space-y-2"
-        >
-          <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
-          <div className="px-2 pb-2">
-            <Slider
-              value={[bpm]}
-              onValueChange={(value) => setBpm(value[0])}
-              min={20}
-              max={300}
-              step={1}
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              {getBpmDescription(bpm)}
-            </p>
-            <div className="mt-3">
-              <Button size="sm" onClick={handleTapTempo} className="w-full">
-                Tap tempo
-              </Button>
-            </div>
-          </div>
-
-          <DropdownMenuSeparator />
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              Time Signature: {timeSignature}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-popover">
-              <DropdownMenuRadioGroup
-                value={timeSignature}
-                onValueChange={setTimeSignature}
-              >
-                <DropdownMenuRadioItem value="2/4">2/4</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="3/4">3/4</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="4/4">4/4</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="5/4">5/4</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="5/8">5/8</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="6/8">6/8</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="7/8">7/8</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="9/8">9/8</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="12/8">12/8</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          {denominator === 8 && (
-            <div className="px-2 pb-2 text-sm space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Beat interpretation
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  size="sm"
-                  variant={
-                    normalizedBeatUnit === "dottedQuarter"
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() => setBeatUnit("dottedQuarter")}
-                  disabled={numerator % 3 !== 0}
-                >
-                  Dotted quarter
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    normalizedBeatUnit === "eighth" ? "default" : "outline"
-                  }
-                  onClick={() => setBeatUnit("eighth")}
-                >
-                  Eighth
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <DropdownMenuSeparator />
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              Feel: {currentFeelOption.label}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-popover space-y-2">
-              <DropdownMenuRadioGroup
-                value={feel}
-                onValueChange={(value) => {
-                  setFeel(value as FeelPreset);
-                  setAdvancedSubdivision(undefined);
-                  setAdvancedSwing(undefined);
-                }}
-              >
-                {feelOptions.map((option) => (
-                  <DropdownMenuRadioItem
-                    key={option.id}
-                    value={option.id}
-                    className="flex flex-col items-start"
-                  >
-                    <span>{option.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {option.description}
-                    </span>
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="bg-popover space-y-1">
-                  <DropdownMenuLabel>Subdivision override</DropdownMenuLabel>
-                  <div className="grid grid-cols-4 gap-1">
-                    {[1, 2, 3, 4].map((value) => (
-                      <Button
-                        key={value}
-                        size="sm"
-                        variant={
-                          advancedSubdivision === value ? "default" : "outline"
-                        }
-                        onClick={() =>
-                          setAdvancedSubdivision((prev) =>
-                            prev === value
-                              ? undefined
-                              : (value as 1 | 2 | 3 | 4)
-                          )
-                        }
-                      >
-                        {value}
-                      </Button>
-                    ))}
-                  </div>
-
-                  {subdivision === 2 && (
-                    <>
-                      <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
-                      <div className="flex flex-col items-center justify-between text-sm p-1.5">
-                        {isSwingFeel && (
-                          <span className="text-xs text-muted-foreground">
-                            {Math.round((swingAmount ?? 0) * 100)}%
-                          </span>
-                        )}
-                        <Slider
-                          value={[swingAmount * 100]}
-                          onValueChange={(value) =>
-                            setAdvancedSwing(value[0] / 100)
-                          }
-                          min={0}
-                          max={100}
-                          step={5}
-                        />
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Higher values create a longer first eighth.
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          <DropdownMenuSeparator />
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              Accent pattern: {currentAccentPreset?.label ?? "Downbeat"}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-popover space-y-2">
-              <DropdownMenuRadioGroup
-                value={currentAccentPresetId}
-                onValueChange={(value) => handleAccentPresetChange(value)}
-              >
-                {accentPresets.map((preset) => (
-                  <DropdownMenuRadioItem key={preset.id} value={preset.id}>
-                    {preset.label}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="bg-popover space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={useCustomAccents}
-                        onCheckedChange={setUseCustomAccents}
-                        id="custom-accents"
-                      />
-                      <Label
-                        htmlFor="custom-accents"
-                        className="cursor-pointer"
-                      >
-                        Use custom grid
-                      </Label>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setCustomAccentLevels(null);
-                        setUseCustomAccents(false);
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-                  {renderAccentGrid()}
-                  <p className="text-xs w-[280px] text-muted-foreground">
-                    Click cells to cycle silence → normal → accent. Grid length
-                    adapts to subdivision.
-                  </p>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          <DropdownMenuSeparator />
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              Sound: {soundTypeLabels[soundType]}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-popover">
-              <DropdownMenuRadioGroup
-                value={soundType}
-                onValueChange={handleSoundTypeChange}
-              >
-                <DropdownMenuRadioItem value="classic">
-                  Classic Click
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="woodblock">
-                  Woodblock
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="digital">
-                  Digital Tick
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="hihat">
-                  Hi-Hat
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="clave">
-                  Clave Bell
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <div className="flex items-center gap-3">
-        <Label
-          htmlFor="metronome-toggle"
-          className="text-foreground cursor-pointer flex items-center gap-1.5"
-        >
-          <Timer className="h-4 w-4" />
-        </Label>
+    <div className="flex items-center gap-2 mx-4 flex-wrap">
+      <div className="flex items-center gap-2">
+        <Timer className="h-4 w-4" />
         <Switch
           checked={isPlaying}
           onCheckedChange={setIsPlaying}
           id="metronome-toggle"
         />
-      </div>
 
-      {isPlaying && (
-        <div className="flex items-center gap-2">
-          <Slider
-            value={[volume]}
-            onValueChange={(value) => setVolume(value[0])}
-            min={0}
-            max={100}
-            step={1}
-            className="w-20"
-          />
-        </div>
-      )}
+        {isPlaying && (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  {bpm}, {timeSignature}
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="w-72 bg-popover space-y-2"
+              >
+                <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
+                <div className="px-2 pb-2">
+                  <Slider
+                    value={[bpm]}
+                    onValueChange={(value) => setBpm(value[0])}
+                    min={20}
+                    max={300}
+                    step={1}
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {getBpmDescription(bpm)}
+                  </p>
+                  <div className="mt-3">
+                    <Button
+                      size="sm"
+                      onClick={handleTapTempo}
+                      className="w-full"
+                    >
+                      Tap tempo
+                    </Button>
+                  </div>
+                </div>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    Time Signature: {timeSignature}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover">
+                    <DropdownMenuRadioGroup
+                      value={timeSignature}
+                      onValueChange={setTimeSignature}
+                    >
+                      <DropdownMenuRadioItem value="2/4">
+                        2/4
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="3/4">
+                        3/4
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="4/4">
+                        4/4
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="5/4">
+                        5/4
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="5/8">
+                        5/8
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="6/8">
+                        6/8
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="7/8">
+                        7/8
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="9/8">
+                        9/8
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="12/8">
+                        12/8
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+
+                {denominator === 8 && (
+                  <div className="px-2 pb-2 text-sm space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Beat interpretation
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant={
+                          normalizedBeatUnit === "dottedQuarter"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => setBeatUnit("dottedQuarter")}
+                        disabled={numerator % 3 !== 0}
+                      >
+                        Dotted quarter
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          normalizedBeatUnit === "eighth"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => setBeatUnit("eighth")}
+                      >
+                        Eighth
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    Feel: {currentFeelOption.label}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover space-y-2">
+                    <DropdownMenuRadioGroup
+                      value={feel}
+                      onValueChange={(value) => {
+                        setFeel(value as FeelPreset);
+                        setAdvancedSubdivision(undefined);
+                        setAdvancedSwing(undefined);
+                      }}
+                    >
+                      {feelOptions.map((option) => (
+                        <DropdownMenuRadioItem
+                          key={option.id}
+                          value={option.id}
+                          className="flex flex-col items-start"
+                        >
+                          <span>{option.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {option.description}
+                          </span>
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-popover space-y-1">
+                        <DropdownMenuLabel>
+                          Subdivision override
+                        </DropdownMenuLabel>
+                        <div className="grid grid-cols-4 gap-1">
+                          {[1, 2, 3, 4].map((value) => (
+                            <Button
+                              key={value}
+                              size="sm"
+                              variant={
+                                advancedSubdivision === value
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                setAdvancedSubdivision((prev) =>
+                                  prev === value
+                                    ? undefined
+                                    : (value as 1 | 2 | 3 | 4),
+                                )
+                              }
+                            >
+                              {value}
+                            </Button>
+                          ))}
+                        </div>
+
+                        {subdivision === 2 && (
+                          <>
+                            <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
+                            <div className="flex flex-col items-center justify-between text-sm p-1.5">
+                              {isSwingFeel && (
+                                <span className="text-xs text-muted-foreground">
+                                  {Math.round((swingAmount ?? 0) * 100)}%
+                                </span>
+                              )}
+                              <Slider
+                                value={[swingAmount * 100]}
+                                onValueChange={(value) =>
+                                  setAdvancedSwing(value[0] / 100)
+                                }
+                                min={0}
+                                max={100}
+                                step={5}
+                              />
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Higher values create a longer first eighth.
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    Accent pattern: {currentAccentPreset?.label ?? "Downbeat"}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover space-y-2">
+                    <DropdownMenuRadioGroup
+                      value={currentAccentPresetId}
+                      onValueChange={(value) => handleAccentPresetChange(value)}
+                    >
+                      {accentPresets.map((preset) => (
+                        <DropdownMenuRadioItem
+                          key={preset.id}
+                          value={preset.id}
+                        >
+                          {preset.label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-popover space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={useCustomAccents}
+                              onCheckedChange={setUseCustomAccents}
+                              id="custom-accents"
+                            />
+                            <Label
+                              htmlFor="custom-accents"
+                              className="cursor-pointer"
+                            >
+                              Use custom grid
+                            </Label>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setCustomAccentLevels(null);
+                              setUseCustomAccents(false);
+                            }}
+                          >
+                            Reset
+                          </Button>
+                        </div>
+                        {renderAccentGrid()}
+                        <p className="text-xs w-[280px] text-muted-foreground">
+                          Click cells to cycle silence → normal → accent. Grid
+                          length adapts to subdivision.
+                        </p>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    Sound: {soundTypeLabels[soundType]}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover">
+                    <DropdownMenuRadioGroup
+                      value={soundType}
+                      onValueChange={handleSoundTypeChange}
+                    >
+                      <DropdownMenuRadioItem value="classic">
+                        Classic Click
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="woodblock">
+                        Woodblock
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="digital">
+                        Digital Tick
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="hihat">
+                        Hi-Hat
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="clave">
+                        Clave Bell
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Slider
+              value={[volume]}
+              onValueChange={(value) => setVolume(value[0])}
+              min={0}
+              max={100}
+              step={1}
+              className="w-20"
+            />
+          </>
+        )}
+      </div>
 
       {isPlaying && (
         <div className="flex items-center gap-2">

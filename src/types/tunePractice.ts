@@ -112,6 +112,8 @@ export interface TunePracticeState {
   practicePlan: PracticePlanItem[];
   currentIndex: number;
   currentStreak: number;
+  /** Cumulative wins (flames) for current nugget; each pass adds successCount. */
+  totalWins: number;
   lastEvaluation: TuneEvaluationResponse | null;
   error: string | null;
   currentEvalIndex?: number;

@@ -127,6 +127,7 @@
     },
     "buttons": {
       "replay": "Replay",
+      "restart": "Restart",
       "previous": "Previous",
       "next": "Next"
     },

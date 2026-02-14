@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -13,7 +13,6 @@ import {
   LessonState,
   EvaluationOutput,
   CoachOutput,
-  TeacherSuggestion,
 } from "@/types/learningSession";
 import { NoteSequence } from "@/types/noteSequence";
 import { SkillToUnlock } from "@/components/LessonCard";
@@ -27,22 +26,23 @@ import {
   clearSequenceHistory,
 } from "@/utils/lessonSequenceHistory";
 
-// Types for debug and evaluation state
-export type DebugState =
-  | {
-      type: "lesson";
-      suggestion: TeacherSuggestion;
-      prompt: string;
-    }
-  | {
-      type: "evaluation";
-      prompt: string;
-      userSequence: NoteSequence;
-      evaluationType: "structured" | "free";
-      pendingCall: () => Promise<void>;
-      decidePrompt?: string;
-    }
-  | null;
+// A single LLM call captured for debug: the prompt sent and the response received
+export interface DebugLLMCall {
+  /** The full prompt sent to the LLM */
+  request?: string;
+  /** JSON-stringified LLM response */
+  response?: string;
+}
+
+// Debug data captured for the debug dropdown (non-blocking)
+export interface LessonDebugInfo {
+  /** Teacher greeting / lesson selection LLM call */
+  teacherSelection?: DebugLLMCall;
+  /** Lesson generation LLM call */
+  lessonGeneration?: DebugLLMCall;
+  /** Evaluation LLM call */
+  evaluation?: DebugLLMCall;
+}
 
 // EvaluationState now uses combined EvaluationOutput
 export type EvaluationState =
@@ -77,10 +77,9 @@ export interface LessonEngineState {
   setMode: (mode: "practice" | "evaluation") => void;
   setEvaluationResult: (result: "positive" | "negative" | null) => void;
   setSkillToUnlock: (skill: SkillToUnlock | null) => void;
-  setDebugState: React.Dispatch<React.SetStateAction<DebugState>>;
   setEvaluationState: React.Dispatch<React.SetStateAction<EvaluationState>>;
   setShowEvaluationScreen: (show: boolean) => void;
-  debugState: DebugState;
+  setDebugInfo: React.Dispatch<React.SetStateAction<LessonDebugInfo>>;
   evaluationState: EvaluationState;
   hasEvaluatedRef: React.MutableRefObject<boolean>;
   userActionTokenRef: React.MutableRefObject<string>;
@@ -118,7 +117,7 @@ export function useLessonEngine(
     state.setLessonState((prev) => ({ ...prev, isEvaluating: false }));
     state.setSkillToUnlock(null);
     state.setEvaluationState(null);
-    state.setDebugState(null);
+    state.setDebugInfo({});
   }, [state]);
 
   // Regenerate demo sequence with new BPM/meter settings (and optionally new difficulty)
@@ -233,17 +232,23 @@ export function useLessonEngine(
 
         // Check if user performed a new action (React Query handles request cancellation)
         if (state.userActionTokenRef.current !== actionToken) {
-          state.setDebugState(null);
           return;
         }
-        
-        // Clear debugState now that mutation is in progress and isLoading is true
-        // This ensures smooth transition from debug card to loading spinner
-        state.setDebugState(null);
 
         // Type guard for debug mode response
         if ("prompt" in lessonStartData) {
           throw new Error("Unexpected debug response in non-debug mode");
+        }
+
+        // In debug mode, save the response for the debug sheet
+        if (options.debugMode) {
+          state.setDebugInfo((prev) => ({
+            ...prev,
+            lessonGeneration: {
+              ...prev.lessonGeneration,
+              response: JSON.stringify(lessonStartData, null, 2),
+            },
+          }));
         }
 
         const lessonRunId = lessonStartData.lessonRunId;
@@ -312,7 +317,6 @@ export function useLessonEngine(
         // On error, return to practice plan screen (welcome phase)
         state.resetLesson();
         state.setLessonState((prev) => ({ ...prev, prompt: "", lastComment: null }));
-        state.setDebugState(null);
         state.setMode("practice");
         state.setEvaluationResult(null);
         callbacks.onClearRecording();
@@ -341,8 +345,6 @@ export function useLessonEngine(
       const { lesson } = state.lessonState;
       const actionToken = state.userActionTokenRef.current;
       state.setLessonState((prev) => ({ ...prev, isEvaluating: true }));
-      // Don't clear debugState yet - keep it until showEvaluationScreen is ready
-      // This prevents brief flash of LessonEvaluation screen
       state.setEvaluationState(null);
 
       try {
@@ -367,6 +369,17 @@ export function useLessonEngine(
             type: "structured",
             evaluationOutput,
           });
+
+          // In debug mode, save the response for the debug sheet
+          if (options.debugMode) {
+            state.setDebugInfo((prev) => ({
+              ...prev,
+              evaluation: {
+                ...prev.evaluation,
+                response: JSON.stringify(evaluationOutput, null, 2),
+              },
+            }));
+          }
 
           // Debug mode: toast evaluation results
           if (options.debugMode) {
@@ -445,11 +458,9 @@ export function useLessonEngine(
             awardedSkillsWithTitles,
           });
 
-          // Show evaluation screen - set this BEFORE clearing debugState to prevent flash
+          // Show evaluation screen
           console.log("executeEvaluation: Setting showEvaluationScreen to true");
           state.setShowEvaluationScreen(true);
-          // Now safe to clear debugState since showEvaluationScreen will take precedence in render
-          state.setDebugState(null);
           console.log("executeEvaluation: Evaluation complete, screen should show");
         } else {
           throw new Error("Lesson run ID is required for evaluation");
@@ -461,8 +472,6 @@ export function useLessonEngine(
           lastComment: t("learnMode.evaluationFallback"),
           isEvaluating: false,
         }));
-        // Clear debug state on error
-        state.setDebugState(null);
         // Don't show evaluation screen on error - return to practice mode
         state.setMode("practice");
       } finally {
@@ -482,45 +491,38 @@ export function useLessonEngine(
     ]
   );
 
-  // Trigger evaluation (with debug mode support)
+  // Trigger evaluation -- always proceeds immediately.
+  // In debug mode, fires a parallel debug=true call to capture the prompt for the dropdown.
   const evaluateAttempt = useCallback(
     async (userSequence: NoteSequence) => {
-      const { lesson } = state.lessonState;
-      
-      // In debug mode, fetch full prompt from edge function first
+      // In debug mode, fire a parallel call to capture the prompt (non-blocking)
       if (options.debugMode) {
-        try {
-          // Call edge function with debug=true to get the full LLM prompt
-          const debugResponse = await mutations.evaluateStructuredLesson.mutateAsync({
-            lessonRunId: lesson.lessonRunId,
-            userSequence,
-            metronomeContext: {
-              bpm: options.metronomeBpm,
-              meter: options.metronomeTimeSignature,
-            },
-            localUserId: options.localUserId,
-            debug: true,
-          });
-
-          // Type guard: debug response has 'prompt' field
+        const { lesson } = state.lessonState;
+        mutations.evaluateStructuredLesson.mutateAsync({
+          lessonRunId: lesson.lessonRunId,
+          userSequence,
+          metronomeContext: {
+            bpm: options.metronomeBpm,
+            meter: options.metronomeTimeSignature,
+          },
+          localUserId: options.localUserId,
+          debug: true,
+        }).then((debugResponse) => {
           if ('prompt' in debugResponse) {
-            // Show debug card with full LLM prompt from edge function
-            state.setDebugState({
-              type: "evaluation",
-              prompt: debugResponse.prompt,
-              userSequence,
-              evaluationType: "structured",
-              pendingCall: () => executeEvaluation(userSequence),
-            });
-            return;
+            state.setDebugInfo((prev) => ({
+              ...prev,
+              evaluation: {
+                ...prev.evaluation,
+                request: debugResponse.prompt,
+              },
+            }));
           }
-        } catch (error) {
+        }).catch((error) => {
           console.error("Failed to get debug prompt:", error);
-          // Fall through to normal execution
-        }
+        });
       }
 
-      // Normal mode or debug failed - proceed directly
+      // Always proceed directly with evaluation
       await executeEvaluation(userSequence);
     },
     [

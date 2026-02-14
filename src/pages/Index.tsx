@@ -1332,6 +1332,9 @@ const Index = () => {
     setSaveBeforeOpenDialogOpen(false);
   }, []);
 
+  // Track tune mode state for recording logic (separate from learnMode to avoid circular reference)
+  const [isInTuneMode, setIsInTuneMode] = useState(false);
+
   // Learn mode recording manager (for curriculum lessons)
   const learnRecordingManager = useRecordingManager({
     bpm: metronomeBpm,
@@ -1355,6 +1358,7 @@ const Index = () => {
       activeMode === "learn" && learnModeType === "curriculum"
         ? (metronomeStartTime ?? undefined)
         : undefined,
+    completeOnlyOnDemand: isInTuneMode,
   });
 
   // Free practice recording manager
@@ -1378,9 +1382,6 @@ const Index = () => {
         : undefined,
   });
 
-  // Track tune mode state for recording logic (separate from learnMode to avoid circular reference)
-  const [isInTuneMode, setIsInTuneMode] = useState(false);
-
   // Learn mode hook (curriculum lessons)
   const learnMode = LearnMode({
     isPlaying: appState === "ai_playing",
@@ -1400,6 +1401,7 @@ const Index = () => {
       setLearnModeRecording(null);
       learnModeRecordingRef.current = null;
     },
+    onCompleteRecordingNow: () => learnRecordingManager.completeNow(),
     language,
     model: selectedModel,
     debugMode,
@@ -1417,7 +1419,10 @@ const Index = () => {
       setMetronomeSoundType(soundType as MetronomeSoundType),
     onRegisterNoteHandler: registerTuneNoteHandler,
     onRegisterNoteOffHandler: registerTuneNoteOffHandler,
+    onEnableFreePractice: () => setLearnModeType("free-practice"),
   });
+
+  const { debugMenuState, switchToFreePractice } = learnMode;
 
   const { resetToStart: resetLearnToStart } = learnMode;
 
@@ -1938,6 +1943,8 @@ const Index = () => {
         debugMode={debugMode}
         setDebugMode={setDebugMode}
         onEnableFreePractice={() => setLearnModeType("free-practice")}
+        debugMenuState={debugMenuState}
+        onSwitchToFreePractice={switchToFreePractice}
       />
     ),
     quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
@@ -2045,7 +2052,7 @@ const Index = () => {
           <div className="w-full h-[320px] z-30 bg-key-black border-t rounded-t-2xl flex flex-col">
             {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
             <div className="w-full flex items-center justify-between gap-4 p-1 shrink-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">

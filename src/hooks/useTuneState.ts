@@ -12,6 +12,7 @@ const initialState: TunePracticeState = {
   practicePlan: [],
   currentIndex: 0,
   currentStreak: 0,
+  totalWins: 0,
   lastEvaluation: null,
   error: null,
 };
@@ -35,6 +36,7 @@ export function useTuneState(tuneKey: string) {
       practicePlan,
       tuneTitle,
       currentIndex: 0,
+      totalWins: 0,
       phase: "practicing",
     }));
   }, []);
@@ -46,7 +48,10 @@ export function useTuneState(tuneKey: string) {
       lastEvaluation: evaluation,
       currentStreak: evaluation.currentStreak,
       currentEvalIndex: evaluation.evalIndex,
-      // Stay in practicing phase - no transition
+      totalWins:
+        evaluation.evaluation === "pass"
+          ? prev.totalWins + (evaluation.successCount ?? 0)
+          : prev.totalWins,
     }));
   }, []);
 
@@ -68,6 +73,7 @@ export function useTuneState(tuneKey: string) {
           phase: "loading",
           currentIndex: 0,
           currentStreak: 0,
+          totalWins: 0,
           lastEvaluation: null,
           practicePlan: [], // Clear old plan to signal regeneration
         };
@@ -76,6 +82,7 @@ export function useTuneState(tuneKey: string) {
         ...prev,
         currentIndex: nextIndex,
         currentStreak: 0,
+        totalWins: 0,
         lastEvaluation: null,
       };
     });
@@ -91,6 +98,7 @@ export function useTuneState(tuneKey: string) {
         ...prev,
         currentIndex: previousIndex,
         currentStreak: 0,
+        totalWins: 0,
         lastEvaluation: null,
       };
     });

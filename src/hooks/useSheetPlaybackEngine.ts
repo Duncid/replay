@@ -31,6 +31,7 @@ type UseSheetPlaybackEngineOptions = {
   speed?: number;
   chordWindowMs?: number;
   onTick?: (timeSec: number) => void;
+  onReachedEnd?: () => void;
 };
 
 const DEFAULT_SPEED = 1;
@@ -98,6 +99,7 @@ export function useSheetPlaybackEngine({
   speed = DEFAULT_SPEED,
   chordWindowMs = DEFAULT_CHORD_WINDOW_MS,
   onTick,
+  onReachedEnd,
 }: UseSheetPlaybackEngineOptions) {
   const gates = useMemo(() => buildGates(notes), [notes]);
   const endTime = useMemo(() => {
@@ -140,6 +142,8 @@ export function useSheetPlaybackEngine({
   // onTick callback ref — always up-to-date without causing re-renders
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
+  const onReachedEndRef = useRef(onReachedEnd);
+  onReachedEndRef.current = onReachedEnd;
 
   const activeNoteIdsRef = useRef<Set<string>>(new Set());
 
@@ -425,7 +429,9 @@ export function useSheetPlaybackEngine({
       updateFocus();
 
       if (nextTime >= endTime - EPSILON) {
-        // Reached end of track — reset to start
+        // Reached end of track — capture whether user drove before reset
+        const wasUserDriven = !isAutoplayRef.current;
+        // Reset to start
         isAutoplayRef.current = false;
         setIsAutoplay(false);
         playerAdvancingRef.current = false;
@@ -446,6 +452,9 @@ export function useSheetPlaybackEngine({
         setActiveNoteIds(activeNoteIdsRef.current);
         // Fire onTick at time 0 so playhead and viewport snap back
         onTickRef.current?.(0);
+        if (wasUserDriven) {
+          onReachedEndRef.current?.();
+        }
         return;
       }
 
