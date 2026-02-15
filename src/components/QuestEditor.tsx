@@ -81,6 +81,7 @@ import {
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -523,7 +524,19 @@ type NodeComponentProps = {
   selected?: boolean;
 } & Record<string, unknown>;
 
+/** When embedded in a tab, fit view once the tab is visible so the flow renders (container has real dimensions). */
+function FitViewOnActivate({ isActive }: { isActive: boolean }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    if (!isActive) return;
+    const id = setTimeout(() => fitView({ duration: 0 }), 100);
+    return () => clearTimeout(id);
+  }, [isActive, fitView]);
+  return null;
+}
+
 function QuestEditorFlow({
+  isActive = true,
   onNodesChange,
   onEdgesChange,
   onEdgesDelete,
@@ -532,6 +545,7 @@ function QuestEditorFlow({
   onConnect,
   onEditNode,
 }: {
+  isActive?: boolean;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onEdgesDelete?: (edges: Edge[]) => void;
@@ -567,6 +581,7 @@ function QuestEditorFlow({
       edgeTypes={edgeTypes}
       fitView
     >
+      <FitViewOnActivate isActive={isActive} />
       <Background />
       <Controls className="quest-controls" />
       <MiniMap
@@ -605,12 +620,13 @@ export function QuestEditor({
   } = useQuestGraphs();
 
   // Fetch published tunes from database for tune node selector
-  const { data: publishedTuneList, isLoading: isLoadingTunes } = usePublishedTuneKeys();
+  const { data: publishedTuneList, isLoading: isLoadingTunes } =
+    usePublishedTuneKeys();
 
   // Transform published tunes to selector format (show tune_key, not briefing.title)
   const availablePublishedTunes = useMemo(() => {
     if (!publishedTuneList) return [];
-    return publishedTuneList.map(tune => ({
+    return publishedTuneList.map((tune) => ({
       key: tune.tune_key,
       label: tune.tune_key,
     }));
@@ -2503,6 +2519,7 @@ export function QuestEditor({
         <style>{questControlsStyles}</style>
         <ReactFlowProvider>
           <QuestEditorFlow
+            isActive={isVisible}
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
@@ -2877,11 +2894,19 @@ export function QuestEditor({
                       disabled={isLoadingTunes}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={isLoadingTunes ? "Loading..." : "Select a published tune..."} />
+                        <SelectValue
+                          placeholder={
+                            isLoadingTunes
+                              ? "Loading..."
+                              : "Select a published tune..."
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {availablePublishedTunes.length === 0 ? (
-                          <SelectItem value="" disabled>No published tunes available</SelectItem>
+                          <SelectItem value="" disabled>
+                            No published tunes available
+                          </SelectItem>
                         ) : (
                           availablePublishedTunes.map((tune) => (
                             <SelectItem key={tune.key} value={tune.key}>

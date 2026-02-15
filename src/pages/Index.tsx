@@ -1929,8 +1929,8 @@ const Index = () => {
                   onNotationChange={setMusicNotation}
                 />
                 <TabsList>
-                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                   <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
+                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                   <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
                   <TabsTrigger value="lab">{t("tabs.lab")}</TabsTrigger>
                 </TabsList>
