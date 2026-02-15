@@ -1,6 +1,6 @@
 export type PianoSoundType =
-  | "classic"        // Original raw Web Audio oscillators (DEFAULT)
-  | "acoustic-piano" // tonejs-instruments sampled grand piano
+  | "classic"        // Original raw Web Audio oscillators (Patch)
+  | "acoustic-piano" // tonejs-instruments sampled grand piano (app default)
   | "electric-piano" // tonejs-instruments electric piano
   | "guitar"         // tonejs-instruments acoustic guitar
   | "cello"          // tonejs-instruments cello
@@ -10,7 +10,7 @@ export type PianoSoundType =
   | "flute";         // tonejs-instruments flute
 
 export const PIANO_SOUND_LABELS: Record<PianoSoundType, string> = {
-  "classic": "Basic",
+  "classic": "Patch",
   "acoustic-piano": "Acoustic Piano",
   "electric-piano": "Electric Piano",
   "guitar": "Acoustic Guitar",

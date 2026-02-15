@@ -76,56 +76,36 @@ function createStripeTexture(baseHex: string, stripeHex: string) {
   return texture;
 }
 
-export type PianoSheetSize =
-  | "xs"
-  | "sm"
-  | "md"
-  | "lg"
-  | "xl"
-  | "2xl"
-  | "3xl";
 export type PianoSheetAlign = "start" | "center" | "end";
 
-export const BASE_UNITS: Record<PianoSheetSize, number> = {
-  xs: 8,
-  sm: 10,
-  md: 12,
-  lg: 14,
-  xl: 16,
-  "2xl": 18,
-  "3xl": 20,
-};
-
-const SIZES_BIGGEST_FIRST: PianoSheetSize[] = [
-  "3xl",
-  "2xl",
-  "xl",
-  "lg",
-  "md",
-  "sm",
-  "xs",
-];
+export const MIN_BASE_UNIT = 8;
+export const MAX_BASE_UNIT = 24;
+export const DEFAULT_BASE_UNIT = 12;
 
 /**
- * Returns the largest PianoSheetSize that fits in the given available height
- * given the number of track lines. minHeight(size) = BASE_UNITS[size] * (2 + trackCount).
+ * Returns the largest base unit (px) in [MIN_BASE_UNIT, MAX_BASE_UNIT] that fits
+ * in the given available height. minHeight = baseUnit * (2 + trackCount).
  */
-export function getRecommendedPianoSheetSize(
+export function getRecommendedBaseUnit(
   availableHeight: number,
   trackCount: number
-): PianoSheetSize {
-  for (const size of SIZES_BIGGEST_FIRST) {
-    const minHeight = BASE_UNITS[size] * (2 + trackCount);
-    if (availableHeight >= minHeight) return size;
-  }
-  return "xs";
+): number {
+  const denominator = 2 + trackCount;
+  if (denominator <= 0) return MAX_BASE_UNIT;
+  const ideal = availableHeight / denominator;
+  const clamped = Math.min(
+    MAX_BASE_UNIT,
+    Math.max(MIN_BASE_UNIT, ideal)
+  );
+  return Math.floor(clamped);
 }
 
 interface PianoSheetPixiProps {
   notes: NoteEvent[];
   width: number;
   height: number;
-  size?: PianoSheetSize;
+  /** Base unit in px (8–24). Drives note height and layout scale. */
+  size?: number;
   align?: PianoSheetAlign;
   timeSignatures?: TimeSignature[];
   qpm?: number;
@@ -140,7 +120,7 @@ export function PianoSheetPixi({
   notes,
   width,
   height,
-  size: sizeProp = "md",
+  size: sizeProp = DEFAULT_BASE_UNIT,
   align = "center",
   timeSignatures,
   qpm,
@@ -151,7 +131,10 @@ export function PianoSheetPixi({
   isAutoplay = false,
 }: PianoSheetPixiProps) {
   const config = useMemo<SheetConfig>(() => {
-    const baseUnit = BASE_UNITS[sizeProp];
+    const baseUnit = Math.min(
+      MAX_BASE_UNIT,
+      Math.max(MIN_BASE_UNIT, sizeProp)
+    );
     const noteHeight = baseUnit;
     const trackGap = 0;
     const trackStep = noteHeight + trackGap;

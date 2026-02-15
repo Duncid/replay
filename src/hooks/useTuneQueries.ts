@@ -6,6 +6,7 @@ import type { TuneAssetData, TuneBriefing } from "@/types/tuneAssets";
 interface StartTunePracticeParams {
   tuneKey: string;
   localUserId?: string | null;
+  userName?: string | null;
   language?: string;
   notationPreference?: "auto" | "abc" | "solfege";
   debug?: boolean;
@@ -29,6 +30,7 @@ export function useStartTunePractice() {
         body: {
           tuneKey: params.tuneKey,
           localUserId: params.localUserId,
+          userName: params.userName,
           language: params.language || "en",
           notationPreference: params.notationPreference ?? "auto",
           debug: params.debug || false,

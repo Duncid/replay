@@ -1,7 +1,7 @@
 import {
-  getRecommendedPianoSheetSize,
+  DEFAULT_BASE_UNIT,
+  getRecommendedBaseUnit,
   PianoSheetPixi,
-  type PianoSheetSize,
 } from "@/components/PianoSheetPixi";
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
 import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
@@ -23,7 +23,16 @@ import type {
   TuneEvaluationResponse,
 } from "@/types/tunePractice";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { ArrowLeft, ArrowRight, Play, RotateCcw, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  Music,
+  Play,
+  RotateCcw,
+  Square,
+  X,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -43,6 +52,7 @@ interface TunePracticeProps {
   totalWins: number;
   lastEvaluation?: TuneEvaluationResponse | null;
   onPlaySample: () => void;
+  onStopSample?: () => void;
   onPlayheadReachedEnd?: () => void;
   onSwitchNugget: () => void;
   onPreviousNugget: () => void;
@@ -225,10 +235,12 @@ function StreakDisplay({
 export function TunePractice({
   currentNugget,
   currentIndex,
+  totalNuggets,
   currentStreak,
   totalWins,
   lastEvaluation,
   onPlaySample,
+  onStopSample,
   onSwitchNugget,
   onPreviousNugget,
   onLeave,
@@ -252,6 +264,7 @@ export function TunePractice({
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
   const [commentKey, setCommentKey] = useState(0);
   const isFirstNugget = currentIndex === 0;
+  const isLastNugget = currentIndex >= totalNuggets - 1;
   const handleCopyEvalDebug = async () => {
     const promptText = evalPrompt?.trim() ?? "";
     const answerText = evalAnswer?.trim() ?? "";
@@ -363,7 +376,9 @@ export function TunePractice({
     const raf = requestAnimationFrame(() => {
       const { width, height } = el.getBoundingClientRect();
       setPixiSize((prev) =>
-        prev.width === width && prev.height === height ? prev : { width, height }
+        prev.width === width && prev.height === height
+          ? prev
+          : { width, height },
       );
     });
     return () => {
@@ -411,9 +426,9 @@ export function TunePractice({
     const maxMidi = Math.max(...notes.map((n) => n.midi));
     return maxMidi - minMidi + 1;
   }, [notes]);
-  const pianoSheetSize = useMemo((): PianoSheetSize => {
-    if (pixiSize.height <= 0) return "md";
-    return getRecommendedPianoSheetSize(pixiSize.height, trackCount);
+  const pianoSheetSize = useMemo((): number => {
+    if (pixiSize.height <= 0) return DEFAULT_BASE_UNIT;
+    return getRecommendedBaseUnit(pixiSize.height, trackCount);
   }, [pixiSize.height, trackCount]);
 
   // ── PianoSheetPixi: playback engine ───────────────────────────────
@@ -513,21 +528,23 @@ export function TunePractice({
             className="relative w-full flex-1 min-h-0 overflow-hidden"
           >
             <div className="absolute inset-0 w-full h-full">
-              {pixiSize.width > 0 && pixiSize.height > 0 && notes.length > 0 && (
-                <PianoSheetPixi
-                  notes={notes}
-                  width={pixiSize.width}
-                  height={pixiSize.height}
-                  size={pianoSheetSize}
-                  timeSignatures={sampleSequence?.timeSignatures}
-                  qpm={bpm}
-                  onTickRef={onTickRef}
-                  focusedNoteIds={playback.focusedNoteIds}
-                  activeNoteIds={playback.activeNoteIds}
-                  followPlayhead
-                  isAutoplay={playback.isAutoplay}
-                />
-              )}
+              {pixiSize.width > 0 &&
+                pixiSize.height > 0 &&
+                notes.length > 0 && (
+                  <PianoSheetPixi
+                    notes={notes}
+                    width={pixiSize.width}
+                    height={pixiSize.height}
+                    size={pianoSheetSize}
+                    timeSignatures={sampleSequence?.timeSignatures}
+                    qpm={bpm}
+                    onTickRef={onTickRef}
+                    focusedNoteIds={playback.focusedNoteIds}
+                    activeNoteIds={playback.activeNoteIds}
+                    followPlayhead
+                    isAutoplay={playback.isAutoplay}
+                  />
+                )}
             </div>
           </div>
         </div>
@@ -659,7 +676,7 @@ export function TunePractice({
         </SheetContent>
       </Sheet>
 
-      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-4">
+      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-auto w-full max-w-5xl">
         <div className="flex items-center justify-start gap-1">
           <Button
             variant="ghost"
@@ -672,40 +689,66 @@ export function TunePractice({
           </Button>
         </div>
         <div className="flex items-center justify-center gap-1">
-          <div className="bg-key-black p-1 border border-border rounded-2xl ">
+          <div className="bg-key-black p-1 border border-border rounded-2xl gap-1">
             <Button
               variant="default"
-              onClick={onPlaySample}
-              disabled={isPlaying}
+              onClick={isPlaying ? () => onStopSample?.() : onPlaySample}
               size="sm"
+              title={
+                isPlaying ? t("tune.buttons.stop") : t("tune.buttons.replay")
+              }
             >
-              <Play fill="currentColor" stroke="none" />{" "}
-              {t("tune.buttons.replay")}
+              {isPlaying ? (
+                <>
+                  <Square
+                    fill="currentColor"
+                    stroke="none"
+                    className="size-3"
+                  />{" "}
+                  {t("tune.buttons.stop")}
+                </>
+              ) : (
+                <>
+                  <Play fill="currentColor" stroke="none" />{" "}
+                  {t("tune.buttons.replay")}
+                </>
+              )}
             </Button>
             <Button
               variant="ghost"
-              onClick={() => playback.stop()}
+              onClick={() => {
+                if (isPlaying) onStopSample?.();
+                playback.stop();
+              }}
               size="sm"
               title={t("tune.buttons.restart")}
             >
               <RotateCcw /> {t("tune.buttons.restart")}
             </Button>
+            <Button variant="ghost" size="sm" title={t("tune.buttons.restart")}>
+              <Music />
+              <ChevronDown className="opacity-50" />
+            </Button>
           </div>
         </div>
         <div className="flex items-center justify-end gap-1">
           <Button variant="ghost" onClick={onLeave} size="sm">
-            Leave <X />
+            {t("tune.buttons.leave")} <X />
           </Button>
-          <div className="w-px h-4 bg-border" />
-          <Button
-            variant={shouldPulse ? "default" : "ghost"}
-            onClick={handleNextNugget}
-            isPulsating={shouldPulse}
-            size="sm"
-          >
-            {t("tune.buttons.next")}
-            <ArrowRight />
-          </Button>
+          {!isLastNugget && (
+            <>
+              <div className="w-px h-4 bg-border" />
+              <Button
+                variant={shouldPulse ? "default" : "ghost"}
+                onClick={handleNextNugget}
+                isPulsating={shouldPulse}
+                size="sm"
+              >
+                {t("tune.buttons.next")}
+                <ArrowRight />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
@@ -17,20 +16,18 @@ interface TeacherWelcomeProps {
   greeting: TeacherGreetingResponse | null;
   isLoading: boolean;
   onSelectActivity: (suggestion: TeacherSuggestion) => void;
-  onStart: () => void;
 }
 
 export function TeacherWelcome({
   greeting,
   isLoading,
   onSelectActivity,
-  onStart,
 }: TeacherWelcomeProps) {
   const { t } = useTranslation();
 
   let content: React.ReactNode = null;
 
-  // If greeting is available, show the suggestions UI
+  // If greeting is available, show the suggestions UI (lesson selection)
   if (greeting) {
     content = (
       <div className="space-y-6">
@@ -73,16 +70,9 @@ export function TeacherWelcome({
         </div>
       </div>
     );
-  } else if (isLoading) {
-    // Loading state for initial greeting fetch (after Start is clicked)
-    content = <LoadingSpinner message={t("learnMode.loadingTeacher")} />;
   } else {
-    // Normal mode - just show Start button
-    content = (
-      <div className="h-full flex flex-col justify-center items-center space-y-6">
-        <Button onClick={onStart}>{t("learnMode.startButton")}</Button>
-      </div>
-    );
+    // Loading: fetching teacher greeting (go straight to lesson selection)
+    content = <LoadingSpinner message={t("learnMode.loadingTeacher")} />;
   }
 
   return <div className="w-full">{content}</div>;

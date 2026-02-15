@@ -27,12 +27,11 @@
     "play": "Composer",
     "learn": "Apprendre",
     "quest": "Quête",
-    "lab": "Tune",
-    "interactive": "Interactif"
+    "lab": "Tune"
   },
   "piano": {
     "sound": "Son du piano",
-    "basic": "Classique",
+    "basic": "Patch",
     "sampledInstruments": "Instruments échantillonnés"
   },
   "menus": {
@@ -128,9 +127,11 @@
     },
     "buttons": {
       "replay": "Rejouer",
+      "stop": "Arrêter",
       "restart": "Recommencer",
       "previous": "Précédent",
-      "next": "Suivant"
+      "next": "Suivant",
+      "leave": "Quitter"
     },
     "feedback": {
       "greatJob": "Bravo !",

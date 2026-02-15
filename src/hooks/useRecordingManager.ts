@@ -110,10 +110,75 @@ export function useRecordingManager({
     clearEndingProgress();
   }, [clearEndingProgress]);
 
-  const completeRecording = useCallback(() => {
-    if (recordingRef.current.notes.length === 0) return;
+  const getCurrentVirtualTime = useCallback((): number => {
+    if (!recordingStartTimeRef.current) return 0;
 
+    if (timelinePausedRef.current) {
+      // Timeline is paused - resume at lastNoteEndTime + resumeGap
+      const resumeTime = lastNoteEndTimeRef.current + resumeGapMs / 1000;
+      console.log(
+        `[RecordingManager] Resuming timeline at ${resumeTime.toFixed(
+          3,
+        )}s (was paused at ${virtualTimeRef.current.toFixed(3)}s)`,
+      );
+
+      // Unpause and update the reference point for real time
+      timelinePausedRef.current = false;
+      // Adjust recording start time so that current real time maps to resumeTime
+      recordingStartTimeRef.current = Date.now() - resumeTime * 1000;
+      virtualTimeRef.current = resumeTime;
+      return resumeTime;
+    }
+
+    // Timeline is running - use real elapsed time
+    return (Date.now() - recordingStartTimeRef.current) / 1000;
+  }, [resumeGapMs]);
+
+  const completeRecording = useCallback(() => {
     clearAllTimeouts();
+
+    // Close any notes still held (e.g. last key held when playhead reached end) so they're included
+    const endTimeSeconds = getCurrentVirtualTime();
+    const pendingEntries = Array.from(notePressDataRef.current.entries());
+    for (const [noteKey, pressData] of pendingEntries) {
+      const pitch = noteNameToMidi(noteKey);
+      const note: Note = {
+        pitch,
+        startTime: pressData.startTime,
+        endTime: endTimeSeconds,
+        velocity: pressData.velocity,
+      };
+      if (
+        metronomeIsPlaying &&
+        metronomeStartTime !== undefined &&
+        pressData.toneTime !== undefined
+      ) {
+        const timing = calculateMetronomeBeatTiming(
+          pressData.toneTime,
+          metronomeStartTime,
+          bpm,
+          timeSignature,
+        );
+        if (timing) {
+          note.beat = timing.beat;
+          note.beatOffset = timing.beatOffset;
+        }
+      }
+      recordingRef.current.notes.push(note);
+      recordingRef.current.totalTime = Math.max(
+        recordingRef.current.totalTime,
+        endTimeSeconds,
+      );
+      lastNoteEndTimeRef.current = Math.max(
+        lastNoteEndTimeRef.current,
+        endTimeSeconds,
+      );
+      virtualTimeRef.current = endTimeSeconds;
+      notePressDataRef.current.delete(noteKey);
+      heldKeysCountRef.current = Math.max(0, heldKeysCountRef.current - 1);
+    }
+
+    if (recordingRef.current.notes.length === 0) return;
 
     // Normalize recording so first note starts at 0
     const minTime = Math.min(
@@ -173,7 +238,14 @@ export function useRecordingManager({
         progressIntervalRef.current = null;
       }
     }, 16);
-  }, [bpm, timeSignature, clearAllTimeouts]);
+  }, [
+    bpm,
+    timeSignature,
+    clearAllTimeouts,
+    getCurrentVirtualTime,
+    metronomeIsPlaying,
+    metronomeStartTime,
+  ]);
 
   const startPauseTimeout = useCallback(() => {
     // Clear existing timeouts
@@ -225,30 +297,6 @@ export function useRecordingManager({
       }, 300);
     }, pauseTimeoutMs);
   }, [pauseTimeoutMs, completeRecording, clearEndingProgress]);
-
-  const getCurrentVirtualTime = useCallback((): number => {
-    if (!recordingStartTimeRef.current) return 0;
-
-    if (timelinePausedRef.current) {
-      // Timeline is paused - resume at lastNoteEndTime + resumeGap
-      const resumeTime = lastNoteEndTimeRef.current + resumeGapMs / 1000;
-      console.log(
-        `[RecordingManager] Resuming timeline at ${resumeTime.toFixed(
-          3,
-        )}s (was paused at ${virtualTimeRef.current.toFixed(3)}s)`,
-      );
-
-      // Unpause and update the reference point for real time
-      timelinePausedRef.current = false;
-      // Adjust recording start time so that current real time maps to resumeTime
-      recordingStartTimeRef.current = Date.now() - resumeTime * 1000;
-      virtualTimeRef.current = resumeTime;
-      return resumeTime;
-    }
-
-    // Timeline is running - use real elapsed time
-    return (Date.now() - recordingStartTimeRef.current) / 1000;
-  }, [resumeGapMs]);
 
   const startRecording = useCallback(() => {
     if (recordingStartTimeRef.current !== null) return; // Already recording

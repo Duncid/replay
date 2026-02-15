@@ -12,11 +12,6 @@ import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
 import { UserMenu } from "@/components/UserMenu";
 import { WhistleImportSheet } from "@/components/WhistleImportSheet";
 import {
-  InteractiveViewActionBar,
-  InteractiveViewTabContent,
-  useInteractiveState,
-} from "@/components/modes/InteractiveView";
-import {
   LearnMode,
   LearnModeActionBar,
   LearnModeTabContent,
@@ -120,7 +115,7 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
-type ActiveMode = "play" | "learn" | "quest" | "lab" | "interactive";
+type ActiveMode = "play" | "learn" | "quest" | "lab";
 
 // Normalize creativity (0-100) to model-specific temperature ranges
 const normalizeCreativityToRNN = (creativity: number): number => {
@@ -191,7 +186,6 @@ const Index = () => {
   const previousUserIdRef = useRef<string | null>(null);
   const sheetInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
   const labInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
-  const interactiveState = useInteractiveState();
 
   const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
   const [musicNotation, setMusicNotation] = useLocalStorage<
@@ -201,7 +195,7 @@ const Index = () => {
   // Persisted preferences
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(
     STORAGE_KEYS.INSTRUMENT,
-    "classic",
+    "acoustic-piano",
   );
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(
     STORAGE_KEYS.BPM,
@@ -372,12 +366,6 @@ const Index = () => {
     };
   }, []);
 
-  // Preload audio samples when instrument changes
-  useEffect(() => {
-    if (!hasUserInteractedRef.current) return;
-    pianoRef.current?.preload();
-  }, [pianoSoundType]);
-
   // Mode hooks defined later due to dependency on playSequence/handleReplaySequence
   // (they will be initialized after those functions are defined)
 
@@ -452,6 +440,13 @@ const Index = () => {
     recordingManager.cancelRecording();
     setActiveMode(newMode);
   };
+
+  // Migrate away from removed "interactive" tab (fallback for stored preference)
+  useEffect(() => {
+    if ((activeMode as string) === "interactive") {
+      setActiveMode("play");
+    }
+  }, [activeMode, setActiveMode]);
 
   const registerLabNoteHandler = useCallback(
     (handler: ((noteKey: string) => void) | null) => {
@@ -1389,6 +1384,7 @@ const Index = () => {
       pianoRef.current?.ensureAudioReady();
       setTimeout(() => playSequence(sequence, undefined, true), 50);
     },
+    onStopPlayback: stopAiPlayback,
     onStartRecording: () => {
       // Recording starts automatically when user plays
     },
@@ -1533,15 +1529,6 @@ const Index = () => {
         });
       }
 
-      if (activeMode === "interactive") {
-        sheetInputEventRef.current?.({
-          type: "noteon",
-          midi: noteNameToMidi(noteKey),
-          timeMs: performance.now(),
-          velocity,
-        });
-      }
-
       if (activeMode === "play") {
         recordingManager.addNoteStart(noteKey, velocity);
       } else if (activeMode === "learn") {
@@ -1578,27 +1565,6 @@ const Index = () => {
     ],
   );
 
-  const handleInteractiveActivePitchesChange = useCallback(
-    (pitches: Set<number>) => {
-      if (activeMode !== "interactive") return;
-      const nextKeys = new Set<string>();
-      pitches.forEach((pitch) => {
-        nextKeys.add(midiToNoteName(pitch));
-      });
-      setActiveKeys(nextKeys);
-    },
-    [activeMode],
-  );
-
-  const handleInteractivePlaybackNote = useCallback(
-    ({ midi, durationSec }: { midi: number; durationSec: number }) => {
-      if (activeMode !== "interactive") return;
-      const frequency = midiToFrequency(midi);
-      pianoRef.current?.playNote(frequency, durationSec);
-    },
-    [activeMode],
-  );
-
   const handleLabActivePitchesChange = useCallback(
     (pitches: Set<number>) => {
       if (activeMode !== "lab") return;
@@ -1625,13 +1591,6 @@ const Index = () => {
       if (activeMode === "lab") {
         labNoteOffHandlerRef.current?.(noteKey);
         labInputEventRef.current?.({
-          type: "noteoff",
-          midi: noteNameToMidi(noteKey),
-          timeMs: performance.now(),
-        });
-      }
-      if (activeMode === "interactive") {
-        sheetInputEventRef.current?.({
           type: "noteoff",
           midi: noteNameToMidi(noteKey),
           timeMs: performance.now(),
@@ -1950,7 +1909,6 @@ const Index = () => {
     ),
     quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
     lab: <TuneManagementActionBar />,
-    interactive: <InteractiveViewActionBar state={interactiveState} />,
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
@@ -1975,9 +1933,6 @@ const Index = () => {
                   <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
                   <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
                   <TabsTrigger value="lab">{t("tabs.lab")}</TabsTrigger>
-                  <TabsTrigger value="interactive">
-                    {t("tabs.interactive")}
-                  </TabsTrigger>
                 </TabsList>
                 {activeMode === "quest" && questHeaderTitle && (
                   <span className="text-sm text-muted-foreground ml-2">
@@ -1998,7 +1953,7 @@ const Index = () => {
             {/* AI Playing / Replay indicator */}
             <TopToastLabel
               show={appState === "ai_playing"}
-              label={isReplaying ? t("status.replay") : t("status.playing")}
+              label={t("status.playing")}
               pulse
             />
 
@@ -2040,12 +1995,6 @@ const Index = () => {
               onActivePitchesChange={handleLabActivePitchesChange}
               onPlaybackNote={handleLabPlaybackNote}
             />
-            <InteractiveViewTabContent
-              state={interactiveState}
-              onPlaybackInputEventRef={sheetInputEventRef}
-              onActivePitchesChange={handleInteractiveActivePitchesChange}
-              onPlaybackNote={handleInteractivePlaybackNote}
-            />
           </div>
         </Tabs>
 
@@ -2073,7 +2022,7 @@ const Index = () => {
                       }
                     >
                       <DropdownMenuRadioItem value="classic">
-                        {t("piano.basic")}
+                        {PIANO_SOUND_LABELS["classic"]}
                       </DropdownMenuRadioItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel className="text-xs text-muted-foreground">
@@ -2133,11 +2082,7 @@ const Index = () => {
                 appState === "waiting_for_ai"
               }
               soundType={pianoSoundType}
-              hasColor={
-                isInTuneMode ||
-                activeMode === "lab" ||
-                activeMode === "interactive"
-              }
+              hasColor={isInTuneMode || activeMode === "lab"}
               language={language}
               notationPreference={musicNotation}
               onNoteStart={handleNoteStart}

@@ -13,7 +13,7 @@ function frequencyToNote(frequency: number): string {
   return `${noteNames[noteIndex]}${octave}`;
 }
 
-export function usePianoAudio(soundType: PianoSoundType | null = "classic") {
+export function usePianoAudio(soundType: PianoSoundType | null = "acoustic-piano") {
   const tonePiano = useTonePiano(soundType);
   
   // Store tonePiano in ref for stable callbacks
