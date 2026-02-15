@@ -99,6 +99,7 @@ serve(async (req) => {
     const {
       tuneKey,
       localUserId = null,
+      userName = null,
       language = "en",
       notationPreference: rawNotation = "auto",
       debug = false,
@@ -308,6 +309,7 @@ PLAN LENGTH:
 ## STUDENT CONTEXT
 
 - ID: ${localUserId || "anonymous"}
+- Name: ${userName ? `"${userName}" (use for personalized greetings and encouragement)` : "unknown (student prefers anonymity)"}
 - Language: ${language}
 - Music notation: ${effectiveNotation}. ${notationConvention}
 LANGUAGE INSTRUCTION:
@@ -378,6 +380,7 @@ Consider factors like:
 Use the submit_practice_plan function to return a structured practice plan.`;
 
     const userPrompt = `Create a practice plan that forms a growth path from this student's current abilities toward playing the full tune.
+${userName ? `Address the student by name (${userName}) in your encouragement for a warm, personalized greeting.` : ""}
 
 Plan length guidance:
 - For beginners: plan up to ~16 activities
@@ -435,7 +438,7 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
               encouragement: {
                 type: "string",
                 description:
-                  "Brief encouraging message for the student (1 sentence). Do not use nugget or assembly IDs, user do not know them.",
+                  "Brief encouraging message for the student (1 sentence). If the student's name is known, use it for a warm, personalized greeting. Do not use nugget or assembly IDs, user do not know them.",
               },
             },
             required: ["practicePlan", "encouragement"],

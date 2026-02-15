@@ -74,6 +74,7 @@ export interface DebugMenuState {
 interface LearnModeProps {
   isPlaying: boolean;
   onPlaySequence: (sequence: NoteSequence) => void;
+  onStopPlayback?: () => void;
   onStartRecording: () => void;
   isRecording: boolean;
   userRecording: NoteSequence | null;
@@ -104,6 +105,7 @@ interface LearnModeProps {
 export function LearnMode({
   isPlaying,
   onPlaySequence,
+  onStopPlayback,
   isRecording,
   userRecording,
   onClearRecording,
@@ -189,11 +191,12 @@ export function LearnMode({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  // Fetch teacher greeting when user clicks Start
-  const handleStartTeacherGreet = useCallback(() => {
-    console.log(`[LearnMode] Start clicked: user=${localUserId ?? "unknown"}`);
-    setShouldFetchGreeting(true);
-  }, [localUserId]);
+  // Auto-fetch teacher greeting when on welcome screen (go straight to lesson selection)
+  useEffect(() => {
+    if (lesson.phase === "welcome") {
+      setShouldFetchGreeting(true);
+    }
+  }, [lesson.phase, setShouldFetchGreeting]);
 
   // === Effects ===
   // Show error toast if teacher greeting fails
@@ -585,6 +588,7 @@ export function LearnMode({
           debugMode={debugMode}
           onLeave={handleLeave}
           onPlaySample={onPlaySequence}
+          onStopSample={onStopPlayback}
           isPlayingSample={isPlaying}
           currentRecording={userRecording}
           isRecording={isRecording}
@@ -614,7 +618,6 @@ export function LearnMode({
           greeting={teacherGreeting}
           isLoading={isLoadingTeacher}
           onSelectActivity={handleSelectActivity}
-          onStart={handleStartTeacherGreet}
         />
       );
     }

@@ -54,7 +54,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     {
       activeKeys,
       allowInput,
-      soundType = "classic",
+      soundType = "acoustic-piano",
       onNoteStart,
       onNoteEnd,
       hasColor = false,
@@ -70,7 +70,38 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const [sustainedKeys, setSustainedKeys] = useState<Set<string>>(new Set());
     const pressedKeysRef = useRef<Set<string>>(new Set());
     const keyActivationTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+    const hasUserInteractedRef = useRef(false);
     const audio = usePianoAudio(soundType);
+    const audioRef = useRef(audio);
+    audioRef.current = audio;
+
+    // Piano owns preloading: on first user interaction, resume context and load current instrument
+    useEffect(() => {
+      const handleFirstInteraction = () => {
+        hasUserInteractedRef.current = true;
+        const a = audioRef.current;
+        void a.ensureAudioReady().then(() => a.preload());
+        document.removeEventListener("pointerdown", handleFirstInteraction);
+        document.removeEventListener("touchstart", handleFirstInteraction);
+      };
+      document.addEventListener("pointerdown", handleFirstInteraction, {
+        once: true,
+      });
+      document.addEventListener("touchstart", handleFirstInteraction, {
+        once: true,
+      });
+      return () => {
+        document.removeEventListener("pointerdown", handleFirstInteraction);
+        document.removeEventListener("touchstart", handleFirstInteraction);
+      };
+    }, []);
+
+    // When sound type changes, preload the new instrument if user has already interacted
+    useEffect(() => {
+      if (hasUserInteractedRef.current && soundType) {
+        void audio.preload();
+      }
+    }, [soundType, audio]);
 
     const noteToMidi = useCallback((noteKey: string) => {
       const noteNames = [

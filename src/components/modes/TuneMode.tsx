@@ -1,14 +1,13 @@
 import { DebugLLMSheet } from "@/components/DebugLLMSheet";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { useLocalUsers } from "@/hooks/useLocalUsers";
 import {
   useEvaluateTuneAttempt,
   useStartTunePractice,
   useTuneAssets,
 } from "@/hooks/useTuneQueries";
 import { useTuneState } from "@/hooks/useTuneState";
-import type {
-  TuneEvaluationDebugData,
-} from "@/types/tunePractice";
+import type { TuneEvaluationDebugData } from "@/types/tunePractice";
 import type { INoteSequence } from "@magenta/music/es6";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,6 +33,7 @@ interface TuneModeProps {
   debugMode?: boolean;
   onLeave: () => void;
   onPlaySample: (sequence: INoteSequence) => void;
+  onStopSample?: () => void;
   isPlayingSample?: boolean;
   currentRecording?: INoteSequence | null;
   isRecording?: boolean;
@@ -55,6 +55,7 @@ export function TuneMode({
   debugMode = false,
   onLeave,
   onPlaySample,
+  onStopSample,
   isPlayingSample = false,
   currentRecording,
   isRecording = false,
@@ -65,6 +66,10 @@ export function TuneMode({
   onTuneDebugMenuChange,
 }: TuneModeProps) {
   const { t } = useTranslation();
+  const { users } = useLocalUsers();
+  const userName = localUserId
+    ? (users.find((u) => u.id === localUserId)?.name ?? null)
+    : null;
   const {
     state,
     currentNugget,
@@ -81,7 +86,10 @@ export function TuneMode({
   const evaluateAttempt = useEvaluateTuneAttempt();
   const { data: tuneAssets } = useTuneAssets(tuneKey);
 
-  const [coachDebugCall, setCoachDebugCall] = useState<{ request?: string; response?: string } | null>(null);
+  const [coachDebugCall, setCoachDebugCall] = useState<{
+    request?: string;
+    response?: string;
+  } | null>(null);
   const [showCoachPromptSheet, setShowCoachPromptSheet] = useState(false);
   const [evalDebugData, setEvalDebugData] =
     useState<TuneEvaluationDebugData | null>(null);
@@ -128,6 +136,7 @@ export function TuneMode({
   const lastProcessedSignatureRef = useRef<string | null>(null);
   const lastProcessedRecordingIdRef = useRef<string | null>(null);
   const lastAutoPlayKey = useRef<string | null>(null);
+  const hasAutoEnabledInteractionRef = useRef(false);
 
   // Evaluation indexing to handle out-of-order responses
   const evalIndexRef = useRef(0);
@@ -408,8 +417,7 @@ export function TuneMode({
     const signature = getRecordingSignature(currentRecording);
     if (recordingId && lastProcessedRecordingIdRef.current === recordingId)
       return;
-    if (!recordingId && lastProcessedSignatureRef.current === signature)
-      return;
+    if (!recordingId && lastProcessedSignatureRef.current === signature) return;
 
     const targetSequence = (currentNugget.nugget?.noteSequence ||
       currentNugget.assembly?.noteSequence ||
@@ -468,6 +476,7 @@ export function TuneMode({
       const response = await startPractice.mutateAsync({
         tuneKey,
         localUserId,
+        userName,
         language,
         notationPreference,
         debug: false,
@@ -494,23 +503,27 @@ export function TuneMode({
         }));
 
         // Fire a parallel call to capture the coach prompt (non-blocking)
-        startPractice.mutateAsync({
-          tuneKey,
-          localUserId,
-          language,
-          notationPreference,
-          debug: true,
-        }).then((debugResponse) => {
-          const promptText = (debugResponse as any).prompt;
-          if (promptText) {
-            setCoachDebugCall((prev) => ({
-              ...prev,
-              request: promptText,
-            }));
-          }
-        }).catch((err) => {
-          console.error("Failed to fetch coach debug prompt:", err);
-        });
+        startPractice
+          .mutateAsync({
+            tuneKey,
+            localUserId,
+            userName,
+            language,
+            notationPreference,
+            debug: true,
+          })
+          .then((debugResponse) => {
+            const promptText = (debugResponse as any).prompt;
+            if (promptText) {
+              setCoachDebugCall((prev) => ({
+                ...prev,
+                request: promptText,
+              }));
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to fetch coach debug prompt:", err);
+          });
       }
     } catch (error) {
       console.error("Error fetching practice plan:", error);
@@ -543,6 +556,7 @@ export function TuneMode({
   );
 
   const handleSwitchNugget = useCallback(() => {
+    onStopSample?.();
     setHasUserInteracted(true);
     nextNugget();
     lastProcessedRecording.current = currentRecording ?? null;
@@ -559,12 +573,13 @@ export function TuneMode({
     setEvalDebugData(null);
     lastProcessedRecordingIdRef.current = null;
     lastProcessedSignatureRef.current = null;
-  }, [nextNugget, currentRecording, clearEvaluation]);
+  }, [onStopSample, nextNugget, currentRecording, clearEvaluation]);
 
   const handlePreviousNugget = useCallback(() => {
     if (state.currentIndex === 0) {
       return;
     }
+    onStopSample?.();
     setHasUserInteracted(true);
     previousNugget();
     lastProcessedRecording.current = currentRecording ?? null;
@@ -581,7 +596,21 @@ export function TuneMode({
     setEvalDebugData(null);
     lastProcessedRecordingIdRef.current = null;
     lastProcessedSignatureRef.current = null;
-  }, [previousNugget, currentRecording, clearEvaluation, state.currentIndex]);
+  }, [
+    onStopSample,
+    previousNugget,
+    currentRecording,
+    clearEvaluation,
+    state.currentIndex,
+  ]);
+
+  // When we first enter practicing with a plan, allow autoplay for the first nugget
+  useEffect(() => {
+    if (state.phase !== "practicing" || state.practicePlan.length === 0) return;
+    if (hasAutoEnabledInteractionRef.current) return;
+    hasAutoEnabledInteractionRef.current = true;
+    setHasUserInteracted(true);
+  }, [state.phase, state.practicePlan.length]);
 
   useEffect(() => {
     if (!currentNugget?.itemId) return;
@@ -625,40 +654,45 @@ export function TuneMode({
   }
 
   // Practice phase - THE MAIN CONTINUOUS SCREEN
+  // Wrapper gives TunePractice a proper height chain (TabsContent uses items-center;
+  // without this, the pixi container can get 0 or wrong size on resize).
   if (state.phase === "practicing" && currentNugget) {
     return (
       <>
-        <TunePractice
-          tuneTitle={state.tuneTitle}
-          currentNugget={currentNugget}
-          currentIndex={state.currentIndex}
-          totalNuggets={state.practicePlan.length}
-          currentStreak={state.currentStreak}
-          totalWins={state.totalWins}
-          lastEvaluation={state.lastEvaluation}
-          onPlaySample={() => handlePlaySample(true)}
-          onSwitchNugget={handleSwitchNugget}
-          onPreviousNugget={handlePreviousNugget}
-          onLeave={onLeave}
-          isPlaying={isPlayingSample}
-          isEvaluating={isEvaluating}
-          isRecording={isRecording}
-          onPlayheadReachedEnd={onPlayheadReachedEnd}
-          debugMode={debugMode}
-          practicePlan={state.practicePlan}
-          currentEvalIndex={state.currentEvalIndex}
-          pendingEvalIndex={pendingEvalIndex}
-          onRegisterNoteHandler={onRegisterNoteHandler}
-          onRegisterNoteOffHandler={onRegisterNoteOffHandler}
-          evalPrompt={lastEvalPrompt}
-          evalAnswer={lastEvalAnswer}
-          evalDecision={lastEvalDecision}
-          evalDebugData={evalDebugData}
-          showPlanSheet={showPlanSheet}
-          onShowPlanSheetChange={setShowPlanSheet}
-          showEvalDebug={showEvalDebug}
-          onShowEvalDebugChange={setShowEvalDebug}
-        />
+        <div className="w-full h-full min-h-0 flex flex-col">
+          <TunePractice
+            tuneTitle={state.tuneTitle}
+            currentNugget={currentNugget}
+            currentIndex={state.currentIndex}
+            totalNuggets={state.practicePlan.length}
+            currentStreak={state.currentStreak}
+            totalWins={state.totalWins}
+            lastEvaluation={state.lastEvaluation}
+            onPlaySample={() => handlePlaySample(true)}
+            onStopSample={onStopSample}
+            onSwitchNugget={handleSwitchNugget}
+            onPreviousNugget={handlePreviousNugget}
+            onLeave={onLeave}
+            isPlaying={isPlayingSample}
+            isEvaluating={isEvaluating}
+            isRecording={isRecording}
+            onPlayheadReachedEnd={onPlayheadReachedEnd}
+            debugMode={debugMode}
+            practicePlan={state.practicePlan}
+            currentEvalIndex={state.currentEvalIndex}
+            pendingEvalIndex={pendingEvalIndex}
+            onRegisterNoteHandler={onRegisterNoteHandler}
+            onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+            evalPrompt={lastEvalPrompt}
+            evalAnswer={lastEvalAnswer}
+            evalDecision={lastEvalDecision}
+            evalDebugData={evalDebugData}
+            showPlanSheet={showPlanSheet}
+            onShowPlanSheetChange={setShowPlanSheet}
+            showEvalDebug={showEvalDebug}
+            onShowEvalDebugChange={setShowEvalDebug}
+          />
+        </div>
         {/* Coach LLM Call Sheet (opened from action bar debug dropdown) */}
         <DebugLLMSheet
           title="Coach LLM Call"

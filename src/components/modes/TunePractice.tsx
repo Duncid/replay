@@ -1,4 +1,8 @@
-import { PianoSheetPixi } from "@/components/PianoSheetPixi";
+import {
+  DEFAULT_BASE_UNIT,
+  getRecommendedBaseUnit,
+  PianoSheetPixi,
+} from "@/components/PianoSheetPixi";
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
 import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +23,16 @@ import type {
   TuneEvaluationResponse,
 } from "@/types/tunePractice";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
-import { ArrowLeft, ArrowRight, Play, RotateCcw, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  Music,
+  Play,
+  RotateCcw,
+  Square,
+  X,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -39,6 +52,7 @@ interface TunePracticeProps {
   totalWins: number;
   lastEvaluation?: TuneEvaluationResponse | null;
   onPlaySample: () => void;
+  onStopSample?: () => void;
   onPlayheadReachedEnd?: () => void;
   onSwitchNugget: () => void;
   onPreviousNugget: () => void;
@@ -221,10 +235,12 @@ function StreakDisplay({
 export function TunePractice({
   currentNugget,
   currentIndex,
+  totalNuggets,
   currentStreak,
   totalWins,
   lastEvaluation,
   onPlaySample,
+  onStopSample,
   onSwitchNugget,
   onPreviousNugget,
   onLeave,
@@ -248,6 +264,7 @@ export function TunePractice({
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
   const [commentKey, setCommentKey] = useState(0);
   const isFirstNugget = currentIndex === 0;
+  const isLastNugget = currentIndex >= totalNuggets - 1;
   const handleCopyEvalDebug = async () => {
     const promptText = evalPrompt?.trim() ?? "";
     const answerText = evalAnswer?.trim() ?? "";
@@ -338,6 +355,13 @@ export function TunePractice({
   const pixiContainerRef = useRef<HTMLDivElement>(null);
   const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
 
+  const updatePixiSizeFromRef = useCallback(() => {
+    const el = pixiContainerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    setPixiSize({ width, height });
+  }, []);
+
   useLayoutEffect(() => {
     const el = pixiContainerRef.current;
     if (!el) return;
@@ -348,8 +372,64 @@ export function TunePractice({
       setPixiSize({ width, height });
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    // Initial measurement in case the first callback had zero size
+    const raf = requestAnimationFrame(() => {
+      const { width, height } = el.getBoundingClientRect();
+      setPixiSize((prev) =>
+        prev.width === width && prev.height === height
+          ? prev
+          : { width, height },
+      );
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
   }, []);
+
+  // Re-measure when notes appear so we get correct size after layout settles
+  useEffect(() => {
+    if (notes.length === 0) return;
+    const raf = requestAnimationFrame(() => updatePixiSizeFromRef());
+    return () => cancelAnimationFrame(raf);
+  }, [notes.length, updatePixiSizeFromRef]);
+
+  // Fallback: window resize — read container size after reflow so canvas gets correct dimensions.
+  // ResizeObserver may not fire when only the window changes; read after rAF so layout is applied.
+  const resizeDebounceMs = 80;
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
+    const onResize = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        // Read after the next frame so flex layout has been recalculated
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          updatePixiSizeFromRef();
+        });
+      }, resizeDebounceMs);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [updatePixiSizeFromRef]);
+
+  // Adaptive size: pick largest preset that fits available height
+  const trackCount = useMemo(() => {
+    if (notes.length === 0) return 0;
+    const minMidi = Math.min(...notes.map((n) => n.midi));
+    const maxMidi = Math.max(...notes.map((n) => n.midi));
+    return maxMidi - minMidi + 1;
+  }, [notes]);
+  const pianoSheetSize = useMemo((): number => {
+    if (pixiSize.height <= 0) return DEFAULT_BASE_UNIT;
+    return getRecommendedBaseUnit(pixiSize.height, trackCount);
+  }, [pixiSize.height, trackCount]);
 
   // ── PianoSheetPixi: playback engine ───────────────────────────────
   const onTickRef = useRef<((timeSec: number) => void) | null>(null);
@@ -442,24 +522,30 @@ export function TunePractice({
         </div>
 
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
+          {/* Outer div is sized by flex only; inner div + canvas are out-of-flow so they don't prevent shrinking */}
           <div
             ref={pixiContainerRef}
-            className="w-full flex-1 min-h-0 overflow-hidden"
+            className="relative w-full flex-1 min-h-0 overflow-hidden"
           >
-            {pixiSize.width > 0 && pixiSize.height > 0 && notes.length > 0 && (
-              <PianoSheetPixi
-                notes={notes}
-                width={pixiSize.width}
-                height={pixiSize.height}
-                timeSignatures={sampleSequence?.timeSignatures}
-                qpm={bpm}
-                onTickRef={onTickRef}
-                focusedNoteIds={playback.focusedNoteIds}
-                activeNoteIds={playback.activeNoteIds}
-                followPlayhead
-                isAutoplay={playback.isAutoplay}
-              />
-            )}
+            <div className="absolute inset-0 w-full h-full">
+              {pixiSize.width > 0 &&
+                pixiSize.height > 0 &&
+                notes.length > 0 && (
+                  <PianoSheetPixi
+                    notes={notes}
+                    width={pixiSize.width}
+                    height={pixiSize.height}
+                    size={pianoSheetSize}
+                    timeSignatures={sampleSequence?.timeSignatures}
+                    qpm={bpm}
+                    onTickRef={onTickRef}
+                    focusedNoteIds={playback.focusedNoteIds}
+                    activeNoteIds={playback.activeNoteIds}
+                    followPlayhead
+                    isAutoplay={playback.isAutoplay}
+                  />
+                )}
+            </div>
           </div>
         </div>
       </div>
@@ -590,7 +676,7 @@ export function TunePractice({
         </SheetContent>
       </Sheet>
 
-      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-4">
+      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-auto w-full max-w-5xl">
         <div className="flex items-center justify-start gap-1">
           <Button
             variant="ghost"
@@ -603,40 +689,66 @@ export function TunePractice({
           </Button>
         </div>
         <div className="flex items-center justify-center gap-1">
-          <div className="bg-key-black p-1 border border-border rounded-2xl ">
+          <div className="bg-key-black p-1 border border-border rounded-2xl gap-1">
             <Button
               variant="default"
-              onClick={onPlaySample}
-              disabled={isPlaying}
+              onClick={isPlaying ? () => onStopSample?.() : onPlaySample}
               size="sm"
+              title={
+                isPlaying ? t("tune.buttons.stop") : t("tune.buttons.replay")
+              }
             >
-              <Play fill="currentColor" stroke="none" />{" "}
-              {t("tune.buttons.replay")}
+              {isPlaying ? (
+                <>
+                  <Square
+                    fill="currentColor"
+                    stroke="none"
+                    className="size-3"
+                  />{" "}
+                  {t("tune.buttons.stop")}
+                </>
+              ) : (
+                <>
+                  <Play fill="currentColor" stroke="none" />{" "}
+                  {t("tune.buttons.replay")}
+                </>
+              )}
             </Button>
             <Button
               variant="ghost"
-              onClick={() => playback.stop()}
+              onClick={() => {
+                if (isPlaying) onStopSample?.();
+                playback.stop();
+              }}
               size="sm"
               title={t("tune.buttons.restart")}
             >
               <RotateCcw /> {t("tune.buttons.restart")}
             </Button>
+            <Button variant="ghost" size="sm" title={t("tune.buttons.restart")}>
+              <Music />
+              <ChevronDown className="opacity-50" />
+            </Button>
           </div>
         </div>
         <div className="flex items-center justify-end gap-1">
           <Button variant="ghost" onClick={onLeave} size="sm">
-            Leave <X />
+            {t("tune.buttons.leave")} <X />
           </Button>
-          <div className="w-px h-4 bg-border" />
-          <Button
-            variant={shouldPulse ? "default" : "ghost"}
-            onClick={handleNextNugget}
-            isPulsating={shouldPulse}
-            size="sm"
-          >
-            {t("tune.buttons.next")}
-            <ArrowRight />
-          </Button>
+          {!isLastNugget && (
+            <>
+              <div className="w-px h-4 bg-border" />
+              <Button
+                variant={shouldPulse ? "default" : "ghost"}
+                onClick={handleNextNugget}
+                isPulsating={shouldPulse}
+                size="sm"
+              >
+                {t("tune.buttons.next")}
+                <ArrowRight />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

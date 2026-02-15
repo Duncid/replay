@@ -2,7 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -13,9 +18,13 @@ export default {
       },
     },
     extend: {
+      maxWidth: {
+        "6xl": "80rem", // 1280px
+        "5xl": "64rem", // 1024px
+      },
       gridTemplateColumns: {
-        '22': 'repeat(22, minmax(0, 1fr))',
-        '44': 'repeat(44, minmax(0, 1fr))',
+        "22": "repeat(22, minmax(0, 1fr))",
+        "44": "repeat(44, minmax(0, 1fr))",
       },
       colors: {
         border: "hsl(var(--border))",

@@ -32,7 +32,7 @@ function stripAbcHeaders(abc: string): string {
   return noteLines.join("\n");
 }
 
-export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc, mode = 'add', onEdit, instrument = 'classic' }: AddPartitionDialogProps) {
+export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc, mode = 'add', onEdit, instrument = 'acoustic-piano' }: AddPartitionDialogProps) {
   const [abcText, setAbcText] = useState(initialAbc ? stripAbcHeaders(initialAbc) : "");
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });

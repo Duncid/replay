@@ -267,7 +267,7 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
   };
 }
 
-export function useTonePiano(soundType: PianoSoundType | null = "classic") {
+export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano") {
   const [isLoaded, setIsLoaded] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
   const soundTypeRef = useRef<PianoSoundType | null>(soundType);
