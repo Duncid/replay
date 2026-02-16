@@ -192,11 +192,20 @@ export default {
             boxShadow: "0 0 0 4px hsl(var(--primary) / 0.2)",
           },
         },
+        "pulse-glow-border": {
+          "0%, 100%": {
+            boxShadow: "0 0 0 0 hsl(var(--primary) / 0)",
+          },
+          "50%": {
+            boxShadow: "0 0 0 3px hsl(var(--primary) / 0.2)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 1.5s ease-in-out infinite",
+        "pulse-glow-border": "pulse-glow-border 4s ease-in-out infinite",
       },
     },
   },

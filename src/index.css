@@ -108,6 +108,22 @@ All colors MUST be HSL.
     will-change: clip-path, opacity;
   }
 
+  @keyframes comment-typing-reverse {
+    from {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
+    to {
+      clip-path: inset(0 100% 0 0);
+      opacity: 0.35;
+    }
+  }
+
+  .comment-typing-reverse {
+    animation: comment-typing-reverse 0.3s steps(12, end) forwards;
+    will-change: clip-path, opacity;
+  }
+
   /* Custom scrollbar - minimalist with muted color */
   .custom-scrollbar {
     scrollbar-width: thin;

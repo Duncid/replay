@@ -6,12 +6,14 @@ import { useCallback, useRef } from "react";
 interface UseOsmdPlaybackSyncOptions {
   /** Ref to the current QPM (quarter-notes per minute). Read inside callbacks to avoid recreating them. */
   qpmRef: React.RefObject<number>;
-  /** Ref to the overflow-x-auto wrapper around the OSMD view. */
+  /** Ref to the scroll wrapper around the OSMD view (overflow-x-auto for horizontal, overflow-y-auto for vertical). */
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   /** Ref that tracks whether playback is in autoplay mode. */
   isAutoplayRef: React.RefObject<boolean>;
   /** CSS color string for the OSMD cursor (passed to CursorOptions.color). */
   cursorColor?: string;
+  /** Scroll direction: horizontal for single-line staff, vertical for multi-line sheet. */
+  scrollDirection?: "horizontal" | "vertical";
 }
 
 // ── Hook ───────────────────────────────────────────────────────────
@@ -21,6 +23,7 @@ export function useOsmdPlaybackSync({
   scrollContainerRef,
   isAutoplayRef,
   cursorColor = "#FFECB3",
+  scrollDirection = "horizontal",
 }: UseOsmdPlaybackSyncOptions) {
   // ── Refs ────────────────────────────────────────────────────────
 
@@ -99,8 +102,14 @@ export function useOsmdPlaybackSync({
 
     // Scroll container back to start
     const container = scrollContainerRef.current;
-    if (container) container.scrollTo({ left: 0, behavior: "smooth" });
-  }, [configureCursor, patchCursorElement, scrollContainerRef]);
+    if (container) {
+      if (scrollDirection === "vertical") {
+        container.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        container.scrollTo({ left: 0, behavior: "smooth" });
+      }
+    }
+  }, [configureCursor, patchCursorElement, scrollContainerRef, scrollDirection]);
 
   // ── Scroll logic (pagination-style) ─────────────────────────────
   //
@@ -120,22 +129,41 @@ export function useOsmdPlaybackSync({
     // Don't re-trigger while a smooth scroll is in flight
     if (scrollingRef.current) return;
 
-    const cursorX = cursorEl.offsetLeft;
-    const containerWidth = container.clientWidth;
-    const cursorViewportX = cursorX - container.scrollLeft;
+    if (scrollDirection === "vertical") {
+      const cursorY = cursorEl.offsetTop;
+      const containerHeight = container.clientHeight;
+      const cursorViewportY = cursorY - container.scrollTop;
 
-    // Cursor still in the comfortable zone — do nothing
-    if (cursorViewportX < containerWidth * 0.75) return;
+      // Cursor still in the comfortable zone — do nothing
+      if (cursorViewportY < containerHeight * 0.75) return;
 
-    // Cursor crossed 75% — paginate so it lands at 25%
-    const maxScroll = container.scrollWidth - containerWidth;
-    const targetScroll = Math.max(
-      0,
-      Math.min(maxScroll, cursorX - containerWidth * 0.25),
-    );
+      // Cursor crossed 75% — paginate so it lands at 25%
+      const maxScroll = container.scrollHeight - containerHeight;
+      const targetScroll = Math.max(
+        0,
+        Math.min(maxScroll, cursorY - containerHeight * 0.25),
+      );
 
-    scrollingRef.current = true;
-    container.scrollTo({ left: targetScroll, behavior: "smooth" });
+      scrollingRef.current = true;
+      container.scrollTo({ top: targetScroll, behavior: "smooth" });
+    } else {
+      const cursorX = cursorEl.offsetLeft;
+      const containerWidth = container.clientWidth;
+      const cursorViewportX = cursorX - container.scrollLeft;
+
+      // Cursor still in the comfortable zone — do nothing
+      if (cursorViewportX < containerWidth * 0.75) return;
+
+      // Cursor crossed 75% — paginate so it lands at 25%
+      const maxScroll = container.scrollWidth - containerWidth;
+      const targetScroll = Math.max(
+        0,
+        Math.min(maxScroll, cursorX - containerWidth * 0.25),
+      );
+
+      scrollingRef.current = true;
+      container.scrollTo({ left: targetScroll, behavior: "smooth" });
+    }
 
     // Reset scrolling flag when the animation finishes.
     // Use scrollend event with a timeout fallback (scrollend isn't universal).
@@ -146,7 +174,7 @@ export function useOsmdPlaybackSync({
     };
     container.addEventListener("scrollend", onDone, { once: true });
     const fallback = setTimeout(onDone, 600);
-  }, [scrollContainerRef]);
+  }, [scrollContainerRef, scrollDirection]);
 
   // ── Per-frame tick (timestamp-based) ────────────────────────────
 

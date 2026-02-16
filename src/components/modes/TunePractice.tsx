@@ -1,3 +1,4 @@
+import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
 import {
   DEFAULT_BASE_UNIT,
   getRecommendedBaseUnit,
@@ -14,7 +15,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useOsmdPlaybackSync } from "@/hooks/useOsmdPlaybackSync";
 import { useSheetPlaybackEngine } from "@/hooks/useSheetPlaybackEngine";
+import { useTuneAssets } from "@/hooks/useTuneQueries";
 import { cn } from "@/lib/utils";
 import type { NoteSequence } from "@/types/noteSequence";
 import type {
@@ -24,9 +27,14 @@ import type {
 } from "@/types/tunePractice";
 import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
 import {
+  getAssemblyXml,
+  getNuggetXml,
+  getTuneDspXml,
+  getTuneXml,
+} from "@/utils/tuneAssetBundler";
+import {
   ArrowLeft,
   ArrowRight,
-  ChevronDown,
   Music,
   Play,
   RotateCcw,
@@ -44,6 +52,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 interface TunePracticeProps {
+  tuneKey: string;
   tuneTitle: string;
   currentNugget: PracticePlanItem;
   currentIndex: number;
@@ -79,24 +88,6 @@ interface TunePracticeProps {
 }
 
 const STREAK_THRESHOLD = 3;
-
-// Status display for top left: only "Sending" when sending, nothing when listening
-function StatusDisplay({
-  isEvaluating,
-  labels,
-}: {
-  isEvaluating: boolean;
-  labels: { sending: string };
-}) {
-  if (isEvaluating) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-        <span className="text-sm font-medium">{labels.sending}</span>
-      </div>
-    );
-  }
-  return <div className="min-h-[24px]" />;
-}
 
 // Wins display: totalWins flames; on pass add new ones with animation, on fail/close only show message (no removal)
 function StreakDisplay({
@@ -204,8 +195,10 @@ function StreakDisplay({
     }
   }, [totalWins, fires.length, lastEvaluation]);
 
+  if (fires.length === 0 && !tempMessage) return null;
+
   return (
-    <div className={cn("flex items-center gap-2 h-8", className)}>
+    <div className={cn("flex items-center gap-2", className)}>
       {fires.map((fireId) => (
         <span key={fireId} className="text-lg">
           🔥
@@ -233,6 +226,7 @@ function StreakDisplay({
 }
 
 export function TunePractice({
+  tuneKey,
   currentNugget,
   currentIndex,
   totalNuggets,
@@ -261,8 +255,13 @@ export function TunePractice({
   const { t } = useTranslation();
   const streakComplete = totalWins >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
+  const [showSheetView, setShowSheetView] = useState(false);
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
   const [commentKey, setCommentKey] = useState(0);
+  const [leavingText, setLeavingText] = useState<string | null>(null);
+  const [showSending, setShowSending] = useState(false);
+  const [feedbackArrivedPulse, setFeedbackArrivedPulse] = useState(false);
+  const leavingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstNugget = currentIndex === 0;
   const isLastNugget = currentIndex >= totalNuggets - 1;
   const handleCopyEvalDebug = async () => {
@@ -297,6 +296,34 @@ export function TunePractice({
     close: t("tune.feedback.almostThere"),
   };
 
+  // ── XML for sheet view (published or local) ────────────────────────
+  const { data: tuneAssets } = useTuneAssets(tuneKey);
+  const xmlForCurrentNugget = useMemo(() => {
+    const itemId = currentNugget.itemId;
+    const itemType = currentNugget.itemType;
+    if (tuneAssets) {
+      if (itemType === "full_tune")
+        return tuneAssets.tune_dsp_xml ?? tuneAssets.tune_xml ?? null;
+      if (itemType === "assembly") {
+        const xmls = tuneAssets.assembly_xmls as Record<string, string> | null;
+        return xmls?.[itemId] ?? null;
+      }
+      const xmls = tuneAssets.nugget_xmls as Record<string, string> | null;
+      return xmls?.[itemId] ?? null;
+    }
+    if (itemType === "full_tune")
+      return getTuneDspXml(tuneKey) ?? getTuneXml(tuneKey);
+    if (itemType === "assembly") return getAssemblyXml(tuneKey, itemId);
+    return getNuggetXml(tuneKey, itemId);
+  }, [tuneKey, currentNugget.itemId, currentNugget.itemType, tuneAssets]);
+
+  const hasSheetXml = !!xmlForCurrentNugget;
+
+  // Switch back to Pixi when nugget has no sheet XML
+  useEffect(() => {
+    if (showSheetView && !hasSheetXml) setShowSheetView(false);
+  }, [showSheetView, hasSheetXml]);
+
   // Get sample sequence from nugget, assembly, or full tune
   const sampleSequence = (currentNugget.nugget?.noteSequence ||
     currentNugget.assembly?.noteSequence ||
@@ -315,6 +342,42 @@ export function TunePractice({
   useEffect(() => {
     setCommentKey((prev) => prev + 1);
   }, [lastEvaluation?.feedbackText]);
+
+  // Pulse card when feedback arrives
+  useEffect(() => {
+    if (!lastEvaluation?.feedbackText) return;
+    setFeedbackArrivedPulse(true);
+    const t = setTimeout(() => setFeedbackArrivedPulse(false), 2000);
+    return () => clearTimeout(t);
+  }, [lastEvaluation?.feedbackText]);
+
+  // Feedback card: on eval start, animate text out (reverse), then show "Sending"
+  useEffect(() => {
+    if (leavingTimeoutRef.current) {
+      clearTimeout(leavingTimeoutRef.current);
+      leavingTimeoutRef.current = null;
+    }
+    if (isEvaluating) {
+      const currentText = lastEvaluation
+        ? commentText
+        : currentNugget.instruction;
+      setLeavingText(currentText);
+      setShowSending(false);
+      leavingTimeoutRef.current = setTimeout(() => {
+        leavingTimeoutRef.current = null;
+        setLeavingText(null);
+        setShowSending(true);
+      }, 300);
+    } else {
+      setLeavingText(null);
+      setShowSending(false);
+    }
+    return () => {
+      if (leavingTimeoutRef.current) {
+        clearTimeout(leavingTimeoutRef.current);
+      }
+    };
+  }, [isEvaluating, commentText, currentNugget.instruction, lastEvaluation]);
 
   useEffect(() => {
     // Reset pulse state when streak is not complete
@@ -432,10 +495,18 @@ export function TunePractice({
   }, [pixiSize.height, trackCount]);
 
   // ── PianoSheetPixi: playback engine ───────────────────────────────
+  const bpm = useMemo(() => {
+    const seq = sampleSequence ?? { notes: [], totalTime: 0 };
+    const tempo = (seq as NoteSequence).tempos?.[0]?.qpm;
+    return Math.round(tempo ?? 120);
+  }, [sampleSequence]);
+
   const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+  const osmdTickRef = useRef<((timeSec: number) => void) | null>(null);
 
   const onTick = useCallback((t: number) => {
     onTickRef.current?.(t);
+    osmdTickRef.current?.(t);
   }, []);
 
   const playback = useSheetPlaybackEngine({
@@ -445,11 +516,33 @@ export function TunePractice({
     onReachedEnd: onPlayheadReachedEnd,
   });
 
-  const bpm = useMemo(() => {
-    const seq = sampleSequence ?? { notes: [], totalTime: 0 };
-    const tempo = (seq as NoteSequence).tempos?.[0]?.qpm;
-    return Math.round(tempo ?? 120);
-  }, [sampleSequence]);
+  // ── OSMD sheet sync (vertical scroll) ─────────────────────────────
+  const osmdScrollRef = useRef<HTMLDivElement>(null);
+  const isAutoplayRef = useRef(false);
+  const qpmRef = useRef(120);
+  isAutoplayRef.current = playback.isAutoplay;
+  qpmRef.current = bpm;
+  const { handleOsmdReady, onOsmdTick, handleUserScroll, resetCursorToStart } =
+    useOsmdPlaybackSync({
+      qpmRef,
+      scrollContainerRef: osmdScrollRef,
+      isAutoplayRef,
+      cursorColor: "#FFECB3",
+      scrollDirection: "vertical",
+    });
+  osmdTickRef.current = onOsmdTick;
+
+  // Reset OSMD cursor when playback returns to start (Restart or end-of-track)
+  const isAtStart =
+    playback.playheadTime < 0.01 &&
+    (playback.playheadTimeRef.current ?? 0) < 0.01;
+  const prevIsAtStartRef = useRef(true);
+  useEffect(() => {
+    if (isAtStart && !prevIsAtStartRef.current) {
+      resetCursorToStart();
+    }
+    prevIsAtStartRef.current = isAtStart;
+  }, [isAtStart, resetCursorToStart]);
 
   // Sync visual playback with external audio playback
   const wasPlayingRef = useRef(false);
@@ -500,34 +593,54 @@ export function TunePractice({
   };
 
   return (
-    <div className="relative flex h-full w-full flex-col gap-4 py-2">
-      <div className="absolute top-0 left-0 flex items-center justify-between p-2 gap-2">
-        <StatusDisplay isEvaluating={isEvaluating} labels={statusLabels} />
-      </div>
-
-      <div className="flex flex-1 flex-col items-center gap-2">
-        <div className="flex flex-col items-center justify-end px-3">
+    <div className="relative flex h-full w-full flex-col gap-2 py-2">
+      {/* Feedback card: bottom-right, max 1/3 width */}
+      <div
+        className={cn(
+          "absolute bottom-16 right-[22%] translate-x-[220px] max-w-[50%] p-6 rounded-3xl border border-gray-500/60 bg-gray-700/60 shadow-lg backdrop-blur-sm z-10 transition-all duration-300 ease-out",
+          showSending ? "w-[320px]" : "w-[440px]",
+        )}
+      >
+        <div className="flex items-center justify-center flex-col gap-2">
           <StreakDisplay
             totalWins={totalWins}
             lastEvaluation={lastEvaluation}
             currentNuggetId={currentNugget.itemId}
             messages={streakMessages}
           />
-          <p
-            key={commentKey}
-            className="text-foreground text-center text-base px-3 comment-typing motion-reduce:animate-none"
-          >
-            {lastEvaluation ? commentText : currentNugget.instruction}
-          </p>
+          <div className="min-h-[1.5rem] text-center">
+            {leavingText ? (
+              <p className="text-foreground text-base comment-typing-reverse motion-reduce:animate-none">
+                {leavingText}
+              </p>
+            ) : showSending ? (
+              <p className="text-muted-foreground text-base animate-pulse">
+                {statusLabels.sending}
+              </p>
+            ) : (
+              <p
+                key={commentKey}
+                className="text-foreground text-lg comment-typing motion-reduce:animate-none"
+              >
+                {lastEvaluation ? commentText : currentNugget.instruction}
+              </p>
+            )}
+          </div>
         </div>
+      </div>
 
+      <div className="flex flex-1 flex-col items-center gap-2">
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
-          {/* Outer div is sized by flex only; inner div + canvas are out-of-flow so they don't prevent shrinking */}
-          <div
-            ref={pixiContainerRef}
-            className="relative w-full flex-1 min-h-0 overflow-hidden"
-          >
-            <div className="absolute inset-0 w-full h-full">
+          {/* Shared container: Pixi (hidden when sheet) + Sheet (hidden when Pixi) */}
+          <div className="relative w-full flex-1 min-h-0 overflow-hidden">
+            {/* Pixi view: stays mounted, invisible when sheet view is shown */}
+            <div
+              ref={pixiContainerRef}
+              className={cn(
+                "absolute inset-0 w-full h-full overflow-hidden",
+                showSheetView && "invisible",
+              )}
+            >
               {pixiSize.width > 0 &&
                 pixiSize.height > 0 &&
                 notes.length > 0 && (
@@ -545,6 +658,34 @@ export function TunePractice({
                     isAutoplay={playback.isAutoplay}
                   />
                 )}
+            </div>
+            {/* Sheet view: multi-line, vertical scroll, max-w-4xl.
+                Use invisible (not hidden) when collapsed so OSMD gets valid dimensions on mount. */}
+            <div
+              ref={osmdScrollRef}
+              onScroll={handleUserScroll}
+              className={cn(
+                "absolute inset-0 w-full h-full overflow-y-auto overflow-x-hidden flex justify-center py-8 border-t border-b border-border",
+                !showSheetView && "invisible pointer-events-none",
+              )}
+            >
+              <div className="w-full max-w-4xl">
+                {xmlForCurrentNugget ? (
+                  <OpenSheetMusicDisplayView
+                    xml={xmlForCurrentNugget}
+                    compactness="compacttight"
+                    hasColor
+                    className="relative"
+                    renderSingleHorizontalStaffline={false}
+                    onOsmdReady={handleOsmdReady}
+                    disableCustomCursorStyle
+                  />
+                ) : (
+                  <div className="p-4 text-sm text-muted-foreground text-center">
+                    {t("tune.sheetNoXml")}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -688,8 +829,8 @@ export function TunePractice({
             {t("tune.buttons.previous")}
           </Button>
         </div>
-        <div className="flex items-center justify-center gap-1">
-          <div className="bg-key-black p-1 border border-border rounded-2xl gap-1">
+        <div className="flex items-center justify-center">
+          <div className="flex gap-1 bg-key-black p-1 border border-border rounded-2xl">
             <Button
               variant="default"
               onClick={isPlaying ? () => onStopSample?.() : onPlaySample}
@@ -719,15 +860,21 @@ export function TunePractice({
               onClick={() => {
                 if (isPlaying) onStopSample?.();
                 playback.stop();
+                resetCursorToStart();
               }}
               size="sm"
               title={t("tune.buttons.restart")}
             >
               <RotateCcw /> {t("tune.buttons.restart")}
             </Button>
-            <Button variant="ghost" size="sm" title={t("tune.buttons.restart")}>
+            <Button
+              variant={showSheetView ? "secondary" : "ghost"}
+              size="sm"
+              title={t("tune.buttons.sheetView")}
+              onClick={() => hasSheetXml && setShowSheetView((v) => !v)}
+              disabled={!hasSheetXml}
+            >
               <Music />
-              <ChevronDown className="opacity-50" />
             </Button>
           </div>
         </div>
