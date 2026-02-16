@@ -1,14 +1,6 @@
 import { DebugLLMSheet } from "@/components/DebugLLMSheet";
-import { EvaluationDebugSheet } from "@/components/EvaluationDebugSheet";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
-import { LessonPractice } from "@/components/modes/LessonPractice";
+import { LessonMode } from "@/components/modes/LessonMode";
 import { TuneMode } from "@/components/modes/TuneMode";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
 import { Button } from "@/components/ui/button";
@@ -24,19 +16,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import {
-  EvaluationState,
-  LessonDebugInfo,
-  useLessonEngine,
-} from "@/hooks/useLessonEngine";
-import {
-  useEvaluateStructuredLesson,
-  useRegenerateCurriculumLesson,
-  useStartCurriculumLesson,
-  useTeacherGreeting,
-} from "@/hooks/useLessonQueries";
+import type { LessonDebugInfo } from "@/hooks/useLessonEngine";
+import { useTeacherGreeting } from "@/hooks/useLessonQueries";
 import { fetchTeacherGreeting } from "@/services/lessonService";
-import { useLessonState } from "@/hooks/useLessonState";
 import {
   LessonFeelPreset,
   LessonMetronomeSettings,
@@ -135,25 +117,7 @@ export function LearnMode({
   // Debug menu state (unified for lesson + tune modes)
   const [debugMenuState, setDebugMenuState] = useState<DebugMenuState | null>(null);
   // === State Management ===
-  const {
-    lessonState,
-    setLessonState,
-    updateLesson,
-    resetLesson,
-    modeState,
-    setModeState,
-    setMode,
-    setEvaluationResult,
-    uiState,
-    setShouldFetchGreeting,
-    skillToUnlock,
-    setSkillToUnlock,
-  } = useLessonState();
-
-  // Extract individual values for easier access
-  const { prompt, lesson, lastComment, isEvaluating } = lessonState;
-  const { evaluationResult } = modeState;
-  const { shouldFetchGreeting } = uiState;
+  const [shouldFetchGreeting, setShouldFetchGreeting] = useState(false);
 
   // === React Query Hooks ===
   const {
@@ -162,20 +126,7 @@ export function LearnMode({
     error: teacherGreetingError,
   } = useTeacherGreeting(language, localUserId, shouldFetchGreeting);
 
-  // React Query mutations (used for both loading state and passed to engine)
-  const startCurriculumLessonMutation = useStartCurriculumLesson();
-  const regenerateCurriculumLessonMutation = useRegenerateCurriculumLesson();
-  const evaluateStructuredLessonMutation = useEvaluateStructuredLesson();
-
-  // Combined loading state from mutations
-  const isLoading =
-    startCurriculumLessonMutation.isPending ||
-    regenerateCurriculumLessonMutation.isPending;
-
-  // Additional state
-  const [evaluationState, setEvaluationState] = useState<EvaluationState>(null);
-
-  // Debug info captured for non-blocking dropdown access
+  // Debug info captured for non-blocking dropdown access (teacher selection only; lesson/eval debug lives in LessonMode)
   const [debugInfo, setDebugInfo] = useState<LessonDebugInfo>({});
 
   // Debug sheet state (one per LLM call context)
@@ -184,24 +135,23 @@ export function LearnMode({
   const [showEvalSheet, setShowEvalSheet] = useState(false);
   const [showLessonInfoSheet, setShowLessonInfoSheet] = useState(false);
 
-  // Tune practice state
+  // Tune and lesson practice state (key-based routing, like TuneMode)
   const [activeTuneKey, setActiveTuneKey] = useState<string | null>(null);
-
-  // Refs
-  const hasEvaluatedRef = useRef(false);
-  const userActionTokenRef = useRef<string>(crypto.randomUUID());
+  const [activeLessonKey, setActiveLessonKey] = useState<string | null>(null);
+  const [isLessonLoading, setIsLessonLoading] = useState(false);
 
   // Hooks
   const { toast } = useToast();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  // Auto-fetch teacher greeting when on welcome screen (go straight to lesson selection)
+  // Auto-fetch teacher greeting when on welcome screen (no tune or lesson selected)
+  const isOnWelcomeScreen = !activeTuneKey && !activeLessonKey;
   useEffect(() => {
-    if (lesson.phase === "welcome") {
+    if (isOnWelcomeScreen) {
       setShouldFetchGreeting(true);
     }
-  }, [lesson.phase, setShouldFetchGreeting]);
+  }, [isOnWelcomeScreen, setShouldFetchGreeting]);
 
   // === Effects ===
   // Show error toast if teacher greeting fails
@@ -220,7 +170,7 @@ export function LearnMode({
 
   // In debug mode, fetch teacher greeting debug data as soon as we're on the welcome screen
   useEffect(() => {
-    if (!debugMode || lesson.phase !== "welcome") return;
+    if (!debugMode || !isOnWelcomeScreen) return;
     // Skip if already fetched
     if (debugInfo.teacherSelection?.request) return;
     fetchTeacherGreeting({ language, localUserId, debug: true })
@@ -239,7 +189,7 @@ export function LearnMode({
       .catch((err) => {
         console.error("Failed to fetch teacher greeting debug:", err);
       });
-  }, [debugMode, lesson.phase, language, localUserId, debugInfo.teacherSelection?.request]);
+  }, [debugMode, isOnWelcomeScreen, language, localUserId, debugInfo.teacherSelection?.request]);
 
   // In debug mode, capture the normal teacher greeting response when it arrives
   useEffect(() => {
@@ -283,116 +233,16 @@ export function LearnMode({
     ],
   );
 
-  // === Business Logic ===
-  const engine = useLessonEngine(
-    {
-      lessonState,
-      setLessonState,
-      updateLesson,
-      resetLesson,
-      modeState,
-      setMode,
-      setEvaluationResult,
-      setSkillToUnlock,
-      setEvaluationState,
-      setDebugInfo,
-      evaluationState,
-      hasEvaluatedRef,
-      userActionTokenRef,
-    },
-    {
-      onPlaySequence,
-      onClearRecording,
-      applyMetronomeSettings,
-      setMetronomeBpm,
-      setMetronomeTimeSignature,
-    },
-    {
-      startCurriculumLesson: startCurriculumLessonMutation,
-      regenerateCurriculumLesson: regenerateCurriculumLessonMutation,
-      evaluateStructuredLesson: evaluateStructuredLessonMutation,
-    },
-    {
-      language,
-      model,
-      debugMode,
-      metronomeBpm,
-      metronomeTimeSignature,
-      localUserId,
-    },
-  );
-
-  // Extract functions from engine
-  const {
-    generateLesson,
-    regenerateLessonWithNewSettings,
-    executeEvaluation,
-    evaluateAttempt,
-    handleMakeEasier,
-    handleMakeHarder,
-    markUserAction,
-  } = engine;
-
-  // All business logic is now in useLessonEngine hook
-
-  const handlePlay = useCallback(() => {
-    if (lesson.targetSequence.notes.length > 0) {
-      onPlaySequence(lesson.targetSequence);
-    }
-  }, [lesson.targetSequence, onPlaySequence]);
-
-  // executeEvaluation and evaluateAttempt are now in useLessonEngine hook
-
-  // When recording completes in your_turn (playhead reached end), run evaluation
-  useEffect(() => {
-    if (
-      lesson.phase === "your_turn" &&
-      userRecording &&
-      userRecording.notes.length > 0 &&
-      !isRecording &&
-      !hasEvaluatedRef.current &&
-      !isEvaluating
-    ) {
-      hasEvaluatedRef.current = true;
-      evaluateAttempt(userRecording);
-    }
-  }, [
-    lesson.phase,
-    userRecording,
-    isRecording,
-    isEvaluating,
-    evaluateAttempt,
-  ]);
-
-  // Dismiss feedback overlay and clear state (back to instruction in overlay)
-  const handleReturnToPractice = useCallback(() => {
-    setMode("practice");
-    onClearRecording();
-    hasEvaluatedRef.current = false;
-    setEvaluationState(null);
-  }, [onClearRecording, setMode]);
-
-  // handleMakeEasier and handleMakeHarder are now in useLessonEngine hook
-
   const handleLeave = useCallback(() => {
-    markUserAction();
-    resetLesson();
-    setLessonState((prev) => ({ ...prev, prompt: "", lastComment: null }));
     setDebugInfo({});
-    setMode("practice");
-    setEvaluationResult(null);
     onClearRecording();
     setShouldFetchGreeting(false);
     setMetronomeIsPlaying(false);
-    setActiveTuneKey(null); // Reset tune mode
-    // Invalidate teacher greeting cache to force fresh suggestions on next Start
+    setActiveTuneKey(null);
+    setActiveLessonKey(null);
     queryClient.invalidateQueries({ queryKey: ["teacherGreeting"] });
   }, [
-    markUserAction,
     onClearRecording,
-    resetLesson,
-    setLessonState,
-    setMode,
     setShouldFetchGreeting,
     queryClient,
     setMetronomeIsPlaying,
@@ -417,38 +267,18 @@ export function LearnMode({
         return;
       }
 
-      // Build prompt from suggestion
-      const lessonPrompt = `${suggestion.label}: ${suggestion.why}`;
       const lessonKey = suggestion.activityKey || suggestion.lessonKey || "";
-
-      // Always proceed immediately with lesson generation
-      generateLesson(lessonPrompt, 1, undefined, lessonKey);
-
-      // In debug mode, fire a parallel call to capture the LLM prompt (non-blocking)
-      if (debugMode) {
-        startCurriculumLessonMutation
-          .mutateAsync({
-            lessonKey,
-            language,
-            debug: true,
-          })
-          .then((data) => {
-            if ("prompt" in data && data.prompt) {
-              setDebugInfo((prev) => ({
-                ...prev,
-                lessonGeneration: {
-                  ...prev.lessonGeneration,
-                  request: data.prompt,
-                },
-              }));
-            }
-          })
-          .catch((err) => {
-            console.error("Failed to fetch lesson debug prompt:", err);
-          });
+      if (lessonKey) {
+        setActiveLessonKey(lessonKey);
+      } else {
+        toast({
+          title: "Error",
+          description: "Lesson key not found",
+          variant: "destructive",
+        });
       }
     },
-    [debugMode, language, toast, generateLesson, startCurriculumLessonMutation],
+    [toast],
   );
 
   // === Debug menu: build entries from available debug data ===
@@ -469,49 +299,24 @@ export function LearnMode({
       });
     }
 
-    if (debugInfo.lessonGeneration?.request || debugInfo.lessonGeneration?.response) {
-      entries.push({
-        id: "lesson-generation",
-        label: "Lesson Generation",
-        icon: <FileText className="h-4 w-4" />,
-        openSheet: () => setShowLessonSheet(true),
-      });
+    if (activeLessonKey) {
+      entries.push(
+        { id: "lesson-generation", label: "Lesson Generation", icon: <FileText className="h-4 w-4" />, openSheet: () => setShowLessonSheet(true) },
+        { id: "evaluation", label: "Last Evaluation", icon: <Bug className="h-4 w-4" />, openSheet: () => setShowEvalSheet(true) },
+        { id: "lesson-info", label: "Lesson info", icon: <FileText className="h-4 w-4" />, openSheet: () => setShowLessonInfoSheet(true) }
+      );
     }
 
-    if (debugInfo.evaluation?.request || debugInfo.evaluation?.response) {
-      entries.push({
-        id: "evaluation",
-        label: "Last Evaluation",
-        icon: <Bug className="h-4 w-4" />,
-        openSheet: () => setShowEvalSheet(true),
-      });
-    }
-
-    if (lesson.phase === "your_turn") {
-      entries.push({
-        id: "lesson-info",
-        label: "Lesson info",
-        icon: <FileText className="h-4 w-4" />,
-        openSheet: () => setShowLessonInfoSheet(true),
-      });
-    }
-
-    // Derive title from current phase
     let title = "Debug";
-    if (lesson.phase === "welcome") {
-      title = "Teacher Selection Debug";
-    } else if (lesson.phase === "your_turn") {
-      title = "Lesson Debug";
-    }
+    if (isOnWelcomeScreen) title = "Teacher Selection Debug";
+    else if (activeLessonKey) title = "Lesson Debug";
 
-    // Always set the menu state in debug mode (even with no entries yet)
     setDebugMenuState({ title, entries });
   }, [
     debugMode,
-    lesson.phase,
+    isOnWelcomeScreen,
+    activeLessonKey,
     debugInfo.teacherSelection,
-    debugInfo.lessonGeneration,
-    debugInfo.evaluation,
   ]);
 
   // Clear debug menu on unmount or when leaving
@@ -565,9 +370,6 @@ export function LearnMode({
   );
 
   const render = () => {
-    // ============================================
-    // TUNE PRACTICE MODE (activeTuneKey is set)
-    // ============================================
     if (activeTuneKey) {
       return (
         <TuneMode
@@ -591,162 +393,65 @@ export function LearnMode({
       );
     }
 
-    // ============================================
-    // LESSON SELECTION (lesson.phase === "welcome")
-    // ============================================
-    if (lesson.phase === "welcome") {
-      // Loading: Generating lesson after selection
-      if (isLoading) {
-        return (
-          <LoadingSpinner message={t("learnMode.generatingLesson")} />
-        );
-      }
-
-      // Default: Show teacher welcome with suggestions
+    if (activeLessonKey) {
       return (
-        <TeacherWelcome
-          greeting={teacherGreeting}
-          isLoading={isLoadingTeacher}
-          onSelectActivity={handleSelectActivity}
-        />
-      );
-    }
-
-    // ============================================
-    // LESSON FLOW (lesson.phase === "your_turn")
-    // ============================================
-    if (lesson.phase === "your_turn") {
-      const targetSequence =
-        lesson.targetSequence ?? { notes: [], totalTime: 0 };
-      const evaluationFeedback =
-        evaluationState?.type === "structured"
-          ? {
-              evaluation: evaluationState.evaluationOutput.evaluation,
-              feedbackText: evaluationState.evaluationOutput.feedbackText,
-              awardedSkills: evaluationState.awardedSkillsWithTitles,
-            }
-          : null;
-      return (
-        <LessonPractice
-          instruction={lesson.instruction}
-          targetSequence={targetSequence}
-          isPlaying={isPlaying}
-          isLoading={isLoading || isPlaying}
-          isEvaluating={isEvaluating}
-          isRecording={isRecording}
-          evaluationFeedback={evaluationFeedback}
-          onPlay={handlePlay}
-          onStopPlayback={onStopPlayback}
-          onPlayheadReachedEnd={onCompleteRecordingNow}
+        <LessonMode
+          lessonKey={activeLessonKey}
           onLeave={handleLeave}
-          onDismissFeedback={handleReturnToPractice}
-          onMakeEasier={() => {
-            setEvaluationState(null);
-            handleMakeEasier();
-          }}
-          onMakeHarder={() => {
-            setEvaluationState(null);
-            handleMakeHarder();
-          }}
+          onLoadingChange={setIsLessonLoading}
+          isPlaying={isPlaying}
+          onPlaySequence={onPlaySequence}
+          onStopPlayback={onStopPlayback}
+          isRecording={isRecording}
+          userRecording={userRecording}
+          onClearRecording={onClearRecording}
+          onCompleteRecordingNow={onCompleteRecordingNow}
+          language={language}
+          notationPreference={notationPreference}
+          debugMode={debugMode}
+          localUserId={localUserId}
+          metronomeBpm={metronomeBpm}
+          metronomeTimeSignature={metronomeTimeSignature}
+          setMetronomeBpm={setMetronomeBpm}
+          setMetronomeTimeSignature={setMetronomeTimeSignature}
+          applyMetronomeSettings={applyMetronomeSettings}
           onRegisterNoteHandler={onRegisterNoteHandler}
           onRegisterNoteOffHandler={onRegisterNoteOffHandler}
-          trackTitle={lesson.trackTitle}
-          skillToUnlock={skillToUnlock}
-          debugMode={debugMode}
-          difficulty={lesson.difficulty}
+          showLessonSheet={showLessonSheet}
+          setShowLessonSheet={setShowLessonSheet}
+          showEvalSheet={showEvalSheet}
+          setShowEvalSheet={setShowEvalSheet}
+          showLessonInfoSheet={showLessonInfoSheet}
+          setShowLessonInfoSheet={setShowLessonInfoSheet}
         />
       );
     }
 
-    return null;
+    return (
+      <TeacherWelcome
+        greeting={teacherGreeting}
+        isLoading={isLoadingTeacher}
+        onSelectActivity={handleSelectActivity}
+      />
+    );
   };
 
-  // Debug sheets (rendered outside the main flow, opened from dropdown)
+  // Debug sheets: only Teacher Selection here; Lesson Generation / Evaluation / Info are inside LessonMode
   const renderDebugSheets = () => {
     if (!debugMode) return null;
     return (
-      <>
-        <DebugLLMSheet
-          title="Teacher Selection LLM Call"
-          open={showTeacherSheet}
-          onOpenChange={setShowTeacherSheet}
-          debugCall={debugInfo.teacherSelection}
-        />
-        <DebugLLMSheet
-          title="Lesson Generation LLM Call"
-          open={showLessonSheet}
-          onOpenChange={setShowLessonSheet}
-          debugCall={debugInfo.lessonGeneration}
-        />
-        <EvaluationDebugSheet
-          title="Last Evaluation"
-          open={showEvalSheet}
-          onOpenChange={setShowEvalSheet}
-          debugCall={debugInfo.evaluation}
-          evaluationOutput={
-            evaluationState?.type === "structured"
-              ? evaluationState.evaluationOutput
-              : undefined
-          }
-          awardedSkills={
-            evaluationState?.type === "structured"
-              ? evaluationState.awardedSkillsWithTitles
-              : undefined
-          }
-        />
-        <Sheet
-          open={showLessonInfoSheet}
-          onOpenChange={setShowLessonInfoSheet}
-        >
-          <SheetContent side="right" className="w-[400px] sm:max-w-[400px]">
-            <SheetHeader>
-              <SheetTitle>Lesson info</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4 space-y-3 text-sm">
-              {typeof lesson.difficulty === "number" && (
-                <p>
-                  <span className="font-medium text-muted-foreground">
-                    Difficulty:
-                  </span>{" "}
-                  {lesson.difficulty}
-                </p>
-              )}
-              {skillToUnlock && (
-                <p>
-                  <span className="font-medium text-muted-foreground">
-                    Skill:
-                  </span>{" "}
-                  {skillToUnlock.skillKey}
-                  {skillToUnlock.title
-                    ? ` (${skillToUnlock.title})`
-                    : ""}
-                </p>
-              )}
-              {lesson.trackTitle && (
-                <p>
-                  <span className="font-medium text-muted-foreground">
-                    Track:
-                  </span>{" "}
-                  {lesson.trackTitle}
-                </p>
-              )}
-              {typeof lesson.difficulty !== "number" &&
-                !skillToUnlock &&
-                !lesson.trackTitle && (
-                  <p className="text-muted-foreground">
-                    No lesson info available.
-                  </p>
-                )}
-            </div>
-          </SheetContent>
-        </Sheet>
-      </>
+      <DebugLLMSheet
+        title="Teacher Selection LLM Call"
+        open={showTeacherSheet}
+        onOpenChange={setShowTeacherSheet}
+        debugCall={debugInfo.teacherSelection}
+      />
     );
   };
 
   const handleUserAction = useCallback(() => {
-    markUserAction();
-  }, [markUserAction]);
+    // No-op: user action cancellation is handled inside LessonMode / TuneMode
+  }, []);
 
   const resetToStart = useCallback(() => {
     handleLeave();
@@ -757,10 +462,9 @@ export function LearnMode({
     onEnableFreePractice?.();
   }, [handleLeave, onEnableFreePractice]);
 
-  const isInLessonPractice = lesson.phase === "your_turn";
+  const isInLessonPractice = activeLessonKey != null && !isLessonLoading;
 
   return {
-    lesson,
     render,
     renderDebugSheets,
     handleUserAction,
