@@ -1,1 +1,153 @@
-{"language":{"label":"Langue","english":"Anglais","french":"Français","musicNotation":"Notation musicale","musicNotationAuto":"Auto","musicNotationAbc":"ABC","musicNotationSolfege":"Solfège"},"userMenu":{"menuLabel":"Menu","currentUser":"Utilisateur","switchUser":"Changer d'utilisateur","newUser":"Nouvel utilisateur","newUserDescription":"Entrez un nom pour le nouvel utilisateur.","nameLabel":"Nom","namePlaceholder":"Entrez un nom...","create":"Créer"},"status":{"playing":"Lecture","replay":"Relecture","improvising":"Improvisation en cours..."},"tabs":{"play":"Composer","learn":"Apprendre","quest":"Quête","lab":"Tune"},"piano":{"sound":"Son du piano","basic":"Patch","sampledInstruments":"Instruments échantillonnés"},"menus":{"insert":"Insérer","uploadAbc":"Importer un fichier ABC","uploadMusicXml":"Importer un fichier MusicXML","uploadMidi":"Importer un fichier MIDI","uploadNoteSequence":"Importer une NoteSequence","writeAbc":"Écrire en ABC","whistleImport":"Siffler (micro)","writeNoteSequence":"Écrire une NoteSequence","new":"Nouveau","startNewTitle":"Démarrer une nouvelle composition ?","startNewDescription":"Cela effacera votre composition actuelle. Pensez à la sauvegarder si vous voulez la conserver.","cancel":"Annuler","save":"Enregistrer","saveAs":"Enregistrer sous...","saveAndOpen":"Enregistrer et ouvrir","saveAsNewAndOpen":"Enregistrer comme nouveau et ouvrir","saveBeforeOpeningTitle":"Enregistrer la composition actuelle ?","saveBeforeOpeningDescriptionExisting":"Vous avez des modifications non enregistrées. Les enregistrer avant d'ouvrir une autre composition ?","saveBeforeOpeningDescriptionNew":"Vous n'avez pas encore enregistré cette composition. L'enregistrer avant d'en ouvrir une autre ?","continueWithoutSaving":"Continuer sans enregistrer","export":"Exporter","compositionFallbackTitle":"Composition"},"controls":{"autoreply":"Réponse automatique","play":"Lecture","stop":"Arrêt"},"learnMode":{"promptPlaceholder":"Que voulez-vous apprendre ? (par ex. \"une progression d'accords de jazz simple\" ou \"un riff de blues de base\")","suggestions":["Apprends-moi une longue séquence jazz","Apprends-moi une séquence classique sombre"],"loadingTeacher":"Préparation de votre leçon...","preparingLesson":"Préparation de la leçon...","generatingLesson":"Génération de la leçon...","startButton":"Commencer","startLearning":"Commencer l'apprentissage","generateErrorTitle":"Échec de la création de la leçon","generateErrorDescription":"Veuillez réessayer","evaluationFallback":"Évaluation impossible - réessayez !","listening":"À l'écoute...","waitingForUser":"Jouez sur le clavier ci-dessous","playButton":"Écouter","nextButton":"Suivant","leaveButton":"Quitter"},"whistleImport":{"title":"Import par sifflement","permissionTip":"Astuce : vérifiez l'invite d'autorisation de votre navigateur ou les paramètres pour activer l'accès au microphone.","level":"Niveau","instruction":"Commencez l'enregistrement pour voir le signal de sifflement entrant et le nom de la note détectée se mettre à jour en temps réel.","detectedNotes":"Notes détectées","noNotesYet":"Aucune note capturée pour le moment. Appuyez sur Rec et commencez à siffler pour commencer.","buttons":{"rec":"Enregistrer","stop":"Arrêter","clear":"Effacer"},"errors":{"permissionDenied":"L'accès au microphone a été refusé. Veuillez autoriser les permissions du microphone et réessayer.","accessFailed":"Impossible d'accéder au microphone : {{error}}","unknown":"Erreur inconnue"}},"tune":{"loadingTune":"Chargement du morceau...","preparingPlan":"Préparation du plan d'entraînement...","planReady":"Nouveau plan d'entraînement prêt !","letsPractice":"Allons pratiquer !","loadPlanFailed":"Échec du chargement du plan d'entraînement","evaluateFailed":"Échec de l'évaluation de la performance","practiceComplete":"Séance d'entraînement terminée !","getNewPlan":"Obtenir un nouveau plan d'entraînement","returnToSelection":"Retour à la sélection","tuneAcquired":"Morceau acquis : {{title}}","skillUnlocked":"Compétence débloquée : {{skills}}","nextSectionHint":"Belle série ! Passe à la section suivante quand tu es prêt.","comments":{"title":"Commentaires du coach","placeholder":"Joue une phrase pour obtenir un retour.","helper":"Les commentaires se mettent à jour automatiquement après chaque prise.","noComments":"Essaie !"},"status":{"playing":"Lecture","sending":"Envoi","close":"Presque"},"buttons":{"replay":"Rejouer","stop":"Arrêter","restart":"Recommencer","previous":"Précédent","next":"Suivant","leave":"Quitter","sheetView":"Passer à la partition"},"feedback":{"greatJob":"Bravo !","almostThere":"Presque !","keepPracticing":"Continue à t'entraîner !","pass":"Réussi","close":"Presque","tryAgain":"Réessaie","leave":"Quitter","practiceAgain":"Reprendre l'entraînement","nextSection":"Section suivante","masteredPrompt":"Tu maîtrises cette section ! Prêt pour la suite ?"},"sheetNoXml":"Aucune partition disponible pour cet extrait"}}
+{
+  "language": {
+    "label": "Langue",
+    "english": "Anglais",
+    "french": "Français",
+    "musicNotation": "Notation musicale",
+    "musicNotationAuto": "Auto",
+    "musicNotationAbc": "ABC",
+    "musicNotationSolfege": "Solfège"
+  },
+  "userMenu": {
+    "menuLabel": "Menu",
+    "currentUser": "Utilisateur",
+    "switchUser": "Changer d'utilisateur",
+    "newUser": "Nouvel utilisateur",
+    "newUserDescription": "Entrez un nom pour le nouvel utilisateur.",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Entrez un nom...",
+    "create": "Créer"
+  },
+  "status": {
+    "playing": "Lecture",
+    "replay": "Relecture",
+    "improvising": "Improvisation en cours..."
+  },
+  "tabs": {
+    "play": "Composer",
+    "learn": "Apprendre",
+    "quest": "Quête",
+    "lab": "Tune"
+  },
+  "piano": {
+    "sound": "Son du piano",
+    "basic": "Patch",
+    "sampledInstruments": "Instruments échantillonnés"
+  },
+  "menus": {
+    "insert": "Insérer",
+    "uploadAbc": "Importer un fichier ABC",
+    "uploadMusicXml": "Importer un fichier MusicXML",
+    "uploadMidi": "Importer un fichier MIDI",
+    "uploadNoteSequence": "Importer une NoteSequence",
+    "writeAbc": "Écrire en ABC",
+    "whistleImport": "Siffler (micro)",
+    "writeNoteSequence": "Écrire une NoteSequence",
+    "new": "Nouveau",
+    "startNewTitle": "Démarrer une nouvelle composition ?",
+    "startNewDescription": "Cela effacera votre composition actuelle. Pensez à la sauvegarder si vous voulez la conserver.",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saveAs": "Enregistrer sous...",
+    "saveAndOpen": "Enregistrer et ouvrir",
+    "saveAsNewAndOpen": "Enregistrer comme nouveau et ouvrir",
+    "saveBeforeOpeningTitle": "Enregistrer la composition actuelle ?",
+    "saveBeforeOpeningDescriptionExisting": "Vous avez des modifications non enregistrées. Les enregistrer avant d'ouvrir une autre composition ?",
+    "saveBeforeOpeningDescriptionNew": "Vous n'avez pas encore enregistré cette composition. L'enregistrer avant d'en ouvrir une autre ?",
+    "continueWithoutSaving": "Continuer sans enregistrer",
+    "export": "Exporter",
+    "compositionFallbackTitle": "Composition"
+  },
+  "controls": {
+    "autoreply": "Réponse automatique",
+    "play": "Lecture",
+    "stop": "Arrêt"
+  },
+  "evaluation": {
+    "passTitle": "Bravo !",
+    "closeTitle": "Presque !",
+    "failTitle": "Continue à t'entraîner !",
+    "tryHarder": "Plus difficile",
+    "lowerDifficulty": "Moins difficile",
+    "returnToPractice": "Continuer à pratiquer",
+    "finishLesson": "Quitter",
+    "skillsUnlocked": "Compétences débloquées !"
+  },
+  "learnMode": {
+    "promptPlaceholder": "Que voulez-vous apprendre ? (par ex. \"une progression d'accords de jazz simple\" ou \"un riff de blues de base\")",
+    "suggestions": [
+      "Apprends-moi une longue séquence jazz",
+      "Apprends-moi une séquence classique sombre"
+    ],
+    "loadingTeacher": "Préparation de votre leçon...",
+    "preparingLesson": "Préparation de la leçon...",
+    "generatingLesson": "Génération de la leçon...",
+    "startButton": "Commencer",
+    "startLearning": "Commencer l'apprentissage",
+    "generateErrorTitle": "Échec de la création de la leçon",
+    "generateErrorDescription": "Veuillez réessayer",
+    "evaluationFallback": "Évaluation impossible - réessayez !",
+    "listening": "À l'écoute...",
+    "waitingForUser": "Jouez sur le clavier ci-dessous",
+    "playButton": "Écouter",
+    "nextButton": "Suivant",
+    "leaveButton": "Quitter"
+  },
+  "whistleImport": {
+    "title": "Import par sifflement",
+    "permissionTip": "Astuce : vérifiez l'invite d'autorisation de votre navigateur ou les paramètres pour activer l'accès au microphone.",
+    "level": "Niveau",
+    "instruction": "Commencez l'enregistrement pour voir le signal de sifflement entrant et le nom de la note détectée se mettre à jour en temps réel.",
+    "detectedNotes": "Notes détectées",
+    "noNotesYet": "Aucune note capturée pour le moment. Appuyez sur Rec et commencez à siffler pour commencer.",
+    "buttons": { "rec": "Enregistrer", "stop": "Arrêter", "clear": "Effacer" },
+    "errors": {
+      "permissionDenied": "L'accès au microphone a été refusé. Veuillez autoriser les permissions du microphone et réessayer.",
+      "accessFailed": "Impossible d'accéder au microphone : {{error}}",
+      "unknown": "Erreur inconnue"
+    }
+  },
+  "tune": {
+    "loadingTune": "Chargement du morceau...",
+    "preparingPlan": "Préparation du plan d'entraînement...",
+    "planReady": "Nouveau plan d'entraînement prêt !",
+    "letsPractice": "Allons pratiquer !",
+    "loadPlanFailed": "Échec du chargement du plan d'entraînement",
+    "evaluateFailed": "Échec de l'évaluation de la performance",
+    "practiceComplete": "Séance d'entraînement terminée !",
+    "getNewPlan": "Obtenir un nouveau plan d'entraînement",
+    "returnToSelection": "Retour à la sélection",
+    "tuneAcquired": "Morceau acquis : {{title}}",
+    "skillUnlocked": "Compétence débloquée : {{skills}}",
+    "nextSectionHint": "Belle série ! Passe à la section suivante quand tu es prêt.",
+    "comments": {
+      "title": "Commentaires du coach",
+      "placeholder": "Joue une phrase pour obtenir un retour.",
+      "helper": "Les commentaires se mettent à jour automatiquement après chaque prise.",
+      "noComments": "Essaie !"
+    },
+    "status": { "playing": "Lecture", "sending": "Envoi", "close": "Presque" },
+    "buttons": {
+      "replay": "Rejouer",
+      "stop": "Arrêter",
+      "restart": "Recommencer",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "leave": "Quitter",
+      "sheetView": "Passer à la partition"
+    },
+    "feedback": {
+      "greatJob": "Bravo !",
+      "almostThere": "Presque !",
+      "keepPracticing": "Continue à t'entraîner !",
+      "pass": "Réussi",
+      "close": "Presque",
+      "tryAgain": "Réessaie",
+      "leave": "Quitter",
+      "practiceAgain": "Reprendre l'entraînement",
+      "nextSection": "Section suivante",
+      "masteredPrompt": "Tu maîtrises cette section ! Prêt pour la suite ?"
+    },
+    "sheetNoXml": "Aucune partition disponible pour cet extrait"
+  }
+}

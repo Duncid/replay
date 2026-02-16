@@ -78,7 +78,6 @@ export interface LessonEngineState {
   setEvaluationResult: (result: "positive" | "negative" | null) => void;
   setSkillToUnlock: (skill: SkillToUnlock | null) => void;
   setEvaluationState: React.Dispatch<React.SetStateAction<EvaluationState>>;
-  setShowEvaluationScreen: (show: boolean) => void;
   setDebugInfo: React.Dispatch<React.SetStateAction<LessonDebugInfo>>;
   evaluationState: EvaluationState;
   hasEvaluatedRef: React.MutableRefObject<boolean>;
@@ -457,11 +456,6 @@ export function useLessonEngine(
             evaluationOutput,
             awardedSkillsWithTitles,
           });
-
-          // Show evaluation screen
-          console.log("executeEvaluation: Setting showEvaluationScreen to true");
-          state.setShowEvaluationScreen(true);
-          console.log("executeEvaluation: Evaluation complete, screen should show");
         } else {
           throw new Error("Lesson run ID is required for evaluation");
         }

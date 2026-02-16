@@ -1,8 +1,13 @@
 import { DebugLLMSheet } from "@/components/DebugLLMSheet";
-import { FeedbackScreen } from "@/components/FeedbackScreen";
+import { EvaluationDebugSheet } from "@/components/EvaluationDebugSheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { FreePracticeMode } from "@/components/modes/FreePracticeMode";
-import { LessonEvaluation } from "@/components/modes/LessonEvaluation";
 import { LessonPractice } from "@/components/modes/LessonPractice";
 import { TuneMode } from "@/components/modes/TuneMode";
 import { TeacherWelcome } from "@/components/TeacherWelcome";
@@ -147,7 +152,7 @@ export function LearnMode({
 
   // Extract individual values for easier access
   const { prompt, lesson, lastComment, isEvaluating } = lessonState;
-  const { mode: lessonMode, evaluationResult } = modeState;
+  const { evaluationResult } = modeState;
   const { shouldFetchGreeting } = uiState;
 
   // === React Query Hooks ===
@@ -169,7 +174,6 @@ export function LearnMode({
 
   // Additional state
   const [evaluationState, setEvaluationState] = useState<EvaluationState>(null);
-  const [showEvaluationScreen, setShowEvaluationScreen] = useState(false);
 
   // Debug info captured for non-blocking dropdown access
   const [debugInfo, setDebugInfo] = useState<LessonDebugInfo>({});
@@ -178,6 +182,7 @@ export function LearnMode({
   const [showTeacherSheet, setShowTeacherSheet] = useState(false);
   const [showLessonSheet, setShowLessonSheet] = useState(false);
   const [showEvalSheet, setShowEvalSheet] = useState(false);
+  const [showLessonInfoSheet, setShowLessonInfoSheet] = useState(false);
 
   // Tune practice state
   const [activeTuneKey, setActiveTuneKey] = useState<string | null>(null);
@@ -290,7 +295,6 @@ export function LearnMode({
       setEvaluationResult,
       setSkillToUnlock,
       setEvaluationState,
-      setShowEvaluationScreen,
       setDebugInfo,
       evaluationState,
       hasEvaluatedRef,
@@ -339,13 +343,10 @@ export function LearnMode({
 
   // executeEvaluation and evaluateAttempt are now in useLessonEngine hook
 
-  // Watch for recording completion to trigger evaluation (only in evaluation mode)
-  // In practice mode, no recording or evaluation happens
-  // Only trigger if we're actively in evaluation mode and recording just completed
+  // When recording completes in your_turn (playhead reached end), run evaluation
   useEffect(() => {
     if (
       lesson.phase === "your_turn" &&
-      lessonMode === "evaluation" &&
       userRecording &&
       userRecording.notes.length > 0 &&
       !isRecording &&
@@ -357,39 +358,19 @@ export function LearnMode({
     }
   }, [
     lesson.phase,
-    lessonMode,
     userRecording,
     isRecording,
     isEvaluating,
     evaluateAttempt,
   ]);
 
-  // Enter evaluation mode or return to practice
-  const handleEvaluate = useCallback(() => {
-    if (lessonMode === "practice") {
-      // Switch to evaluation mode
-      setMode("evaluation");
-      setEvaluationResult(null);
-      setLessonState((prev) => ({ ...prev, lastComment: null }));
-      // Clear any existing recording and reset evaluation state
-      onClearRecording();
-      hasEvaluatedRef.current = false;
-      setEvaluationState(null);
-      // Recording will start when user actually plays (handled by parent)
-      // Make sure we don't have any stale recording that would trigger evaluation immediately
-    } else {
-      // Switch back to practice mode
-      setMode("practice");
-      onClearRecording();
-      hasEvaluatedRef.current = false;
-    }
-  }, [
-    lessonMode,
-    onClearRecording,
-    setMode,
-    setEvaluationResult,
-    setLessonState,
-  ]);
+  // Dismiss feedback overlay and clear state (back to instruction in overlay)
+  const handleReturnToPractice = useCallback(() => {
+    setMode("practice");
+    onClearRecording();
+    hasEvaluatedRef.current = false;
+    setEvaluationState(null);
+  }, [onClearRecording, setMode]);
 
   // handleMakeEasier and handleMakeHarder are now in useLessonEngine hook
 
@@ -500,9 +481,18 @@ export function LearnMode({
     if (debugInfo.evaluation?.request || debugInfo.evaluation?.response) {
       entries.push({
         id: "evaluation",
-        label: "Evaluation",
+        label: "Last Evaluation",
         icon: <Bug className="h-4 w-4" />,
         openSheet: () => setShowEvalSheet(true),
+      });
+    }
+
+    if (lesson.phase === "your_turn") {
+      entries.push({
+        id: "lesson-info",
+        label: "Lesson info",
+        icon: <FileText className="h-4 w-4" />,
+        openSheet: () => setShowLessonInfoSheet(true),
       });
     }
 
@@ -626,81 +616,40 @@ export function LearnMode({
     // LESSON FLOW (lesson.phase === "your_turn")
     // ============================================
     if (lesson.phase === "your_turn") {
-      // Feedback: Show feedback screen after evaluation
-      if (showEvaluationScreen) {
-        return (
-          <FeedbackScreen
-            evaluation={
-              evaluationState?.type === "structured"
-                ? evaluationState.evaluationOutput.evaluation
-                : "close"
+      const targetSequence =
+        lesson.targetSequence ?? { notes: [], totalTime: 0 };
+      const evaluationFeedback =
+        evaluationState?.type === "structured"
+          ? {
+              evaluation: evaluationState.evaluationOutput.evaluation,
+              feedbackText: evaluationState.evaluationOutput.feedbackText,
+              awardedSkills: evaluationState.awardedSkillsWithTitles,
             }
-            feedbackText={
-              evaluationState?.type === "structured"
-                ? evaluationState.evaluationOutput.feedbackText
-                : ""
-            }
-            awardedSkills={
-              evaluationState?.type === "structured" &&
-              evaluationState.awardedSkillsWithTitles?.length
-                ? evaluationState.awardedSkillsWithTitles
-                : undefined
-            }
-            debugMode={debugMode}
-            evaluationOutput={
-              evaluationState?.type === "structured"
-                ? evaluationState.evaluationOutput
-                : undefined
-            }
-            onReturnToPractice={() => {
-              setShowEvaluationScreen(false);
-              setMode("practice");
-              setEvaluationState(null);
-              onClearRecording();
-              hasEvaluatedRef.current = false;
-            }}
-            onMakeEasier={() => {
-              setShowEvaluationScreen(false);
-              handleMakeEasier();
-            }}
-            onMakeHarder={() => {
-              setShowEvaluationScreen(false);
-              handleMakeHarder();
-            }}
-            onFinishLesson={() => {
-              setShowEvaluationScreen(false);
-              handleLeave();
-            }}
-          />
-        );
-      }
-
-      // Evaluation: User is recording their attempt
-      if (lessonMode === "evaluation") {
-        return (
-          <LessonEvaluation
-            instruction={lesson.instruction}
-            isEvaluating={isEvaluating}
-            isLoading={isLoading || isPlaying}
-            isRecording={isRecording}
-            onBackToPractice={handleEvaluate}
-            onLeave={handleLeave}
-            trackTitle={lesson.trackTitle}
-            skillToUnlock={skillToUnlock}
-            debugMode={debugMode}
-            difficulty={lesson.difficulty}
-          />
-        );
-      }
-
-      // Practice: User is practicing the lesson
+          : null;
       return (
         <LessonPractice
           instruction={lesson.instruction}
+          targetSequence={targetSequence}
+          isPlaying={isPlaying}
           isLoading={isLoading || isPlaying}
+          isEvaluating={isEvaluating}
+          isRecording={isRecording}
+          evaluationFeedback={evaluationFeedback}
           onPlay={handlePlay}
-          onStartEvaluation={handleEvaluate}
+          onStopPlayback={onStopPlayback}
+          onPlayheadReachedEnd={onCompleteRecordingNow}
           onLeave={handleLeave}
+          onDismissFeedback={handleReturnToPractice}
+          onMakeEasier={() => {
+            setEvaluationState(null);
+            handleMakeEasier();
+          }}
+          onMakeHarder={() => {
+            setEvaluationState(null);
+            handleMakeHarder();
+          }}
+          onRegisterNoteHandler={onRegisterNoteHandler}
+          onRegisterNoteOffHandler={onRegisterNoteOffHandler}
           trackTitle={lesson.trackTitle}
           skillToUnlock={skillToUnlock}
           debugMode={debugMode}
@@ -729,12 +678,68 @@ export function LearnMode({
           onOpenChange={setShowLessonSheet}
           debugCall={debugInfo.lessonGeneration}
         />
-        <DebugLLMSheet
-          title="Evaluation LLM Call"
+        <EvaluationDebugSheet
+          title="Last Evaluation"
           open={showEvalSheet}
           onOpenChange={setShowEvalSheet}
           debugCall={debugInfo.evaluation}
+          evaluationOutput={
+            evaluationState?.type === "structured"
+              ? evaluationState.evaluationOutput
+              : undefined
+          }
+          awardedSkills={
+            evaluationState?.type === "structured"
+              ? evaluationState.awardedSkillsWithTitles
+              : undefined
+          }
         />
+        <Sheet
+          open={showLessonInfoSheet}
+          onOpenChange={setShowLessonInfoSheet}
+        >
+          <SheetContent side="right" className="w-[400px] sm:max-w-[400px]">
+            <SheetHeader>
+              <SheetTitle>Lesson info</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4 space-y-3 text-sm">
+              {typeof lesson.difficulty === "number" && (
+                <p>
+                  <span className="font-medium text-muted-foreground">
+                    Difficulty:
+                  </span>{" "}
+                  {lesson.difficulty}
+                </p>
+              )}
+              {skillToUnlock && (
+                <p>
+                  <span className="font-medium text-muted-foreground">
+                    Skill:
+                  </span>{" "}
+                  {skillToUnlock.skillKey}
+                  {skillToUnlock.title
+                    ? ` (${skillToUnlock.title})`
+                    : ""}
+                </p>
+              )}
+              {lesson.trackTitle && (
+                <p>
+                  <span className="font-medium text-muted-foreground">
+                    Track:
+                  </span>{" "}
+                  {lesson.trackTitle}
+                </p>
+              )}
+              {typeof lesson.difficulty !== "number" &&
+                !skillToUnlock &&
+                !lesson.trackTitle && (
+                  <p className="text-muted-foreground">
+                    No lesson info available.
+                  </p>
+                )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </>
     );
   };
@@ -752,13 +757,14 @@ export function LearnMode({
     onEnableFreePractice?.();
   }, [handleLeave, onEnableFreePractice]);
 
-  // Expose lesson mode and tune mode state to parent so it can control recording
+  const isInLessonPractice = lesson.phase === "your_turn";
+
   return {
     lesson,
     render,
     renderDebugSheets,
     handleUserAction,
-    lessonMode,
+    isInLessonPractice,
     isInTuneMode: activeTuneKey !== null,
     resetToStart,
     debugMenuState,

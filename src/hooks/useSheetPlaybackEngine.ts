@@ -31,6 +31,7 @@ type UseSheetPlaybackEngineOptions = {
   speed?: number;
   chordWindowMs?: number;
   onTick?: (timeSec: number) => void;
+  /** Called when playhead reaches end and user drove the playhead (e.g. complete recording). Not called when demo/autoplay ends. */
   onReachedEnd?: () => void;
 };
 

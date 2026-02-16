@@ -2,14 +2,12 @@ import { LessonCard, SkillToUnlock } from "@/components/LessonCard";
 
 /**
  * LessonEvaluation - Evaluation phase of the lesson flow
- * 
- * This component represents the evaluation screen where users:
- * - Record their attempt
- * - See evaluation status (recording, evaluating)
- * - Can return to practice mode
- * 
- * Initially wraps LessonCard for backward compatibility, but can be
- * redesigned independently without affecting other lesson flow screens.
+ *
+ * @deprecated No longer rendered. Practice and evaluation are unified in
+ * LessonPractice (Pixi view + overlay + playhead). This component is kept
+ * for reference or potential reuse of LessonCard in other flows.
+ *
+ * Previously: evaluation screen where users record, see status, return to practice.
  */
 interface LessonEvaluationProps {
   instruction: string;

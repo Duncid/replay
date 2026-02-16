@@ -1330,6 +1330,50 @@ const Index = () => {
   // Track tune mode state for recording logic (separate from learnMode to avoid circular reference)
   const [isInTuneMode, setIsInTuneMode] = useState(false);
 
+  // Ref for playhead-end completion (learnMode is created before learnRecordingManager so it can read isInLessonPractice)
+  const learnCompleteRecordingNowRef = useRef<() => void>(() => {});
+
+  // Learn mode hook (curriculum lessons) – created before learnRecordingManager so completeOnlyOnDemand can use learnMode.isInLessonPractice
+  const learnMode = LearnMode({
+    isPlaying: appState === "ai_playing",
+    onPlaySequence: (sequence) => {
+      pianoRef.current?.ensureAudioReady();
+      setTimeout(() => playSequence(sequence, undefined, true), 50);
+    },
+    onStopPlayback: stopAiPlayback,
+    onStartRecording: () => {
+      // Recording starts automatically when user plays
+    },
+    isRecording:
+      appState === "user_playing" &&
+      activeMode === "learn" &&
+      learnModeType === "curriculum",
+    userRecording: learnModeRecording,
+    onClearRecording: () => {
+      setLearnModeRecording(null);
+      learnModeRecordingRef.current = null;
+    },
+    onCompleteRecordingNow: () => learnCompleteRecordingNowRef.current?.(),
+    language,
+    notationPreference: musicNotation,
+    model: selectedModel,
+    debugMode,
+    localUserId: currentUserId,
+    metronomeBpm,
+    setMetronomeBpm,
+    metronomeTimeSignature,
+    setMetronomeTimeSignature,
+    metronomeIsPlaying,
+    setMetronomeIsPlaying,
+    setMetronomeFeel: (feel: LessonFeelPreset) =>
+      setMetronomeFeel(feel as FeelPreset),
+    setMetronomeSoundType: (soundType: LessonMetronomeSoundType) =>
+      setMetronomeSoundType(soundType as MetronomeSoundType),
+    onRegisterNoteHandler: registerTuneNoteHandler,
+    onRegisterNoteOffHandler: registerTuneNoteOffHandler,
+    onEnableFreePractice: () => setLearnModeType("free-practice"),
+  });
+
   // Learn mode recording manager (for curriculum lessons)
   const learnRecordingManager = useRecordingManager({
     bpm: metronomeBpm,
@@ -1353,8 +1397,15 @@ const Index = () => {
       activeMode === "learn" && learnModeType === "curriculum"
         ? (metronomeStartTime ?? undefined)
         : undefined,
-    completeOnlyOnDemand: isInTuneMode,
+    completeOnlyOnDemand:
+      isInTuneMode ||
+      (learnModeType === "curriculum" && learnMode.isInLessonPractice),
   });
+
+  // Wire playhead-end completion to recording manager
+  useEffect(() => {
+    learnCompleteRecordingNowRef.current = () => learnRecordingManager.completeNow();
+  }, [learnRecordingManager]);
 
   // Free practice recording manager
   const freePracticeRecordingManager = useRecordingManager({
@@ -1375,48 +1426,6 @@ const Index = () => {
       activeMode === "learn" && learnModeType === "free-practice"
         ? (metronomeStartTime ?? undefined)
         : undefined,
-  });
-
-  // Learn mode hook (curriculum lessons)
-  const learnMode = LearnMode({
-    isPlaying: appState === "ai_playing",
-    onPlaySequence: (sequence) => {
-      pianoRef.current?.ensureAudioReady();
-      setTimeout(() => playSequence(sequence, undefined, true), 50);
-    },
-    onStopPlayback: stopAiPlayback,
-    onStartRecording: () => {
-      // Recording starts automatically when user plays
-    },
-    isRecording:
-      appState === "user_playing" &&
-      activeMode === "learn" &&
-      learnModeType === "curriculum",
-    userRecording: learnModeRecording,
-    onClearRecording: () => {
-      setLearnModeRecording(null);
-      learnModeRecordingRef.current = null;
-    },
-    onCompleteRecordingNow: () => learnRecordingManager.completeNow(),
-    language,
-    notationPreference: musicNotation,
-    model: selectedModel,
-    debugMode,
-    localUserId: currentUserId,
-    // Metronome control props
-    metronomeBpm,
-    setMetronomeBpm,
-    metronomeTimeSignature,
-    setMetronomeTimeSignature,
-    metronomeIsPlaying,
-    setMetronomeIsPlaying,
-    setMetronomeFeel: (feel: LessonFeelPreset) =>
-      setMetronomeFeel(feel as FeelPreset),
-    setMetronomeSoundType: (soundType: LessonMetronomeSoundType) =>
-      setMetronomeSoundType(soundType as MetronomeSoundType),
-    onRegisterNoteHandler: registerTuneNoteHandler,
-    onRegisterNoteOffHandler: registerTuneNoteOffHandler,
-    onEnableFreePractice: () => setLearnModeType("free-practice"),
   });
 
   const { debugMenuState, switchToFreePractice } = learnMode;
@@ -1505,7 +1514,7 @@ const Index = () => {
       if (activeMode === "learn") {
         if (learnModeType === "curriculum") {
           learnMode.handleUserAction();
-          if (isInTuneMode) {
+          if (isInTuneMode || learnMode.isInLessonPractice) {
             tuneNoteHandlerRef.current?.(noteKey);
           }
         }
@@ -1533,14 +1542,9 @@ const Index = () => {
         recordingManager.addNoteStart(noteKey, velocity);
       } else if (activeMode === "learn") {
         if (learnModeType === "curriculum") {
-          // TuneMode: Always record when a tune is active
           if (isInTuneMode) {
             learnRecordingManager.addNoteStart(noteKey, velocity);
-          } else if (
-            learnMode.lesson.phase === "your_turn" &&
-            learnMode.lessonMode === "evaluation"
-          ) {
-            // Lesson mode: Only record in evaluation mode
+          } else if (learnMode.isInLessonPractice) {
             learnRecordingManager.addNoteStart(noteKey, velocity);
           }
         } else if (learnModeType === "free-practice") {
@@ -1555,8 +1559,7 @@ const Index = () => {
       noteNameToMidi,
       recordingManager,
       learnMode.handleUserAction,
-      learnMode.lesson.phase,
-      learnMode.lessonMode,
+      learnMode.isInLessonPractice,
       learnRecordingManager,
       freePracticeRecordingManager,
       learnModeType,
@@ -1600,16 +1603,12 @@ const Index = () => {
         recordingManager.addNoteEnd(noteKey);
       } else if (activeMode === "learn") {
         if (learnModeType === "curriculum") {
-          // TuneMode: Always record when a tune is active
           if (isInTuneMode) {
             learnRecordingManager.addNoteEnd(noteKey);
             tuneNoteOffHandlerRef.current?.(noteKey);
-          } else if (
-            learnMode.lesson.phase === "your_turn" &&
-            learnMode.lessonMode === "evaluation"
-          ) {
-            // Lesson mode: Only record in evaluation mode
+          } else if (learnMode.isInLessonPractice) {
             learnRecordingManager.addNoteEnd(noteKey);
+            tuneNoteOffHandlerRef.current?.(noteKey);
           }
         } else if (learnModeType === "free-practice") {
           // Always record for free practice
@@ -1623,8 +1622,7 @@ const Index = () => {
       recordingManager,
       learnRecordingManager,
       freePracticeRecordingManager,
-      learnMode.lesson.phase,
-      learnMode.lessonMode,
+      learnMode.isInLessonPractice,
       learnModeType,
       isInTuneMode,
     ],
@@ -2082,7 +2080,11 @@ const Index = () => {
                 appState === "waiting_for_ai"
               }
               soundType={pianoSoundType}
-              hasColor={isInTuneMode || activeMode === "lab"}
+              hasColor={
+                isInTuneMode ||
+                activeMode === "lab" ||
+                (activeMode === "learn" && learnModeType === "curriculum")
+              }
               language={language}
               notationPreference={musicNotation}
               onNoteStart={handleNoteStart}
