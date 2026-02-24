@@ -539,6 +539,11 @@ export function useSheetPlaybackEngine({
     [endTime, gates, recomputeActiveNotes]
   );
 
+  const currentRequiredPitches = useMemo(() => {
+    const gate = gates[gateIndex];
+    return gate ? gate.requiredPitches : [];
+  }, [gates, gateIndex]);
+
   return {
     playheadTime,
     playheadTimeRef: tRef,
@@ -552,5 +557,6 @@ export function useSheetPlaybackEngine({
     stop,
     seek,
     handleInputEvent,
+    currentRequiredPitches,
   };
 }

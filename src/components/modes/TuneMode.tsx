@@ -41,6 +41,11 @@ interface TuneModeProps {
   onRegisterNoteOffHandler?: (
     handler: ((noteKey: string) => void) | null,
   ) => void;
+  onRegisterExpectedNotesProvider?: (
+    provider:
+      | (() => { mids: number[]; t0: number; t1: number } | null)
+      | null,
+  ) => void;
   onClearRecording?: () => void;
   /** When playhead reaches end of track (user-driven), parent completes recording; we then send. */
   onPlayheadReachedEnd?: () => void;
@@ -61,6 +66,7 @@ export function TuneMode({
   isRecording = false,
   onRegisterNoteHandler,
   onRegisterNoteOffHandler,
+  onRegisterExpectedNotesProvider,
   onClearRecording,
   onPlayheadReachedEnd,
   onTuneDebugMenuChange,
@@ -684,6 +690,7 @@ export function TuneMode({
             pendingEvalIndex={pendingEvalIndex}
             onRegisterNoteHandler={onRegisterNoteHandler}
             onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+            onRegisterExpectedNotesProvider={onRegisterExpectedNotesProvider}
             evalPrompt={lastEvalPrompt}
             evalAnswer={lastEvalAnswer}
             evalDecision={lastEvalDecision}

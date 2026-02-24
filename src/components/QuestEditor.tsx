@@ -554,20 +554,28 @@ function QuestEditorFlow({
   onConnect: (connection: Connection) => void;
   onEditNode: (nodeId: string) => void;
 }) {
-  const nodeTypes: NodeTypes = {
-    track: (props: NodeComponentProps) => (
-      <TrackNode {...props} onEdit={onEditNode} />
-    ),
-    lesson: (props: NodeComponentProps) => (
-      <LessonNode {...props} onEdit={onEditNode} />
-    ),
-    skill: (props: NodeComponentProps) => (
-      <SkillNode {...props} onEdit={onEditNode} />
-    ),
-    tune: (props: NodeComponentProps) => (
-      <TuneNode {...props} onEdit={onEditNode} />
-    ),
-  };
+  const onEditNodeRef = useRef(onEditNode);
+  useEffect(() => {
+    onEditNodeRef.current = onEditNode;
+  }, [onEditNode]);
+
+  const nodeTypes: NodeTypes = useMemo(
+    () => ({
+      track: (props: NodeComponentProps) => (
+        <TrackNode {...props} onEdit={onEditNodeRef.current} />
+      ),
+      lesson: (props: NodeComponentProps) => (
+        <LessonNode {...props} onEdit={onEditNodeRef.current} />
+      ),
+      skill: (props: NodeComponentProps) => (
+        <SkillNode {...props} onEdit={onEditNodeRef.current} />
+      ),
+      tune: (props: NodeComponentProps) => (
+        <TuneNode {...props} onEdit={onEditNodeRef.current} />
+      ),
+    }),
+    [],
+  );
 
   return (
     <ReactFlow

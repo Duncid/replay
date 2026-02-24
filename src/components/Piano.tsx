@@ -48,8 +48,13 @@ export interface PianoHandle {
     noteKey: string,
     frequency: number,
     velocity?: number,
+    options?: { muteAudio?: boolean },
   ) => void;
-  handleKeyRelease: (noteKey: string, frequency: number) => void;
+  handleKeyRelease: (
+    noteKey: string,
+    frequency: number,
+    options?: { muteAudio?: boolean },
+  ) => void;
 }
 
 const Piano = forwardRef<PianoHandle, PianoProps>(
@@ -236,7 +241,12 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     }, [fullKeyboard]);
 
     const handleKeyPress = useCallback(
-      (noteKey: string, frequency: number, velocity: number = 0.8) => {
+      (
+        noteKey: string,
+        frequency: number,
+        velocity: number = 0.8,
+        options?: { muteAudio?: boolean },
+      ) => {
         if (!allowInput || !isNotePlayable(noteKey)) return;
 
         const existingTimer = keyActivationTimers.current.get(noteKey);
@@ -250,7 +260,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           next.delete(noteKey);
           return next;
         });
-        audio.startNote(noteKey, frequency);
+        if (!options?.muteAudio) {
+          audio.startNote(noteKey, frequency);
+        }
         setUserPressedKeys((prev) => new Set([...prev, noteKey]));
 
         onNoteStart?.(noteKey, frequency, velocity);
@@ -259,10 +271,16 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     );
 
     const handleKeyRelease = useCallback(
-      (noteKey: string, frequency: number) => {
+      (
+        noteKey: string,
+        frequency: number,
+        options?: { muteAudio?: boolean },
+      ) => {
         if (!allowInput || !isNotePlayable(noteKey)) return;
 
-        audio.stopNote(noteKey);
+        if (!options?.muteAudio) {
+          audio.stopNote(noteKey);
+        }
         setUserPressedKeys((prev) => {
           const newSet = new Set(prev);
           newSet.delete(noteKey);

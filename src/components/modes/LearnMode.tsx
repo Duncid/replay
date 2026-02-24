@@ -90,6 +90,11 @@ interface LearnModeProps {
   onRegisterNoteOffHandler?: (
     handler: ((noteKey: string) => void) | null,
   ) => void;
+  onRegisterExpectedNotesProvider?: (
+    provider:
+      | (() => { mids: number[]; t0: number; t1: number } | null)
+      | null,
+  ) => void;
   // Metronome control props
   metronomeBpm: number;
   setMetronomeBpm: (bpm: number) => void;
@@ -117,6 +122,7 @@ export function LearnMode({
   localUserId,
   onRegisterNoteHandler,
   onRegisterNoteOffHandler,
+  onRegisterExpectedNotesProvider,
   metronomeBpm,
   setMetronomeBpm,
   metronomeTimeSignature,
@@ -594,6 +600,7 @@ export function LearnMode({
           isRecording={isRecording}
           onRegisterNoteHandler={onRegisterNoteHandler}
           onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+          onRegisterExpectedNotesProvider={onRegisterExpectedNotesProvider}
           onClearRecording={onClearRecording}
           onPlayheadReachedEnd={onCompleteRecordingNow}
           onTuneDebugMenuChange={handleTuneDebugMenuChange}
