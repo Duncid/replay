@@ -77,13 +77,9 @@ def extract_xml(
     midi_path = tune_folder / "tune.mid"
     generated_ns_files: list[str] = []
     if midi_path.exists():
-        full_sequence, per_instrument_sequences = midi_to_note_sequences_with_instruments(
+        _, per_instrument_sequences = midi_to_note_sequences_with_instruments(
             midi_path
         )
-        full_ns_path = tune_folder / "tune.ns.json"
-        write_json(full_ns_path, full_sequence)
-        generated_ns_files.append(full_ns_path.name)
-
         for index, instrument_sequence in enumerate(per_instrument_sequences, start=1):
             instrument_ns_path = tune_folder / f"tune.inst{index}.ns.json"
             write_json(instrument_ns_path, instrument_sequence)

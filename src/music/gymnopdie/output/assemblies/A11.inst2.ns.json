@@ -1,0 +1,99 @@
+{
+  "notes": [
+    {
+      "endTime": 5.33332200000001,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 35,
+      "program": 0,
+      "startTime": 1.9999890000000136,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 5.33332200000001,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 59,
+      "program": 0,
+      "startTime": 3.1111000000000075,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 5.33332200000001,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 62,
+      "program": 0,
+      "startTime": 3.1111000000000075,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 5.33332200000001,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 66,
+      "program": 0,
+      "startTime": 3.1111000000000075,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 8.666655000000006,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 40,
+      "program": 0,
+      "startTime": 5.33332200000001,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 8.666655000000006,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 61,
+      "program": 0,
+      "startTime": 6.444433000000004,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 8.666655000000006,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 64,
+      "program": 0,
+      "startTime": 6.444433000000004,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 8.666655000000006,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 69,
+      "program": 0,
+      "startTime": 6.444433000000004,
+      "velocity": 0.9921259842519685
+    },
+    {
+      "endTime": 11.999988000000016,
+      "instrument": 1,
+      "isDrum": false,
+      "pitch": 40,
+      "program": 0,
+      "startTime": 8.666655000000006,
+      "velocity": 0.9921259842519685
+    }
+  ],
+  "totalTime": 11.999988000000016,
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    }
+  ]
+}

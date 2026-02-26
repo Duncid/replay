@@ -81,7 +81,7 @@ def test_extract_removes_ghost_notes(tmp_path: Path) -> None:
     assert notes[0].pitch.nameWithOctave == "D4"
 
 
-def test_extract_writes_full_and_per_instrument_note_sequences(tmp_path: Path) -> None:
+def test_extract_writes_per_instrument_note_sequences(tmp_path: Path) -> None:
     tune_folder = tmp_path / "multi_inst"
     tune_folder.mkdir()
 
@@ -97,37 +97,27 @@ def test_extract_writes_full_and_per_instrument_note_sequences(tmp_path: Path) -
     cleaned_path = extract_xml(tune_folder)
     assert cleaned_path.exists()
 
-    full_ns_path = tune_folder / "tune.ns.json"
     inst1_ns_path = tune_folder / "tune.inst1.ns.json"
     inst2_ns_path = tune_folder / "tune.inst2.ns.json"
 
-    assert full_ns_path.exists()
+    assert not (tune_folder / "tune.ns.json").exists()
     assert inst1_ns_path.exists()
     assert inst2_ns_path.exists()
 
-    full_ns = json.loads(full_ns_path.read_text(encoding="utf-8"))
     inst1_ns = json.loads(inst1_ns_path.read_text(encoding="utf-8"))
     inst2_ns = json.loads(inst2_ns_path.read_text(encoding="utf-8"))
 
     assert len(inst1_ns["notes"]) == 2
     assert len(inst2_ns["notes"]) == 1
-    assert len(full_ns["notes"]) == len(inst1_ns["notes"]) + len(inst2_ns["notes"])
 
     inst1_pitches = {note["pitch"] for note in inst1_ns["notes"]}
     inst2_pitches = {note["pitch"] for note in inst2_ns["notes"]}
-    full_instruments = {note["instrument"] for note in full_ns["notes"]}
     inst1_instruments = {note["instrument"] for note in inst1_ns["notes"]}
     inst2_instruments = {note["instrument"] for note in inst2_ns["notes"]}
 
     assert inst1_pitches == {60, 62}
     assert inst2_pitches == {67}
-    assert full_instruments == {0, 1}
     assert inst1_instruments == {0}
     assert inst2_instruments == {1}
-    assert all("program" in note for note in full_ns["notes"])
-    assert all("isDrum" in note for note in full_ns["notes"])
-    assert "controlChanges" in full_ns
-    assert "pitchBends" in full_ns
-    assert "keySignatures" in full_ns
-    assert "sourceInfo" in full_ns
-    assert "ticksPerQuarter" in full_ns
+    assert all("program" in note for note in inst1_ns["notes"])
+    assert all("isDrum" in note for note in inst2_ns["notes"])

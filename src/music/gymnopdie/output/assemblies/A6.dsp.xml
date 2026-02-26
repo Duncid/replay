@@ -4,7 +4,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-01</encoding-date>
+      <encoding-date>2026-02-26</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -15,21 +15,21 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P9245d700158c6ce5c120caf7e88889dc">
+    <score-part id="P136ca26c4cd9466d8f3774ab011fa750">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Ibb0e8905d5ea11a6095ecd9ecd72d7e7">
+      <score-instrument id="I8ce16390a225d19bbdf8b8355d761678">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Ibb0e8905d5ea11a6095ecd9ecd72d7e7">
+      <midi-instrument id="I8ce16390a225d19bbdf8b8355d761678">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
   
-  <part id="P9245d700158c6ce5c120caf7e88889dc">
+  <part id="P136ca26c4cd9466d8f3774ab011fa750">
     
     <measure implicit="no" number="1">
       <attributes>
@@ -202,17 +202,6 @@
         <staff>2</staff><type>quarter</type>
       </note>
       <note>
-        <chord />
-        <pitch>
-          <step>F</step>
-          <alter>1</alter>
-          <octave>5</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <accidental>sharp</accidental>
-      </note>
-      <note>
         <pitch>
           <step>B</step>
           <octave>3</octave>
@@ -241,6 +230,17 @@
         <accidental>sharp</accidental>
       </note>
       <note>
+        <chord />
+        <pitch>
+          <step>F</step>
+          <alter>1</alter>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+        <accidental>sharp</accidental>
+      </note>
+      <note>
         <pitch>
           <step>A</step>
           <octave>5</octave>
@@ -255,17 +255,6 @@
         </pitch>
         <duration>10080</duration>
         <staff>2</staff><type>quarter</type>
-      </note>
-      <note>
-        <chord />
-        <pitch>
-          <step>C</step>
-          <alter>1</alter>
-          <octave>5</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <accidental>sharp</accidental>
       </note>
       <note>
         <chord />
@@ -322,6 +311,16 @@
       </note>
       <note>
         <pitch>
+          <step>C</step>
+          <alter>1</alter>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+        <accidental>sharp</accidental>
+      </note>
+      <note>
+        <pitch>
           <step>G</step>
           <octave>2</octave>
         </pitch>
@@ -333,15 +332,6 @@
         <pitch>
           <step>B</step>
           <octave>4</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-      </note>
-      <note>
-        <chord />
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
         </pitch>
         <duration>10080</duration>
         <staff>1</staff><type>quarter</type>
@@ -385,6 +375,17 @@
         <staff>1</staff><type>quarter</type>
         <accidental>sharp</accidental>
       </note>
+    </measure>
+    
+    <measure implicit="no" number="5">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
       <note>
         <pitch>
           <step>D</step>
@@ -402,9 +403,6 @@
         <duration>10080</duration>
         <staff>1</staff><type>quarter</type>
       </note>
-    </measure>
-    
-    <measure implicit="no" number="5">
       <note>
         <pitch>
           <step>A</step>

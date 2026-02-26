@@ -8,7 +8,6 @@ from music21 import stream, tempo, meter, key, instrument, note, chord, clef
 from pydantic import BaseModel
 
 import copy
-
 from tune_pipeline.xml_simplify import simplify_part_for_dsp2
 
 class NuggetExtractError(RuntimeError):
@@ -406,12 +405,9 @@ def extract_nuggets(
             print(f"Skipping nugget {nugget_id}: {e}")
             continue
             
-        # Extract for each track
+        # Extract NoteSequence for each instrument track
         for track_name, ns in note_sequences.items():
-            # Determine filename suffix
-            # full -> nX.ns.json
-            # rh -> nX.rh.ns.json
-            suffix = "" if track_name == "full" else f".{track_name}"
+            suffix = f".{track_name}"
             filename = f"{nugget_id}{suffix}.ns.json"
             
             # Slice notes
@@ -452,25 +448,21 @@ def extract_nuggets(
             with open(nuggets_dir / filename, 'w') as f:
                 json.dump(extracted_ns, f, indent=2)
 
-            part = parts_by_track.get(track_name)
-            if part is not None:
-                sliced_part = _slice_part_by_offset(part, start_offset, end_offset)
-                xml_filename = f"{nugget_id}{suffix}.xml"
-                xml_path = nuggets_dir / xml_filename
-                _write_musicxml(sliced_part, xml_path)
-                _apply_clef_heuristic_to_xml(xml_path)
+        # Generate a single score XML (and DSP XML) per nugget from the combined part.
+        sliced_part = _slice_part_by_offset(combined_part, start_offset, end_offset)
+        xml_path = nuggets_dir / f"{nugget_id}.xml"
+        _write_musicxml(sliced_part, xml_path)
+        _apply_clef_heuristic_to_xml(xml_path)
 
-                chord_keep = "lowest" if track_name == "lh" else "highest"
-                dsp2_part = simplify_part_for_dsp2(
-                    sliced_part,
-                    grid,
-                    chord_cap=chord_cap,
-                    chord_keep=chord_keep,
-                )
-                dsp_filename = f"{nugget_id}{suffix}.dsp.xml"
-                dsp_path = nuggets_dir / dsp_filename
-                _write_musicxml(dsp2_part, dsp_path)
-                _apply_clef_heuristic_to_xml(dsp_path)
+        dsp2_part = simplify_part_for_dsp2(
+            sliced_part,
+            grid,
+            chord_cap=chord_cap,
+            chord_keep="highest",
+        )
+        dsp_path = nuggets_dir / f"{nugget_id}.dsp.xml"
+        _write_musicxml(dsp2_part, dsp_path)
+        _apply_clef_heuristic_to_xml(dsp_path)
 
 
 def extract_assemblies(
@@ -559,9 +551,9 @@ def extract_assemblies(
             print(f"Skipping assembly {assembly_id}: {e}")
             continue
         
-        # Extract for each track
+        # Extract NoteSequence for each instrument track
         for track_name, ns in note_sequences.items():
-            suffix = "" if track_name == "full" else f".{track_name}"
+            suffix = f".{track_name}"
             filename = f"{assembly_id}{suffix}.ns.json"
             
             # Slice notes
@@ -593,24 +585,20 @@ def extract_assemblies(
             with open(assemblies_dir / filename, 'w') as f:
                 json.dump(extracted_ns, f, indent=2)
 
-            part = parts_by_track.get(track_name)
-            if part is not None:
-                sliced_part = _slice_part_by_offset(part, start_offset, end_offset)
-                xml_filename = f"{assembly_id}{suffix}.xml"
-                xml_path = assemblies_dir / xml_filename
-                _write_musicxml(sliced_part, xml_path)
-                _apply_clef_heuristic_to_xml(xml_path)
+        # Generate a single score XML (and DSP XML) per assembly from the combined part.
+        sliced_part = _slice_part_by_offset(combined_part, start_offset, end_offset)
+        xml_path = assemblies_dir / f"{assembly_id}.xml"
+        _write_musicxml(sliced_part, xml_path)
+        _apply_clef_heuristic_to_xml(xml_path)
 
-                chord_keep = "lowest" if track_name == "lh" else "highest"
-                dsp2_part = simplify_part_for_dsp2(
-                    sliced_part,
-                    grid,
-                    chord_cap=chord_cap,
-                    chord_keep=chord_keep,
-                )
-                dsp_filename = f"{assembly_id}{suffix}.dsp.xml"
-                dsp_path = assemblies_dir / dsp_filename
-                _write_musicxml(dsp2_part, dsp_path)
-                _apply_clef_heuristic_to_xml(dsp_path)
+        dsp2_part = simplify_part_for_dsp2(
+            sliced_part,
+            grid,
+            chord_cap=chord_cap,
+            chord_keep="highest",
+        )
+        dsp_path = assemblies_dir / f"{assembly_id}.dsp.xml"
+        _write_musicxml(dsp2_part, dsp_path)
+        _apply_clef_heuristic_to_xml(dsp_path)
         
         print(f"Extracted assembly {assembly_id}: {len(sliced_notes)} notes, {total_duration:.2f}s")

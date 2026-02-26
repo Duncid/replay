@@ -15,6 +15,11 @@ const tuneNsModules = import.meta.glob<{ default: object }>(
   { eager: true },
 );
 
+const tuneInstModules = import.meta.glob<{ default: object }>(
+  "/src/music/*/output/tune.inst*.ns.json",
+  { eager: true },
+);
+
 const tuneLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.lh.ns.json",
   { eager: true },
@@ -31,6 +36,11 @@ const nuggetNsModules = import.meta.glob<{ default: object }>(
   { eager: true },
 );
 
+const nuggetInstModules = import.meta.glob<{ default: object }>(
+  "/src/music/*/output/nuggets/*.inst*.ns.json",
+  { eager: true },
+);
+
 const nuggetLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.lh.ns.json",
   { eager: true },
@@ -44,6 +54,11 @@ const nuggetRhModules = import.meta.glob<{ default: object }>(
 // Pre-load all assembly note sequences
 const assemblyNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.ns.json",
+  { eager: true },
+);
+
+const assemblyInstModules = import.meta.glob<{ default: object }>(
+  "/src/music/*/output/assemblies/*.inst*.ns.json",
   { eager: true },
 );
 
@@ -113,12 +128,15 @@ const getGlobModule = (
 // Export local tune keys discovered from file system
 // Only returns folders that have an output/tune.ns.json file (required for publishing)
 export const getLocalTuneKeys = (): string[] => {
-  return Object.keys(tuneNsModules)
-    .map((path) => {
-      const match = path.match(/\/music\/([^/]+)\/output\/tune\.ns\.json$/);
-      return match ? match[1] : null;
-    })
-    .filter(Boolean) as string[];
+  const keys = new Set<string>();
+  const paths = [...Object.keys(tuneNsModules), ...Object.keys(tuneInstModules)];
+  paths.forEach((path) => {
+    const match = path.match(
+      /\/music\/([^/]+)\/output\/tune(?:\.inst\d+)?\.ns\.json$/,
+    );
+    if (match?.[1]) keys.add(match[1]);
+  });
+  return Array.from(keys);
 };
 
 // Validation result for pre-publish checks
@@ -178,6 +196,18 @@ export const getTeacher = (musicRef: string): Record<string, unknown> | null =>
 export const getTuneNs = (musicRef: string): object | null =>
   getGlobModule(tuneNsModules, `/src/music/${musicRef}/output/tune.ns.json`);
 
+export const getTuneInst = (musicRef: string, instId: string): object | null =>
+  getGlobModule(
+    tuneInstModules,
+    `/src/music/${musicRef}/output/tune.${instId}.ns.json`,
+  );
+
+export const getTuneInst1 = (musicRef: string): object | null =>
+  getTuneInst(musicRef, "inst1");
+
+export const getTuneInst2 = (musicRef: string): object | null =>
+  getTuneInst(musicRef, "inst2");
+
 export const getTuneLh = (musicRef: string): object | null =>
   getGlobModule(tuneLhModules, `/src/music/${musicRef}/output/tune.lh.ns.json`);
 
@@ -191,6 +221,16 @@ export const getNuggetNs = (
   getGlobModule(
     nuggetNsModules,
     `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`,
+  );
+
+export const getNuggetInst = (
+  musicRef: string,
+  nuggetId: string,
+  instId: string,
+): object | null =>
+  getGlobModule(
+    nuggetInstModules,
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.${instId}.ns.json`,
   );
 
 export const getNuggetLh = (
@@ -218,6 +258,16 @@ export const getAssemblyNs = (
   getGlobModule(
     assemblyNsModules,
     `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`,
+  );
+
+export const getAssemblyInst = (
+  musicRef: string,
+  assemblyId: string,
+  instId: string,
+): object | null =>
+  getGlobModule(
+    assemblyInstModules,
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.${instId}.ns.json`,
   );
 
 export const getAssemblyLh = (
