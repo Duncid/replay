@@ -65,6 +65,7 @@ This project is built with:
 Safari/PWA on iPadOS does not currently expose Web MIDI. This repo includes an iPad bridge/polyfill strategy for native wrappers (WKWebView/Capacitor).
 
 See `docs/ipados-midi-bridge.md` for the integration contract and Swift sketch.
+For full iMac→iPad packaging/testing steps, see `docs/ipad-rm.md`.
 
 ## How can I deploy this project?
 
