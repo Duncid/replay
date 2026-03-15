@@ -112,7 +112,7 @@ export const useMidiInput = (
 
     if (!isSupported) {
       if (isManual) {
-        const errorMessage = "Web MIDI API is not supported in this browser. Try Chrome, Edge, or Opera.";
+        const errorMessage = "Web MIDI API is not supported in this browser. On iPad, use the native wrapper build with the CoreMIDI bridge enabled.";
         setError(errorMessage);
         onError?.(errorMessage);
       }
