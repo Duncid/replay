@@ -75,14 +75,26 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const audioRef = useRef(audio);
     audioRef.current = audio;
 
+    const isNativeIOS =
+      typeof window !== "undefined" &&
+      !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+    const [showTapOverlay, setShowTapOverlay] = useState(isNativeIOS);
+
+    const runFirstInteraction = useCallback(() => {
+      if (hasUserInteractedRef.current) return;
+      hasUserInteractedRef.current = true;
+      setShowTapOverlay(false);
+      const a = audioRef.current;
+      void a.ensureAudioReady().then(() => a.preload());
+    }, []);
+
     // Piano owns preloading: on first user interaction, resume context and load current instrument
     useEffect(() => {
       const handleFirstInteraction = () => {
-        hasUserInteractedRef.current = true;
-        const a = audioRef.current;
-        void a.ensureAudioReady().then(() => a.preload());
+        runFirstInteraction();
         document.removeEventListener("pointerdown", handleFirstInteraction);
         document.removeEventListener("touchstart", handleFirstInteraction);
+        document.removeEventListener("keydown", handleFirstInteraction);
       };
       document.addEventListener("pointerdown", handleFirstInteraction, {
         once: true,
@@ -90,11 +102,15 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       document.addEventListener("touchstart", handleFirstInteraction, {
         once: true,
       });
+      document.addEventListener("keydown", handleFirstInteraction, {
+        once: true,
+      });
       return () => {
         document.removeEventListener("pointerdown", handleFirstInteraction);
         document.removeEventListener("touchstart", handleFirstInteraction);
+        document.removeEventListener("keydown", handleFirstInteraction);
       };
-    }, []);
+    }, [runFirstInteraction]);
 
     // When sound type changes, preload the new instrument if user has already interacted
     useEffect(() => {
@@ -398,6 +414,23 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           className,
         )}
       >
+        {showTapOverlay && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center bg-background/90 backdrop-blur-sm cursor-pointer"
+            onClick={runFirstInteraction}
+            onTouchStart={runFirstInteraction}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") runFirstInteraction();
+            }}
+            aria-label="Tap to enable sound"
+          >
+            <p className="text-lg font-medium text-muted-foreground text-center px-4">
+              Tap to enable sound
+            </p>
+          </div>
+        )}
         {!audio.isLoaded && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-muted-foreground">

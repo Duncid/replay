@@ -8,7 +8,16 @@ interface IosMidiBridgeHandler {
   postMessage: (message: IosMidiBridgeMessage) => void;
 }
 
+interface CapacitorMidiBridge {
+  ping: () => Promise<{ ok: boolean; message?: string }>;
+  requestAccess: () => Promise<{ sources: string[] }>;
+  disconnect: () => Promise<void>;
+}
+
 interface WindowWithIosBridge extends Window {
+  Capacitor?: {
+    isNativePlatform?: () => boolean;
+  };
   webkit?: {
     messageHandlers?: {
       midiBridge?: IosMidiBridgeHandler;
@@ -37,15 +46,84 @@ const installIosWebMidiPolyfill = () => {
   if ("requestMIDIAccess" in navigator) return;
 
   const scopedWindow = window as WindowWithIosBridge;
-  const bridge = scopedWindow.webkit?.messageHandlers?.midiBridge;
+  const isCapacitorUrl =
+    typeof window.location?.href === "string" &&
+    (window.location.href.startsWith("capacitor://") || window.location.href.startsWith("ionic://"));
+  const isCapacitor =
+    !!scopedWindow.Capacitor?.isNativePlatform?.() || (isCapacitorUrl && !!scopedWindow.Capacitor);
+  const webkitBridge = scopedWindow.webkit?.messageHandlers?.midiBridge;
 
-  if (!bridge) {
+  if (!isCapacitor && !webkitBridge) {
+    if (isCapacitorUrl) {
+      const maxRetries = 10;
+      let retryCount = 0;
+      const retry = () => {
+        if ("requestMIDIAccess" in navigator) return;
+        retryCount++;
+        console.log("[MIDI Polyfill] Capacitor not ready, retry", retryCount, "/", maxRetries);
+        if (retryCount < maxRetries) {
+          setTimeout(retry, 200);
+        }
+        installIosWebMidiPolyfill();
+      };
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", retry);
+      } else {
+        setTimeout(retry, 200);
+      }
+    }
     return;
   }
 
-  let midiHandler: ((event: MIDIMessageEvent) => void) | null = null;
+  console.log("[MIDI Polyfill] Installed, isCapacitor:", isCapacitor);
 
+  let midiHandler: ((event: MIDIMessageEvent) => void) | null = null;
+  let capacitorPlugin: CapacitorMidiBridge | null = null;
+  let nativeStarted = false;
+
+  const startNativeIfNeeded = () => {
+    if (nativeStarted) return;
+    nativeStarted = true;
+    console.log("[MIDI Polyfill] startNativeIfNeeded: fetching MidiBridge plugin...");
+    getCapacitorPlugin()
+      .then((plugin) => {
+        console.log("[MIDI Polyfill] getCapacitorPlugin.then() ran, plugin:", !!plugin);
+        if (!plugin) {
+          console.error("[MIDI Polyfill] MidiBridge plugin NOT FOUND - registerPlugin('MidiBridge') returned null");
+          return;
+        }
+        console.log("[MIDI Polyfill] MidiBridge plugin found, verifying with ping()...");
+        const doRequestAccess = () => plugin.requestAccess();
+        if (typeof plugin.ping === "function") {
+          plugin
+            .ping()
+            .then((res) => {
+              console.log("[MIDI Polyfill] MidiBridge ping OK:", res);
+              return doRequestAccess();
+            })
+            .catch((err) => {
+              console.error("[MIDI Polyfill] MidiBridge ping failed:", err);
+              doRequestAccess();
+            });
+        } else {
+          console.warn("[MIDI Polyfill] MidiBridge has no ping(), calling requestAccess directly");
+          doRequestAccess();
+        }
+      })
+      .catch((err) => {
+        console.error("[MIDI Polyfill] startNativeIfNeeded promise chain failed:", err);
+      })
+      .finally(() => {
+        console.log("[MIDI Polyfill] startNativeIfNeeded promise chain settled");
+      });
+  };
+
+  let emitLogCount = 0;
   const emitMidiMessage = (packet: MidiPacket) => {
+    emitLogCount++;
+    if (emitLogCount <= 5) {
+      console.warn("[MIDI Polyfill] emitMidiMessage #" + emitLogCount + ", midiHandler:", !!midiHandler, "packet:", packet);
+    }
     if (!midiHandler) return;
 
     const normalized = normalizePacket(packet);
@@ -81,9 +159,12 @@ const installIosWebMidiPolyfill = () => {
     midiHandler(syntheticEvent);
   };
 
+  let inputDisplayName = "No devices";
   const input: MIDIInput = {
+    get name() {
+      return inputDisplayName;
+    },
     id: "ios-virtual-midi-input",
-    name: "iPad USB MIDI",
     manufacturer: "CoreMIDI",
     version: "1.0",
     type: "input",
@@ -102,13 +183,20 @@ const installIosWebMidiPolyfill = () => {
     get: () => midiHandler,
     set: (value) => {
       midiHandler = value;
+      if (value) {
+        console.log("[MIDI Polyfill] onmidimessage setter called with handler");
+        if (isCapacitor) {
+          startNativeIfNeeded();
+        }
+      }
     },
     configurable: true,
   });
 
+  const inputsMap = new Map<string, MIDIInput>();
   const midiAccess = {
     sysexEnabled: false,
-    inputs: new Map([[input.id, input]]),
+    inputs: inputsMap,
     outputs: new Map(),
     onstatechange: null,
     addEventListener: () => {},
@@ -125,17 +213,72 @@ const installIosWebMidiPolyfill = () => {
   scopedWindow.addEventListener(IOS_MIDI_EVENT_NAME, onNativeMidiEvent as EventListener);
   scopedWindow.__dispatchIOSMidiMessage = emitMidiMessage;
 
+  const getCapacitorPlugin = async (): Promise<CapacitorMidiBridge | null> => {
+    if (capacitorPlugin) {
+      console.log("[MIDI Polyfill] getCapacitorPlugin: returning cached plugin");
+      return capacitorPlugin;
+    }
+    if (!isCapacitor) {
+      console.log("[MIDI Polyfill] getCapacitorPlugin: not Capacitor, skipping");
+      return null;
+    }
+    try {
+      console.log("[MIDI Polyfill] getCapacitorPlugin: importing @capacitor/core...");
+      const { registerPlugin } = await import("@capacitor/core");
+      console.log("[MIDI Polyfill] getCapacitorPlugin: registerPlugin('MidiBridge')...");
+      capacitorPlugin = registerPlugin("MidiBridge") as CapacitorMidiBridge;
+      return capacitorPlugin;
+    } catch (err) {
+      console.error("[MIDI Polyfill] getCapacitorPlugin failed:", err);
+      return null;
+    }
+  };
+
   Object.defineProperty(navigator, "requestMIDIAccess", {
     configurable: true,
     writable: true,
     value: async () => {
-      bridge.postMessage({ type: "midi/request-access" });
+      const isCapacitorNow =
+        !!scopedWindow.Capacitor?.isNativePlatform?.() ||
+        (isCapacitorUrl && !!scopedWindow.Capacitor);
+
+      if (webkitBridge && !isCapacitorNow) {
+        webkitBridge.postMessage({ type: "midi/request-access" });
+      }
+
+      if (isCapacitorNow) {
+        const plugin = await getCapacitorPlugin();
+        if (!plugin) {
+          inputDisplayName = "No devices";
+          inputsMap.clear();
+          return midiAccess;
+        }
+        const result = await plugin.requestAccess();
+        const sources = result?.sources ?? [];
+        nativeStarted = true;
+        inputsMap.clear();
+        if (sources.length >= 1) {
+          inputDisplayName = sources[0];
+          inputsMap.set(input.id, input);
+        } else {
+          inputDisplayName = "No devices";
+        }
+        return midiAccess;
+      }
+
+      inputDisplayName = "iPad USB MIDI";
+      inputsMap.clear();
+      inputsMap.set(input.id, input);
       return midiAccess;
     },
   });
 
   scopedWindow.addEventListener("beforeunload", () => {
-    bridge.postMessage({ type: "midi/disconnect" });
+    if (isCapacitor && capacitorPlugin) {
+      capacitorPlugin.disconnect();
+    } else if (webkitBridge) {
+      webkitBridge.postMessage({ type: "midi/disconnect" });
+    }
     scopedWindow.removeEventListener(IOS_MIDI_EVENT_NAME, onNativeMidiEvent as EventListener);
   });
 };

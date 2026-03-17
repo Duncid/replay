@@ -36,10 +36,12 @@ export function usePianoAudio(soundType: PianoSoundType | null = "acoustic-piano
   }, []);
 
   const startNote = useCallback((noteKey: string, _frequency: number) => {
-    if (!tonePianoRef.current) return;
-    // noteKey is already in format like "C4", so use it directly
-    tonePianoRef.current.startNote(noteKey);
-  }, []);
+    void ensureAudioReady().then(() => {
+      if (tonePianoRef.current) {
+        tonePianoRef.current.startNote(noteKey);
+      }
+    });
+  }, [ensureAudioReady]);
 
   const stopNote = useCallback((noteKey: string) => {
     if (!tonePianoRef.current) return;

@@ -111,6 +111,7 @@ export const useMidiInput = (
     disconnect();
 
     if (!isSupported) {
+      console.log("[MIDI] isSupported=false, requestMIDIAccess in navigator:", "requestMIDIAccess" in navigator);
       if (isManual) {
         const errorMessage = "Web MIDI API is not supported in this browser. On iPad, use the native wrapper build with the CoreMIDI bridge enabled.";
         setError(errorMessage);
@@ -123,13 +124,20 @@ export const useMidiInput = (
       setError(null);
       console.log("[MIDI] Requesting MIDI access...");
 
-      // Clear all existing handlers before connecting to prevent stale handlers
-      await clearAllMidiHandlers();
-
-      const access = await navigator.requestMIDIAccess();
+      const REQUEST_TIMEOUT_MS = 3000;
+      const access = await Promise.race([
+        navigator.requestMIDIAccess(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`requestMIDIAccess timed out after ${REQUEST_TIMEOUT_MS}ms`)),
+            REQUEST_TIMEOUT_MS
+          )
+        ),
+      ]);
       midiAccessRef.current = access;
 
       const inputs = Array.from(access.inputs.values());
+      console.log("[MIDI] requestMIDIAccess returned, inputs.length:", inputs.length, "input ids:", inputs.map((i) => i.id));
       const deviceList: MidiDevice[] = inputs.map((input) => ({
         id: input.id,
         name: input.name || "Unknown Device",
@@ -173,7 +181,7 @@ export const useMidiInput = (
       }
       console.error("[MIDI] Error:", err);
     }
-  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices, onError, clearAllMidiHandlers]);
+  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices, onError]);
 
   const requestAccess = useCallback(async () => {
     await connectToDevices(true);
