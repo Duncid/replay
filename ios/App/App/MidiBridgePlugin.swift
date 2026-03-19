@@ -5,7 +5,7 @@ import WebKit
 
 /// Local Capacitor plugin that bridges CoreMIDI to the web app's Web MIDI polyfill.
 /// When the web calls requestAccess(), we start listening to USB MIDI devices.
-/// Incoming MIDI packets are forwarded via window.__dispatchIOSMidiMessage([status, data1, data2]).
+/// Incoming MIDI packets are batched to window.__dispatchIOSMidiMessageBatch([[s,d1,d2],...]).
 @objc(MidiBridgePlugin)
 public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
@@ -63,6 +63,11 @@ private final class MidiManager {
     private weak var webView: WKWebView?
     private let queue = DispatchQueue(label: "com.replay.midi", qos: .userInitiated)
 
+    /// Thread-safe buffer + single main-queue flush to avoid one evaluateJavaScript per packet.
+    private let pendingLock = NSLock()
+    private var pendingPackets: [[UInt8]] = []
+    private var flushScheduled = false
+
     func start(webView: WKWebView?) {
         self.webView = webView
         print("[MIDI Bridge] [DEBUG] MidiManager.start ENTRY, webView is nil:", webView == nil)
@@ -92,6 +97,11 @@ private final class MidiManager {
     }
 
     func stop() {
+        pendingLock.lock()
+        pendingPackets.removeAll()
+        flushScheduled = false
+        pendingLock.unlock()
+
         disconnectAllSources()
         if inputPort != 0 {
             MIDIPortDispose(inputPort)
@@ -171,7 +181,7 @@ private final class MidiManager {
             if length >= 3 {
                 withUnsafePointer(to: packet) { ptr in
                     let bytesPtr = UnsafeRawPointer(ptr).advanced(by: 10).assumingMemoryBound(to: UInt8.self)
-                    forwardToWeb([bytesPtr[0], bytesPtr[1], bytesPtr[2]])
+                    enqueuePacketForWeb([bytesPtr[0], bytesPtr[1], bytesPtr[2]])
                 }
             }
             if i < numPackets - 1 {
@@ -180,20 +190,100 @@ private final class MidiManager {
         }
     }
 
-    private static var forwardLogCount = 0
-
-    private func forwardToWeb(_ bytes: [UInt8]) {
-        guard webView != nil else {
-            print("[MIDI Bridge] forwardToWeb skipped: webView is nil")
+    /// Debug: log every packet from CoreMIDI (compare to web `[MIDI] Note ON/OFF` in Xcode console).
+    private static func logMidiPacket(_ phase: String, _ b: [UInt8]) {
+        guard b.count == 3 else {
+            NSLog("[MIDI Bridge] %@ invalid len=%lu", phase, b.count)
             return
         }
-        Self.forwardLogCount += 1
-        if Self.forwardLogCount <= 3 {
-            print("[MIDI Bridge] forwardToWeb packet #\(Self.forwardLogCount): [\(bytes[0]),\(bytes[1]),\(bytes[2])]")
+        let st = b[0]
+        let cmd = st & 0xF0
+        let note = UInt(b[1])
+        let vel = UInt(b[2])
+        let kind: String
+        switch cmd {
+        case 0x80:
+            kind = "NoteOff"
+        case 0x90:
+            kind = vel == 0 ? "NoteOff(vel0)" : "NoteOn"
+        default:
+            kind = String(format: "cmd0x%02X", cmd)
         }
-        let js = "window.__dispatchIOSMidiMessage && window.__dispatchIOSMidiMessage([\(bytes[0]),\(bytes[1]),\(bytes[2])]);"
-        DispatchQueue.main.async { [weak self] in
-            self?.webView?.evaluateJavaScript(js)
+        NSLog("[MIDI Bridge] %@ %@ st=0x%02X note=%u vel=%u", phase, kind, st, note, vel)
+    }
+
+    private func enqueuePacketForWeb(_ bytes: [UInt8]) {
+        guard bytes.count == 3, webView != nil else {
+            if webView == nil {
+                print("[MIDI Bridge] enqueuePacketForWeb skipped: webView is nil")
+            }
+            return
+        }
+        Self.logMidiPacket("ENQUEUE", bytes)
+
+        pendingLock.lock()
+        pendingPackets.append(bytes)
+        let shouldScheduleMain = !flushScheduled
+        if shouldScheduleMain {
+            flushScheduled = true
+        }
+        pendingLock.unlock()
+
+        if shouldScheduleMain {
+            DispatchQueue.main.async { [weak self] in
+                self?.flushPendingPacketsToWeb()
+            }
+        }
+    }
+
+    private func flushPendingPacketsToWeb() {
+        pendingLock.lock()
+        let batch = pendingPackets
+        pendingPackets.removeAll()
+        pendingLock.unlock()
+
+        guard !batch.isEmpty else {
+            finishFlushAndRescheduleIfNeeded()
+            return
+        }
+        guard let wv = webView else {
+            finishFlushAndRescheduleIfNeeded()
+            return
+        }
+
+        var parts: [String] = []
+        parts.reserveCapacity(batch.count)
+        for p in batch where p.count == 3 {
+            parts.append("[\(p[0]),\(p[1]),\(p[2])]")
+        }
+        guard !parts.isEmpty else {
+            finishFlushAndRescheduleIfNeeded()
+            return
+        }
+
+        NSLog("[MIDI Bridge] FLUSH_TO_WEB count=%lu jsLen≈%lu", batch.count, UInt(parts.joined(separator: ",").utf8.count + 80))
+
+        let js = "window.__dispatchIOSMidiMessageBatch && window.__dispatchIOSMidiMessageBatch([" + parts.joined(separator: ",") + "]);"
+        wv.evaluateJavaScript(js) { [weak self] _, error in
+            if let err = error {
+                NSLog("[MIDI Bridge] evaluateJavaScript ERROR: %@", String(describing: err))
+            }
+            self?.finishFlushAndRescheduleIfNeeded()
+        }
+    }
+
+    private func finishFlushAndRescheduleIfNeeded() {
+        pendingLock.lock()
+        flushScheduled = false
+        let more = !pendingPackets.isEmpty
+        if more {
+            flushScheduled = true
+        }
+        pendingLock.unlock()
+        if more {
+            DispatchQueue.main.async { [weak self] in
+                self?.flushPendingPacketsToWeb()
+            }
         }
     }
 }

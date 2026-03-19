@@ -483,21 +483,16 @@ const Index = () => {
         console.warn("[MIDI] handleMidiNoteOn ignored: appState=", appState);
         return;
       }
-      if (midiPressedKeysRef.current.has(noteKey)) return;
       midiPressedKeysRef.current.add(noteKey);
       pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
     },
     [appState],
   );
 
-  const handleMidiNoteOff = useCallback(
-    (noteKey: string, frequency: number) => {
-      if (!midiPressedKeysRef.current.has(noteKey)) return;
-      midiPressedKeysRef.current.delete(noteKey);
-      pianoRef.current?.handleKeyRelease(noteKey, frequency);
-    },
-    [],
-  );
+  const handleMidiNoteOff = useCallback((noteKey: string, frequency: number) => {
+    midiPressedKeysRef.current.delete(noteKey);
+    pianoRef.current?.handleKeyRelease(noteKey, frequency);
+  }, []);
 
   const handleNoMidiDevices = () => {
     toast({

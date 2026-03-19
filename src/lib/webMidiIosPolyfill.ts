@@ -24,6 +24,7 @@ interface WindowWithIosBridge extends Window {
     };
   };
   __dispatchIOSMidiMessage?: (packet: MidiPacket) => void;
+  __dispatchIOSMidiMessageBatch?: (packets: MidiPacket[]) => void;
 }
 
 const NOTE_DATA_LENGTH = 3;
@@ -192,7 +193,18 @@ const installIosWebMidiPolyfill = () => {
       BUBBLING_PHASE: Event.BUBBLING_PHASE,
     } as unknown as MIDIMessageEvent;
 
-    midiHandler(syntheticEvent);
+    try {
+      midiHandler(syntheticEvent);
+    } catch (err) {
+      console.error("[MIDI Polyfill] handler error:", err);
+    }
+  };
+
+  const emitMidiMessageBatch = (packets: MidiPacket[]) => {
+    if (!Array.isArray(packets)) return;
+    for (const packet of packets) {
+      emitMidiMessage(packet);
+    }
   };
 
   let inputDisplayName = "No devices";
@@ -253,6 +265,7 @@ const installIosWebMidiPolyfill = () => {
 
   scopedWindow.addEventListener(IOS_MIDI_EVENT_NAME, onNativeMidiEvent as EventListener);
   scopedWindow.__dispatchIOSMidiMessage = emitMidiMessage;
+  scopedWindow.__dispatchIOSMidiMessageBatch = emitMidiMessageBatch;
 
   const getCapacitorPlugin = (): Promise<CapacitorMidiBridge | null> => {
     console.log("[MIDI Polyfill] [DEBUG] getCapacitorPlugin ENTRY");
