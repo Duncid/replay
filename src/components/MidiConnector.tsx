@@ -4,6 +4,7 @@ import { AlertCircle, KeyboardMusic, Unplug } from "lucide-react";
 interface MidiConnectorProps {
   isConnected: boolean;
   deviceName: string | null;
+  attemptedNoDevice: boolean;
   isSupported: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
@@ -12,6 +13,7 @@ interface MidiConnectorProps {
 export const MidiConnector = ({
   isConnected,
   deviceName,
+  attemptedNoDevice,
   isSupported,
   onConnect,
   onDisconnect,
@@ -25,7 +27,16 @@ export const MidiConnector = ({
     );
   }
 
-  if (isConnected && deviceName) {
+  if (deviceName === "Connecting...") {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+        <span>Connecting...</span>
+      </div>
+    );
+  }
+
+  if (isConnected && deviceName && deviceName !== "No devices") {
     return (
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm">
@@ -40,6 +51,21 @@ export const MidiConnector = ({
         >
           <Unplug />
           Disconnect
+        </Button>
+      </div>
+    );
+  }
+
+  if (attemptedNoDevice) {
+    return (
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 text-sm">
+          <div className="w-2 h-2 bg-red-500 rounded-full" />
+          <span className="text-muted-foreground">No MIDI device</span>
+        </div>
+        <Button variant="outline" size="sm" onClick={onConnect}>
+          <KeyboardMusic />
+          Retry
         </Button>
       </div>
     );

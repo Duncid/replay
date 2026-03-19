@@ -60,6 +60,13 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## iPad USB MIDI support (native wrapper)
+
+Safari/PWA on iPadOS does not currently expose Web MIDI. This repo includes an iPad bridge/polyfill strategy for native wrappers (WKWebView/Capacitor).
+
+See `docs/ipados-midi-bridge.md` for the integration contract and Swift sketch.
+For full iMac→iPad packaging/testing steps, see `docs/ipad-rm.md`.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/4523c14a-d949-4525-aba0-140756208667) and click on Share -> Publish.

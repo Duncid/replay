@@ -8,6 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
     --background: 220 20% 8%;
     --foreground: 45 100% 85%;
 

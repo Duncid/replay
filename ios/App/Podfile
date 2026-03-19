@@ -1,0 +1,41 @@
+require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
+
+platform :ios, '13.0'
+use_frameworks!
+
+# workaround to avoid Xcode caching of Pods that requires
+# Product -> Clean Build Folder after new Cordova plugins installed
+# Requires CocoaPods 1.6 or newer
+install! 'cocoapods', :disable_input_output_paths => true
+
+def capacitor_pods
+  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+
+end
+
+target 'App' do
+  capacitor_pods
+  # Add your Pods here
+end
+
+# Fix Xcode 14+ warning: Run script build phase '[CP] Embed Pods Frameworks' will be run during every build
+# Ref.: https://github.com/CocoaPods/CocoaPods/issues/11444
+post_integrate do |installer|
+  main_project = installer.aggregate_targets[0].user_project
+  pods_project = installer.pods_project
+  targets = main_project.targets + pods_project.targets
+  targets.each do |target|
+    run_script_build_phases = target.build_phases.select { |p| p.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase) }
+    run_script_build_phases.select { |p| p.name&.start_with?("[CP") }.each do |run_script|
+      next unless (run_script.input_paths || []).empty? && (run_script.output_paths || []).empty?
+      run_script.always_out_of_date = "1"
+    end
+  end
+  main_project.save
+  pods_project.save
+end
+
+post_install do |installer|
+  assertDeploymentTarget(installer)
+end

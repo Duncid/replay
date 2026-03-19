@@ -479,11 +479,11 @@ const Index = () => {
   // MIDI note handlers - memoized to ensure stable references for useMidiInput
   const handleMidiNoteOn = useCallback(
     (noteKey: string, frequency: number, velocity: number) => {
-      if (
-        (appState !== "idle" && appState !== "user_playing") ||
-        midiPressedKeysRef.current.has(noteKey)
-      )
+      if (appState !== "idle" && appState !== "user_playing") {
+        console.warn("[MIDI] handleMidiNoteOn ignored: appState=", appState);
         return;
+      }
+      if (midiPressedKeysRef.current.has(noteKey)) return;
       midiPressedKeysRef.current.add(noteKey);
       pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
     },
@@ -520,6 +520,7 @@ const Index = () => {
 
   const {
     connectedDevice,
+    attemptedNoDevice,
     error: midiError,
     isSupported: isMidiSupported,
     requestAccess,
@@ -1913,7 +1914,7 @@ const Index = () => {
 
   return (
     <TuneManagementProvider>
-      <div className="h-screen flex flex-col items-center justify-start bg-background overflow-hidden">
+      <div className="h-screen flex flex-col items-center justify-start bg-background overflow-hidden pt-[var(--safe-area-inset-top)]">
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
@@ -2066,6 +2067,7 @@ const Index = () => {
               <MidiConnector
                 isConnected={!!connectedDevice}
                 deviceName={connectedDevice?.name || null}
+                attemptedNoDevice={attemptedNoDevice}
                 isSupported={isMidiSupported}
                 onConnect={requestAccess}
                 onDisconnect={disconnect}

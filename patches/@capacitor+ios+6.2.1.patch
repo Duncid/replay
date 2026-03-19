@@ -1,0 +1,15 @@
+diff --git a/node_modules/@capacitor/ios/CapacitorCordova/CapacitorCordova/Classes/Public/CDVWebViewProcessPoolFactory.m b/node_modules/@capacitor/ios/CapacitorCordova/CapacitorCordova/Classes/Public/CDVWebViewProcessPoolFactory.m
+index 3781f48..a0f2469 100644
+--- a/node_modules/@capacitor/ios/CapacitorCordova/CapacitorCordova/Classes/Public/CDVWebViewProcessPoolFactory.m
++++ b/node_modules/@capacitor/ios/CapacitorCordova/CapacitorCordova/Classes/Public/CDVWebViewProcessPoolFactory.m
+@@ -38,7 +38,10 @@ static CDVWebViewProcessPoolFactory *factory = nil;
+ - (instancetype)init
+ {
+     if (self = [super init]) {
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+         _sharedPool = [[WKProcessPool alloc] init];
++#pragma clang diagnostic pop
+     }
+     return self;
+ }

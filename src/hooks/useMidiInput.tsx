@@ -16,6 +16,7 @@ interface MidiNote {
 interface UseMidiInputReturn {
   devices: MidiDevice[];
   connectedDevice: MidiDevice | null;
+  attemptedNoDevice: boolean;
   isSupported: boolean;
   error: string | null;
   requestAccess: () => Promise<void>;
@@ -46,10 +47,10 @@ export const useMidiInput = (
 ): UseMidiInputReturn => {
   const [devices, setDevices] = useState<MidiDevice[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<MidiDevice | null>(null);
+  const [attemptedNoDevice, setAttemptedNoDevice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const midiAccessRef = useRef<MIDIAccess | null>(null);
   const activeInputRef = useRef<MIDIInput | null>(null);
-  const hasAutoConnectedRef = useRef(false);
 
   // Check if Web MIDI is supported
   const isSupported = typeof navigator !== "undefined" && "requestMIDIAccess" in navigator;
@@ -86,6 +87,7 @@ export const useMidiInput = (
       activeInputRef.current = null;
     }
     setConnectedDevice(null);
+    setAttemptedNoDevice(false);
     console.log("[MIDI] Disconnected");
   }, []);
 
@@ -107,12 +109,14 @@ export const useMidiInput = (
   }, [isSupported]);
 
   const connectToDevices = useCallback(async (isManual: boolean) => {
+    setAttemptedNoDevice(false);
     // Ensure we don't accumulate multiple connections (e.g., from Strict Mode double-invocation)
     disconnect();
 
     if (!isSupported) {
+      console.log("[MIDI] isSupported=false, requestMIDIAccess in navigator:", "requestMIDIAccess" in navigator);
       if (isManual) {
-        const errorMessage = "Web MIDI API is not supported in this browser. Try Chrome, Edge, or Opera.";
+        const errorMessage = "Web MIDI API is not supported in this browser. On iPad, use the native wrapper build with the CoreMIDI bridge enabled.";
         setError(errorMessage);
         onError?.(errorMessage);
       }
@@ -121,15 +125,23 @@ export const useMidiInput = (
 
     try {
       setError(null);
-      console.log("[MIDI] Requesting MIDI access...");
+      console.log("[MIDI] [DEBUG] About to call navigator.requestMIDIAccess()...");
 
-      // Clear all existing handlers before connecting to prevent stale handlers
-      await clearAllMidiHandlers();
-
-      const access = await navigator.requestMIDIAccess();
+      const REQUEST_TIMEOUT_MS = 10000;
+      const access = await Promise.race([
+        navigator.requestMIDIAccess(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`requestMIDIAccess timed out after ${REQUEST_TIMEOUT_MS}ms`)),
+            REQUEST_TIMEOUT_MS
+          )
+        ),
+      ]);
       midiAccessRef.current = access;
+      console.log("[MIDI] [DEBUG] requestMIDIAccess() returned successfully");
 
       const inputs = Array.from(access.inputs.values());
+      console.log("[MIDI] [DEBUG] inputs.length:", inputs.length, "input ids:", inputs.map((i) => i.id));
       const deviceList: MidiDevice[] = inputs.map((input) => ({
         id: input.id,
         name: input.name || "Unknown Device",
@@ -149,13 +161,15 @@ export const useMidiInput = (
 
       // Auto-connect to first device
       const firstInput = inputs[0];
-      
+      console.log("[MIDI] [DEBUG] Setting onmidimessage on first input:", firstInput.id, firstInput.name);
+
       // Clear any existing handler on this input before setting new one
       // This ensures no stale handlers remain from previous sessions
       firstInput.onmidimessage = null;
-      
+
       activeInputRef.current = firstInput;
       firstInput.onmidimessage = handleMidiMessage;
+      console.log("[MIDI] [DEBUG] onmidimessage SET - this triggers polyfill startNativeIfNeeded");
 
       setConnectedDevice({
         id: firstInput.id,
@@ -165,27 +179,25 @@ export const useMidiInput = (
 
       console.log(`[MIDI] Connected to: ${firstInput.name}`);
     } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Failed to access MIDI devices";
       if (isManual) {
-        const errorMessage = err instanceof Error ? err.message : "Failed to access MIDI devices";
         setError(errorMessage);
-        // Show error in toast notification
         onError?.(errorMessage);
       }
-      console.error("[MIDI] Error:", err);
+      console.error("[MIDI] Error:", errorMessage, err);
     }
-  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices, onError, clearAllMidiHandlers]);
+  }, [disconnect, handleMidiMessage, isSupported, onManualConnectNoDevices, onError]);
 
   const requestAccess = useCallback(async () => {
+    console.log("[MIDI] [DEBUG] requestAccess() called (user clicked Connect)");
     await connectToDevices(true);
+    console.log("[MIDI] [DEBUG] requestAccess() completed");
   }, [connectToDevices]);
-
-  // Auto-connect on mount if supported (silent - no error display)
-  useEffect(() => {
-    if (isSupported && !hasAutoConnectedRef.current) {
-      hasAutoConnectedRef.current = true;
-      connectToDevices(false);
-    }
-  }, [connectToDevices, isSupported]);
 
   // Update MIDI message handler when callbacks change to avoid stale closures
   useEffect(() => {
@@ -195,6 +207,35 @@ export const useMidiInput = (
       console.log("[MIDI] Updated message handler");
     }
   }, [handleMidiMessage]);
+
+  // Listen for polyfill name updates (iOS Capacitor: native sources arrive async)
+  useEffect(() => {
+    const onSourcesUpdated = () => {
+      if (!activeInputRef.current) return;
+      const name = activeInputRef.current.name;
+      if (name === "No devices") {
+        activeInputRef.current.onmidimessage = null;
+        activeInputRef.current = null;
+        setConnectedDevice(null);
+        setDevices([]);
+        setAttemptedNoDevice(true);
+        onManualConnectNoDevices?.();
+        return;
+      }
+      setConnectedDevice((prev) =>
+        prev ? { ...prev, name: name || prev.name } : null
+      );
+      setDevices((prev) =>
+        prev.length > 0 && activeInputRef.current
+          ? prev.map((d, i) =>
+              i === 0 ? { ...d, name: activeInputRef.current!.name || d.name } : d
+            )
+          : prev
+      );
+    };
+    window.addEventListener("midi-sources-updated", onSourcesUpdated);
+    return () => window.removeEventListener("midi-sources-updated", onSourcesUpdated);
+  }, [onManualConnectNoDevices]);
 
   // Cleanup on unmount - ensure all handlers are cleared
   useEffect(() => {
@@ -213,6 +254,7 @@ export const useMidiInput = (
   return {
     devices,
     connectedDevice,
+    attemptedNoDevice,
     isSupported,
     error,
     requestAccess,
