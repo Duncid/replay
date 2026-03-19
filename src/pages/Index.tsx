@@ -520,6 +520,7 @@ const Index = () => {
 
   const {
     connectedDevice,
+    attemptedNoDevice,
     error: midiError,
     isSupported: isMidiSupported,
     requestAccess,
@@ -2066,6 +2067,7 @@ const Index = () => {
               <MidiConnector
                 isConnected={!!connectedDevice}
                 deviceName={connectedDevice?.name || null}
+                attemptedNoDevice={attemptedNoDevice}
                 isSupported={isMidiSupported}
                 onConnect={requestAccess}
                 onDisconnect={disconnect}

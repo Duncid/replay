@@ -9,6 +9,11 @@ import WebKit
 @objc(MidiBridgePlugin)
 public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
+    public override init() {
+        super.init()
+        NSLog("[MIDI Bridge] [DEBUG] MidiBridgePlugin init() - plugin instance created")
+    }
+
     public let identifier = "MidiBridgePlugin"
     public let jsName = "MidiBridge"
     public let pluginMethods: [CAPPluginMethod] = [
@@ -20,11 +25,12 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     private let midiManager = MidiManager()
 
     @objc func ping(_ call: CAPPluginCall) {
-        NSLog("===== [MIDI Bridge] ping() called - plugin is loaded and reachable =====")
+        NSLog("===== [MIDI Bridge] [DEBUG] ping() ENTRY - plugin is loaded and reachable =====")
         call.resolve(["ok": true, "message": "MidiBridge loaded"])
     }
 
     @objc func requestAccess(_ call: CAPPluginCall) {
+        NSLog("===== [MIDI Bridge] [DEBUG] requestAccess ENTRY - native Swift method invoked =====")
         let webView = bridge?.webView
         midiManager.start(webView: webView)
         if webView == nil {
@@ -36,7 +42,9 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         let sources = midiManager.getSourceNames()
+        NSLog("[MIDI Bridge] [DEBUG] requestAccess: resolving with sources: %@", sources.description)
         call.resolve(["sources": sources])
+        NSLog("[MIDI Bridge] [DEBUG] requestAccess EXIT - call resolved")
     }
 
     @objc func disconnect(_ call: CAPPluginCall) {
@@ -57,17 +65,24 @@ private final class MidiManager {
 
     func start(webView: WKWebView?) {
         self.webView = webView
-        print("[MIDI Bridge] MidiManager.start, webView is nil:", webView == nil)
+        print("[MIDI Bridge] [DEBUG] MidiManager.start ENTRY, webView is nil:", webView == nil)
 
         var result = MIDIClientCreateWithBlock("Replay MIDI" as CFString, &client) { [weak self] message in
             self?.handleNotify(message)
         }
-        guard result == noErr else { return }
+        guard result == noErr else {
+            print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIClientCreateWithBlock failed, result:", result)
+            return
+        }
 
         result = MIDIInputPortCreateWithBlock(client, "Replay Input" as CFString, &inputPort) { [weak self] packetList, _ in
             self?.handlePacketList(packetList)
         }
-        guard result == noErr else { return }
+        guard result == noErr else {
+            print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIInputPortCreateWithBlock failed, result:", result)
+            return
+        }
+        print("[MIDI Bridge] [DEBUG] MidiManager.start: CoreMIDI client and port created OK")
 
         connectAllSources()
     }
@@ -122,7 +137,7 @@ private final class MidiManager {
 
     private func connectAllSources() {
         let count = MIDIGetNumberOfSources()
-        NSLog("===== [MIDI Bridge] connectAllSources: %d MIDI source(s) =====", count)
+        NSLog("===== [MIDI Bridge] [DEBUG] connectAllSources: %d MIDI source(s) =====", count)
         for i in 0..<count {
             let source = MIDIGetSource(i)
             let name = getName(for: source)
