@@ -171,21 +171,114 @@ private final class MidiManager {
         let numPackets = list.numPackets
         guard numPackets > 0 else { return }
 
-        // Packet data starts after numPackets (4 bytes) in MIDIPacketList
         let firstPacketPtr = UnsafeRawPointer(packetList).advanced(by: 4).assumingMemoryBound(to: MIDIPacket.self)
         var currentPtr = UnsafeMutablePointer<MIDIPacket>(mutating: firstPacketPtr)
 
         for i in 0..<numPackets {
-            let packet = currentPtr.pointee
+            var packet = currentPtr.pointee
             let length = Int(packet.length)
-            if length >= 3 {
-                withUnsafePointer(to: packet) { ptr in
-                    let bytesPtr = UnsafeRawPointer(ptr).advanced(by: 10).assumingMemoryBound(to: UInt8.self)
-                    enqueuePacketForWeb([bytesPtr[0], bytesPtr[1], bytesPtr[2]])
+            if length > 0 {
+                withUnsafeMutablePointer(to: &packet) { pkt in
+                    // MIDIPacketBytePtr is a C macro and not always visible to Swift; use data field offset.
+                    let offset = MemoryLayout<MIDIPacket>.offset(of: \MIDIPacket.data)
+                        ?? (MemoryLayout<MIDITimeStamp>.size + MemoryLayout<UInt16>.size)
+                    let bytes = UnsafeRawPointer(pkt).advanced(by: offset).assumingMemoryBound(to: UInt8.self)
+                    parseMidiPacketData(bytes, length: length, emit: { [weak self] in
+                        self?.enqueuePacketForWeb($0)
+                    })
                 }
             }
             if i < numPackets - 1 {
                 currentPtr = MIDIPacketNext(currentPtr)
+            }
+        }
+    }
+
+    /// Full scan of one CoreMIDI `MIDIPacket` payload: running status, multiple messages, SysEx skip.
+    /// Running status resets at each packet boundary (per packet is safer for USB bursts).
+    private func parseMidiPacketData(_ data: UnsafePointer<UInt8>, length: Int, emit: ([UInt8]) -> Void) {
+        var i = 0
+        var runningStatus: UInt8 = 0
+
+        while i < length {
+            let b = data[i]
+
+            // System real-time (single byte) — may appear between channel messages
+            if b >= 0xF8 {
+                i += 1
+                continue
+            }
+
+            // SysEx: skip until EOX 0xF7
+            if b == 0xF0 {
+                i += 1
+                while i < length && data[i] != 0xF7 {
+                    i += 1
+                }
+                if i < length { i += 1 }
+                runningStatus = 0
+                continue
+            }
+
+            // Other system common (0xF1–0xF7)
+            if b >= 0xF1 && b <= 0xF7 {
+                switch b {
+                case 0xF1, 0xF3:
+                    i += 1
+                    if i < length { i += 1 }
+                case 0xF2:
+                    i += 1
+                    if i + 1 < length {
+                        i += 2
+                    } else {
+                        i = length
+                    }
+                default:
+                    i += 1
+                }
+                runningStatus = 0
+                continue
+            }
+
+            let status: UInt8
+            if (b & 0x80) != 0 {
+                status = b
+                runningStatus = status
+                i += 1
+            } else {
+                guard runningStatus != 0 else {
+                    i += 1
+                    continue
+                }
+                status = runningStatus
+            }
+
+            let high = status & 0xF0
+
+            switch high {
+            case 0x80, 0x90, 0xA0, 0xB0:
+                guard i + 1 < length else { return }
+                let d1 = data[i]
+                let d2 = data[i + 1]
+                emit([status, d1, d2])
+                i += 2
+
+            case 0xC0, 0xD0:
+                guard i < length else { return }
+                let d1 = data[i]
+                emit([status, d1, 0])
+                i += 1
+
+            case 0xE0:
+                guard i + 1 < length else { return }
+                let d1 = data[i]
+                let d2 = data[i + 1]
+                emit([status, d1, d2])
+                i += 2
+
+            default:
+                runningStatus = 0
+                if i < length { i += 1 }
             }
         }
     }
