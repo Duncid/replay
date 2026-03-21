@@ -51,6 +51,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
@@ -206,6 +208,7 @@ const Index = () => {
     "4/4",
   );
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
+  const [fullKeyboard, setFullKeyboard] = useState(false);
   const [metronomeStartTime, setMetronomeStartTime] = useState<number | null>(
     null,
   );
@@ -2057,6 +2060,19 @@ const Index = () => {
                     activeMode === "learn" ? setMetronomeSoundType : undefined
                   }
                 />
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="full-keyboard"
+                    checked={fullKeyboard}
+                    onCheckedChange={setFullKeyboard}
+                  />
+                  <Label
+                    htmlFor="full-keyboard"
+                    className="cursor-pointer text-sm whitespace-nowrap"
+                  >
+                    {t("piano.fullKeyboard")}
+                  </Label>
+                </div>
               </div>
 
               <MidiConnector
@@ -2082,6 +2098,7 @@ const Index = () => {
               hasColor={isInTuneMode || activeMode === "lab"}
               language={language}
               notationPreference={musicNotation}
+              fullKeyboard={fullKeyboard}
               onNoteStart={handleNoteStart}
               onNoteEnd={handleNoteEnd}
             />
