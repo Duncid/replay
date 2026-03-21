@@ -11,7 +11,7 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     public override init() {
         super.init()
-        NSLog("[MIDI Bridge] [DEBUG] MidiBridgePlugin init() - plugin instance created")
+        // NSLog("[MIDI Bridge] [DEBUG] MidiBridgePlugin init() - plugin instance created")
     }
 
     public let identifier = "MidiBridgePlugin"
@@ -25,12 +25,12 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     private let midiManager = MidiManager()
 
     @objc func ping(_ call: CAPPluginCall) {
-        NSLog("===== [MIDI Bridge] [DEBUG] ping() ENTRY - plugin is loaded and reachable =====")
+        // NSLog("===== [MIDI Bridge] [DEBUG] ping() ENTRY - plugin is loaded and reachable =====")
         call.resolve(["ok": true, "message": "MidiBridge loaded"])
     }
 
     @objc func requestAccess(_ call: CAPPluginCall) {
-        NSLog("===== [MIDI Bridge] [DEBUG] requestAccess ENTRY - native Swift method invoked =====")
+        // NSLog("===== [MIDI Bridge] [DEBUG] requestAccess ENTRY - native Swift method invoked =====")
         let webView = bridge?.webView
         midiManager.start(webView: webView)
         if webView == nil {
@@ -42,9 +42,9 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         let sources = midiManager.getSourceNames()
-        NSLog("[MIDI Bridge] [DEBUG] requestAccess: resolving with sources: %@", sources.description)
+        // NSLog("[MIDI Bridge] [DEBUG] requestAccess: resolving with sources: %@", sources.description)
         call.resolve(["sources": sources])
-        NSLog("[MIDI Bridge] [DEBUG] requestAccess EXIT - call resolved")
+        // NSLog("[MIDI Bridge] [DEBUG] requestAccess EXIT - call resolved")
     }
 
     @objc func disconnect(_ call: CAPPluginCall) {
@@ -70,13 +70,13 @@ private final class MidiManager {
 
     func start(webView: WKWebView?) {
         self.webView = webView
-        print("[MIDI Bridge] [DEBUG] MidiManager.start ENTRY, webView is nil:", webView == nil)
+        // print("[MIDI Bridge] [DEBUG] MidiManager.start ENTRY, webView is nil:", webView == nil)
 
         var result = MIDIClientCreateWithBlock("Replay MIDI" as CFString, &client) { [weak self] message in
             self?.handleNotify(message)
         }
         guard result == noErr else {
-            print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIClientCreateWithBlock failed, result:", result)
+            // print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIClientCreateWithBlock failed, result:", result)
             return
         }
 
@@ -84,10 +84,10 @@ private final class MidiManager {
             self?.handlePacketList(packetList)
         }
         guard result == noErr else {
-            print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIInputPortCreateWithBlock failed, result:", result)
+            // print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIInputPortCreateWithBlock failed, result:", result)
             return
         }
-        print("[MIDI Bridge] [DEBUG] MidiManager.start: CoreMIDI client and port created OK")
+        // print("[MIDI Bridge] [DEBUG] MidiManager.start: CoreMIDI client and port created OK")
 
         connectAllSources()
     }
@@ -147,11 +147,11 @@ private final class MidiManager {
 
     private func connectAllSources() {
         let count = MIDIGetNumberOfSources()
-        NSLog("===== [MIDI Bridge] [DEBUG] connectAllSources: %d MIDI source(s) =====", count)
+        // NSLog("===== [MIDI Bridge] [DEBUG] connectAllSources: %d MIDI source(s) =====", count)
         for i in 0..<count {
             let source = MIDIGetSource(i)
             let name = getName(for: source)
-            NSLog("[MIDI Bridge]   source[%d]: %@", i, name)
+            // NSLog("[MIDI Bridge]   source[%d]: %@", i, name)
             if !connectedSources.contains(source) {
                 MIDIPortConnectSource(inputPort, source, nil)
                 connectedSources.insert(source)
@@ -283,37 +283,13 @@ private final class MidiManager {
         }
     }
 
-    /// Debug: log every packet from CoreMIDI (compare to web `[MIDI] Note ON/OFF` in Xcode console).
-    private static func logMidiPacket(_ phase: String, _ b: [UInt8]) {
-        guard b.count == 3 else {
-            NSLog("[MIDI Bridge] %@ invalid len=%lu", phase, b.count)
-            return
-        }
-        let st = b[0]
-        let cmd = st & 0xF0
-        let note = UInt(b[1])
-        let vel = UInt(b[2])
-        let kind: String
-        switch cmd {
-        case 0x80:
-            kind = "NoteOff"
-        case 0x90:
-            kind = vel == 0 ? "NoteOff(vel0)" : "NoteOn"
-        default:
-            kind = String(format: "cmd0x%02X", cmd)
-        }
-        NSLog("[MIDI Bridge] %@ %@ st=0x%02X note=%u vel=%u", phase, kind, st, note, vel)
-    }
-
     private func enqueuePacketForWeb(_ bytes: [UInt8]) {
         guard bytes.count == 3, webView != nil else {
             if webView == nil {
-                print("[MIDI Bridge] enqueuePacketForWeb skipped: webView is nil")
+                // print("[MIDI Bridge] enqueuePacketForWeb skipped: webView is nil")
             }
             return
         }
-        Self.logMidiPacket("ENQUEUE", bytes)
-
         pendingLock.lock()
         pendingPackets.append(bytes)
         let shouldScheduleMain = !flushScheduled
@@ -354,13 +330,14 @@ private final class MidiManager {
             return
         }
 
-        NSLog("[MIDI Bridge] FLUSH_TO_WEB count=%lu jsLen≈%lu", batch.count, UInt(parts.joined(separator: ",").utf8.count + 80))
+        // NSLog("[MIDI Bridge] FLUSH_TO_WEB count=%lu jsLen≈%lu", batch.count, UInt(parts.joined(separator: ",").utf8.count + 80))
 
         let js = "window.__dispatchIOSMidiMessageBatch && window.__dispatchIOSMidiMessageBatch([" + parts.joined(separator: ",") + "]);"
         wv.evaluateJavaScript(js) { [weak self] _, error in
-            if let err = error {
-                NSLog("[MIDI Bridge] evaluateJavaScript ERROR: %@", String(describing: err))
-            }
+            // if let err = error {
+            //     NSLog("[MIDI Bridge] evaluateJavaScript ERROR: %@", String(describing: err))
+            // }
+            _ = error
             self?.finishFlushAndRescheduleIfNeeded()
         }
     }
