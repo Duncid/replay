@@ -1,6 +1,16 @@
 {
-  "notes": [],
-  "totalTime": 3.0,
+  "notes": [
+    {
+      "endTime": 4.166664000000001,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 69,
+      "program": 0,
+      "startTime": 0.8333310000000012,
+      "velocity": 0.49606299212598426
+    }
+  ],
+  "totalTime": 4.166664000000001,
   "tempos": [
     {
       "time": 0.0,

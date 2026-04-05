@@ -4,7 +4,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-26</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -15,21 +15,21 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="Pfeeaee9d798ef16e7951992d03716750">
+    <score-part id="P9f9bea169ae92c81299e9095c44ac9ae">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Idcf241102e6f3401f36c071fb90bf5e2">
+      <score-instrument id="Iac5149caf1a5f61fa74b826c8e376a38">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Idcf241102e6f3401f36c071fb90bf5e2">
+      <midi-instrument id="Iac5149caf1a5f61fa74b826c8e376a38">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
   
-  <part id="Pfeeaee9d798ef16e7951992d03716750">
+  <part id="P9f9bea169ae92c81299e9095c44ac9ae">
     
     <measure implicit="no" number="1">
       <attributes>
@@ -42,84 +42,90 @@
           <beat-type>4</beat-type>
         </time>
       <staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>
-      <note default-x="15.5" default-y="-5">
+      <direction placement="below">
+        <direction-type>
+          <dynamics default-x="6.5" default-y="-40" relative-y="-40">
+            <pp />
+          </dynamics>
+        </direction-type>
+        <sound dynamics="31" />
+      </direction>
+      <note default-x="12" default-y="-35">
         <pitch>
-          <step>E</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <stem>down</stem>
-      </note>
-      <note default-x="74.04" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <stem>down</stem>
-      </note>
-      <note default-x="132.59" default-y="-20">
-        <pitch>
-          <step>B</step>
+          <step>F</step>
+          <alter>1</alter>
           <octave>4</octave>
         </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <stem>down</stem>
+        <duration>30240</duration>
+        <staff>1</staff><tie type="start" />
+        <type>half</type>
+        <dot />
+        <stem>up</stem>
+        <notations>
+          <tied type="start" />
+        </notations>
       </note>
+      <direction placement="above">
+        <direction-type>
+          <dynamics default-x="6.5" default-y="-80" relative-x="-15.55" relative-y="39.1">
+            <f />
+          </dynamics>
+        </direction-type>
+        <offset sound="yes">-20160</offset>
+        <sound dynamics="88" />
+      </direction>
       <backup>
         <duration>30240</duration>
       </backup>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>7</voice>
+        <voice>6</voice>
         <type>quarter</type>
       </note>
-      <note default-x="74.04" default-y="-135.25">
-        <pitch>
-          <step>G</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>20160</duration>
-        <staff>2</staff><voice>7</voice>
-        <type>half</type>
-        <stem>up</stem>
-      </note>
-      <note default-x="74.04" default-y="-125.25">
-        <chord />
+      <note default-x="79.33" default-y="-130.25">
         <pitch>
           <step>B</step>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <staff>2</staff><voice>7</voice>
+        <staff>2</staff><voice>6</voice>
         <type>half</type>
         <stem>up</stem>
       </note>
-      <note default-x="74.04" default-y="-110.25">
+      <note default-x="79.33" default-y="-120.25">
         <chord />
         <pitch>
-          <step>E</step>
+          <step>D</step>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <staff>1</staff><voice>7</voice>
+        <staff>1</staff><voice>6</voice>
+        <type>half</type>
+        <stem>up</stem>
+      </note>
+      <note default-x="79.33" default-y="-110.25">
+        <chord />
+        <pitch>
+          <step>F</step>
+          <alter>1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>20160</duration>
+        <staff>1</staff><voice>6</voice>
         <type>half</type>
         <stem>up</stem>
       </note>
       <backup>
         <duration>30240</duration>
       </backup>
-      <note default-x="15.5" default-y="-185.25">
+      <note default-x="12" default-y="-175.25">
         <pitch>
-          <step>D</step>
+          <step>G</step>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <staff>2</staff><voice>8</voice>
+        <staff>2</staff><voice>7</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -127,34 +133,30 @@
     </measure>
     
     <measure implicit="no" number="2">
-      <note default-x="15.5" default-y="-10">
+      <direction placement="below">
+        <direction-type>
+          <dynamics default-x="6.5" default-y="-40" relative-y="-40">
+            <pp />
+          </dynamics>
+        </direction-type>
+        <sound dynamics="31" />
+      </direction>
+      <note default-x="15.5" default-y="-35">
         <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <stem>down</stem>
-      </note>
-      <note default-x="75.29" default-y="-15">
-        <pitch>
-          <step>C</step>
-          <alter>0</alter>
-          <octave>5</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <accidental>natural</accidental>
-        <stem>down</stem>
-      </note>
-      <note default-x="135.08" default-y="-20">
-        <pitch>
-          <step>B</step>
+          <step>F</step>
+          <alter>1</alter>
           <octave>4</octave>
         </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><type>quarter</type>
-        <stem>down</stem>
+        <duration>30240</duration>
+        <staff>1</staff><tie type="stop" />
+        <tie type="start" />
+        <type>half</type>
+        <dot />
+        <stem>up</stem>
+        <notations>
+          <tied type="stop" />
+          <tied type="start" />
+        </notations>
       </note>
       <backup>
         <duration>30240</duration>
@@ -162,62 +164,53 @@
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>7</voice>
+        <voice>6</voice>
         <type>quarter</type>
       </note>
-      <note default-x="75.29" default-y="-150.25">
+      <note default-x="82.83" default-y="-135.25">
         <pitch>
-          <step>D</step>
+          <step>A</step>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <staff>2</staff><voice>7</voice>
+        <staff>2</staff><voice>6</voice>
         <type>half</type>
         <stem>up</stem>
       </note>
-      <note default-x="75.29" default-y="-135.25">
+      <note default-x="82.83" default-y="-125.25">
         <chord />
         <pitch>
-          <step>G</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>20160</duration>
-        <staff>2</staff><voice>7</voice>
-        <type>half</type>
-        <stem>up</stem>
-      </note>
-      <note default-x="75.29" default-y="-125.25">
-        <chord />
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>20160</duration>
-        <staff>2</staff><voice>7</voice>
-        <type>half</type>
-        <stem>up</stem>
-      </note>
-      <note default-x="75.29" default-y="-110.25">
-        <chord />
-        <pitch>
-          <step>E</step>
+          <step>C</step>
+          <alter>1</alter>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <staff>1</staff><voice>7</voice>
+        <staff>1</staff><voice>6</voice>
+        <type>half</type>
+        <stem>up</stem>
+      </note>
+      <note default-x="82.83" default-y="-110.25">
+        <chord />
+        <pitch>
+          <step>F</step>
+          <alter>1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>20160</duration>
+        <staff>1</staff><voice>6</voice>
         <type>half</type>
         <stem>up</stem>
       </note>
       <backup>
         <duration>30240</duration>
       </backup>
-      <note default-x="15.5" default-y="-185.25">
+      <note default-x="15.5" default-y="-190.25">
         <pitch>
           <step>D</step>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <staff>2</staff><voice>8</voice>
+        <staff>2</staff><voice>7</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>

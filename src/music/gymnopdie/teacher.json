@@ -1,856 +1,3300 @@
 {
-  "schemaVersion": "teacher.v2",
-  "title": "D major 3/4 vamp with melody + ritard (78 measures)",
-  "pipelineSettings": {
-    "handAssignmentPolicy": {
-      "mode": "byInstrument",
-      "instrumentToHand": {
-        "inst1": "RH",
-        "inst2": "LH"
-      }
-    }
-  },
-  "nuggets": [
-    {
-      "id": "N1",
-      "label": "Intro vamp (LH only)",
-      "length": 8,
-      "location": {
-        "startMeasure": 1,
-        "startBeat": 1,
-        "endMeasure": 2,
-        "endBeat": 4
-      },
-      "dependsOn": [],
-      "modes": ["LH", "HandsTogether"]
-    },
-    {
-      "id": "N2",
-      "label": "Intro vamp repeat (LH only)",
-      "length": 8,
-      "location": {
-        "startMeasure": 3,
-        "startBeat": 1,
-        "endMeasure": 4,
-        "endBeat": 4
-      },
-      "dependsOn": ["N1"],
-      "modes": ["LH", "HandsTogether"]
-    },
-    {
-      "id": "N3",
-      "label": "Melody enters over vamp",
-      "length": 12,
-      "location": {
-        "startMeasure": 5,
-        "startBeat": 1,
-        "endMeasure": 6,
-        "endBeat": 4
-      },
-      "dependsOn": ["N2"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N4",
-      "label": "Melody phrase continuation",
-      "length": 13,
-      "location": {
-        "startMeasure": 7,
-        "startBeat": 1,
-        "endMeasure": 8,
-        "endBeat": 4
-      },
-      "dependsOn": ["N3"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N5",
-      "label": "Vamp + RH support tone",
-      "length": 9,
-      "location": {
-        "startMeasure": 9,
-        "startBeat": 1,
-        "endMeasure": 10,
-        "endBeat": 4
-      },
-      "dependsOn": ["N4"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N6",
-      "label": "Vamp",
-      "length": 8,
-      "location": {
-        "startMeasure": 11,
-        "startBeat": 1,
-        "endMeasure": 12,
-        "endBeat": 4
-      },
-      "dependsOn": ["N5"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N7",
-      "label": "Vamp + RH entrance figure",
-      "length": 12,
-      "location": {
-        "startMeasure": 13,
-        "startBeat": 1,
-        "endMeasure": 14,
-        "endBeat": 4
-      },
-      "dependsOn": ["N6"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N8",
-      "label": "Vamp + RH cadence to lower note",
-      "length": 12,
-      "location": {
-        "startMeasure": 15,
-        "startBeat": 1,
-        "endMeasure": 16,
-        "endBeat": 4
-      },
-      "dependsOn": ["N7"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N9",
-      "label": "Vamp (dynamic lift begins)",
-      "length": 8,
-      "location": {
-        "startMeasure": 17,
-        "startBeat": 1,
-        "endMeasure": 18,
-        "endBeat": 4
-      },
-      "dependsOn": ["N8"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N10",
-      "label": "Vamp",
-      "length": 8,
-      "location": {
-        "startMeasure": 19,
-        "startBeat": 1,
-        "endMeasure": 20,
-        "endBeat": 4
-      },
-      "dependsOn": ["N9"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N11",
-      "label": "Vamp + RH step figure",
-      "length": 12,
-      "location": {
-        "startMeasure": 21,
-        "startBeat": 1,
-        "endMeasure": 22,
-        "endBeat": 4
-      },
-      "dependsOn": ["N10"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N12",
-      "label": "Vamp + RH landing",
-      "length": 12,
-      "location": {
-        "startMeasure": 23,
-        "startBeat": 1,
-        "endMeasure": 24,
-        "endBeat": 4
-      },
-      "dependsOn": ["N11"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N13",
-      "label": "Vamp + RH long tone / sustain control",
-      "length": 9,
-      "location": {
-        "startMeasure": 25,
-        "startBeat": 1,
-        "endMeasure": 26,
-        "endBeat": 4
-      },
-      "dependsOn": ["N12"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N14",
-      "label": "Vamp",
-      "length": 8,
-      "location": {
-        "startMeasure": 27,
-        "startBeat": 1,
-        "endMeasure": 28,
-        "endBeat": 4
-      },
-      "dependsOn": ["N13"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N15",
-      "label": "Vamp + RH entrance figure (repeat family)",
-      "length": 12,
-      "location": {
-        "startMeasure": 29,
-        "startBeat": 1,
-        "endMeasure": 30,
-        "endBeat": 4
-      },
-      "dependsOn": ["N14"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N16",
-      "label": "Vamp + RH cadence (repeat family)",
-      "length": 12,
-      "location": {
-        "startMeasure": 31,
-        "startBeat": 1,
-        "endMeasure": 32,
-        "endBeat": 4
-      },
-      "dependsOn": ["N15"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N17",
-      "label": "Vamp (build)",
-      "length": 8,
-      "location": {
-        "startMeasure": 33,
-        "startBeat": 1,
-        "endMeasure": 34,
-        "endBeat": 4
-      },
-      "dependsOn": ["N16"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N18",
-      "label": "Vamp",
-      "length": 8,
-      "location": {
-        "startMeasure": 35,
-        "startBeat": 1,
-        "endMeasure": 36,
-        "endBeat": 4
-      },
-      "dependsOn": ["N17"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N19",
-      "label": "Vamp + RH step figure (repeat)",
-      "length": 12,
-      "location": {
-        "startMeasure": 37,
-        "startBeat": 1,
-        "endMeasure": 38,
-        "endBeat": 4
-      },
-      "dependsOn": ["N18"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N20",
-      "label": "Vamp + RH landing (repeat)",
-      "length": 12,
-      "location": {
-        "startMeasure": 39,
-        "startBeat": 1,
-        "endMeasure": 40,
-        "endBeat": 4
-      },
-      "dependsOn": ["N19"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N21",
-      "label": "Color change: bass shift / chord variant",
-      "length": 8,
-      "location": {
-        "startMeasure": 41,
-        "startBeat": 1,
-        "endMeasure": 42,
-        "endBeat": 4
-      },
-      "dependsOn": ["N20"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N22",
-      "label": "Chordal intensification",
-      "length": 10,
-      "location": {
-        "startMeasure": 43,
-        "startBeat": 1,
-        "endMeasure": 44,
-        "endBeat": 4
-      },
-      "dependsOn": ["N21"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N23",
-      "label": "Vamp + RH figuration (clustered chord hits)",
-      "length": 12,
-      "location": {
-        "startMeasure": 45,
-        "startBeat": 1,
-        "endMeasure": 46,
-        "endBeat": 4
-      },
-      "dependsOn": ["N22"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N24",
-      "label": "Vamp + RH landing (clustered chord hits)",
-      "length": 12,
-      "location": {
-        "startMeasure": 47,
-        "startBeat": 1,
-        "endMeasure": 48,
-        "endBeat": 4
-      },
-      "dependsOn": ["N23"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N25",
-      "label": "Section repeat: vamp groove (steady)",
-      "length": 8,
-      "location": {
-        "startMeasure": 49,
-        "startBeat": 1,
-        "endMeasure": 50,
-        "endBeat": 4
-      },
-      "dependsOn": ["N24"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N26",
-      "label": "Section repeat: vamp",
-      "length": 8,
-      "location": {
-        "startMeasure": 51,
-        "startBeat": 1,
-        "endMeasure": 52,
-        "endBeat": 4
-      },
-      "dependsOn": ["N25"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N27",
-      "label": "Section repeat: vamp + RH figure",
-      "length": 12,
-      "location": {
-        "startMeasure": 53,
-        "startBeat": 1,
-        "endMeasure": 54,
-        "endBeat": 4
-      },
-      "dependsOn": ["N26"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N28",
-      "label": "Section repeat: vamp + RH landing",
-      "length": 12,
-      "location": {
-        "startMeasure": 55,
-        "startBeat": 1,
-        "endMeasure": 56,
-        "endBeat": 4
-      },
-      "dependsOn": ["N27"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N29",
-      "label": "Approach to closing (bass variant + thicker RH)",
-      "length": 10,
-      "location": {
-        "startMeasure": 57,
-        "startBeat": 1,
-        "endMeasure": 58,
-        "endBeat": 4
-      },
-      "dependsOn": ["N28"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N30",
-      "label": "Approach: chordal RH hits (wider spacing)",
-      "length": 12,
-      "location": {
-        "startMeasure": 59,
-        "startBeat": 1,
-        "endMeasure": 60,
-        "endBeat": 4
-      },
-      "dependsOn": ["N29"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N31",
-      "label": "Approach: continuation",
-      "length": 12,
-      "location": {
-        "startMeasure": 61,
-        "startBeat": 1,
-        "endMeasure": 62,
-        "endBeat": 4
-      },
-      "dependsOn": ["N30"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N32",
-      "label": "Approach: landing setup",
-      "length": 12,
-      "location": {
-        "startMeasure": 63,
-        "startBeat": 1,
-        "endMeasure": 64,
-        "endBeat": 4
-      },
-      "dependsOn": ["N31"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N33",
-      "label": "Closing loop: vamp (steady)",
-      "length": 8,
-      "location": {
-        "startMeasure": 65,
-        "startBeat": 1,
-        "endMeasure": 66,
-        "endBeat": 4
-      },
-      "dependsOn": ["N32"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N34",
-      "label": "Closing loop: vamp",
-      "length": 8,
-      "location": {
-        "startMeasure": 67,
-        "startBeat": 1,
-        "endMeasure": 68,
-        "endBeat": 4
-      },
-      "dependsOn": ["N33"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N35",
-      "label": "Closing loop: vamp + RH figure",
-      "length": 12,
-      "location": {
-        "startMeasure": 69,
-        "startBeat": 1,
-        "endMeasure": 70,
-        "endBeat": 4
-      },
-      "dependsOn": ["N34"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N36",
-      "label": "Closing loop: vamp + RH landing",
-      "length": 12,
-      "location": {
-        "startMeasure": 71,
-        "startBeat": 1,
-        "endMeasure": 72,
-        "endBeat": 4
-      },
-      "dependsOn": ["N35"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-
-    {
-      "id": "N37",
-      "label": "Final build: thicker chords / transition",
-      "length": 18,
-      "location": {
-        "startMeasure": 73,
-        "startBeat": 1,
-        "endMeasure": 74,
-        "endBeat": 4
-      },
-      "dependsOn": ["N36"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N38",
-      "label": "Cadential block-chords + sustain",
-      "length": 11,
-      "location": {
-        "startMeasure": 75,
-        "startBeat": 1,
-        "endMeasure": 76,
-        "endBeat": 4
-      },
-      "dependsOn": ["N37"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    },
-    {
-      "id": "N39",
-      "label": "Ritard + final sonority (tempo drops m77–m78)",
-      "length": 11,
-      "location": {
-        "startMeasure": 77,
-        "startBeat": 1,
-        "endMeasure": 78,
-        "endBeat": 4
-      },
-      "dependsOn": ["N38"],
-      "modes": ["RH", "LH", "HandsTogether"]
-    }
-  ],
   "assemblies": [
     {
       "id": "A1",
-      "tier": 1,
-      "nuggetIds": ["N1", "N2"],
-      "modes": ["LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N1",
+        "N4"
+      ],
+      "tier": 1
     },
     {
       "id": "A2",
-      "tier": 1,
-      "nuggetIds": ["N3", "N4"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N7",
+        "N10"
+      ],
+      "tier": 1
     },
     {
       "id": "A3",
-      "tier": 1,
-      "nuggetIds": ["N7", "N8"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N13",
+        "N16"
+      ],
+      "tier": 1
     },
     {
       "id": "A4",
-      "tier": 1,
-      "nuggetIds": ["N11", "N12"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N19",
+        "N21"
+      ],
+      "tier": 1
     },
     {
       "id": "A5",
-      "tier": 1,
-      "nuggetIds": ["N37", "N38"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N23",
+        "N25"
+      ],
+      "tier": 1
     },
-
     {
       "id": "A6",
-      "tier": 2,
-      "nuggetIds": ["N1", "N2", "N3", "N4"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N27",
+        "N29"
+      ],
+      "tier": 1
     },
     {
       "id": "A7",
-      "tier": 2,
-      "nuggetIds": ["N5", "N6", "N7", "N8"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N32",
+        "N35"
+      ],
+      "tier": 1
     },
     {
       "id": "A8",
-      "tier": 2,
-      "nuggetIds": ["N9", "N10", "N11", "N12"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N38",
+        "N41"
+      ],
+      "tier": 1
     },
     {
       "id": "A9",
-      "tier": 2,
-      "nuggetIds": ["N21", "N22", "N23", "N24"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N43",
+        "N45"
+      ],
+      "tier": 1
     },
     {
       "id": "A10",
-      "tier": 2,
-      "nuggetIds": ["N33", "N34", "N35", "N36"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N48",
+        "N51"
+      ],
+      "tier": 1
     },
     {
       "id": "A11",
-      "tier": 2,
-      "nuggetIds": ["N37", "N38", "N39"],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N53",
+        "N55"
+      ],
+      "tier": 1
     },
-
     {
       "id": "A12",
-      "tier": 3,
-      "nuggetIds": [
-        "N1",
-        "N2",
-        "N3",
-        "N4",
-        "N5",
-        "N6",
-        "N7",
-        "N8",
-        "N9",
-        "N10",
-        "N11",
-        "N12"
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
       ],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "nuggetIds": [
+        "N57",
+        "N59"
+      ],
+      "tier": 1
     },
     {
       "id": "A13",
-      "tier": 3,
-      "nuggetIds": [
-        "N13",
-        "N14",
-        "N15",
-        "N16",
-        "N17",
-        "N18",
-        "N19",
-        "N20",
-        "N21",
-        "N22",
-        "N23",
-        "N24"
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
       ],
-      "modes": ["RH", "LH", "HandsTogether"]
+      "nuggetIds": [
+        "N61",
+        "N63"
+      ],
+      "tier": 1
     },
     {
       "id": "A14",
-      "tier": 3,
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
       "nuggetIds": [
-        "N25",
-        "N26",
-        "N27",
-        "N28",
-        "N29",
-        "N30",
-        "N31",
-        "N32",
-        "N33",
-        "N34",
-        "N35",
-        "N36"
+        "N65",
+        "N68"
       ],
-      "modes": ["RH", "LH", "HandsTogether"]
-    }
-  ],
-  "instrumentPlans": [
-    {
-      "instrument": { "id": "inst1", "name": "Piano RH" },
-      "motifs": [
-        {
-          "id": "RH_M1",
-          "label": "Upper-register 4-note turn (78–81–79–78 family)"
-        },
-        {
-          "id": "RH_M2",
-          "label": "Stepwise walk figure (73–71–73–74–69 family)"
-        },
-        {
-          "id": "RH_M3",
-          "label": "Long held tone / pedal tone (sustain control)"
-        },
-        { "id": "RH_M4", "label": "Cadential block-chord hit (finale color)" }
-      ],
-      "motifOccurrences": [
-        {
-          "motifId": "RH_M1",
-          "startMeasure": 5,
-          "startBeat": 2,
-          "endMeasure": 6,
-          "endBeat": 2
-        },
-        {
-          "motifId": "RH_M2",
-          "startMeasure": 6,
-          "startBeat": 3,
-          "endMeasure": 8,
-          "endBeat": 1
-        },
-        {
-          "motifId": "RH_M3",
-          "startMeasure": 9,
-          "startBeat": 1,
-          "endMeasure": 12,
-          "endBeat": 4
-        },
-        {
-          "motifId": "RH_M1",
-          "startMeasure": 41,
-          "startBeat": 2,
-          "endMeasure": 42,
-          "endBeat": 2
-        },
-        {
-          "motifId": "RH_M4",
-          "startMeasure": 76,
-          "startBeat": 1,
-          "endMeasure": 78,
-          "endBeat": 4
-        }
-      ],
-      "tuneHints": {
-        "focus": [
-          "even 3/4 pulse",
-          "clean releases on beat 1 changes",
-          "melody legato over LH sustain"
-        ],
-        "register": "mostly upper-mid to high (approx MIDI 64–81)"
-      }
+      "tier": 1
     },
     {
-      "instrument": { "id": "inst2", "name": "Piano LH" },
-      "motifs": [
-        {
-          "id": "LH_M1",
-          "label": "Vamp type A: bass + triad (bass 43; chord tones 59/62/66)"
-        },
-        {
-          "id": "LH_M2",
-          "label": "Vamp type B: bass + triad (bass 38; chord tones 57/61/66)"
-        },
-        {
-          "id": "LH_M3",
-          "label": "Bass-variant color (42/40/35/33 family in later section)"
-        }
+      "id": "A15",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
       ],
-      "motifOccurrences": [
-        {
-          "motifId": "LH_M1",
-          "startMeasure": 1,
-          "startBeat": 1,
-          "endMeasure": 1,
-          "endBeat": 4
-        },
-        {
-          "motifId": "LH_M2",
-          "startMeasure": 2,
-          "startBeat": 1,
-          "endMeasure": 2,
-          "endBeat": 4
-        },
-        {
-          "motifId": "LH_M1",
-          "startMeasure": 3,
-          "startBeat": 1,
-          "endMeasure": 3,
-          "endBeat": 4
-        },
-        {
-          "motifId": "LH_M2",
-          "startMeasure": 4,
-          "startBeat": 1,
-          "endMeasure": 4,
-          "endBeat": 4
-        },
-
-        {
-          "motifId": "LH_M1",
-          "startMeasure": 5,
-          "startBeat": 1,
-          "endMeasure": 72,
-          "endBeat": 4
-        },
-        {
-          "motifId": "LH_M3",
-          "startMeasure": 57,
-          "startBeat": 1,
-          "endMeasure": 66,
-          "endBeat": 4
-        },
-        {
-          "motifId": "LH_M3",
-          "startMeasure": 73,
-          "startBeat": 1,
-          "endMeasure": 78,
-          "endBeat": 4
-        }
+      "nuggetIds": [
+        "N71",
+        "N73"
       ],
-      "tuneHints": {
-        "focus": [
-          "beat-1 bass confidence",
-          "beat-2 chord placement",
-          "avoid pedal blur at chord changes"
-        ],
-        "texture": "bass on beat 1 + chord stab on beat 2 (sustain to barline)"
-      }
+      "tier": 1
+    },
+    {
+      "id": "A16",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N75",
+        "N77"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A17",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N79",
+        "N82"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A18",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N85",
+        "N87"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A19",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N90",
+        "N92"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A20",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N94",
+        "N96"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A21",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N98",
+        "N101"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A22",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N104",
+        "N106"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A23",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N109",
+        "N111"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A24",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N113",
+        "N116"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A25",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N119",
+        "N121"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A26",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N123",
+        "N125"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A27",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N1",
+        "N4",
+        "N7",
+        "N10"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A28",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N13",
+        "N16",
+        "N19",
+        "N21"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A29",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N23",
+        "N25",
+        "N27",
+        "N29"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A30",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N32",
+        "N35",
+        "N38",
+        "N41"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A31",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N43",
+        "N45",
+        "N48",
+        "N51"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A32",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N53",
+        "N55",
+        "N57",
+        "N59"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A33",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N61",
+        "N63",
+        "N65",
+        "N68"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A34",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N71",
+        "N73",
+        "N75",
+        "N77"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A35",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N79",
+        "N82",
+        "N85",
+        "N87"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A36",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N90",
+        "N92",
+        "N94",
+        "N96"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A37",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N98",
+        "N101",
+        "N104",
+        "N106"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A38",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N109",
+        "N111",
+        "N113",
+        "N116"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A39",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N119",
+        "N121",
+        "N123",
+        "N125"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A40",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N1",
+        "N4",
+        "N7",
+        "N10",
+        "N13",
+        "N16",
+        "N19",
+        "N21"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A41",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N23",
+        "N25",
+        "N27",
+        "N29",
+        "N32",
+        "N35",
+        "N38",
+        "N41"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A42",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N43",
+        "N45",
+        "N48",
+        "N51",
+        "N53",
+        "N55",
+        "N57",
+        "N59"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A43",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N61",
+        "N63",
+        "N65",
+        "N68",
+        "N71",
+        "N73",
+        "N75",
+        "N77"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A44",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N79",
+        "N82",
+        "N85",
+        "N87",
+        "N90",
+        "N92",
+        "N94",
+        "N96"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A45",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ],
+      "nuggetIds": [
+        "N98",
+        "N101",
+        "N104",
+        "N106",
+        "N109",
+        "N111",
+        "N113",
+        "N116"
+      ],
+      "tier": 3
     }
-  ],
-  "teachingOrder": [
-    "N1",
-    "N2",
-    "N3",
-    "N4",
-    "N5",
-    "N6",
-    "N7",
-    "N8",
-    "N9",
-    "N10",
-    "N11",
-    "N12",
-    "N13",
-    "N14",
-    "N15",
-    "N16",
-    "N17",
-    "N18",
-    "N19",
-    "N20",
-    "N21",
-    "N22",
-    "N23",
-    "N24",
-    "N25",
-    "N26",
-    "N27",
-    "N28",
-    "N29",
-    "N30",
-    "N31",
-    "N32",
-    "N33",
-    "N34",
-    "N35",
-    "N36",
-    "N37",
-    "N38",
-    "N39"
   ],
   "assemblyOrder": [
     "A1",
+    "A10",
+    "A11",
+    "A12",
+    "A13",
+    "A14",
+    "A15",
+    "A16",
+    "A17",
+    "A18",
+    "A19",
     "A2",
+    "A20",
+    "A21",
+    "A22",
+    "A23",
+    "A24",
+    "A25",
+    "A26",
     "A3",
     "A4",
+    "A5",
     "A6",
     "A7",
     "A8",
-    "A12",
     "A9",
-    "A13",
-    "A10",
-    "A14",
-    "A5",
-    "A11"
-  ]
+    "A27",
+    "A28",
+    "A29",
+    "A30",
+    "A31",
+    "A32",
+    "A33",
+    "A34",
+    "A35",
+    "A36",
+    "A37",
+    "A38",
+    "A39",
+    "A40",
+    "A41",
+    "A42",
+    "A43",
+    "A44",
+    "A45"
+  ],
+  "instrumentPlans": [
+    {
+      "id": "inst1",
+      "name": "Piano RH"
+    },
+    {
+      "id": "inst2",
+      "name": "Piano LH"
+    }
+  ],
+  "nuggets": [
+    {
+      "dependsOn": [],
+      "id": "N1",
+      "label": "Bar 1",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 2,
+        "startBeat": 1.0,
+        "startMeasure": 1
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N1"
+      ],
+      "id": "N2",
+      "label": "Bars 1\u20133",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 3,
+        "startBeat": 1.0,
+        "startMeasure": 1
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N4"
+      ],
+      "id": "N3",
+      "label": "Bars 2\u20134",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 2
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N4",
+      "label": "Bar 3",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 3
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N4"
+      ],
+      "id": "N5",
+      "label": "Bars 3\u20135",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 5,
+        "startBeat": 1.0,
+        "startMeasure": 3
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N7"
+      ],
+      "id": "N6",
+      "label": "Bars 5\u20137",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 7,
+        "startBeat": 1.0,
+        "startMeasure": 5
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N7",
+      "label": "Bar 6",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 7,
+        "startBeat": 1.0,
+        "startMeasure": 6
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N7"
+      ],
+      "id": "N8",
+      "label": "Bars 6\u20138",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 8,
+        "startBeat": 1.0,
+        "startMeasure": 6
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N10"
+      ],
+      "id": "N9",
+      "label": "Bars 7\u20139",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 9,
+        "startBeat": 1.0,
+        "startMeasure": 7
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N10",
+      "label": "Bar 8",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 9,
+        "startBeat": 1.0,
+        "startMeasure": 8
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N10"
+      ],
+      "id": "N11",
+      "label": "Bars 8\u201310",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 10,
+        "startBeat": 1.0,
+        "startMeasure": 8
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N13"
+      ],
+      "id": "N12",
+      "label": "Bars 9\u201311",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 11,
+        "startBeat": 1.0,
+        "startMeasure": 9
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N13",
+      "label": "Bar 10",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 11,
+        "startBeat": 1.0,
+        "startMeasure": 10
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N13"
+      ],
+      "id": "N14",
+      "label": "Bars 10\u201312",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 12,
+        "startBeat": 1.0,
+        "startMeasure": 10
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N16"
+      ],
+      "id": "N15",
+      "label": "Bars 11\u201313",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 13,
+        "startBeat": 1.0,
+        "startMeasure": 11
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N16",
+      "label": "Bar 12",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 13,
+        "startBeat": 1.0,
+        "startMeasure": 12
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N16"
+      ],
+      "id": "N17",
+      "label": "Bars 12\u201314",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 14,
+        "startBeat": 1.0,
+        "startMeasure": 12
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N19"
+      ],
+      "id": "N18",
+      "label": "Bars 13\u201315",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 15,
+        "startBeat": 1.0,
+        "startMeasure": 13
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N19",
+      "label": "Bar 14",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 15,
+        "startBeat": 1.0,
+        "startMeasure": 14
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N19",
+        "N21"
+      ],
+      "id": "N20",
+      "label": "Bars 14\u201316",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 16,
+        "startBeat": 1.0,
+        "startMeasure": 14
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N19"
+      ],
+      "id": "N21",
+      "label": "Bar 15",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 16,
+        "startBeat": 1.0,
+        "startMeasure": 15
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N21",
+        "N23"
+      ],
+      "id": "N22",
+      "label": "Bars 15\u201317",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 17,
+        "startBeat": 1.0,
+        "startMeasure": 15
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N21"
+      ],
+      "id": "N23",
+      "label": "Bar 16",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 17,
+        "startBeat": 1.0,
+        "startMeasure": 16
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N23",
+        "N25"
+      ],
+      "id": "N24",
+      "label": "Bars 16\u201318",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 18,
+        "startBeat": 1.0,
+        "startMeasure": 16
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N23"
+      ],
+      "id": "N25",
+      "label": "Bar 17",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 18,
+        "startBeat": 1.0,
+        "startMeasure": 17
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N25",
+        "N27"
+      ],
+      "id": "N26",
+      "label": "Bars 17\u201319",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 19,
+        "startBeat": 1.0,
+        "startMeasure": 17
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N25"
+      ],
+      "id": "N27",
+      "label": "Bar 18",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 19,
+        "startBeat": 1.0,
+        "startMeasure": 18
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N27",
+        "N29"
+      ],
+      "id": "N28",
+      "label": "Bars 18\u201320",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 20,
+        "startBeat": 1.0,
+        "startMeasure": 18
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N27"
+      ],
+      "id": "N29",
+      "label": "Bar 19",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 20,
+        "startBeat": 1.0,
+        "startMeasure": 19
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N29"
+      ],
+      "id": "N30",
+      "label": "Bars 19\u201321",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 21,
+        "startBeat": 1.0,
+        "startMeasure": 19
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N32"
+      ],
+      "id": "N31",
+      "label": "Bars 20\u201322",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 22,
+        "startBeat": 1.0,
+        "startMeasure": 20
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N32",
+      "label": "Bar 21",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 22,
+        "startBeat": 1.0,
+        "startMeasure": 21
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N32"
+      ],
+      "id": "N33",
+      "label": "Bars 21\u201323",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 23,
+        "startBeat": 1.0,
+        "startMeasure": 21
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N35"
+      ],
+      "id": "N34",
+      "label": "Bars 22\u201324",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 24,
+        "startBeat": 1.0,
+        "startMeasure": 22
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N35",
+      "label": "Bar 23",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 24,
+        "startBeat": 1.0,
+        "startMeasure": 23
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N35"
+      ],
+      "id": "N36",
+      "label": "Bars 23\u201325",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 25,
+        "startBeat": 1.0,
+        "startMeasure": 23
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N38"
+      ],
+      "id": "N37",
+      "label": "Bars 25\u201327",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 27,
+        "startBeat": 1.0,
+        "startMeasure": 25
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N38",
+      "label": "Bar 26",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 27,
+        "startBeat": 1.0,
+        "startMeasure": 26
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N38"
+      ],
+      "id": "N39",
+      "label": "Bars 26\u201328",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 28,
+        "startBeat": 1.0,
+        "startMeasure": 26
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N41"
+      ],
+      "id": "N40",
+      "label": "Bars 27\u201329",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 29,
+        "startBeat": 1.0,
+        "startMeasure": 27
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N41",
+      "label": "Bar 28",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 29,
+        "startBeat": 1.0,
+        "startMeasure": 28
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N41",
+        "N43"
+      ],
+      "id": "N42",
+      "label": "Bars 28\u201330",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 30,
+        "startBeat": 1.0,
+        "startMeasure": 28
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N41"
+      ],
+      "id": "N43",
+      "label": "Bar 29",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 30,
+        "startBeat": 1.0,
+        "startMeasure": 29
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N43",
+        "N45"
+      ],
+      "id": "N44",
+      "label": "Bars 29\u201331",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 31,
+        "startBeat": 1.0,
+        "startMeasure": 29
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N43"
+      ],
+      "id": "N45",
+      "label": "Bar 30",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 31,
+        "startBeat": 1.0,
+        "startMeasure": 30
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N45"
+      ],
+      "id": "N46",
+      "label": "Bars 30\u201332",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 32,
+        "startBeat": 1.0,
+        "startMeasure": 30
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N48"
+      ],
+      "id": "N47",
+      "label": "Bars 31\u201333",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 33,
+        "startBeat": 1.0,
+        "startMeasure": 31
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N48",
+      "label": "Bar 32",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 33,
+        "startBeat": 1.0,
+        "startMeasure": 32
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N48"
+      ],
+      "id": "N49",
+      "label": "Bars 32\u201334",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 34,
+        "startBeat": 1.0,
+        "startMeasure": 32
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N51"
+      ],
+      "id": "N50",
+      "label": "Bars 33\u201335",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 35,
+        "startBeat": 1.0,
+        "startMeasure": 33
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N51",
+      "label": "Bar 34",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 35,
+        "startBeat": 1.0,
+        "startMeasure": 34
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N51",
+        "N53"
+      ],
+      "id": "N52",
+      "label": "Bars 34\u201336",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 36,
+        "startBeat": 1.0,
+        "startMeasure": 34
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N51"
+      ],
+      "id": "N53",
+      "label": "Bar 35",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 36,
+        "startBeat": 1.0,
+        "startMeasure": 35
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N53",
+        "N55"
+      ],
+      "id": "N54",
+      "label": "Bars 35\u201337",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 37,
+        "startBeat": 1.0,
+        "startMeasure": 35
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N53"
+      ],
+      "id": "N55",
+      "label": "Bar 36",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 37,
+        "startBeat": 1.0,
+        "startMeasure": 36
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N55",
+        "N57"
+      ],
+      "id": "N56",
+      "label": "Bars 36\u201338",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 38,
+        "startBeat": 1.0,
+        "startMeasure": 36
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N55"
+      ],
+      "id": "N57",
+      "label": "Bar 37",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 38,
+        "startBeat": 1.0,
+        "startMeasure": 37
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N57",
+        "N59"
+      ],
+      "id": "N58",
+      "label": "Bars 37\u201339",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 39,
+        "startBeat": 1.0,
+        "startMeasure": 37
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N57"
+      ],
+      "id": "N59",
+      "label": "Bar 38",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 39,
+        "startBeat": 1.0,
+        "startMeasure": 38
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N59",
+        "N61"
+      ],
+      "id": "N60",
+      "label": "Bars 38\u201340",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 40,
+        "startBeat": 1.0,
+        "startMeasure": 38
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N59"
+      ],
+      "id": "N61",
+      "label": "Bar 39",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 40,
+        "startBeat": 1.0,
+        "startMeasure": 39
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N61",
+        "N63"
+      ],
+      "id": "N62",
+      "label": "Bars 39\u201341",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 41,
+        "startBeat": 1.0,
+        "startMeasure": 39
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N61"
+      ],
+      "id": "N63",
+      "label": "Bar 40",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 41,
+        "startBeat": 1.0,
+        "startMeasure": 40
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N63",
+        "N65"
+      ],
+      "id": "N64",
+      "label": "Bars 40\u201342",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 42,
+        "startBeat": 1.0,
+        "startMeasure": 40
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N63"
+      ],
+      "id": "N65",
+      "label": "Bar 41",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 42,
+        "startBeat": 1.0,
+        "startMeasure": 41
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N65"
+      ],
+      "id": "N66",
+      "label": "Bars 41\u201343",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 43,
+        "startBeat": 1.0,
+        "startMeasure": 41
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N68"
+      ],
+      "id": "N67",
+      "label": "Bars 42\u201344",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 44,
+        "startBeat": 1.0,
+        "startMeasure": 42
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N68",
+      "label": "Bar 43",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 44,
+        "startBeat": 1.0,
+        "startMeasure": 43
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N68"
+      ],
+      "id": "N69",
+      "label": "Bars 43\u201345",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 45,
+        "startBeat": 1.0,
+        "startMeasure": 43
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N71"
+      ],
+      "id": "N70",
+      "label": "Bars 45\u201347",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 47,
+        "startBeat": 1.0,
+        "startMeasure": 45
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N71",
+      "label": "Bar 46",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 47,
+        "startBeat": 1.0,
+        "startMeasure": 46
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N71",
+        "N73"
+      ],
+      "id": "N72",
+      "label": "Bars 46\u201348",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 48,
+        "startBeat": 1.0,
+        "startMeasure": 46
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N71"
+      ],
+      "id": "N73",
+      "label": "Bar 47",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 48,
+        "startBeat": 1.0,
+        "startMeasure": 47
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N73",
+        "N75"
+      ],
+      "id": "N74",
+      "label": "Bars 47\u201349",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 49,
+        "startBeat": 1.0,
+        "startMeasure": 47
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N73"
+      ],
+      "id": "N75",
+      "label": "Bar 48",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 49,
+        "startBeat": 1.0,
+        "startMeasure": 48
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N75",
+        "N77"
+      ],
+      "id": "N76",
+      "label": "Bars 48\u201350",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 50,
+        "startBeat": 1.0,
+        "startMeasure": 48
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N75"
+      ],
+      "id": "N77",
+      "label": "Bar 49",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 50,
+        "startBeat": 1.0,
+        "startMeasure": 49
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N77",
+        "N79"
+      ],
+      "id": "N78",
+      "label": "Bars 49\u201351",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 51,
+        "startBeat": 1.0,
+        "startMeasure": 49
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N77"
+      ],
+      "id": "N79",
+      "label": "Bar 50",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 51,
+        "startBeat": 1.0,
+        "startMeasure": 50
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N79"
+      ],
+      "id": "N80",
+      "label": "Bars 50\u201352",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 52,
+        "startBeat": 1.0,
+        "startMeasure": 50
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N82"
+      ],
+      "id": "N81",
+      "label": "Bars 51\u201353",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 53,
+        "startBeat": 1.0,
+        "startMeasure": 51
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N82",
+      "label": "Bar 52",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 53,
+        "startBeat": 1.0,
+        "startMeasure": 52
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N82"
+      ],
+      "id": "N83",
+      "label": "Bars 52\u201354",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 54,
+        "startBeat": 1.0,
+        "startMeasure": 52
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N85"
+      ],
+      "id": "N84",
+      "label": "Bars 53\u201355",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 55,
+        "startBeat": 1.0,
+        "startMeasure": 53
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N85",
+      "label": "Bar 54",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 55,
+        "startBeat": 1.0,
+        "startMeasure": 54
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N85",
+        "N87"
+      ],
+      "id": "N86",
+      "label": "Bars 54\u201356",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 56,
+        "startBeat": 1.0,
+        "startMeasure": 54
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N85"
+      ],
+      "id": "N87",
+      "label": "Bar 55",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 56,
+        "startBeat": 1.0,
+        "startMeasure": 55
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N87"
+      ],
+      "id": "N88",
+      "label": "Bars 55\u201357",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 57,
+        "startBeat": 1.0,
+        "startMeasure": 55
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N90"
+      ],
+      "id": "N89",
+      "label": "Bars 56\u201358",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 58,
+        "startBeat": 1.0,
+        "startMeasure": 56
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N90",
+      "label": "Bar 57",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 58,
+        "startBeat": 1.0,
+        "startMeasure": 57
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N90",
+        "N92"
+      ],
+      "id": "N91",
+      "label": "Bars 57\u201359",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 59,
+        "startBeat": 1.0,
+        "startMeasure": 57
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N90"
+      ],
+      "id": "N92",
+      "label": "Bar 58",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 59,
+        "startBeat": 1.0,
+        "startMeasure": 58
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N92",
+        "N94"
+      ],
+      "id": "N93",
+      "label": "Bars 58\u201360",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 60,
+        "startBeat": 1.0,
+        "startMeasure": 58
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N92"
+      ],
+      "id": "N94",
+      "label": "Bar 59",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 60,
+        "startBeat": 1.0,
+        "startMeasure": 59
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N94",
+        "N96"
+      ],
+      "id": "N95",
+      "label": "Bars 59\u201361",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 61,
+        "startBeat": 1.0,
+        "startMeasure": 59
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N94"
+      ],
+      "id": "N96",
+      "label": "Bar 60",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 61,
+        "startBeat": 1.0,
+        "startMeasure": 60
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N96",
+        "N98"
+      ],
+      "id": "N97",
+      "label": "Bars 60\u201362",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 62,
+        "startBeat": 1.0,
+        "startMeasure": 60
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N96"
+      ],
+      "id": "N98",
+      "label": "Bar 61",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 62,
+        "startBeat": 1.0,
+        "startMeasure": 61
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N98"
+      ],
+      "id": "N99",
+      "label": "Bars 61\u201363",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 63,
+        "startBeat": 1.0,
+        "startMeasure": 61
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N101"
+      ],
+      "id": "N100",
+      "label": "Bars 62\u201364",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 64,
+        "startBeat": 1.0,
+        "startMeasure": 62
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N101",
+      "label": "Bar 63",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 64,
+        "startBeat": 1.0,
+        "startMeasure": 63
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N101"
+      ],
+      "id": "N102",
+      "label": "Bars 63\u201365",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 65,
+        "startBeat": 1.0,
+        "startMeasure": 63
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N104"
+      ],
+      "id": "N103",
+      "label": "Bars 64\u201366",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 66,
+        "startBeat": 1.0,
+        "startMeasure": 64
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N104",
+      "label": "Bar 65",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 66,
+        "startBeat": 1.0,
+        "startMeasure": 65
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N104",
+        "N106"
+      ],
+      "id": "N105",
+      "label": "Bars 65\u201367",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 67,
+        "startBeat": 1.0,
+        "startMeasure": 65
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N104"
+      ],
+      "id": "N106",
+      "label": "Bar 66",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 67,
+        "startBeat": 1.0,
+        "startMeasure": 66
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N106"
+      ],
+      "id": "N107",
+      "label": "Bars 66\u201368",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 68,
+        "startBeat": 1.0,
+        "startMeasure": 66
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N109"
+      ],
+      "id": "N108",
+      "label": "Bars 67\u201369",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 69,
+        "startBeat": 1.0,
+        "startMeasure": 67
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N109",
+      "label": "Bar 68",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 69,
+        "startBeat": 1.0,
+        "startMeasure": 68
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N109",
+        "N111"
+      ],
+      "id": "N110",
+      "label": "Bars 68\u201370",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 70,
+        "startBeat": 1.0,
+        "startMeasure": 68
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N109"
+      ],
+      "id": "N111",
+      "label": "Bar 69",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 70,
+        "startBeat": 1.0,
+        "startMeasure": 69
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N111",
+        "N113"
+      ],
+      "id": "N112",
+      "label": "Bars 69\u201371",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 71,
+        "startBeat": 1.0,
+        "startMeasure": 69
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N111"
+      ],
+      "id": "N113",
+      "label": "Bar 70",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 71,
+        "startBeat": 1.0,
+        "startMeasure": 70
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N113"
+      ],
+      "id": "N114",
+      "label": "Bars 70\u201372",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 72,
+        "startBeat": 1.0,
+        "startMeasure": 70
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N116"
+      ],
+      "id": "N115",
+      "label": "Bars 71\u201373",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 73,
+        "startBeat": 1.0,
+        "startMeasure": 71
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N116",
+      "label": "Bar 72",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 73,
+        "startBeat": 1.0,
+        "startMeasure": 72
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N116"
+      ],
+      "id": "N117",
+      "label": "Bars 72\u201374",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 74,
+        "startBeat": 1.0,
+        "startMeasure": 72
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N119"
+      ],
+      "id": "N118",
+      "label": "Bars 73\u201375",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 75,
+        "startBeat": 1.0,
+        "startMeasure": 73
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N119",
+      "label": "Bar 74",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 75,
+        "startBeat": 1.0,
+        "startMeasure": 74
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N119",
+        "N121"
+      ],
+      "id": "N120",
+      "label": "Bars 74\u201376",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 76,
+        "startBeat": 1.0,
+        "startMeasure": 74
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N119"
+      ],
+      "id": "N121",
+      "label": "Bar 75",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 76,
+        "startBeat": 1.0,
+        "startMeasure": 75
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N121",
+        "N123"
+      ],
+      "id": "N122",
+      "label": "Bars 75\u201377",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 77,
+        "startBeat": 1.0,
+        "startMeasure": 75
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N121"
+      ],
+      "id": "N123",
+      "label": "Bar 76",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 77,
+        "startBeat": 1.0,
+        "startMeasure": 76
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N123",
+        "N125"
+      ],
+      "id": "N124",
+      "label": "Bars 76\u201378",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 78,
+        "startBeat": 1.0,
+        "startMeasure": 76
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N123"
+      ],
+      "id": "N125",
+      "label": "Bar 77",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 78,
+        "startBeat": 1.0,
+        "startMeasure": 77
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N125",
+        "N127"
+      ],
+      "id": "N126",
+      "label": "Bars 77\u201378",
+      "length": 7,
+      "location": {
+        "endBeat": 4.0,
+        "endMeasure": 78,
+        "startBeat": 1.0,
+        "startMeasure": 77
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N125"
+      ],
+      "id": "N127",
+      "label": "Bar 78",
+      "length": 3,
+      "location": {
+        "endBeat": 4.0,
+        "endMeasure": 78,
+        "startBeat": 1.0,
+        "startMeasure": 78
+      },
+      "modes": [
+        "RH",
+        "LH",
+        "HandsTogether"
+      ]
+    }
+  ],
+  "pipelineSettings": {
+    "dsp": {
+      "chordCap": 6,
+      "gridQuarterLength": 0.25
+    },
+    "handAssignmentPolicy": {
+      "instrumentToHand": {
+        "inst1": "RH",
+        "inst2": "LH"
+      },
+      "mode": "byInstrument"
+    },
+    "metadata": {
+      "assumedTempoQpm": 120,
+      "assumedTimeSignature": "4/4"
+    }
+  },
+  "schemaVersion": "teacher.v2",
+  "teachingOrder": [
+    "N1",
+    "N2",
+    "N4",
+    "N3",
+    "N5",
+    "N7",
+    "N6",
+    "N8",
+    "N10",
+    "N9",
+    "N11",
+    "N13",
+    "N12",
+    "N14",
+    "N16",
+    "N15",
+    "N17",
+    "N19",
+    "N18",
+    "N21",
+    "N20",
+    "N23",
+    "N22",
+    "N25",
+    "N24",
+    "N27",
+    "N26",
+    "N29",
+    "N28",
+    "N30",
+    "N32",
+    "N31",
+    "N33",
+    "N35",
+    "N34",
+    "N36",
+    "N38",
+    "N37",
+    "N39",
+    "N41",
+    "N40",
+    "N43",
+    "N42",
+    "N45",
+    "N44",
+    "N46",
+    "N48",
+    "N47",
+    "N49",
+    "N51",
+    "N50",
+    "N53",
+    "N52",
+    "N55",
+    "N54",
+    "N57",
+    "N56",
+    "N59",
+    "N58",
+    "N61",
+    "N60",
+    "N63",
+    "N62",
+    "N65",
+    "N64",
+    "N66",
+    "N68",
+    "N67",
+    "N69",
+    "N71",
+    "N70",
+    "N73",
+    "N72",
+    "N75",
+    "N74",
+    "N77",
+    "N76",
+    "N79",
+    "N78",
+    "N80",
+    "N82",
+    "N81",
+    "N83",
+    "N85",
+    "N84",
+    "N87",
+    "N86",
+    "N88",
+    "N90",
+    "N89",
+    "N92",
+    "N91",
+    "N94",
+    "N93",
+    "N96",
+    "N95",
+    "N98",
+    "N97",
+    "N99",
+    "N101",
+    "N100",
+    "N102",
+    "N104",
+    "N103",
+    "N106",
+    "N105",
+    "N107",
+    "N109",
+    "N108",
+    "N111",
+    "N110",
+    "N113",
+    "N112",
+    "N114",
+    "N116",
+    "N115",
+    "N117",
+    "N119",
+    "N118",
+    "N121",
+    "N120",
+    "N123",
+    "N122",
+    "N125",
+    "N124",
+    "N127",
+    "N126"
+  ],
+  "title": "gymnopdie"
 }

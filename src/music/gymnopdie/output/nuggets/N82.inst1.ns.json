@@ -1,0 +1,36 @@
+{
+  "notes": [
+    {
+      "endTime": 1.2777700000000038,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 74,
+      "program": 0,
+      "startTime": 0.16665900000000988,
+      "velocity": 0.49606299212598426
+    },
+    {
+      "endTime": 2.388881000000012,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 72,
+      "program": 0,
+      "startTime": 1.2777700000000038,
+      "velocity": 0.49606299212598426
+    }
+  ],
+  "totalTime": 2.388881000000012,
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    }
+  ]
+}

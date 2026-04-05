@@ -80,18 +80,9 @@
       "program": 0,
       "startTime": 3.8,
       "velocity": 0.6299212598425197
-    },
-    {
-      "endTime": 7.323958333333334,
-      "instrument": 0,
-      "isDrum": false,
-      "pitch": 67,
-      "program": 0,
-      "startTime": 4.0,
-      "velocity": 0.6299212598425197
     }
   ],
-  "totalTime": 8.0,
+  "totalTime": 4.0,
   "tempos": [
     {
       "time": 0.0,

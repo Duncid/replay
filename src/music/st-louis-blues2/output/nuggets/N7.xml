@@ -4,7 +4,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-26</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -15,21 +15,21 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P838d99f212c3242b1aab89a170ff1195">
+    <score-part id="Pe9a2861cc2c92ec72e34381552f75a2e">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I1f01f094a71c5e301a33913e8194d68f">
+      <score-instrument id="Iaadba5431002f40ba830b6f72ba3f79e">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I1f01f094a71c5e301a33913e8194d68f">
+      <midi-instrument id="Iaadba5431002f40ba830b6f72ba3f79e">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
   
-  <part id="P838d99f212c3242b1aab89a170ff1195">
+  <part id="Pe9a2861cc2c92ec72e34381552f75a2e">
     
     <measure implicit="no" number="1">
       <attributes>
@@ -42,32 +42,15 @@
           <beat-type>4</beat-type>
         </time>
       <clef><sign>G</sign><line>2</line></clef></attributes>
-      <barline location="left">
-        <bar-style>regular</bar-style>
-      </barline>
-      <note default-x="14.58" default-y="-30">
+      <note default-x="15.5" default-y="-30">
         <pitch>
           <step>G</step>
           <octave>4</octave>
         </pitch>
-        <duration>40320</duration>
-        <staff>1</staff><tie type="start" />
-        <type>whole</type>
-        <notations>
-          <tied type="start" />
-        </notations>
-      </note>
-    </measure>
-    
-    <measure implicit="no" number="2">
-      <note default-x="13" default-y="-30">
-        <pitch>
-          <step>G</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>10080</duration>
+        <duration>30240</duration>
         <staff>1</staff><tie type="stop" />
-        <type>quarter</type>
+        <type>half</type>
+        <dot />
         <stem>up</stem>
         <notations>
           <tied type="stop" />
@@ -77,40 +60,6 @@
         <rest />
         <duration>10080</duration>
         <type>quarter</type>
-      </note>
-      <note>
-        <rest />
-        <duration>5040</duration>
-        <type>eighth</type>
-      </note>
-      <note default-x="100.73" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <staff>1</staff><type>eighth</type>
-        <stem>down</stem>
-      </note>
-      <note default-x="137.15" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <staff>1</staff><type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">begin</beam>
-      </note>
-      <note default-x="169.6" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <staff>1</staff><type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">end</beam>
       </note>
     </measure>
   </part>

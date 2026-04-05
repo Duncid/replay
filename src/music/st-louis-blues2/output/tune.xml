@@ -10,7 +10,7 @@
     <rights>PUBLIC DOMAIN 
 This arrangement © MMXXII James T. Bartlett – Roanoke, VA</rights>
     <encoding>
-      <encoding-date>2026-02-26</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
       <software>MuseScore 3.6.2</software>
     </encoding>
@@ -25,11 +25,11 @@ This arrangement © MMXXII James T. Bartlett – Roanoke, VA</rights>
     <score-part id="P1">
       <part-name print-object="no">Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I3e6a3a4e704e0d60e3031991cc1e010f">
+      <score-instrument id="I1956609157b427ec470088b9427331ad">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I3e6a3a4e704e0d60e3031991cc1e010f">
+      <midi-instrument id="I1956609157b427ec470088b9427331ad">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
@@ -70,21 +70,6 @@ This arrangement © MMXXII James T. Bartlett – Roanoke, VA</rights>
       <direction placement="above">
         <direction-type>
           <rehearsal default-x="-77.38" font-size="14" font-weight="bold" halign="center" relative-y="30" valign="middle">A</rehearsal>
-        </direction-type>
-      </direction>
-      <direction placement="above">
-        <direction-type>
-          <words />
-        </direction-type>
-      </direction>
-      <direction placement="above">
-        <direction-type>
-          <words />
-        </direction-type>
-      </direction>
-      <direction placement="above">
-        <direction-type>
-          <words />
         </direction-type>
       </direction>
       <direction placement="above">

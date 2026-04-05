@@ -11,6 +11,7 @@ from music21 import converter, instrument, stream, tempo, meter, note as m21note
 
 from tune_pipeline.io import read_json, write_json
 from tune_pipeline.nuggets_extract import extract_nuggets, extract_assemblies
+from tune_pipeline.structure_generate import generate_teacher_payload, infer_metadata_from_ns
 from tune_pipeline.validate_teacher import validate_teacher
 
 
@@ -139,6 +140,10 @@ def _write_instrument_note_sequences(
             "notesCount": len(ns_data.get("notes", [])),
             "noteSequenceFile": ns_name,
         }
+    # Single-track bundles also emit tune.ns.json (app publish + getTuneNs glob).
+    if len(note_sequences) == 1:
+        sole = next(iter(note_sequences.values()))
+        write_json(output_dir / "tune.ns.json", sole)
     return tracks
 
 
@@ -249,15 +254,58 @@ def _score_from_note_sequence(ns: Dict[str, object], metadata: Dict[str, object]
     score.makeMeasures(inPlace=True)
     return score
 
-def build_tune(tune_folder: Path) -> Dict[str, object]:
+
+def write_teacher_json(tune_folder: Path) -> Dict[str, object]:
+    """Generate teacher.json from tune.xml (or instrument NS) + NoteSequences."""
+    note_sequences = _load_instrument_note_sequences(tune_folder)
+    if not note_sequences:
+        raise PipelineError(
+            "Missing NoteSequence input: expected tune.inst*.ns.json or tune.ns.json"
+        )
+
+    tune_xml = tune_folder / "tune.xml"
+    metadata: Dict[str, object] = {}
+    if tune_xml.exists():
+        score = converter.parse(str(tune_xml))
+        raw_piano_parts = _get_piano_parts(score)
+        if not raw_piano_parts:
+            raw_piano_parts = [score.parts[0]]
+        piano_score = _build_piano_score(score, raw_piano_parts)
+        combined_part = _combine_parts(raw_piano_parts)
+        score_for_bounds = piano_score
+    else:
+        primary_key = sorted(note_sequences.keys())[0]
+        metadata = infer_metadata_from_ns(note_sequences[primary_key])
+        score_for_bounds = _score_from_note_sequence(
+            note_sequences[primary_key], metadata
+        )
+        combined_part = score_for_bounds.parts[0]
+
+    title = tune_folder.name
+    payload = generate_teacher_payload(
+        score_for_bounds,
+        combined_part,
+        note_sequences,
+        tune_title=title,
+        metadata=metadata if metadata else None,
+    )
+    teacher_path = tune_folder / "teacher.json"
+    write_json(teacher_path, payload)
+    return payload
+
+
+def build_tune(tune_folder: Path, *, no_generate: bool = False) -> Dict[str, object]:
     # 1. Inspection
     if not tune_folder.exists():
         raise PipelineError(f"Folder not found: {tune_folder}")
-    
+
+    if not no_generate:
+        write_teacher_json(tune_folder)
+
     teacher_path = tune_folder / "teacher.json"
     if not teacher_path.exists():
         raise PipelineError(f"Missing file: {teacher_path.name}")
-    
+
     teacher = read_json(teacher_path)
     validate_teacher(teacher)
 
@@ -366,17 +414,79 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     return summary
 
 
+def build_all(
+    parent_folder: Path,
+    *,
+    no_generate: bool = False,
+) -> Dict[str, object]:
+    """Run build_tune on each immediate subfolder that has tune inputs."""
+    if not parent_folder.is_dir():
+        raise PipelineError(f"Not a directory: {parent_folder}")
+    results: Dict[str, object] = {}
+    for child in sorted(parent_folder.iterdir()):
+        if not child.is_dir() or child.name.startswith("."):
+            continue
+        has_input = (
+            (child / "tune.ns.json").exists()
+            or any(child.glob("tune.inst*.ns.json"))
+            or (child / "tune.xml").exists()
+        )
+        if not has_input:
+            print(f"[build-all] skip {child.name}: no tune.ns.json / tune.inst*.ns.json / tune.xml")
+            continue
+        print(f"[build-all] === {child.name} ===")
+        try:
+            results[child.name] = build_tune(child, no_generate=no_generate)
+        except PipelineError as err:
+            print(f"[build-all] ERROR {child.name}: {err}")
+            results[child.name] = {"error": str(err)}
+    return results
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Tune pipeline CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    gen_parser = subparsers.add_parser(
+        "generate",
+        help="Write teacher.json only (curriculum from score + NoteSequences)",
+    )
+    gen_parser.add_argument("tune_folder", type=Path)
+
     build_parser = subparsers.add_parser("build", help="Build tune artifacts")
     build_parser.add_argument("tune_folder", type=Path)
+    build_parser.add_argument(
+        "--no-generate",
+        action="store_true",
+        help="Use existing teacher.json instead of regenerating curriculum",
+    )
+
+    build_all_parser = subparsers.add_parser(
+        "build-all",
+        help="Run build on every direct subfolder of a directory (e.g. src/music)",
+    )
+    build_all_parser.add_argument("parent_folder", type=Path)
+    build_all_parser.add_argument(
+        "--no-generate",
+        action="store_true",
+        help="Use existing teacher.json in each tune folder",
+    )
+
     args = parser.parse_args()
-    if args.command == "build":
-        summary = build_tune(args.tune_folder)
+    if args.command == "generate":
+        write_teacher_json(args.tune_folder)
+        print(f"Wrote {args.tune_folder / 'teacher.json'}")
+    elif args.command == "build":
+        summary = build_tune(args.tune_folder, no_generate=args.no_generate)
         print("Build summary:")
         for key, value in summary.items():
             print(f"- {key}: {value}")
+    elif args.command == "build-all":
+        summaries = build_all(
+            args.parent_folder,
+            no_generate=args.no_generate,
+        )
+        print("Done. Folders built:", len(summaries))
 
 
 if __name__ == "__main__":

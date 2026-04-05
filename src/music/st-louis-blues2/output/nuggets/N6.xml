@@ -4,7 +4,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-26</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -15,32 +15,23 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P688140e5a9dfe8ca092a6c89ef34c974">
+    <score-part id="Pcbff6f6c7d5d9ce1b56eda4b9a4d3bdd">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I86c9af3e492340a59f30bbd934b04ce8">
+      <score-instrument id="I85c046dc7b1d49a50c3c5d43c421d9df">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I86c9af3e492340a59f30bbd934b04ce8">
+      <midi-instrument id="I85c046dc7b1d49a50c3c5d43c421d9df">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
   
-  <part id="P688140e5a9dfe8ca092a6c89ef34c974">
+  <part id="Pcbff6f6c7d5d9ce1b56eda4b9a4d3bdd">
     
     <measure implicit="no" number="1">
-      <print new-system="yes">
-        <system-layout>
-          <system-margins>
-            <left-margin>0</left-margin>
-            <right-margin>0</right-margin>
-          </system-margins>
-          <system-distance>174.52</system-distance>
-        </system-layout>
-      </print>
       <attributes>
         <divisions>10080</divisions>
         <key>
@@ -51,10 +42,7 @@
           <beat-type>4</beat-type>
         </time>
       <clef><sign>G</sign><line>2</line></clef></attributes>
-      <barline location="left">
-        <bar-style>regular</bar-style>
-      </barline>
-      <note default-x="86.04" default-y="-30">
+      <note default-x="14.58" default-y="-30">
         <pitch>
           <step>G</step>
           <octave>4</octave>
@@ -69,7 +57,7 @@
     </measure>
     
     <measure implicit="no" number="2">
-      <note default-x="13" default-y="-30">
+      <note default-x="15.5" default-y="-30">
         <pitch>
           <step>G</step>
           <octave>4</octave>

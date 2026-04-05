@@ -1,43 +1,34 @@
 {
   "notes": [
     {
-      "endTime": 2.999997000000004,
+      "endTime": 2.8333320000000004,
       "instrument": 1,
       "isDrum": false,
-      "pitch": 59,
+      "pitch": 57,
       "program": 0,
-      "startTime": 0.7777750000000019,
-      "velocity": 0.9921259842519685
+      "startTime": 0.61111,
+      "velocity": 0.7086614173228346
     },
     {
-      "endTime": 2.999997000000004,
+      "endTime": 2.8333320000000004,
       "instrument": 1,
       "isDrum": false,
-      "pitch": 62,
+      "pitch": 61,
       "program": 0,
-      "startTime": 0.7777750000000019,
-      "velocity": 0.9921259842519685
+      "startTime": 0.61111,
+      "velocity": 0.7086614173228346
     },
     {
-      "endTime": 2.999997000000004,
+      "endTime": 2.8333320000000004,
       "instrument": 1,
       "isDrum": false,
       "pitch": 66,
       "program": 0,
-      "startTime": 0.7777750000000019,
-      "velocity": 0.9921259842519685
-    },
-    {
-      "endTime": 6.333330000000004,
-      "instrument": 1,
-      "isDrum": false,
-      "pitch": 38,
-      "program": 0,
-      "startTime": 2.999997000000004,
-      "velocity": 0.9921259842519685
+      "startTime": 0.61111,
+      "velocity": 0.7086614173228346
     }
   ],
-  "totalTime": 6.333330000000004,
+  "totalTime": 2.8333320000000004,
   "tempos": [
     {
       "time": 0.0,

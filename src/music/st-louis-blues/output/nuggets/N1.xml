@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE score-partwise  PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='utf-8'?>
 <score-partwise version="4.0">
   <movement-title>Music21 Fragment</movement-title>
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-01</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -16,22 +15,22 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="Pd4b857cf38eca5fb94a988450f7d3f53">
+    <score-part id="P19a14735f869ed25431d9ffdeff8f706">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I67039e1bea89203a8b299782cc9da2d6">
+      <score-instrument id="Ia6a7fb8541cf29ebd65bcac4e80c1fde">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I67039e1bea89203a8b299782cc9da2d6">
+      <midi-instrument id="Ia6a7fb8541cf29ebd65bcac4e80c1fde">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
-  <!--=========================== Part 1 ===========================-->
-  <part id="Pd4b857cf38eca5fb94a988450f7d3f53">
-    <!--========================= Measure 1 ==========================-->
+  
+  <part id="P19a14735f869ed25431d9ffdeff8f706">
+    
     <measure implicit="no" number="1">
       <print>
         <system-layout>
@@ -51,18 +50,14 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
-        <clef>
-          <sign>G</sign>
-          <line>2</line>
-        </clef>
-      </attributes>
+        <clef><sign>G</sign><line>2</line></clef></attributes>
       <note default-x="86.19" default-y="-10">
         <pitch>
           <step>D</step>
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <stem>down</stem>
         <beam number="1">begin</beam>
       </note>
@@ -72,7 +67,7 @@
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <stem>down</stem>
         <beam number="1">continue</beam>
       </note>
@@ -82,7 +77,7 @@
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <stem>down</stem>
         <beam number="1">end</beam>
       </note>
@@ -95,52 +90,6 @@
         <rest />
         <duration>5040</duration>
         <type>eighth</type>
-      </note>
-    </measure>
-    <!--========================= Measure 2 ==========================-->
-    <measure implicit="no" number="2">
-      <direction placement="above">
-        <direction-type>
-          <rehearsal font-size="14" halign="center" valign="middle">Intro</rehearsal>
-        </direction-type>
-      </direction>
-      <note default-x="12" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">begin</beam>
-      </note>
-      <note default-x="59.25" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <tie type="start" />
-        <type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">end</beam>
-        <notations>
-          <tied type="start" />
-        </notations>
-      </note>
-      <note default-x="106.14" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>30240</duration>
-        <tie type="stop" />
-        <type>half</type>
-        <dot />
-        <stem>down</stem>
-        <notations>
-          <tied type="stop" />
-        </notations>
       </note>
     </measure>
   </part>

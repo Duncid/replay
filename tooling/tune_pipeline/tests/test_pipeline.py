@@ -82,7 +82,7 @@ def test_build_pipeline(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    summary = build_tune(tune_folder)
+    summary = build_tune(tune_folder, no_generate=True)
     output_dir = tune_folder / "output"
 
     assert summary["base"] == "tune"

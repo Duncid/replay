@@ -4,7 +4,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-26</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -15,21 +15,21 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="Pf627dd255e70629a2701dbba0267b9c6">
+    <score-part id="Pff1387b7b4467f65c44c0656183c80f3">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I0ae9ba772530c8559bcca67db68ac219">
+      <score-instrument id="Ib2fdc5f0c0684a8269b4e6844f2386e4">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I0ae9ba772530c8559bcca67db68ac219">
+      <midi-instrument id="Ib2fdc5f0c0684a8269b4e6844f2386e4">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
   
-  <part id="Pf627dd255e70629a2701dbba0267b9c6">
+  <part id="Pff1387b7b4467f65c44c0656183c80f3">
     
     <measure implicit="no" number="1">
       <attributes>
@@ -42,62 +42,24 @@
           <beat-type>4</beat-type>
         </time>
       <clef><sign>G</sign><line>2</line></clef></attributes>
-      <direction placement="above">
-        <direction-type>
-          <rehearsal default-x="-29.34" font-size="14" font-weight="bold" halign="center" relative-y="30" valign="middle">B</rehearsal>
-        </direction-type>
-      </direction>
-      <note default-x="29.34" default-y="-10">
+      <note default-x="15.5" default-y="-30">
         <pitch>
-          <step>D</step>
-          <octave>5</octave>
+          <step>G</step>
+          <octave>4</octave>
         </pitch>
-        <duration>5040</duration>
-        <staff>1</staff><type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">begin</beam>
-      </note>
-      <note default-x="65.04" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <staff>1</staff><tie type="start" />
-        <type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">end</beam>
-        <notations>
-          <tied type="start" />
-        </notations>
-      </note>
-      <note default-x="84.23" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>1</staff><tie type="stop" />
-        <tie type="start" />
-        <type>quarter</type>
-        <stem>down</stem>
-        <notations>
-          <tied type="stop" />
-          <tied type="start" />
-        </notations>
-      </note>
-      <note default-x="114.94" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>20160</duration>
+        <duration>30240</duration>
         <staff>1</staff><tie type="stop" />
         <type>half</type>
-        <stem>down</stem>
+        <dot />
+        <stem>up</stem>
         <notations>
           <tied type="stop" />
         </notations>
+      </note>
+      <note>
+        <rest />
+        <duration>10080</duration>
+        <type>quarter</type>
       </note>
     </measure>
     
@@ -107,78 +69,48 @@
         <duration>5040</duration>
         <type>eighth</type>
       </note>
-      <note default-x="119.03" default-y="-15">
+      <note default-x="47.28" default-y="-40">
         <pitch>
-          <step>C</step>
-          <alter>1</alter>
-          <octave>5</octave>
+          <step>E</step>
+          <octave>4</octave>
         </pitch>
         <duration>5040</duration>
         <staff>1</staff><type>eighth</type>
-        <accidental>sharp</accidental>
-        <stem>down</stem>
-        <beam number="1">end</beam>
+        <stem>up</stem>
       </note>
-      <note default-x="148.21" default-y="-10">
+      <note default-x="81.01" default-y="-30">
         <pitch>
-          <step>D</step>
-          <octave>5</octave>
+          <step>G</step>
+          <octave>4</octave>
         </pitch>
         <duration>5040</duration>
         <staff>1</staff><type>eighth</type>
-        <stem>down</stem>
+        <stem>up</stem>
         <beam number="1">begin</beam>
       </note>
-      <note default-x="42.18" default-y="-15">
+      <note default-x="115.07" default-y="-25">
         <pitch>
-          <step>C</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <staff>1</staff><type>eighth</type>
-        <stem>down</stem>
-      </note>
-      <note default-x="83.37" default-y="-15">
-        <pitch>
-          <step>C</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <staff>1</staff><type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">begin</beam>
-      </note>
-      <note print-object="no" print-spacing="yes">
-        <rest />
-        <duration>10080</duration>
-        <type>quarter</type>
-      </note>
-      <note default-x="177.39" default-y="-20">
-        <pitch>
-          <step>B</step>
-          <alter>-1</alter>
+          <step>A</step>
           <octave>4</octave>
         </pitch>
         <duration>5040</duration>
         <staff>1</staff><tie type="start" />
         <type>eighth</type>
-        <accidental>flat</accidental>
-        <stem>down</stem>
+        <stem>up</stem>
         <beam number="1">end</beam>
         <notations>
           <tied type="start" />
         </notations>
       </note>
-      <note default-x="206.57" default-y="-20">
+      <note default-x="158.25" default-y="-25">
         <pitch>
-          <step>B</step>
-          <alter>-1</alter>
+          <step>A</step>
           <octave>4</octave>
         </pitch>
-        <duration>10080</duration>
+        <duration>20160</duration>
         <staff>1</staff><tie type="stop" />
-        <type>quarter</type>
-        <stem>down</stem>
+        <type>half</type>
+        <stem>up</stem>
         <notations>
           <tied type="stop" />
         </notations>

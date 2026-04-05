@@ -355,24 +355,85 @@ export const getLocalBriefing = (musicRef: string): TuneBriefing | null => {
 
 // Get local nuggets data (for dropdown population)
 export const getLocalNuggetIds = (musicRef: string): string[] => {
+  return getLocalNuggetMenuItems(musicRef).map((item) => item.id);
+};
+
+export interface TuneMenuNuggetItem {
+  id: string;
+  label: string;
+  subtitle?: string;
+}
+
+export function formatNuggetLocationSubtitle(
+  location?: Record<string, unknown> | null,
+): string | undefined {
+  if (!location || typeof location.startMeasure !== "number") return undefined;
+  const sm = location.startMeasure as number;
+  const em = location.endMeasure;
+  if (typeof em === "number" && em !== sm) return `m. ${sm}–${em}`;
+  return `m. ${sm}`;
+}
+
+/** Ordered nugget rows for Lab UI (labels from teacher.json). */
+export const getLocalNuggetMenuItems = (musicRef: string): TuneMenuNuggetItem[] => {
   const teacher = getTeacher(musicRef);
   if (!teacher) return [];
   const teachingOrder = teacher.teachingOrder as string[] | undefined;
-  if (teachingOrder) return teachingOrder;
-
-  const nuggets = teacher.nuggets as Array<{ id: string }> | undefined;
-  return nuggets?.map((n) => n.id) ?? [];
+  const nuggets = teacher.nuggets as
+    | Array<{ id: string; label?: string; location?: Record<string, unknown> }>
+    | undefined;
+  const byId = new Map((nuggets ?? []).map((n) => [n.id, n]));
+  const order =
+    teachingOrder && teachingOrder.length > 0
+      ? teachingOrder
+      : (nuggets ?? []).map((n) => n.id);
+  return order.map((id) => {
+    const n = byId.get(id);
+    return {
+      id,
+      label: (n?.label as string | undefined) || id,
+      subtitle: formatNuggetLocationSubtitle(n?.location ?? null),
+    };
+  });
 };
+
+export interface TuneMenuAssemblyItem {
+  id: string;
+  label: string;
+  tier?: number;
+  subtitle?: string;
+}
 
 // Get local assembly IDs (for dropdown population)
 export const getLocalAssemblyIds = (musicRef: string): string[] => {
+  return getLocalAssemblyMenuItems(musicRef).map((item) => item.id);
+};
+
+/** Ordered assembly rows for Lab UI (tiers / labels from teacher.json). */
+export const getLocalAssemblyMenuItems = (
+  musicRef: string,
+): TuneMenuAssemblyItem[] => {
   const teacher = getTeacher(musicRef);
   if (!teacher) return [];
   const assemblyOrder = teacher.assemblyOrder as string[] | undefined;
-  if (assemblyOrder) return assemblyOrder;
-
-  const assemblies = teacher.assemblies as Array<{ id: string }> | undefined;
-  return assemblies?.map((a) => a.id) ?? [];
+  const assemblies = teacher.assemblies as
+    | Array<{ id: string; label?: string; tier?: number }>
+    | undefined;
+  const byId = new Map((assemblies ?? []).map((a) => [a.id, a]));
+  const order =
+    assemblyOrder && assemblyOrder.length > 0
+      ? assemblyOrder
+      : (assemblies ?? []).map((a) => a.id);
+  return order.map((id) => {
+    const a = byId.get(id);
+    const tier = a?.tier;
+    return {
+      id,
+      label: (a?.label as string | undefined) || id,
+      tier,
+      subtitle: tier != null ? `Tier ${tier}` : undefined,
+    };
+  });
 };
 
 // Type for bundled tune assets matching the edge function interface

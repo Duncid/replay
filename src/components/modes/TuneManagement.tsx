@@ -54,7 +54,9 @@ import {
   getAssemblyRh,
   getAssemblyXml,
   getLocalAssemblyIds,
+  getLocalAssemblyMenuItems,
   getLocalNuggetIds,
+  getLocalNuggetMenuItems,
   getLocalTuneKeys,
   getNuggetDspXml,
   getNuggetLh,
@@ -71,6 +73,8 @@ import {
   getTuneRh,
   getTuneRhXml,
   getTuneXml,
+  type TuneMenuAssemblyItem,
+  type TuneMenuNuggetItem,
 } from "@/utils/tuneAssetBundler";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -202,6 +206,8 @@ type TuneManagementContextValue = {
   labSequence: NoteSequence;
   nuggetIds: string[];
   assemblyIds: string[];
+  nuggetMenuItems: TuneMenuNuggetItem[];
+  assemblyMenuItems: TuneMenuAssemblyItem[];
   xmlFull: string | null;
   xmlDsp: string | null;
   selectionLabel: string;
@@ -345,22 +351,59 @@ function useTuneManagementState(): TuneManagementContextValue {
     selectedSource === "published" ? selectedTune : null,
   );
 
-  // Derive nugget/assembly IDs based on source
-  const nuggetIds = useMemo(() => {
+  const nuggetMenuItems = useMemo((): TuneMenuNuggetItem[] => {
+    if (!selectedTune) return [];
     if (selectedSource === "published") {
       const briefing = tuneAssets?.briefing as TuneBriefing | null;
-      return briefing?.teachingOrder ?? [];
+      const order = briefing?.teachingOrder ?? [];
+      const nuggets = (tuneAssets?.nuggets as TuneNugget[] | null) ?? [];
+      const byId = new Map(nuggets.map((n) => [n.id, n]));
+      return order.map((id) => {
+        const n = byId.get(id);
+        const loc = n?.location;
+        let subtitle: string | undefined;
+        if (loc && typeof loc.startMeasure === "number") {
+          const sm = loc.startMeasure;
+          const em = loc.endMeasure;
+          subtitle =
+            typeof em === "number" && em !== sm ? `m. ${sm}–${em}` : `m. ${sm}`;
+        }
+        return { id, label: n?.label ?? id, subtitle };
+      });
     }
-    return getLocalNuggetIds(selectedTune);
-  }, [selectedSource, tuneAssets, selectedTune]);
+    return getLocalNuggetMenuItems(selectedTune);
+  }, [selectedSource, selectedTune, tuneAssets]);
 
-  const assemblyIds = useMemo(() => {
+  const assemblyMenuItems = useMemo((): TuneMenuAssemblyItem[] => {
+    if (!selectedTune) return [];
     if (selectedSource === "published") {
       const briefing = tuneAssets?.briefing as TuneBriefing | null;
-      return briefing?.assemblyOrder ?? [];
+      const order = briefing?.assemblyOrder ?? [];
+      const assemblies = (tuneAssets?.assemblies as TuneAssembly[] | null) ?? [];
+      const byId = new Map(assemblies.map((a) => [a.id, a]));
+      return order.map((id) => {
+        const a = byId.get(id);
+        const tier = a?.tier;
+        return {
+          id,
+          label: a?.label ?? id,
+          tier,
+          subtitle: tier != null ? `Tier ${tier}` : undefined,
+        };
+      });
     }
-    return getLocalAssemblyIds(selectedTune);
-  }, [selectedSource, tuneAssets, selectedTune]);
+    return getLocalAssemblyMenuItems(selectedTune);
+  }, [selectedSource, selectedTune, tuneAssets]);
+
+  const nuggetIds = useMemo(
+    () => nuggetMenuItems.map((item) => item.id),
+    [nuggetMenuItems],
+  );
+
+  const assemblyIds = useMemo(
+    () => assemblyMenuItems.map((item) => item.id),
+    [assemblyMenuItems],
+  );
 
   // Helper functions for dropdown (for published tunes from list)
   const getNuggetIdsForTune = useCallback(
@@ -759,7 +802,15 @@ function useTuneManagementState(): TuneManagementContextValue {
     if (!selectedItemId && selectedTarget !== "full") {
       return selectedTarget.charAt(0).toUpperCase() + selectedTarget.slice(1);
     }
-    const baseLabel = selectedTarget === "full" ? "Full" : selectedItemId;
+    let baseLabel = selectedTarget === "full" ? "Full" : selectedItemId;
+    if (selectedTarget === "nuggets") {
+      const row = nuggetMenuItems.find((item) => item.id === selectedItemId);
+      if (row) baseLabel = row.label;
+    }
+    if (selectedTarget === "assemblies") {
+      const row = assemblyMenuItems.find((item) => item.id === selectedItemId);
+      if (row) baseLabel = row.label;
+    }
     const handSuffix =
       selectedHand === "full"
         ? ""
@@ -767,7 +818,13 @@ function useTuneManagementState(): TuneManagementContextValue {
           ? ", Left hand"
           : ", Right hand";
     return `${baseLabel}${handSuffix}`;
-  }, [selectedHand, selectedItemId, selectedTarget]);
+  }, [
+    assemblyMenuItems,
+    nuggetMenuItems,
+    selectedHand,
+    selectedItemId,
+    selectedTarget,
+  ]);
 
   // Selection handler
   const selectTune = useCallback((source: TuneSource, tune: string) => {
@@ -964,6 +1021,8 @@ function useTuneManagementState(): TuneManagementContextValue {
     labSequence,
     nuggetIds,
     assemblyIds,
+    nuggetMenuItems,
+    assemblyMenuItems,
     xmlFull,
     xmlDsp,
     selectionLabel,
@@ -1565,6 +1624,8 @@ export function TuneManagementActionBar() {
     targetLabel,
     nuggetIds,
     assemblyIds,
+    nuggetMenuItems,
+    assemblyMenuItems,
     getHandAvailability,
   } = useTuneManagementContext();
 
@@ -1597,6 +1658,27 @@ export function TuneManagementActionBar() {
       assemblyIds.map((id) => [id, getHandAvailability("assemblies", id)]),
     );
   }, [assemblyIds, getHandAvailability]);
+
+  const assemblyTierGroups = useMemo(() => {
+    const tierMap = new Map<number, typeof assemblyMenuItems>();
+    for (const item of assemblyMenuItems) {
+      const t = item.tier ?? 0;
+      if (!tierMap.has(t)) tierMap.set(t, []);
+      tierMap.get(t)!.push(item);
+    }
+    return [...tierMap.entries()].sort((a, b) => a[0] - b[0]);
+  }, [assemblyMenuItems]);
+
+  const tuneMenuCaption = (primary: string, secondary?: string) => (
+    <span className="flex flex-col items-start gap-0 min-w-0">
+      <span className="leading-tight">{primary}</span>
+      {secondary ? (
+        <span className="text-xs text-muted-foreground leading-tight">
+          {secondary}
+        </span>
+      ) : null}
+    </span>
+  );
 
   return (
     <>
@@ -1760,47 +1842,55 @@ export function TuneManagementActionBar() {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
-              {nuggetIds.length > 0 ? (
-                nuggetIds.map((id) => (
-                  <Fragment key={id}>
+              {nuggetMenuItems.length > 0 ? (
+                nuggetMenuItems.map((item) => (
+                  <Fragment key={item.id}>
                     <DropdownMenuItem
-                      key={`${id}-full`}
-                      onClick={() => selectTarget("nuggets", id, "full")}
+                      key={`${item.id}-full`}
+                      onClick={() => selectTarget("nuggets", item.id, "full")}
                     >
-                      <span className="flex-1">{id}</span>
+                      <span className="flex-1">
+                        {tuneMenuCaption(item.label, item.subtitle)}
+                      </span>
                       {selectedTarget === "nuggets" &&
-                        selectedItemId === id &&
+                        selectedItemId === item.id &&
                         selectedHand === "full" && (
-                          <Check className="h-4 w-4 ml-2" />
+                          <Check className="h-4 w-4 ml-2 shrink-0" />
                         )}
                     </DropdownMenuItem>
-                    {nuggetHandAvailability.get(id)?.left && (
+                    {nuggetHandAvailability.get(item.id)?.left && (
                       <DropdownMenuItem
-                        key={`${id}-left`}
-                        onClick={() => selectTarget("nuggets", id, "left")}
+                        key={`${item.id}-left`}
+                        onClick={() => selectTarget("nuggets", item.id, "left")}
                       >
                         <span className="flex-1">
-                          {id}, {handLabel("left")}
+                          {tuneMenuCaption(
+                            `${item.label}, ${handLabel("left")}`,
+                            item.subtitle,
+                          )}
                         </span>
                         {selectedTarget === "nuggets" &&
-                          selectedItemId === id &&
+                          selectedItemId === item.id &&
                           selectedHand === "left" && (
-                            <Check className="h-4 w-4 ml-2" />
+                            <Check className="h-4 w-4 ml-2 shrink-0" />
                           )}
                       </DropdownMenuItem>
                     )}
-                    {nuggetHandAvailability.get(id)?.right && (
+                    {nuggetHandAvailability.get(item.id)?.right && (
                       <DropdownMenuItem
-                        key={`${id}-right`}
-                        onClick={() => selectTarget("nuggets", id, "right")}
+                        key={`${item.id}-right`}
+                        onClick={() => selectTarget("nuggets", item.id, "right")}
                       >
                         <span className="flex-1">
-                          {id}, {handLabel("right")}
+                          {tuneMenuCaption(
+                            `${item.label}, ${handLabel("right")}`,
+                            item.subtitle,
+                          )}
                         </span>
                         {selectedTarget === "nuggets" &&
-                          selectedItemId === id &&
+                          selectedItemId === item.id &&
                           selectedHand === "right" && (
-                            <Check className="h-4 w-4 ml-2" />
+                            <Check className="h-4 w-4 ml-2 shrink-0" />
                           )}
                       </DropdownMenuItem>
                     )}
@@ -1815,51 +1905,74 @@ export function TuneManagementActionBar() {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
-              {assemblyIds.length > 0 ? (
-                assemblyIds.map((id) => (
-                  <Fragment key={id}>
-                    <DropdownMenuItem
-                      key={`${id}-full`}
-                      onClick={() => selectTarget("assemblies", id, "full")}
-                    >
-                      <span className="flex-1">{id}</span>
-                      {selectedTarget === "assemblies" &&
-                        selectedItemId === id &&
-                        selectedHand === "full" && (
-                          <Check className="h-4 w-4 ml-2" />
+              {assemblyMenuItems.length > 0 ? (
+                assemblyTierGroups.map(([tier, items]) => (
+                  <div key={tier}>
+                    {(assemblyTierGroups.length > 1 || tier !== 0) && (
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground sticky top-0 bg-popover">
+                        {tier === 0 ? "Other" : `Tier ${tier}`}
+                      </div>
+                    )}
+                    {items.map((item) => (
+                      <Fragment key={item.id}>
+                        <DropdownMenuItem
+                          key={`${item.id}-full`}
+                          onClick={() =>
+                            selectTarget("assemblies", item.id, "full")
+                          }
+                        >
+                          <span className="flex-1">
+                            {tuneMenuCaption(item.label, item.subtitle)}
+                          </span>
+                          {selectedTarget === "assemblies" &&
+                            selectedItemId === item.id &&
+                            selectedHand === "full" && (
+                              <Check className="h-4 w-4 ml-2 shrink-0" />
+                            )}
+                        </DropdownMenuItem>
+                        {assemblyHandAvailability.get(item.id)?.left && (
+                          <DropdownMenuItem
+                            key={`${item.id}-left`}
+                            onClick={() =>
+                              selectTarget("assemblies", item.id, "left")
+                            }
+                          >
+                            <span className="flex-1">
+                              {tuneMenuCaption(
+                                `${item.label}, ${handLabel("left")}`,
+                                item.subtitle,
+                              )}
+                            </span>
+                            {selectedTarget === "assemblies" &&
+                              selectedItemId === item.id &&
+                              selectedHand === "left" && (
+                                <Check className="h-4 w-4 ml-2 shrink-0" />
+                              )}
+                          </DropdownMenuItem>
                         )}
-                    </DropdownMenuItem>
-                    {assemblyHandAvailability.get(id)?.left && (
-                      <DropdownMenuItem
-                        key={`${id}-left`}
-                        onClick={() => selectTarget("assemblies", id, "left")}
-                      >
-                        <span className="flex-1">
-                          {id}, {handLabel("left")}
-                        </span>
-                        {selectedTarget === "assemblies" &&
-                          selectedItemId === id &&
-                          selectedHand === "left" && (
-                            <Check className="h-4 w-4 ml-2" />
-                          )}
-                      </DropdownMenuItem>
-                    )}
-                    {assemblyHandAvailability.get(id)?.right && (
-                      <DropdownMenuItem
-                        key={`${id}-right`}
-                        onClick={() => selectTarget("assemblies", id, "right")}
-                      >
-                        <span className="flex-1">
-                          {id}, {handLabel("right")}
-                        </span>
-                        {selectedTarget === "assemblies" &&
-                          selectedItemId === id &&
-                          selectedHand === "right" && (
-                            <Check className="h-4 w-4 ml-2" />
-                          )}
-                      </DropdownMenuItem>
-                    )}
-                  </Fragment>
+                        {assemblyHandAvailability.get(item.id)?.right && (
+                          <DropdownMenuItem
+                            key={`${item.id}-right`}
+                            onClick={() =>
+                              selectTarget("assemblies", item.id, "right")
+                            }
+                          >
+                            <span className="flex-1">
+                              {tuneMenuCaption(
+                                `${item.label}, ${handLabel("right")}`,
+                                item.subtitle,
+                              )}
+                            </span>
+                            {selectedTarget === "assemblies" &&
+                              selectedItemId === item.id &&
+                              selectedHand === "right" && (
+                                <Check className="h-4 w-4 ml-2 shrink-0" />
+                              )}
+                          </DropdownMenuItem>
+                        )}
+                      </Fragment>
+                    ))}
+                  </div>
                 ))
               ) : (
                 <DropdownMenuItem disabled>No assemblies</DropdownMenuItem>

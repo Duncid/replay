@@ -4,7 +4,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-26</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -15,21 +15,21 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P75ebb936593ccf123d9fc78d67aace21">
+    <score-part id="P0e3dde0c484b0af686d15fdf73839e2d">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Ic61e5315acf8b1f82577c29ee6ad046c">
+      <score-instrument id="I2929873c640cab686a5ce74f921b78e6">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Ic61e5315acf8b1f82577c29ee6ad046c">
+      <midi-instrument id="I2929873c640cab686a5ce74f921b78e6">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
   
-  <part id="P75ebb936593ccf123d9fc78d67aace21">
+  <part id="P0e3dde0c484b0af686d15fdf73839e2d">
     
     <measure implicit="no" number="1">
       <attributes>
@@ -41,8 +41,8 @@
         <staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>
       <note>
         <pitch>
-          <step>D</step>
-          <octave>2</octave>
+          <step>A</step>
+          <octave>1</octave>
         </pitch>
         <duration>10080</duration>
         <staff>2</staff><type>quarter</type>
@@ -51,7 +51,7 @@
         <chord />
         <pitch>
           <step>A</step>
-          <octave>5</octave>
+          <octave>4</octave>
         </pitch>
         <duration>10080</duration>
         <staff>1</staff><type>quarter</type>
@@ -85,15 +85,15 @@
       <note>
         <chord />
         <pitch>
-          <step>C</step>
-          <octave>5</octave>
+          <step>B</step>
+          <octave>4</octave>
         </pitch>
         <duration>10080</duration>
         <staff>1</staff><type>quarter</type>
       </note>
       <note>
         <pitch>
-          <step>D</step>
+          <step>C</step>
           <octave>5</octave>
         </pitch>
         <duration>10080</duration>
@@ -120,15 +120,6 @@
     
     <measure implicit="no" number="2">
       <note>
-        <pitch>
-          <step>D</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>10080</duration>
-        <staff>2</staff><type>quarter</type>
-      </note>
-      <note>
-        <chord />
         <pitch>
           <step>G</step>
           <octave>3</octave>

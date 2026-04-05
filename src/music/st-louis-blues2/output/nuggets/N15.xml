@@ -4,7 +4,7 @@
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-26</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -15,21 +15,21 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P2a229b872a6dad207dd8becc559e6133">
+    <score-part id="Pe978bb2963d19ca62eca60eb00364ee4">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I78cf3dd3f08c27b6f083c007e77a750b">
+      <score-instrument id="I96418128dd836dff108a7197664ba395">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I78cf3dd3f08c27b6f083c007e77a750b">
+      <midi-instrument id="I96418128dd836dff108a7197664ba395">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
   
-  <part id="P2a229b872a6dad207dd8becc559e6133">
+  <part id="Pe978bb2963d19ca62eca60eb00364ee4">
     
     <measure implicit="no" number="1">
       <attributes>
@@ -42,70 +42,86 @@
           <beat-type>4</beat-type>
         </time>
       <clef><sign>G</sign><line>2</line></clef></attributes>
-      <note default-x="15.5" default-y="-30">
+      <note default-x="13" default-y="-30">
         <pitch>
           <step>G</step>
           <octave>4</octave>
         </pitch>
-        <duration>20160</duration>
-        <staff>1</staff><type>half</type>
+        <duration>30240</duration>
+        <staff>1</staff><tie type="stop" />
+        <type>half</type>
+        <dot />
         <stem>up</stem>
+        <notations>
+          <tied type="stop" />
+        </notations>
       </note>
-      <note default-x="67.24" default-y="-25">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>20160</duration>
-        <staff>1</staff><type>half</type>
-        <stem>up</stem>
+      <note>
+        <rest />
+        <duration>10080</duration>
+        <type>quarter</type>
       </note>
     </measure>
     
     <measure implicit="no" number="2">
-      <print new-system="yes">
-        <system-layout>
-          <system-margins>
-            <left-margin>0</left-margin>
-            <right-margin>0</right-margin>
-          </system-margins>
-          <system-distance>132.44</system-distance>
-        </system-layout>
-      </print>
-      <note default-x="86.04" default-y="-10">
+      <note default-x="39.44" default-y="-35">
         <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>30240</duration>
-        <staff>1</staff><type>half</type>
-        <dot />
-        <stem>down</stem>
-        <notations>
-          <fermata type="upright" />
-        </notations>
-      </note>
-      <note default-x="185.94" default-y="-25">
-        <pitch>
-          <step>A</step>
+          <step>F</step>
           <alter>1</alter>
           <octave>4</octave>
         </pitch>
         <duration>5040</duration>
         <staff>1</staff><type>eighth</type>
-        <accidental>sharp</accidental>
         <stem>up</stem>
         <beam number="1">begin</beam>
       </note>
-      <note default-x="225.11" default-y="-20">
+      <note default-x="90.32" default-y="-25">
         <pitch>
-          <step>B</step>
+          <step>A</step>
           <octave>4</octave>
         </pitch>
         <duration>5040</duration>
         <staff>1</staff><type>eighth</type>
         <stem>up</stem>
+        <beam number="1">continue</beam>
+      </note>
+      <note default-x="134.7" default-y="-35">
+        <pitch>
+          <step>F</step>
+          <alter>1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>5040</duration>
+        <staff>1</staff><type>eighth</type>
+        <stem>up</stem>
+        <beam number="1">continue</beam>
+      </note>
+      <note default-x="171.99" default-y="-45">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>5040</duration>
+        <staff>1</staff><tie type="start" />
+        <type>eighth</type>
+        <stem>up</stem>
         <beam number="1">end</beam>
+        <notations>
+          <tied type="start" />
+        </notations>
+      </note>
+      <note default-x="206.52" default-y="-45">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>20160</duration>
+        <staff>1</staff><tie type="stop" />
+        <type>half</type>
+        <stem>up</stem>
+        <notations>
+          <tied type="stop" />
+        </notations>
       </note>
     </measure>
   </part>

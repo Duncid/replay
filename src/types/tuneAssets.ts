@@ -2,6 +2,7 @@ import type { NoteSequence } from "./noteSequence";
 
 export interface TuneNugget {
   id: string;
+  label?: string;
   noteSequence: NoteSequence;
   leftHandSequence?: NoteSequence | null;
   rightHandSequence?: NoteSequence | null;
@@ -16,6 +17,7 @@ export interface TuneNugget {
 
 export interface TuneAssembly {
   id: string;
+  label?: string;
   noteSequence: NoteSequence;
   leftHandSequence?: NoteSequence | null;
   rightHandSequence?: NoteSequence | null;
