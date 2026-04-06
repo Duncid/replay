@@ -1,22 +1,41 @@
 import type { MidiLikeEvent, MicTranscriptionConfig } from "@/transcription/types";
 import type { TranscribedNote } from "@/transcription/magenta/OAFEngine";
 
-type SeenNote = {
+/** One active mic note per MIDI pitch (worker-owned map, mutated each hop). */
+export type MicSeenNoteState = {
   midi: number;
-  onsetBucket: number;
   onsetAbsSec: number;
   endAbsSec: number;
-  stableOffCount: number;
   offEmitted: boolean;
   confidence: number;
+  /** Consecutive hops with no qualifying detection for this pitch (silence / gap). */
+  hopsWithoutRenewal: number;
 };
 
-function makeKey(midi: number, onsetBucket: number) {
-  return `${midi}:${onsetBucket}`;
+function makeKey(midi: number) {
+  return String(midi);
 }
 
-function quantizeBucket(timeSec: number, bucketSec: number) {
-  return Math.round(timeSec / bucketSec);
+const END_EPS_SEC = 1e-3;
+
+/** Pull detector output toward the closest expected pitch when within snapRadius (learn / tune). */
+function snapMidiToNearestExpected(
+  floatMidi: number,
+  mids: number[],
+  snapRadiusSemitones: number,
+): number {
+  let best: number | null = null;
+  let bestD = Infinity;
+  for (const m of mids) {
+    const d = Math.abs(m - floatMidi);
+    if (d < bestD) {
+      bestD = d;
+      best = m;
+    }
+  }
+  const rounded = Math.round(floatMidi);
+  if (best === null || bestD > snapRadiusSemitones) return rounded;
+  return best;
 }
 
 export function notesToMidiLikeEvents(params: {
@@ -24,7 +43,7 @@ export function notesToMidiLikeEvents(params: {
   windowStartTimeAbsSec: number;
   nowAbsSec: number;
   config: MicTranscriptionConfig;
-  seenNotes: Map<string, SeenNote>;
+  seenNotes: Map<string, MicSeenNoteState>;
   droppedHops: number;
   expectedWindow?: { mids: number[]; t0: number; t1: number } | null;
 }): { events: MidiLikeEvent[]; droppedHops: number } {
@@ -42,10 +61,12 @@ export function notesToMidiLikeEvents(params: {
   const acceptExpectedOnly = !!config.acceptExpectedOnly;
 
   const shouldAcceptPitch = (midi: number, tAbs: number) => {
-    if (!acceptExpectedOnly || !expectedWindow) return true;
+    if (!acceptExpectedOnly || !expectedWindow?.mids?.length) return true;
     if (tAbs < expectedWindow.t0 || tAbs > expectedWindow.t1) return true;
     return expectedWindow.mids.some((exp) => Math.abs(exp - midi) <= tolerance);
   };
+
+  const renewedMidis = new Set<number>();
 
   notes.forEach((note) => {
     const durMs = (note.endTime - note.startTime) * 1000;
@@ -54,23 +75,38 @@ export function notesToMidiLikeEvents(params: {
 
     const onsetAbs = windowStartTimeAbsSec + note.startTime;
     const offAbs = windowStartTimeAbsSec + note.endTime;
-    const midi = Math.round(note.pitch);
+    let midi: number;
+    if (
+      acceptExpectedOnly &&
+      expectedWindow?.mids?.length
+    ) {
+      const snapRadius = Math.max(tolerance, 0.5);
+      midi = snapMidiToNearestExpected(
+        note.pitch,
+        expectedWindow.mids,
+        snapRadius,
+      );
+    } else {
+      midi = Math.round(note.pitch);
+    }
 
     if (!shouldAcceptPitch(midi, onsetAbs)) return;
 
-    const bucket = quantizeBucket(onsetAbs, config.onsetBucketSec);
-    const key = makeKey(midi, bucket);
-    const seen = seenNotes.get(key);
+    const key = makeKey(midi);
+    let seen = seenNotes.get(key);
+    if (seen?.offEmitted) {
+      seenNotes.delete(key);
+      seen = undefined;
+    }
 
     if (!seen) {
-      const entry: SeenNote = {
+      const entry: MicSeenNoteState = {
         midi,
-        onsetBucket: bucket,
         onsetAbsSec: onsetAbs,
         endAbsSec: offAbs,
-        stableOffCount: 0,
         offEmitted: false,
         confidence,
+        hopsWithoutRenewal: 0,
       };
       seenNotes.set(key, entry);
       events.push({
@@ -81,39 +117,56 @@ export function notesToMidiLikeEvents(params: {
         confidence,
         source: "mic",
       });
+      renewedMidis.add(midi);
       return;
     }
 
-    if (offAbs > seen.endAbsSec) {
-      seen.endAbsSec = offAbs;
-    }
+    seen.endAbsSec = Math.max(seen.endAbsSec, offAbs);
+    seen.onsetAbsSec = Math.min(seen.onsetAbsSec, onsetAbs);
     seen.confidence = Math.max(seen.confidence, confidence);
-    seen.stableOffCount += 1;
+    seen.hopsWithoutRenewal = 0;
+    renewedMidis.add(midi);
   });
+
+  for (const [, seen] of seenNotes) {
+    if (seen.offEmitted) continue;
+    if (!renewedMidis.has(seen.midi)) {
+      seen.hopsWithoutRenewal += 1;
+    }
+  }
 
   for (const [key, seen] of seenNotes) {
     if (seen.offEmitted) continue;
-    const offIsPast = nowAbsSec >= seen.endAbsSec;
-    if (!offIsPast) continue;
-    // Conservative noteOff: require note end confirmation in at least 2 hops.
-    if (seen.stableOffCount < 2) continue;
-    seen.offEmitted = true;
-    events.push({
-      type: "noteOff",
-      midi: seen.midi,
-      t: seen.endAbsSec,
-      confidence: seen.confidence,
-      source: "mic",
-    });
-    // GC old entries after off emission.
-    if (nowAbsSec - seen.endAbsSec > 1.5) {
+    const pastEnd = nowAbsSec + END_EPS_SEC >= seen.endAbsSec;
+    if (
+      pastEnd &&
+      seen.hopsWithoutRenewal >= 2
+    ) {
+      seen.offEmitted = true;
+      events.push({
+        type: "noteOff",
+        midi: seen.midi,
+        t: seen.endAbsSec,
+        confidence: seen.confidence,
+        source: "mic",
+      });
       seenNotes.delete(key);
     }
   }
 
-  // GC stale entries that never got enough off confirmation.
   for (const [key, seen] of seenNotes) {
+    if (seen.offEmitted) {
+      seenNotes.delete(key);
+      continue;
+    }
     if (nowAbsSec - seen.onsetAbsSec > 8) {
+      events.push({
+        type: "noteOff",
+        midi: seen.midi,
+        t: nowAbsSec,
+        confidence: seen.confidence,
+        source: "mic",
+      });
       seenNotes.delete(key);
     }
   }

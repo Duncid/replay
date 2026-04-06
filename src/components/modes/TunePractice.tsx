@@ -600,8 +600,8 @@ export function TunePractice({
       const now = performance.now() / 1000;
       return {
         mids,
-        t0: now - 0.15,
-        t1: now + 0.35,
+        t0: now - 0.22,
+        t1: now + 0.42,
       };
     };
     onRegisterExpectedNotesProvider(provider);

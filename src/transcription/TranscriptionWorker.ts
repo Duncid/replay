@@ -5,7 +5,10 @@ import {
   RingBufferReader,
 } from "@/audio/mic/shared/RingBuffer";
 import { HeuristicOAFEngine, type OAFEngine } from "@/transcription/magenta/OAFEngine";
-import { notesToMidiLikeEvents } from "@/transcription/magenta/NoteSequenceUtils";
+import {
+  type MicSeenNoteState,
+  notesToMidiLikeEvents,
+} from "@/transcription/magenta/NoteSequenceUtils";
 import {
   DEFAULT_MIC_TRANSCRIPTION_CONFIG,
   type MainToWorkerMessage,
@@ -31,18 +34,7 @@ let knownAbsTime = 0;
 let expectedWindow: WorkerExpectedNotesPayload | null = null;
 const droppedHops = 0;
 
-const seenNotes = new Map<
-  string,
-  {
-    midi: number;
-    onsetBucket: number;
-    onsetAbsSec: number;
-    endAbsSec: number;
-    stableOffCount: number;
-    offEmitted: boolean;
-    confidence: number;
-  }
->();
+const seenNotes = new Map<string, MicSeenNoteState>();
 
 const engine: OAFEngine = new HeuristicOAFEngine();
 
@@ -195,7 +187,11 @@ ctx.onmessage = async (event: MessageEvent<MainToWorkerMessage>) => {
       return;
     }
     case "expectedNotes": {
-      expectedWindow = msg.payload;
+      if (msg.payload.mids.length === 0) {
+        expectedWindow = null;
+      } else {
+        expectedWindow = msg.payload;
+      }
       return;
     }
     case "start": {

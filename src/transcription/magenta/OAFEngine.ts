@@ -17,8 +17,8 @@ export interface OAFEngine {
   dispose(): Promise<void>;
 }
 
-const MIN_RMS = 0.01;
-const MIN_CONFIDENCE = 0.5;
+const MIN_RMS = 0.0065;
+const MIN_CONFIDENCE = 0.4;
 
 function hzToMidi(hz: number): number {
   return 69 + 12 * Math.log2(hz / 440);
@@ -36,7 +36,7 @@ function detectPitch(
 
   let r1 = 0;
   let r2 = size - 1;
-  const threshold = 0.2;
+  const threshold = 0.15;
   while (r1 < size && Math.abs(buffer[r1]) < threshold) r1++;
   while (r2 > r1 && Math.abs(buffer[r2]) < threshold) r2--;
   const trimmed = buffer.slice(r1, r2);
@@ -91,8 +91,11 @@ export class HeuristicOAFEngine implements OAFEngine {
     sampleRate: number,
   ): Promise<TranscribedSequence> {
     const winSize = Math.max(256, Math.floor(sampleRate * 0.05));
-    const hop = Math.max(128, Math.floor(winSize / 2));
+    const hop = Math.max(128, Math.floor(winSize / 3));
     const notes: TranscribedNote[] = [];
+    const minNoteOnUnvoiced = 0.04;
+    const minNoteOnPitchChange = 0.022;
+    const minNoteTail = 0.04;
 
     let current:
       | { pitch: number; startTime: number; lastTime: number; confidence: number }
@@ -108,7 +111,7 @@ export class HeuristicOAFEngine implements OAFEngine {
         res.frequency > 50 &&
         res.frequency < 5000;
       if (!voiced) {
-        if (current && t - current.startTime >= 0.06) {
+        if (current && t - current.startTime >= minNoteOnUnvoiced) {
           notes.push({
             pitch: Math.round(current.pitch),
             startTime: current.startTime,
@@ -131,10 +134,12 @@ export class HeuristicOAFEngine implements OAFEngine {
         };
         continue;
       }
-      if (Math.abs(midi - current.pitch) >= 1) {
-        if (t - current.startTime >= 0.06) {
+      const roundedNext = Math.round(midi);
+      const roundedCur = Math.round(current.pitch);
+      if (roundedNext !== roundedCur) {
+        if (t - current.startTime >= minNoteOnPitchChange) {
           notes.push({
-            pitch: Math.round(current.pitch),
+            pitch: roundedCur,
             startTime: current.startTime,
             endTime: t,
             velocity: 0.8,
@@ -155,7 +160,7 @@ export class HeuristicOAFEngine implements OAFEngine {
 
     if (current) {
       const endTime = Math.min(audio.length / sampleRate, current.lastTime + 0.05);
-      if (endTime - current.startTime >= 0.06) {
+      if (endTime - current.startTime >= minNoteTail) {
         notes.push({
           pitch: Math.round(current.pitch),
           startTime: current.startTime,

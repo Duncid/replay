@@ -19,6 +19,28 @@ type MicInputAdapterOptions = {
   expectedNotesProvider?: (() => { mids: number[]; t0: number; t1: number } | null) | null;
   onNoteOn?: (noteKey: string, frequency: number, velocity: number) => void;
   onNoteOff?: (noteKey: string, frequency: number) => void;
+  /** When true, expose live pitch + last accepted note for UI (e.g. debug mode). */
+  pitchDebug?: boolean;
+};
+
+export type MicPitchDebug = {
+  liveHz: number | null;
+  liveNote: string | null;
+  liveConfidence: number;
+  liveRms: number;
+  lastAcceptedNote: string | null;
+  lastAcceptedMidi: number | null;
+  lastAcceptedSource: "worker" | "fallback" | null;
+};
+
+const EMPTY_MIC_PITCH_DEBUG: MicPitchDebug = {
+  liveHz: null,
+  liveNote: null,
+  liveConfidence: 0,
+  liveRms: 0,
+  lastAcceptedNote: null,
+  lastAcceptedMidi: null,
+  lastAcceptedSource: null,
 };
 
 type MicInputAdapterState = {
@@ -28,6 +50,7 @@ type MicInputAdapterState = {
   level: number;
   mode: "sab" | "message" | null;
   metrics: TranscriptionMetrics | null;
+  pitchDebug: MicPitchDebug | null;
 };
 
 function toVelocity(v: number | undefined) {
@@ -47,11 +70,11 @@ function detectPitch(
   let rms = 0;
   for (let i = 0; i < size; i++) rms += buffer[i] * buffer[i];
   rms = Math.sqrt(rms / size);
-  if (rms < 0.008) return { frequency: null, confidence: 0, rms };
+  if (rms < 0.006) return { frequency: null, confidence: 0, rms };
 
   let r1 = 0;
   let r2 = size - 1;
-  const threshold = 0.2;
+  const threshold = 0.15;
   while (r1 < size && Math.abs(buffer[r1]) < threshold) r1++;
   while (r2 > r1 && Math.abs(buffer[r2]) < threshold) r2--;
   const trimmed = buffer.slice(r1, r2);
@@ -102,6 +125,7 @@ export function useMicTranscriptionInputAdapter(
     onNoteOn,
     onNoteOff,
     visualFallbackEnabled = true,
+    pitchDebug = false,
   } = options;
   const cfgWindowSec = options.config?.windowSec;
   const cfgHopSec = options.config?.hopSec;
@@ -117,6 +141,14 @@ export function useMicTranscriptionInputAdapter(
   const [level, setLevel] = useState(0);
   const [mode, setMode] = useState<"sab" | "message" | null>(null);
   const [metrics, setMetrics] = useState<TranscriptionMetrics | null>(null);
+  const [pitchDebugSnapshot, setPitchDebugSnapshot] = useState<MicPitchDebug | null>(
+    null,
+  );
+
+  const pitchDebugRef = useRef(pitchDebug);
+  pitchDebugRef.current = pitchDebug;
+  const lastLivePitchUiAtRef = useRef(0);
+  const emitSourceRef = useRef<"worker" | "fallback">("worker");
 
   const captureRef = useRef<MicCapture | null>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -207,6 +239,17 @@ export function useMicTranscriptionInputAdapter(
       activeKeys.add(noteKey);
       activeByMidi.set(midi, noteKey);
       onNoteOnRef.current?.(noteKey, freq, toVelocity(velocity));
+      if (pitchDebugRef.current) {
+        setPitchDebugSnapshot((prev) => ({
+          liveHz: prev?.liveHz ?? null,
+          liveNote: prev?.liveNote ?? null,
+          liveConfidence: prev?.liveConfidence ?? 0,
+          liveRms: prev?.liveRms ?? 0,
+          lastAcceptedNote: noteKey,
+          lastAcceptedMidi: midi,
+          lastAcceptedSource: emitSourceRef.current,
+        }));
+      }
     };
 
     const emitNoteOff = (midi: number) => {
@@ -220,28 +263,65 @@ export function useMicTranscriptionInputAdapter(
     };
 
     const handleEvents = (events: MidiLikeEvent[]) => {
-      if (events.length > 0) {
-        lastWorkerEventAtRef.current = performance.now();
-      }
+      emitSourceRef.current = "worker";
       events.forEach((evt) => {
         if (evt.type === "noteOn") {
+          const before = activeKeys.size;
           emitNoteOn(evt.midi, evt.velocity);
+          if (activeKeys.size !== before) {
+            lastWorkerEventAtRef.current = performance.now();
+          }
         } else {
+          const before = activeKeys.size;
           emitNoteOff(evt.midi);
+          if (activeKeys.size !== before) {
+            lastWorkerEventAtRef.current = performance.now();
+          }
         }
       });
     };
 
     const maybeProcessFallbackChunk = (chunk: Float32Array, sampleRate: number) => {
-      if (!visualFallbackEnabled) return;
-      // Let worker output take precedence when available.
-      if (performance.now() - lastWorkerEventAtRef.current < 450) return;
+      const needFallbackPitch =
+        visualFallbackEnabled &&
+        performance.now() - lastWorkerEventAtRef.current >= 350;
+      let frequency: number | null = null;
+      let confidence = 0;
+      let rms = 0;
+      if (pitchDebugRef.current || needFallbackPitch) {
+        const res = detectPitch(chunk, sampleRate);
+        frequency = res.frequency;
+        confidence = res.confidence;
+        rms = res.rms;
+      }
 
-      const { frequency, confidence, rms } = detectPitch(chunk, sampleRate);
+      if (pitchDebugRef.current) {
+        const t = performance.now();
+        if (t - lastLivePitchUiAtRef.current >= 80) {
+          lastLivePitchUiAtRef.current = t;
+          setPitchDebugSnapshot((prev) => ({
+            liveHz: frequency,
+            liveNote:
+              frequency != null && frequency >= 20 && frequency <= 8000
+                ? midiToNoteName(Math.round(hzToMidi(frequency)))
+                : null,
+            liveConfidence: confidence,
+            liveRms: rms,
+            lastAcceptedNote: prev?.lastAcceptedNote ?? null,
+            lastAcceptedMidi: prev?.lastAcceptedMidi ?? null,
+            lastAcceptedSource: prev?.lastAcceptedSource ?? null,
+          }));
+        }
+      }
+
+      if (!visualFallbackEnabled) return;
+      if (!needFallbackPitch) return;
+
+      emitSourceRef.current = "fallback";
       const voiced =
         !!frequency &&
-        confidence >= 0.78 &&
-        rms >= 0.01 &&
+        confidence >= 0.67 &&
+        rms >= 0.008 &&
         frequency > 65 &&
         frequency < 2000;
       const now = performance.now();
@@ -347,13 +427,14 @@ export function useMicTranscriptionInputAdapter(
         worker.postMessage({ type: "start" } satisfies MainToWorkerMessage);
         setIsListening(true);
 
-        if (expectedNotesProviderRef.current) {
+        if (typeof expectedNotesProviderRef.current === "function") {
           expectedTimerRef.current = window.setInterval(() => {
             const windowNotes = expectedNotesProviderRef.current?.();
-            if (!windowNotes) return;
+            const payload =
+              windowNotes ?? { mids: [] as number[], t0: 0, t1: 0 };
             worker.postMessage({
               type: "expectedNotes",
-              payload: windowNotes,
+              payload,
             } satisfies MainToWorkerMessage);
           }, 120);
         }
@@ -371,6 +452,8 @@ export function useMicTranscriptionInputAdapter(
       isStoppingRef.current = true;
       teardownPromiseRef.current = (async () => {
         setIsListening(false);
+        setPitchDebugSnapshot(null);
+        lastLivePitchUiAtRef.current = 0;
         activeKeys.clear();
         activeByMidi.clear();
         if (expectedTimerRef.current !== null) {
@@ -405,6 +488,7 @@ export function useMicTranscriptionInputAdapter(
     enabled,
     isGuided,
     visualFallbackEnabled,
+    expectedNotesProvider,
   ]);
 
   return {
@@ -414,5 +498,8 @@ export function useMicTranscriptionInputAdapter(
     level,
     mode,
     metrics,
+    pitchDebug: pitchDebug
+      ? (pitchDebugSnapshot ?? EMPTY_MIC_PITCH_DEBUG)
+      : null,
   };
 }

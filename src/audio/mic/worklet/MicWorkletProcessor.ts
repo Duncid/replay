@@ -63,6 +63,21 @@ class MicWorkletProcessor extends AudioWorkletProcessor {
         const writeIndex = Atomics.load(this.state, 0);
         this.pcm[writeIndex % this.capacity] = sample;
         Atomics.store(this.state, 0, writeIndex + 1);
+        // Still deliver PCM chunks on the main thread (pitch UI, fallback path).
+        // The ring buffer alone does not notify the main thread per chunk.
+        this.messageBuffer[this.messageBufferIndex++] = sample;
+        if (this.messageBufferIndex >= this.chunkSize) {
+          const chunk = this.messageBuffer.slice(0, this.chunkSize);
+          const chunkStartTimeSec =
+            currentTime - this.chunkSize / this.sampleRateHz;
+          this.port.postMessage({
+            type: "pcmChunk",
+            chunk,
+            chunkStartTimeSec,
+            sampleRate: this.sampleRateHz,
+          });
+          this.messageBufferIndex = 0;
+        }
       } else {
         this.messageBuffer[this.messageBufferIndex++] = sample;
         if (this.messageBufferIndex >= this.chunkSize) {

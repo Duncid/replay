@@ -60,7 +60,6 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useLocalUsers } from "@/hooks/useLocalUsers";
 import { MagentaModelType, useMagenta } from "@/hooks/useMagenta";
 import { useMidiInput } from "@/hooks/useMidiInput";
-import { useMicTranscriptionInputAdapter } from "@/inputAdapters/MicTranscriptionInputAdapter";
 import {
   PIANO_SOUND_LABELS,
   PianoSoundType,
@@ -71,6 +70,7 @@ import {
   useRecordingManager,
 } from "@/hooks/useRecordingManager";
 import type { InputNoteEvent } from "@/hooks/useSheetPlaybackEngine";
+import { useMicTranscriptionInputAdapter } from "@/inputAdapters/MicTranscriptionInputAdapter";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LessonFeelPreset,
@@ -397,6 +397,9 @@ const Index = () => {
   const tuneExpectedNotesProviderRef = useRef<
     (() => { mids: number[]; t0: number; t1: number } | null) | null
   >(null);
+  const lessonExpectedNotesProviderRef = useRef<
+    (() => { mids: number[]; t0: number; t1: number } | null) | null
+  >(null);
   const labNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(null);
 
   // Free practice recording
@@ -492,6 +495,29 @@ const Index = () => {
     [],
   );
 
+  const registerLessonExpectedNotesProvider = useCallback(
+    (
+      provider:
+        | (() => { mids: number[]; t0: number; t1: number } | null)
+        | null,
+    ) => {
+      lessonExpectedNotesProviderRef.current = provider;
+    },
+    [],
+  );
+
+  const mergedMicExpectedNotesProvider = useCallback((): {
+    mids: number[];
+    t0: number;
+    t1: number;
+  } | null => {
+    return (
+      tuneExpectedNotesProviderRef.current?.() ??
+      lessonExpectedNotesProviderRef.current?.() ??
+      null
+    );
+  }, []);
+
   // MIDI note handlers - memoized to ensure stable references for useMidiInput
   const handleMidiNoteOn = useCallback(
     (noteKey: string, frequency: number, velocity: number) => {
@@ -505,10 +531,13 @@ const Index = () => {
     [appState],
   );
 
-  const handleMidiNoteOff = useCallback((noteKey: string, frequency: number) => {
-    midiPressedKeysRef.current.delete(noteKey);
-    pianoRef.current?.handleKeyRelease(noteKey, frequency);
-  }, []);
+  const handleMidiNoteOff = useCallback(
+    (noteKey: string, frequency: number) => {
+      midiPressedKeysRef.current.delete(noteKey);
+      pianoRef.current?.handleKeyRelease(noteKey, frequency);
+    },
+    [],
+  );
 
   const handleNoMidiDevices = () => {
     toast({
@@ -1429,6 +1458,8 @@ const Index = () => {
     onRegisterNoteHandler: registerTuneNoteHandler,
     onRegisterNoteOffHandler: registerTuneNoteOffHandler,
     onRegisterExpectedNotesProvider: registerTuneExpectedNotesProvider,
+    onRegisterLessonExpectedNotesProvider:
+      registerLessonExpectedNotesProvider,
     onEnableFreePractice: () => setLearnModeType("free-practice"),
   });
 
@@ -1901,15 +1932,17 @@ const Index = () => {
     enabled: isMicEnabled,
     isGuided: activeMode === "learn" && learnModeType === "curriculum",
     config: {
-      acceptExpectedOnly: activeMode === "learn" && learnModeType === "curriculum",
-      pitchToleranceSemitones: 1,
+      acceptExpectedOnly:
+        activeMode === "learn" && learnModeType === "curriculum",
+      pitchToleranceSemitones: 3,
     },
     expectedNotesProvider:
       activeMode === "learn" && learnModeType === "curriculum"
-        ? () => tuneExpectedNotesProviderRef.current?.() ?? null
-        : null,
+        ? mergedMicExpectedNotesProvider
+        : undefined,
     onNoteOn: handleMicNoteOn,
     onNoteOff: handleMicNoteOff,
+    pitchDebug: isMicEnabled,
   });
 
   useEffect(() => {
@@ -2239,7 +2272,55 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-1">
+                {isMicEnabled && (
+                  <div className="text-xs text-muted-foreground max-w-[min(320px,50vw)] shrink min-w-0 self-start">
+                    <div className="whitespace-nowrap">
+                      {micInput.status === "running"
+                        ? "Listening"
+                        : micInput.status}
+                      {` ${Math.round(micInput.level * 100)}%`}
+                    </div>
+                    {micInput.pitchDebug && (
+                      <div className="mt-0.5 font-mono text-[10px] leading-tight break-words whitespace-normal opacity-90">
+                        <span className="text-foreground/80">Live: </span>
+                        {micInput.pitchDebug.liveHz != null ? (
+                          <>
+                            {micInput.pitchDebug.liveNote}{" "}
+                            {micInput.pitchDebug.liveHz.toFixed(1)}Hz
+                            <span className="text-muted-foreground">
+                              {" "}
+                              c{micInput.pitchDebug.liveConfidence.toFixed(2)}{" "}
+                              rms{micInput.pitchDebug.liveRms.toFixed(3)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            — c{micInput.pitchDebug.liveConfidence.toFixed(2)}{" "}
+                            rms{micInput.pitchDebug.liveRms.toFixed(3)}
+                          </span>
+                        )}
+                        <br />
+                        <span className="text-foreground/80">Accepted: </span>
+                        {micInput.pitchDebug.lastAcceptedNote ? (
+                          <>
+                            {micInput.pitchDebug.lastAcceptedNote}
+                            {micInput.pitchDebug.lastAcceptedMidi != null
+                              ? ` (midi ${micInput.pitchDebug.lastAcceptedMidi})`
+                              : ""}
+                            <span className="text-muted-foreground">
+                              {" "}
+                              ·{" "}
+                              {micInput.pitchDebug.lastAcceptedSource ?? "—"}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <Button
                   variant={isMicEnabled ? "default" : "outline"}
                   size="sm"
@@ -2249,12 +2330,6 @@ const Index = () => {
                   <Mic className="h-4 w-4" />
                   {isMicEnabled ? "Mic On" : "Mic Off"}
                 </Button>
-                {isMicEnabled && (
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {micInput.status === "running" ? "Listening" : micInput.status}
-                    {` ${Math.round(micInput.level * 100)}%`}
-                  </div>
-                )}
                 <MidiConnector
                   isConnected={!!connectedDevice}
                   deviceName={connectedDevice?.name || null}

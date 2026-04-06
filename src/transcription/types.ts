@@ -29,11 +29,11 @@ export type MicTranscriptionConfig = {
 };
 
 export const DEFAULT_MIC_TRANSCRIPTION_CONFIG: MicTranscriptionConfig = {
-  windowSec: 2.5,
-  hopSec: 0.25,
+  windowSec: 2,
+  hopSec: 0.13,
   lookbackSec: 0.5,
-  minNoteMs: 60,
-  minConfidence: 0.55,
+  minNoteMs: 32,
+  minConfidence: 0.4,
   onsetBucketSec: 0.03,
   acceptExpectedOnly: false,
   pitchToleranceSemitones: 0,
