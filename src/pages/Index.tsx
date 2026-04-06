@@ -52,6 +52,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -1458,8 +1463,7 @@ const Index = () => {
     onRegisterNoteHandler: registerTuneNoteHandler,
     onRegisterNoteOffHandler: registerTuneNoteOffHandler,
     onRegisterExpectedNotesProvider: registerTuneExpectedNotesProvider,
-    onRegisterLessonExpectedNotesProvider:
-      registerLessonExpectedNotesProvider,
+    onRegisterLessonExpectedNotesProvider: registerLessonExpectedNotesProvider,
     onEnableFreePractice: () => setLearnModeType("free-practice"),
   });
 
@@ -1928,18 +1932,20 @@ const Index = () => {
     pianoRef.current?.handleKeyRelease(noteKey, frequency, { muteAudio: true });
   };
 
+  const micExpectationsEnabled =
+    (activeMode === "learn" && learnModeType === "curriculum") ||
+    activeMode === "lab";
+
   const micInput = useMicTranscriptionInputAdapter({
     enabled: isMicEnabled,
-    isGuided: activeMode === "learn" && learnModeType === "curriculum",
+    isGuided: micExpectationsEnabled,
     config: {
-      acceptExpectedOnly:
-        activeMode === "learn" && learnModeType === "curriculum",
+      acceptExpectedOnly: micExpectationsEnabled,
       pitchToleranceSemitones: 3,
     },
-    expectedNotesProvider:
-      activeMode === "learn" && learnModeType === "curriculum"
-        ? mergedMicExpectedNotesProvider
-        : undefined,
+    expectedNotesProvider: micExpectationsEnabled
+      ? mergedMicExpectedNotesProvider
+      : undefined,
     onNoteOn: handleMicNoteOn,
     onNoteOff: handleMicNoteOff,
     pitchDebug: isMicEnabled,
@@ -2190,6 +2196,8 @@ const Index = () => {
               onPlaybackInputEventRef={labInputEventRef}
               onActivePitchesChange={handleLabActivePitchesChange}
               onPlaybackNote={handleLabPlaybackNote}
+              onRegisterExpectedNotesProvider={registerTuneExpectedNotesProvider}
+              expectedNotesRegistrationActive={activeMode === "lab"}
             />
           </div>
         </Tabs>
@@ -2272,51 +2280,91 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="flex items-start gap-1">
+              <div className="flex items-center gap-1">
                 {isMicEnabled && (
-                  <div className="text-xs text-muted-foreground max-w-[min(320px,50vw)] shrink min-w-0 self-start">
-                    <div className="whitespace-nowrap">
-                      {micInput.status === "running"
-                        ? "Listening"
-                        : micInput.status}
-                      {` ${Math.round(micInput.level * 100)}%`}
-                    </div>
-                    {micInput.pitchDebug && (
-                      <div className="mt-0.5 font-mono text-[10px] leading-tight break-words whitespace-normal opacity-90">
-                        <span className="text-foreground/80">Live: </span>
-                        {micInput.pitchDebug.liveHz != null ? (
-                          <>
-                            {micInput.pitchDebug.liveNote}{" "}
-                            {micInput.pitchDebug.liveHz.toFixed(1)}Hz
-                            <span className="text-muted-foreground">
-                              {" "}
-                              c{micInput.pitchDebug.liveConfidence.toFixed(2)}{" "}
-                              rms{micInput.pitchDebug.liveRms.toFixed(3)}
+                  <div className="text-xs text-muted-foreground shrink min-w-0">
+                    {micInput.pitchDebug ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex cursor-pointer border-0 bg-transparent p-0 text-left text-inherit underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            <span className="whitespace-nowrap">
+                              {micInput.status === "running"
+                                ? "Listening"
+                                : micInput.status}
+                              {` ${Math.round(micInput.level * 100)}%`}
                             </span>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            — c{micInput.pitchDebug.liveConfidence.toFixed(2)}{" "}
-                            rms{micInput.pitchDebug.liveRms.toFixed(3)}
-                          </span>
-                        )}
-                        <br />
-                        <span className="text-foreground/80">Accepted: </span>
-                        {micInput.pitchDebug.lastAcceptedNote ? (
-                          <>
-                            {micInput.pitchDebug.lastAcceptedNote}
-                            {micInput.pitchDebug.lastAcceptedMidi != null
-                              ? ` (midi ${micInput.pitchDebug.lastAcceptedMidi})`
-                              : ""}
-                            <span className="text-muted-foreground">
-                              {" "}
-                              ·{" "}
-                              {micInput.pitchDebug.lastAcceptedSource ?? "—"}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="start"
+                          side="bottom"
+                          className="w-auto max-w-[min(320px,90vw)] p-2"
+                        >
+                          <div className="font-mono text-[10px] leading-tight break-words whitespace-normal text-popover-foreground">
+                            <div>
+                              <span className="opacity-80">Live: </span>
+                              {micInput.pitchDebug.liveHz != null ? (
+                                <>
+                                  {micInput.pitchDebug.liveNote}{" "}
+                                  {micInput.pitchDebug.liveHz.toFixed(1)}Hz
+                                  <span className="opacity-70">
+                                    {" "}
+                                    c
+                                    {micInput.pitchDebug.liveConfidence.toFixed(
+                                      2,
+                                    )}{" "}
+                                    rms
+                                    {micInput.pitchDebug.liveRms.toFixed(3)}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="opacity-70">
+                                  — c
+                                  {micInput.pitchDebug.liveConfidence.toFixed(
+                                    2,
+                                  )}{" "}
+                                  rms
+                                  {micInput.pitchDebug.liveRms.toFixed(3)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="opacity-80">Accepted: </span>
+                              {micInput.pitchDebug.lastAcceptedNote ? (
+                                <>
+                                  {micInput.pitchDebug.lastAcceptedNote}
+                                  {micInput.pitchDebug.lastAcceptedMidi != null
+                                    ? ` (midi ${micInput.pitchDebug.lastAcceptedMidi})`
+                                    : ""}
+                                  <span className="opacity-70">
+                                    {" "}
+                                    ·{" "}
+                                    {micInput.pitchDebug.lastAcceptedSource ??
+                                      "—"}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="opacity-70">—</span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="opacity-80">Expected: </span>
+                              <span className="opacity-70">
+                                {micInput.pitchDebug.expectedNotes}
+                              </span>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <div className="whitespace-nowrap">
+                        {micInput.status === "running"
+                          ? "Listening"
+                          : micInput.status}
+                        {` ${Math.round(micInput.level * 100)}%`}
                       </div>
                     )}
                   </div>

@@ -31,6 +31,8 @@ export type MicPitchDebug = {
   lastAcceptedNote: string | null;
   lastAcceptedMidi: number | null;
   lastAcceptedSource: "worker" | "fallback" | null;
+  /** Guided expected notes for the current window (joined labels), or "—". */
+  expectedNotes: string;
 };
 
 const EMPTY_MIC_PITCH_DEBUG: MicPitchDebug = {
@@ -41,6 +43,7 @@ const EMPTY_MIC_PITCH_DEBUG: MicPitchDebug = {
   lastAcceptedNote: null,
   lastAcceptedMidi: null,
   lastAcceptedSource: null,
+  expectedNotes: "—",
 };
 
 type MicInputAdapterState = {
@@ -248,6 +251,7 @@ export function useMicTranscriptionInputAdapter(
           lastAcceptedNote: noteKey,
           lastAcceptedMidi: midi,
           lastAcceptedSource: emitSourceRef.current,
+          expectedNotes: prev?.expectedNotes ?? EMPTY_MIC_PITCH_DEBUG.expectedNotes,
         }));
       }
     };
@@ -310,6 +314,8 @@ export function useMicTranscriptionInputAdapter(
             lastAcceptedNote: prev?.lastAcceptedNote ?? null,
             lastAcceptedMidi: prev?.lastAcceptedMidi ?? null,
             lastAcceptedSource: prev?.lastAcceptedSource ?? null,
+            expectedNotes:
+              prev?.expectedNotes ?? EMPTY_MIC_PITCH_DEBUG.expectedNotes,
           }));
         }
       }
@@ -436,6 +442,18 @@ export function useMicTranscriptionInputAdapter(
               type: "expectedNotes",
               payload,
             } satisfies MainToWorkerMessage);
+            if (pitchDebugRef.current) {
+              const mids = windowNotes?.mids ?? [];
+              const unique = [...new Set(mids)];
+              const line =
+                unique.length === 0
+                  ? "—"
+                  : unique.map((m) => midiToNoteName(m)).join(", ");
+              setPitchDebugSnapshot((prev) => ({
+                ...(prev ?? EMPTY_MIC_PITCH_DEBUG),
+                expectedNotes: line,
+              }));
+            }
           }, 120);
         }
       } catch (e) {
