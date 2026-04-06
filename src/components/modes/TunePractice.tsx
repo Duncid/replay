@@ -77,6 +77,11 @@ interface TunePracticeProps {
   onRegisterNoteOffHandler?: (
     handler: ((noteKey: string) => void) | null,
   ) => void;
+  onRegisterExpectedNotesProvider?: (
+    provider:
+      | (() => { mids: number[]; t0: number; t1: number } | null)
+      | null,
+  ) => void;
   evalPrompt?: string | null;
   evalAnswer?: string | null;
   evalDecision?: string | null;
@@ -244,6 +249,7 @@ export function TunePractice({
   practicePlan = [],
   onRegisterNoteHandler,
   onRegisterNoteOffHandler,
+  onRegisterExpectedNotesProvider,
   evalPrompt,
   evalAnswer,
   evalDebugData,
@@ -585,6 +591,22 @@ export function TunePractice({
     onRegisterNoteOffHandler(handler);
     return () => onRegisterNoteOffHandler(null);
   }, [onRegisterNoteOffHandler, playback]);
+
+  useEffect(() => {
+    if (!onRegisterExpectedNotesProvider) return;
+    const provider = () => {
+      const mids = playback.currentRequiredPitches;
+      if (!mids || mids.length === 0) return null;
+      const now = performance.now() / 1000;
+      return {
+        mids,
+        t0: now - 0.22,
+        t1: now + 0.42,
+      };
+    };
+    onRegisterExpectedNotesProvider(provider);
+    return () => onRegisterExpectedNotesProvider(null);
+  }, [onRegisterExpectedNotesProvider, playback.currentRequiredPitches]);
 
   const handleNextNugget = () => {
     setShouldPulse(false);

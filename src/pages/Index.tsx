@@ -52,6 +52,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +75,7 @@ import {
   useRecordingManager,
 } from "@/hooks/useRecordingManager";
 import type { InputNoteEvent } from "@/hooks/useSheetPlaybackEngine";
+import { useMicTranscriptionInputAdapter } from "@/inputAdapters/MicTranscriptionInputAdapter";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LessonFeelPreset,
@@ -86,7 +92,7 @@ import {
 } from "@/utils/noteSequenceUtils";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
 import JSZip from "jszip";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Mic } from "lucide-react";
 import {
   type ReactNode,
   useCallback,
@@ -292,6 +298,7 @@ const Index = () => {
     [],
   );
   const [isMusicXmlImporting, setIsMusicXmlImporting] = useState(false);
+  const [isMicEnabled, setIsMicEnabled] = useState(false);
 
   const { toast } = useToast();
   const magenta = useMagenta();
@@ -338,20 +345,17 @@ const Index = () => {
   const shouldStopAiRef = useRef<boolean>(false);
   const isPlayingRef = useRef<boolean>(false);
   const midiPressedKeysRef = useRef<Set<string>>(new Set());
+  const micPressedKeysRef = useRef<Set<string>>(new Set());
+  const micContextErrorHandledRef = useRef(false);
+  const originalConsoleDebugRef = useRef<typeof console.debug | null>(null);
   const pendingUserSequenceRef = useRef<NoteSequence | null>(null);
   const labNoteHandlerRef = useRef<((noteKey: string) => void) | null>(null);
 
   const MIN_WAIT_TIME_MS = 1000;
 
   useEffect(() => {
-    const warmupAudio = async () => {
-      await pianoRef.current?.ensureAudioReady();
-      await pianoRef.current?.preload();
-    };
-
     const handleFirstInteraction = () => {
       hasUserInteractedRef.current = true;
-      warmupAudio();
       document.removeEventListener("pointerdown", handleFirstInteraction);
       document.removeEventListener("touchstart", handleFirstInteraction);
     };
@@ -395,6 +399,12 @@ const Index = () => {
   const tuneNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(
     null,
   );
+  const tuneExpectedNotesProviderRef = useRef<
+    (() => { mids: number[]; t0: number; t1: number } | null) | null
+  >(null);
+  const lessonExpectedNotesProviderRef = useRef<
+    (() => { mids: number[]; t0: number; t1: number } | null) | null
+  >(null);
   const labNoteOffHandlerRef = useRef<((noteKey: string) => void) | null>(null);
 
   // Free practice recording
@@ -479,6 +489,40 @@ const Index = () => {
     [],
   );
 
+  const registerTuneExpectedNotesProvider = useCallback(
+    (
+      provider:
+        | (() => { mids: number[]; t0: number; t1: number } | null)
+        | null,
+    ) => {
+      tuneExpectedNotesProviderRef.current = provider;
+    },
+    [],
+  );
+
+  const registerLessonExpectedNotesProvider = useCallback(
+    (
+      provider:
+        | (() => { mids: number[]; t0: number; t1: number } | null)
+        | null,
+    ) => {
+      lessonExpectedNotesProviderRef.current = provider;
+    },
+    [],
+  );
+
+  const mergedMicExpectedNotesProvider = useCallback((): {
+    mids: number[];
+    t0: number;
+    t1: number;
+  } | null => {
+    return (
+      tuneExpectedNotesProviderRef.current?.() ??
+      lessonExpectedNotesProviderRef.current?.() ??
+      null
+    );
+  }, []);
+
   // MIDI note handlers - memoized to ensure stable references for useMidiInput
   const handleMidiNoteOn = useCallback(
     (noteKey: string, frequency: number, velocity: number) => {
@@ -492,10 +536,13 @@ const Index = () => {
     [appState],
   );
 
-  const handleMidiNoteOff = useCallback((noteKey: string, frequency: number) => {
-    midiPressedKeysRef.current.delete(noteKey);
-    pianoRef.current?.handleKeyRelease(noteKey, frequency);
-  }, []);
+  const handleMidiNoteOff = useCallback(
+    (noteKey: string, frequency: number) => {
+      midiPressedKeysRef.current.delete(noteKey);
+      pianoRef.current?.handleKeyRelease(noteKey, frequency);
+    },
+    [],
+  );
 
   const handleNoMidiDevices = () => {
     toast({
@@ -1415,6 +1462,8 @@ const Index = () => {
       setMetronomeSoundType(soundType as MetronomeSoundType),
     onRegisterNoteHandler: registerTuneNoteHandler,
     onRegisterNoteOffHandler: registerTuneNoteOffHandler,
+    onRegisterExpectedNotesProvider: registerTuneExpectedNotesProvider,
+    onRegisterLessonExpectedNotesProvider: registerLessonExpectedNotesProvider,
     onEnableFreePractice: () => setLearnModeType("free-practice"),
   });
 
@@ -1860,6 +1909,160 @@ const Index = () => {
     }
   }, [compositions]);
 
+  const handleMicNoteOn = (
+    noteKey: string,
+    frequency: number,
+    velocity: number,
+  ) => {
+    if (
+      (appState !== "idle" && appState !== "user_playing") ||
+      micPressedKeysRef.current.has(noteKey)
+    ) {
+      return;
+    }
+    micPressedKeysRef.current.add(noteKey);
+    pianoRef.current?.handleKeyPress(noteKey, frequency, velocity, {
+      muteAudio: true,
+    });
+  };
+
+  const handleMicNoteOff = (noteKey: string, frequency: number) => {
+    if (!micPressedKeysRef.current.has(noteKey)) return;
+    micPressedKeysRef.current.delete(noteKey);
+    pianoRef.current?.handleKeyRelease(noteKey, frequency, { muteAudio: true });
+  };
+
+  const micExpectationsEnabled =
+    (activeMode === "learn" && learnModeType === "curriculum") ||
+    activeMode === "lab";
+
+  const micInput = useMicTranscriptionInputAdapter({
+    enabled: isMicEnabled,
+    isGuided: micExpectationsEnabled,
+    config: {
+      acceptExpectedOnly: micExpectationsEnabled,
+      pitchToleranceSemitones: 3,
+    },
+    expectedNotesProvider: micExpectationsEnabled
+      ? mergedMicExpectedNotesProvider
+      : undefined,
+    onNoteOn: handleMicNoteOn,
+    onNoteOff: handleMicNoteOff,
+    pitchDebug: isMicEnabled,
+  });
+
+  useEffect(() => {
+    if (activeMode === "quest" && isMicEnabled) {
+      setIsMicEnabled(false);
+    }
+  }, [activeMode, isMicEnabled]);
+
+  useEffect(() => {
+    if (!micInput.error) return;
+    if (isMicEnabled) {
+      setIsMicEnabled(false);
+    }
+    toast({
+      title: "Microphone input error",
+      description: micInput.error,
+      variant: "destructive",
+    });
+  }, [isMicEnabled, micInput.error, toast]);
+
+  useEffect(() => {
+    if (!isMicEnabled) {
+      micContextErrorHandledRef.current = false;
+      return;
+    }
+
+    const handleWindowError = (event: ErrorEvent) => {
+      const message = event.message ?? "";
+      if (
+        !message.includes(
+          "The AudioContext encountered an error from the audio device or the WebAudio renderer.",
+        )
+      ) {
+        return;
+      }
+      if (micContextErrorHandledRef.current) {
+        event.preventDefault();
+        return;
+      }
+      micContextErrorHandledRef.current = true;
+      setIsMicEnabled(false);
+      toast({
+        title: "Microphone input error",
+        description:
+          "Audio device failed while using the microphone. Mic has been turned off.",
+        variant: "destructive",
+      });
+      event.preventDefault();
+    };
+
+    window.addEventListener("error", handleWindowError);
+    return () => {
+      window.removeEventListener("error", handleWindowError);
+    };
+  }, [isMicEnabled, toast]);
+
+  useEffect(() => {
+    if (!isMicEnabled) return;
+    if (micInput.status !== "error" && micInput.status !== "stopped") return;
+    setIsMicEnabled(false);
+  }, [isMicEnabled, micInput.status]);
+
+  useEffect(() => {
+    const browserAudioContextError =
+      "The AudioContext encountered an error from the audio device or the WebAudio renderer.";
+
+    if (!isMicEnabled) {
+      if (originalConsoleDebugRef.current) {
+        console.debug = originalConsoleDebugRef.current;
+        originalConsoleDebugRef.current = null;
+      }
+      return;
+    }
+
+    if (!originalConsoleDebugRef.current) {
+      originalConsoleDebugRef.current = console.debug.bind(console);
+      console.debug = (...args: unknown[]) => {
+        const message = String(args[0] ?? "");
+        if (message.includes(browserAudioContextError)) {
+          if (!micContextErrorHandledRef.current) {
+            micContextErrorHandledRef.current = true;
+            setIsMicEnabled(false);
+            toast({
+              title: "Microphone input error",
+              description:
+                "Audio device failed while using the microphone. Mic has been turned off.",
+              variant: "destructive",
+            });
+          }
+          return;
+        }
+        originalConsoleDebugRef.current?.(...args);
+      };
+    }
+
+    return () => {
+      if (originalConsoleDebugRef.current) {
+        console.debug = originalConsoleDebugRef.current;
+        originalConsoleDebugRef.current = null;
+      }
+    };
+  }, [isMicEnabled, toast]);
+
+  useEffect(() => {
+    if (isMicEnabled) return;
+    micPressedKeysRef.current.forEach((noteKey) => {
+      const frequency = midiToFrequency(noteNameToMidi(noteKey));
+      pianoRef.current?.handleKeyRelease(noteKey, frequency, {
+        muteAudio: true,
+      });
+    });
+    micPressedKeysRef.current.clear();
+  }, [isMicEnabled]);
+
   const actionBars = {
     play: (
       <PlayModeActionBar
@@ -1993,6 +2196,8 @@ const Index = () => {
               onPlaybackInputEventRef={labInputEventRef}
               onActivePitchesChange={handleLabActivePitchesChange}
               onPlaybackNote={handleLabPlaybackNote}
+              onRegisterExpectedNotesProvider={registerTuneExpectedNotesProvider}
+              expectedNotesRegistrationActive={activeMode === "lab"}
             />
           </div>
         </Tabs>
@@ -2075,14 +2280,113 @@ const Index = () => {
                 </div>
               </div>
 
-              <MidiConnector
-                isConnected={!!connectedDevice}
-                deviceName={connectedDevice?.name || null}
-                attemptedNoDevice={attemptedNoDevice}
-                isSupported={isMidiSupported}
-                onConnect={requestAccess}
-                onDisconnect={disconnect}
-              />
+              <div className="flex items-center gap-1">
+                {isMicEnabled && (
+                  <div className="text-xs text-muted-foreground shrink min-w-0">
+                    {micInput.pitchDebug ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex cursor-pointer border-0 bg-transparent p-0 text-left text-inherit underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            <span className="whitespace-nowrap">
+                              {micInput.status === "running"
+                                ? "Listening"
+                                : micInput.status}
+                              {` ${Math.round(micInput.level * 100)}%`}
+                            </span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="start"
+                          side="bottom"
+                          className="w-auto max-w-[min(320px,90vw)] p-2"
+                        >
+                          <div className="font-mono text-[10px] leading-tight break-words whitespace-normal text-popover-foreground">
+                            <div>
+                              <span className="opacity-80">Live: </span>
+                              {micInput.pitchDebug.liveHz != null ? (
+                                <>
+                                  {micInput.pitchDebug.liveNote}{" "}
+                                  {micInput.pitchDebug.liveHz.toFixed(1)}Hz
+                                  <span className="opacity-70">
+                                    {" "}
+                                    c
+                                    {micInput.pitchDebug.liveConfidence.toFixed(
+                                      2,
+                                    )}{" "}
+                                    rms
+                                    {micInput.pitchDebug.liveRms.toFixed(3)}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="opacity-70">
+                                  — c
+                                  {micInput.pitchDebug.liveConfidence.toFixed(
+                                    2,
+                                  )}{" "}
+                                  rms
+                                  {micInput.pitchDebug.liveRms.toFixed(3)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="opacity-80">Accepted: </span>
+                              {micInput.pitchDebug.lastAcceptedNote ? (
+                                <>
+                                  {micInput.pitchDebug.lastAcceptedNote}
+                                  {micInput.pitchDebug.lastAcceptedMidi != null
+                                    ? ` (midi ${micInput.pitchDebug.lastAcceptedMidi})`
+                                    : ""}
+                                  <span className="opacity-70">
+                                    {" "}
+                                    ·{" "}
+                                    {micInput.pitchDebug.lastAcceptedSource ??
+                                      "—"}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="opacity-70">—</span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="opacity-80">Expected: </span>
+                              <span className="opacity-70">
+                                {micInput.pitchDebug.expectedNotes}
+                              </span>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <div className="whitespace-nowrap">
+                        {micInput.status === "running"
+                          ? "Listening"
+                          : micInput.status}
+                        {` ${Math.round(micInput.level * 100)}%`}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <Button
+                  variant={isMicEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsMicEnabled((prev) => !prev)}
+                  className="gap-2"
+                >
+                  <Mic className="h-4 w-4" />
+                  {isMicEnabled ? "Mic On" : "Mic Off"}
+                </Button>
+                <MidiConnector
+                  isConnected={!!connectedDevice}
+                  deviceName={connectedDevice?.name || null}
+                  attemptedNoDevice={attemptedNoDevice}
+                  isSupported={isMidiSupported}
+                  onConnect={requestAccess}
+                  onDisconnect={disconnect}
+                />
+              </div>
             </div>
 
             <Piano

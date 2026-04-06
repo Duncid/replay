@@ -71,7 +71,7 @@ export interface DebugMenuState {
   entries: DebugMenuEntry[];
 }
 
-interface LearnModeProps {
+export interface LearnModeProps {
   isPlaying: boolean;
   onPlaySequence: (sequence: NoteSequence) => void;
   onStopPlayback?: () => void;
@@ -89,6 +89,17 @@ interface LearnModeProps {
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
   onRegisterNoteOffHandler?: (
     handler: ((noteKey: string) => void) | null,
+  ) => void;
+  onRegisterExpectedNotesProvider?: (
+    provider:
+      | (() => { mids: number[]; t0: number; t1: number } | null)
+      | null,
+  ) => void;
+  /** Curriculum lesson target pitches for mic (Tune mode uses onRegisterExpectedNotesProvider). */
+  onRegisterLessonExpectedNotesProvider?: (
+    provider:
+      | (() => { mids: number[]; t0: number; t1: number } | null)
+      | null,
   ) => void;
   // Metronome control props
   metronomeBpm: number;
@@ -117,6 +128,8 @@ export function LearnMode({
   localUserId,
   onRegisterNoteHandler,
   onRegisterNoteOffHandler,
+  onRegisterExpectedNotesProvider,
+  onRegisterLessonExpectedNotesProvider,
   metronomeBpm,
   setMetronomeBpm,
   metronomeTimeSignature,
@@ -197,6 +210,46 @@ export function LearnMode({
       setShouldFetchGreeting(true);
     }
   }, [lesson.phase, setShouldFetchGreeting]);
+
+  useEffect(() => {
+    if (!onRegisterLessonExpectedNotesProvider) return;
+    if (activeTuneKey) {
+      onRegisterLessonExpectedNotesProvider(null);
+      return;
+    }
+    if (lesson.phase !== "your_turn") {
+      onRegisterLessonExpectedNotesProvider(null);
+      return;
+    }
+    const rawNotes = lesson.targetSequence?.notes;
+    if (!rawNotes?.length) {
+      onRegisterLessonExpectedNotesProvider(null);
+      return;
+    }
+    const seen = new Set<number>();
+    const mids: number[] = [];
+    for (const n of rawNotes) {
+      const p = Math.round(n.pitch);
+      if (!seen.has(p)) {
+        seen.add(p);
+        mids.push(p);
+      }
+    }
+    if (mids.length === 0) {
+      onRegisterLessonExpectedNotesProvider(null);
+      return;
+    }
+    onRegisterLessonExpectedNotesProvider(() => {
+      const now = performance.now() / 1000;
+      return { mids, t0: now - 0.7, t1: now + 1.1 };
+    });
+    return () => onRegisterLessonExpectedNotesProvider(null);
+  }, [
+    onRegisterLessonExpectedNotesProvider,
+    activeTuneKey,
+    lesson.phase,
+    lesson.targetSequence,
+  ]);
 
   // === Effects ===
   // Show error toast if teacher greeting fails
@@ -594,6 +647,7 @@ export function LearnMode({
           isRecording={isRecording}
           onRegisterNoteHandler={onRegisterNoteHandler}
           onRegisterNoteOffHandler={onRegisterNoteOffHandler}
+          onRegisterExpectedNotesProvider={onRegisterExpectedNotesProvider}
           onClearRecording={onClearRecording}
           onPlayheadReachedEnd={onCompleteRecordingNow}
           onTuneDebugMenuChange={handleTuneDebugMenuChange}

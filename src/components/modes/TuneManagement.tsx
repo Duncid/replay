@@ -99,6 +99,14 @@ interface TuneManagementProps {
   >;
   onActivePitchesChange?: (pitches: Set<number>) => void;
   onPlaybackNote?: (payload: { midi: number; durationSec: number }) => void;
+  /** Mic + transcription: expected pitches at the current playback gate (same as Tune practice). */
+  onRegisterExpectedNotesProvider?: (
+    provider:
+      | (() => { mids: number[]; t0: number; t1: number } | null)
+      | null,
+  ) => void;
+  /** False while this panel stays mounted but another app tab is active (avoids clobbering Learn tune mic). */
+  expectedNotesRegistrationActive?: boolean;
 }
 
 const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
@@ -918,6 +926,8 @@ export const TuneManagement = ({
   onPlaybackInputEventRef,
   onActivePitchesChange,
   onPlaybackNote,
+  onRegisterExpectedNotesProvider,
+  expectedNotesRegistrationActive = true,
 }: TuneManagementProps) => {
   const {
     selectedSource,
@@ -999,6 +1009,30 @@ export const TuneManagement = ({
       }
     };
   }, [onPlaybackInputEventRef, playback.handleInputEvent]);
+
+  useEffect(() => {
+    if (!onRegisterExpectedNotesProvider) return;
+    if (!expectedNotesRegistrationActive) {
+      onRegisterExpectedNotesProvider(null);
+      return;
+    }
+    const provider = () => {
+      const mids = playback.currentRequiredPitches;
+      if (!mids || mids.length === 0) return null;
+      const now = performance.now() / 1000;
+      return {
+        mids,
+        t0: now - 0.22,
+        t1: now + 0.42,
+      };
+    };
+    onRegisterExpectedNotesProvider(provider);
+    return () => onRegisterExpectedNotesProvider(null);
+  }, [
+    onRegisterExpectedNotesProvider,
+    expectedNotesRegistrationActive,
+    playback.currentRequiredPitches,
+  ]);
 
   // Track active notes to highlight piano keys and play sound
   useEffect(() => {
@@ -1713,12 +1747,20 @@ interface TuneManagementTabContentProps {
   >;
   onActivePitchesChange?: (pitches: Set<number>) => void;
   onPlaybackNote?: (payload: { midi: number; durationSec: number }) => void;
+  onRegisterExpectedNotesProvider?: (
+    provider:
+      | (() => { mids: number[]; t0: number; t1: number } | null)
+      | null,
+  ) => void;
+  expectedNotesRegistrationActive?: boolean;
 }
 
 export function TuneManagementTabContent({
   onPlaybackInputEventRef,
   onActivePitchesChange,
   onPlaybackNote,
+  onRegisterExpectedNotesProvider,
+  expectedNotesRegistrationActive = true,
 }: TuneManagementTabContentProps) {
   return (
     <TabsContent
@@ -1730,6 +1772,8 @@ export function TuneManagementTabContent({
         onPlaybackInputEventRef={onPlaybackInputEventRef}
         onActivePitchesChange={onActivePitchesChange}
         onPlaybackNote={onPlaybackNote}
+        onRegisterExpectedNotesProvider={onRegisterExpectedNotesProvider}
+        expectedNotesRegistrationActive={expectedNotesRegistrationActive}
       />
     </TabsContent>
   );
