@@ -1,0 +1,121 @@
+{
+  "notes": [
+    {
+      "endTime": 15.555554,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 78,
+      "program": 0,
+      "startTime": 14.444443000000001,
+      "velocity": 0.3543307086614173
+    },
+    {
+      "endTime": 16.666665000000002,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 81,
+      "program": 0,
+      "startTime": 15.555554,
+      "velocity": 0.3543307086614173
+    },
+    {
+      "endTime": 17.777776000000003,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 79,
+      "program": 0,
+      "startTime": 16.666665000000002,
+      "velocity": 0.3543307086614173
+    },
+    {
+      "endTime": 18.888887,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 78,
+      "program": 0,
+      "startTime": 17.777776000000003,
+      "velocity": 0.3543307086614173
+    },
+    {
+      "endTime": 19.999998,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 73,
+      "program": 0,
+      "startTime": 18.888887,
+      "velocity": 0.3543307086614173
+    },
+    {
+      "endTime": 21.111109000000003,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 71,
+      "program": 0,
+      "startTime": 19.999998,
+      "velocity": 0.3543307086614173
+    },
+    {
+      "endTime": 22.22222,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 73,
+      "program": 0,
+      "startTime": 21.111109000000003,
+      "velocity": 0.3543307086614173
+    },
+    {
+      "endTime": 23.333331,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 74,
+      "program": 0,
+      "startTime": 22.22222,
+      "velocity": 0.49606299212598426
+    },
+    {
+      "endTime": 26.666664,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 69,
+      "program": 0,
+      "startTime": 23.333331,
+      "velocity": 0.49606299212598426
+    },
+    {
+      "endTime": 39.999996,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 66,
+      "program": 0,
+      "startTime": 26.666664,
+      "velocity": 0.3543307086614173
+    }
+  ],
+  "totalTime": 39.999996,
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    },
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    },
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    },
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    }
+  ]
+}

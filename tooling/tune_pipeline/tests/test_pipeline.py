@@ -38,8 +38,10 @@ def test_build_pipeline(tmp_path: Path) -> None:
     teacher = {
         "schemaVersion": "nuggets-teacher.v1",
         "pipelineSettings": {
-            "handSplitPolicy": {"mode": "byStaff"},
-            "staffToHandDefault": {"1": "RH", "2": "LH"},
+            "handAssignmentPolicy": {
+                "mode": "byInstrument",
+                "instrumentToHand": {"inst1": "RH", "inst2": "LH"},
+            }
         },
         "nuggets": [
             {
@@ -48,20 +50,53 @@ def test_build_pipeline(tmp_path: Path) -> None:
                 "location": {"startMeasure": 1, "startBeat": 1, "endMeasure": 2, "endBeat": 1},
             }
         ],
+        "assemblies": [
+            {
+                "id": "A1",
+                "tier": 1,
+                "nuggetIds": ["N1"],
+            }
+        ]
     }
     (tune_folder / "teacher.json").write_text(json.dumps(teacher), encoding="utf-8")
+    (tune_folder / "tune.inst1.ns.json").write_text(
+        json.dumps(
+            {
+                "notes": [{"pitch": 60, "startTime": 0.0, "endTime": 1.0, "velocity": 0.8}],
+                "totalTime": 1.0,
+                "tempos": [{"time": 0.0, "qpm": 120}],
+                "timeSignatures": [{"time": 0.0, "numerator": 4, "denominator": 4}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tune_folder / "tune.inst2.ns.json").write_text(
+        json.dumps(
+            {
+                "notes": [{"pitch": 48, "startTime": 0.0, "endTime": 1.0, "velocity": 0.7}],
+                "totalTime": 1.0,
+                "tempos": [{"time": 0.0, "qpm": 120}],
+                "timeSignatures": [{"time": 0.0, "numerator": 4, "denominator": 4}],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     summary = build_tune(tune_folder)
+    output_dir = tune_folder / "output"
 
     assert summary["base"] == "tune"
-    assert (tune_folder / "tune.xml").exists()
-    assert (tune_folder / "tune.mid").exists()
-    assert (tune_folder / "tune.ns.json").exists()
-    assert (tune_folder / "tune.rh.ns.json").exists()
-    assert (tune_folder / "tune.lh.ns.json").exists()
-    resolved_path = tune_folder / "tune.nuggets.resolved.v1.json"
-    assert resolved_path.exists()
-    resolved = json.loads(resolved_path.read_text(encoding="utf-8"))
-    assert "N1" in resolved["nuggets"]
-    notes = json.loads((tune_folder / "tune.ns.json").read_text(encoding="utf-8"))["notes"]
+    assert (output_dir / "tune.xml").exists()
+    assert (output_dir / "tune.inst1.ns.json").exists()
+    assert (output_dir / "tune.inst2.ns.json").exists()
+    assert not (output_dir / "tune.ns.json").exists()
+    assert not (output_dir / "tune.rh.ns.json").exists()
+    assert not (output_dir / "tune.lh.ns.json").exists()
+    assert (output_dir / "nuggets" / "N1.inst1.ns.json").exists()
+    assert (output_dir / "nuggets" / "N1.inst2.ns.json").exists()
+    assert (output_dir / "assemblies" / "A1.inst1.ns.json").exists()
+    assert (output_dir / "assemblies" / "A1.inst2.ns.json").exists()
+    assert not (output_dir / "nuggets" / "N1.ns.json").exists()
+    assert not (output_dir / "assemblies" / "A1.ns.json").exists()
+    notes = json.loads((output_dir / "tune.inst1.ns.json").read_text(encoding="utf-8"))["notes"]
     assert notes == sorted(notes, key=lambda n: (n["startTime"], n["pitch"], n["endTime"]))

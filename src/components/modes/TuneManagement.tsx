@@ -1,4 +1,7 @@
-import { PianoSheetPixi } from "@/components/PianoSheetPixi";
+import {
+  PianoSheetPixi,
+  getRecommendedBaseUnit,
+} from "@/components/PianoSheetPixi";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,6 +49,7 @@ import {
   bundleSingleTuneAssets,
   getAssemblyDspXml,
   getAssemblyLh,
+  getAssemblyInst,
   getAssemblyNs,
   getAssemblyRh,
   getAssemblyXml,
@@ -54,12 +58,15 @@ import {
   getLocalTuneKeys,
   getNuggetDspXml,
   getNuggetLh,
+  getNuggetInst,
   getNuggetNs,
   getNuggetRh,
   getNuggetXml,
   getTuneDspXml,
   getTuneLh,
   getTuneLhXml,
+  getTuneInst1,
+  getTuneInst2,
   getTuneNs,
   getTuneRh,
   getTuneRhXml,
@@ -110,6 +117,44 @@ interface TuneManagementProps {
 }
 
 const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
+
+const isNoteSequence = (value: unknown): value is NoteSequence =>
+  Boolean(
+    value &&
+      typeof value === "object" &&
+      Array.isArray((value as NoteSequence).notes),
+  );
+
+const mergeNoteSequences = (
+  ...sequenceCandidates: Array<NoteSequence | null | undefined>
+): NoteSequence => {
+  const sequences = sequenceCandidates.filter(isNoteSequence);
+  if (!sequences.length) return EMPTY_SEQUENCE;
+
+  const mergedNotes = sequences
+    .flatMap((sequence) => sequence.notes)
+    .slice()
+    .sort(
+      (a, b) =>
+        a.startTime - b.startTime || a.pitch - b.pitch || a.endTime - b.endTime,
+    );
+  const totalTime = mergedNotes.length
+    ? Math.max(...mergedNotes.map((note) => note.endTime))
+    : Math.max(...sequences.map((sequence) => sequence.totalTime ?? 0), 0);
+  const tempoSource = sequences.find((sequence) => sequence.tempos?.length);
+  const signatureSource = sequences.find(
+    (sequence) => sequence.timeSignatures?.length,
+  );
+
+  return {
+    ...sequences[0],
+    notes: mergedNotes,
+    totalTime,
+    tempos: tempoSource?.tempos ?? sequences[0].tempos,
+    timeSignatures:
+      signatureSource?.timeSignatures ?? sequences[0].timeSignatures,
+  };
+};
 
 type TuneSource = "published" | "local";
 type TargetType = "full" | "nuggets" | "assemblies";
@@ -467,7 +512,12 @@ function useTuneManagementState(): TuneManagementContextValue {
       if (selectedHand === "right") {
         return (getTuneRh(selectedTune) as NoteSequence) ?? EMPTY_SEQUENCE;
       }
-      return (getTuneNs(selectedTune) as NoteSequence) ?? EMPTY_SEQUENCE;
+      const grouped = getTuneNs(selectedTune) as NoteSequence | null;
+      if (isNoteSequence(grouped)) return grouped;
+      return mergeNoteSequences(
+        getTuneInst1(selectedTune) as NoteSequence | null,
+        getTuneInst2(selectedTune) as NoteSequence | null,
+      );
     }
     if (selectedTarget === "assemblies") {
       if (selectedHand === "left") {
@@ -482,9 +532,18 @@ function useTuneManagementState(): TuneManagementContextValue {
           EMPTY_SEQUENCE
         );
       }
-      return (
-        (getAssemblyNs(selectedTune, selectedItemId) as NoteSequence) ??
-        EMPTY_SEQUENCE
+      const grouped = getAssemblyNs(
+        selectedTune,
+        selectedItemId,
+      ) as NoteSequence | null;
+      if (isNoteSequence(grouped)) return grouped;
+      return mergeNoteSequences(
+        getAssemblyInst(selectedTune, selectedItemId, "inst1") as
+          | NoteSequence
+          | null,
+        getAssemblyInst(selectedTune, selectedItemId, "inst2") as
+          | NoteSequence
+          | null,
       );
     }
     if (selectedHand === "left") {
@@ -499,9 +558,18 @@ function useTuneManagementState(): TuneManagementContextValue {
         EMPTY_SEQUENCE
       );
     }
-    return (
-      (getNuggetNs(selectedTune, selectedItemId) as NoteSequence) ??
-      EMPTY_SEQUENCE
+    const grouped = getNuggetNs(
+      selectedTune,
+      selectedItemId,
+    ) as NoteSequence | null;
+    if (isNoteSequence(grouped)) return grouped;
+    return mergeNoteSequences(
+      getNuggetInst(selectedTune, selectedItemId, "inst1") as
+        | NoteSequence
+        | null,
+      getNuggetInst(selectedTune, selectedItemId, "inst2") as
+        | NoteSequence
+        | null,
     );
   }, [
     selectedSource,
@@ -932,6 +1000,8 @@ export const TuneManagement = ({
   const {
     selectedSource,
     selectedTune,
+    selectedTarget,
+    selectedHand,
     showPublishDialog,
     setShowPublishDialog,
     publishMode,
@@ -966,26 +1036,63 @@ export const TuneManagement = ({
 
   // ── Interactive playback engine ──────────────────────────────────
 
-  const notes = useMemo<NoteEvent[]>(() => {
-    return labSequence.notes.map((note, index) => {
+  const { notes, noteInstrumentById, instrumentIds } = useMemo(() => {
+    const instrumentById = new Map<string, number>();
+    const eventRows = labSequence.notes.map((note, index) => {
       const noteName = midiToNoteName(note.pitch);
+      const instrumentId = typeof note.instrument === "number" ? note.instrument : 0;
+      const id = `${note.pitch}-${note.startTime}-${note.endTime}-${instrumentId}-${index}`;
+      instrumentById.set(id, instrumentId);
       return {
-        id: `${note.pitch}-${note.startTime}-${index}`,
+        id,
         midi: note.pitch,
         start: note.startTime,
         dur: Math.max(0, note.endTime - note.startTime),
-        accidental: noteName.includes("#") ? "sharp" : null,
+        accidental: noteName.includes("#") ? ("sharp" as const) : null,
       };
     });
+    return {
+      notes: eventRows,
+      noteInstrumentById: instrumentById,
+      instrumentIds: Array.from(new Set(instrumentById.values())).sort(
+        (a, b) => a - b,
+      ),
+    };
   }, [labSequence.notes]);
 
-  const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+  const onTickRefPrimary = useRef<((timeSec: number) => void) | null>(null);
+  const onTickRefSecondary = useRef<((timeSec: number) => void) | null>(null);
   const osmdTickRef = useRef<((timeSec: number) => void) | null>(null);
 
   const onTick = useCallback((t: number) => {
-    onTickRef.current?.(t);
+    onTickRefPrimary.current?.(t);
+    onTickRefSecondary.current?.(t);
     osmdTickRef.current?.(t);
   }, []);
+
+  const showDualPixi =
+    selectedSource === "local" &&
+    selectedHand === "full" &&
+    instrumentIds.length >= 2;
+  const topInstrumentId = instrumentIds[0] ?? 0;
+  const bottomInstrumentId = instrumentIds[1] ?? 1;
+
+  const topNotes = useMemo(
+    () =>
+      showDualPixi
+        ? notes.filter((note) => noteInstrumentById.get(note.id) === topInstrumentId)
+        : notes,
+    [noteInstrumentById, notes, showDualPixi, topInstrumentId],
+  );
+  const bottomNotes = useMemo(
+    () =>
+      showDualPixi
+        ? notes.filter(
+            (note) => noteInstrumentById.get(note.id) === bottomInstrumentId,
+          )
+        : [],
+    [bottomInstrumentId, noteInstrumentById, notes, showDualPixi],
+  );
 
   const noteById = useMemo(() => {
     return new Map(notes.map((note) => [note.id, note]));
@@ -1109,6 +1216,27 @@ export const TuneManagement = ({
 
   const pixiContainerRef = useRef<HTMLDivElement>(null);
   const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
+  const dualPixiGap = 8;
+  const dualPaneHeight = showDualPixi
+    ? Math.max(0, (pixiSize.height - dualPixiGap) / 2)
+    : pixiSize.height;
+
+  const getTrackCount = useCallback((rows: NoteEvent[]) => {
+    if (!rows.length) return 1;
+    const minMidi = Math.min(...rows.map((note) => note.midi));
+    const maxMidi = Math.max(...rows.map((note) => note.midi));
+    return maxMidi - minMidi + 1;
+  }, []);
+
+  const sharedPixiSize = useMemo(() => {
+    if (!showDualPixi) return undefined;
+    const topTracks = getTrackCount(topNotes);
+    const bottomTracks = getTrackCount(bottomNotes);
+    return Math.min(
+      getRecommendedBaseUnit(dualPaneHeight, topTracks),
+      getRecommendedBaseUnit(dualPaneHeight, bottomTracks),
+    );
+  }, [bottomNotes, dualPaneHeight, getTrackCount, showDualPixi, topNotes]);
 
   // Re-run when the component transitions past early returns
   // (isLoadingList starts true on mount → pixi div isn't in DOM yet)
@@ -1230,18 +1358,57 @@ export const TuneManagement = ({
         className="w-full flex-1 min-h-0 overflow-hidden"
       >
         {pixiSize.width > 0 && pixiSize.height > 0 && (
-          <PianoSheetPixi
-            notes={notes}
-            width={pixiSize.width}
-            height={pixiSize.height}
-            timeSignatures={labSequence.timeSignatures}
-            qpm={bpm}
-            onTickRef={onTickRef}
-            focusedNoteIds={playback.focusedNoteIds}
-            activeNoteIds={playback.activeNoteIds}
-            followPlayhead
-            isAutoplay={playback.isAutoplay}
-          />
+          <>
+            {showDualPixi ? (
+              <div
+                className="w-full h-full grid"
+                style={{
+                  gridTemplateRows: "1fr 1fr",
+                  rowGap: `${dualPixiGap}px`,
+                }}
+              >
+                <PianoSheetPixi
+                  notes={topNotes}
+                  width={pixiSize.width}
+                  height={dualPaneHeight}
+                  size={sharedPixiSize}
+                  timeSignatures={labSequence.timeSignatures}
+                  qpm={bpm}
+                  onTickRef={onTickRefPrimary}
+                  focusedNoteIds={playback.focusedNoteIds}
+                  activeNoteIds={playback.activeNoteIds}
+                  followPlayhead
+                  isAutoplay={playback.isAutoplay}
+                />
+                <PianoSheetPixi
+                  notes={bottomNotes}
+                  width={pixiSize.width}
+                  height={dualPaneHeight}
+                  size={sharedPixiSize}
+                  timeSignatures={labSequence.timeSignatures}
+                  qpm={bpm}
+                  onTickRef={onTickRefSecondary}
+                  focusedNoteIds={playback.focusedNoteIds}
+                  activeNoteIds={playback.activeNoteIds}
+                  followPlayhead
+                  isAutoplay={playback.isAutoplay}
+                />
+              </div>
+            ) : (
+              <PianoSheetPixi
+                notes={notes}
+                width={pixiSize.width}
+                height={pixiSize.height}
+                timeSignatures={labSequence.timeSignatures}
+                qpm={bpm}
+                onTickRef={onTickRefPrimary}
+                focusedNoteIds={playback.focusedNoteIds}
+                activeNoteIds={playback.activeNoteIds}
+                followPlayhead
+                isAutoplay={playback.isAutoplay}
+              />
+            )}
+          </>
         )}
       </div>
 

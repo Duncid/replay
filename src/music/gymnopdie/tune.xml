@@ -9,7 +9,7 @@
     <creator type="composer">Erik Satie(1866 – 1925)</creator>
     <creator type="lyricist">Éric Alfred Leslie Satie</creator>
     <encoding>
-      <encoding-date>2026-02-01</encoding-date>
+      <encoding-date>2026-02-24</encoding-date>
       <software>music21 v.9.9.1</software>
       <software>MuseScore 3.6.2</software>
       <supports attribute="new-system" element="print" type="yes" value="yes" />
@@ -53,11 +53,11 @@ Trois Gymnopédies</credit-words>
     <score-part id="P1">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Ic51850fbfb7bf43c7b2e1dc2694810b9">
+      <score-instrument id="Iee8ec611ce5c1aaf17cb7acded4fd3c8">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Ic51850fbfb7bf43c7b2e1dc2694810b9">
+      <midi-instrument id="Iee8ec611ce5c1aaf17cb7acded4fd3c8">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
@@ -106,6 +106,12 @@ Trois Gymnopédies</credit-words>
           <words />
         </direction-type>
         <staff>1</staff>
+      </direction>
+      <direction placement="above">
+        <direction-type>
+          <words />
+        </direction-type>
+        <staff>1</staff>
         <sound tempo="54" />
       </direction>
       <direction placement="below">
@@ -129,7 +135,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -139,7 +145,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -151,7 +157,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -164,7 +170,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -178,7 +184,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -199,7 +205,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -209,7 +215,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -222,7 +228,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -235,7 +241,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -249,7 +255,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -270,7 +276,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -280,7 +286,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -292,7 +298,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -305,7 +311,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -319,7 +325,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -340,7 +346,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -350,7 +356,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -363,7 +369,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -376,7 +382,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -390,7 +396,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -453,7 +459,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -463,7 +469,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -475,7 +481,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -488,7 +494,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -502,7 +508,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -519,7 +525,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <note default-x="93.02" default-y="5">
         <pitch>
           <step>G</step>
@@ -564,7 +574,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -574,7 +584,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -587,7 +597,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -600,7 +610,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -614,7 +624,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -684,7 +694,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -694,7 +704,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -706,7 +716,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -719,7 +729,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -733,7 +743,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -766,7 +776,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -776,7 +786,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -789,7 +799,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -802,7 +812,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -816,7 +826,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -868,7 +878,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -878,7 +888,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -890,7 +900,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -903,7 +913,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -917,7 +927,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -960,7 +970,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -970,7 +980,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -983,7 +993,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -996,7 +1006,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1010,7 +1020,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1027,7 +1037,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <note default-x="89.52" default-y="-35">
         <pitch>
           <step>F</step>
@@ -1056,7 +1070,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1066,7 +1080,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1078,7 +1092,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1091,7 +1105,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1105,7 +1119,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1137,7 +1151,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1147,7 +1161,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1160,7 +1174,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1173,7 +1187,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1187,7 +1201,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1250,7 +1264,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1260,7 +1274,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1272,7 +1286,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1285,7 +1299,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1299,7 +1313,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1349,7 +1363,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1359,7 +1373,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1372,7 +1386,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1385,7 +1399,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1399,7 +1413,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1454,7 +1468,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1464,7 +1478,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1476,7 +1490,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1489,7 +1503,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1503,7 +1517,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1520,7 +1534,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="6.5" default-y="-40" relative-y="-40">
@@ -1557,7 +1575,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1567,7 +1585,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1580,7 +1598,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1593,7 +1611,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1607,7 +1625,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1635,7 +1653,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1645,7 +1663,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1658,7 +1676,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1671,7 +1689,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1686,7 +1704,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1720,7 +1738,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1730,7 +1748,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1742,7 +1760,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1755,7 +1773,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1769,7 +1787,7 @@ Trois Gymnopédies</credit-words>
           <octave>1</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1816,7 +1834,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1826,7 +1844,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1838,7 +1856,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1852,7 +1870,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1885,7 +1903,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1895,7 +1913,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1907,7 +1925,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1919,7 +1937,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -1933,7 +1951,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -1950,7 +1968,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>108.58</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <note default-x="93.02" default-y="-40">
         <pitch>
           <step>E</step>
@@ -1982,7 +2004,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -1993,7 +2015,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -2006,7 +2028,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2018,7 +2040,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2032,7 +2054,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2100,7 +2122,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2110,7 +2132,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2123,7 +2145,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -2136,7 +2158,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2150,7 +2172,7 @@ Trois Gymnopédies</credit-words>
           <octave>1</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2198,7 +2220,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2208,7 +2230,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2220,7 +2242,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2232,7 +2254,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2246,7 +2268,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2302,7 +2324,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2312,7 +2334,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2324,7 +2346,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2336,7 +2358,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2348,7 +2370,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2362,7 +2384,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2420,7 +2442,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2431,7 +2453,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -2444,7 +2466,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2456,7 +2478,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2468,7 +2490,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2482,7 +2504,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2499,7 +2521,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <top-system-distance>70</top-system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <note default-x="93.02" default-y="-10">
         <pitch>
           <step>D</step>
@@ -2560,7 +2586,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2571,7 +2597,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -2585,7 +2611,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2597,7 +2623,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2609,7 +2635,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2623,7 +2649,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2673,7 +2699,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2683,7 +2709,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2696,7 +2722,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -2710,7 +2736,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -2725,7 +2751,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2781,7 +2807,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2791,7 +2817,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2804,7 +2830,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -2817,7 +2843,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2831,7 +2857,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2894,7 +2920,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -2904,7 +2930,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2916,7 +2942,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2928,7 +2954,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2940,7 +2966,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -2954,7 +2980,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -2991,7 +3017,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -3002,7 +3028,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -3015,7 +3041,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3027,7 +3053,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3039,7 +3065,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3053,7 +3079,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -3070,7 +3096,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="3.25" default-y="-40" relative-y="-40">
@@ -3125,7 +3155,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -3136,7 +3166,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -3150,7 +3180,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3162,7 +3192,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3174,7 +3204,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3188,7 +3218,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -3215,7 +3245,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -3225,7 +3255,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3237,7 +3267,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3249,7 +3279,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3263,7 +3293,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -3297,7 +3327,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -3307,7 +3337,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3320,7 +3350,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3333,7 +3363,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3348,7 +3378,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -3411,7 +3441,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -3421,7 +3451,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3433,7 +3463,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3446,7 +3476,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3460,7 +3490,7 @@ Trois Gymnopédies</credit-words>
           <octave>1</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -3515,7 +3545,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -3526,7 +3556,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3538,7 +3568,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3550,7 +3580,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3564,7 +3594,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -3581,7 +3611,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="3.25" default-y="-61.65" relative-y="-40">
@@ -3640,7 +3674,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -3650,7 +3684,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3663,7 +3697,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3676,7 +3710,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3688,7 +3722,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -3702,7 +3736,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4069,7 +4103,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4079,7 +4113,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4091,7 +4125,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4104,7 +4138,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4118,7 +4152,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4135,7 +4169,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <note>
         <rest measure="yes" />
         <duration>30240</duration>
@@ -4151,7 +4189,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4161,7 +4199,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4174,7 +4212,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4187,7 +4225,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4201,7 +4239,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4222,7 +4260,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4232,7 +4270,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4244,7 +4282,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4257,7 +4295,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4271,7 +4309,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4292,7 +4330,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4302,7 +4340,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4315,7 +4353,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4328,7 +4366,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4342,7 +4380,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4405,7 +4443,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4415,7 +4453,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4427,7 +4465,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4440,7 +4478,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4454,7 +4492,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4510,7 +4548,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4520,7 +4558,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4533,7 +4571,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4546,7 +4584,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4560,7 +4598,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4577,7 +4615,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>120.71</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="3.25" default-y="-55.94" relative-x="7.06" relative-y="-28.11">
@@ -4642,7 +4684,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4652,7 +4694,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4664,7 +4706,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4677,7 +4719,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4691,7 +4733,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4727,7 +4769,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4737,7 +4779,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4750,7 +4792,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4763,7 +4805,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4777,7 +4819,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4820,7 +4862,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4830,7 +4872,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4842,7 +4884,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4855,7 +4897,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4869,7 +4911,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4912,7 +4954,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -4922,7 +4964,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4935,7 +4977,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4948,7 +4990,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -4962,7 +5004,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -4996,7 +5038,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5006,7 +5048,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5018,7 +5060,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5031,7 +5073,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5045,7 +5087,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5077,7 +5119,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5087,7 +5129,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5100,7 +5142,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5113,7 +5155,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5127,7 +5169,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5144,7 +5186,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <top-system-distance>70</top-system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="4.7" default-y="-53.52" relative-x="5.49" relative-y="-24.45">
@@ -5202,7 +5248,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5212,7 +5258,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5224,7 +5270,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5237,7 +5283,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5251,7 +5297,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5301,7 +5347,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5311,7 +5357,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5324,7 +5370,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5337,7 +5383,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5351,7 +5397,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5406,7 +5452,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5416,7 +5462,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5428,7 +5474,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5441,7 +5487,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5455,7 +5501,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5497,7 +5543,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5507,7 +5553,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5520,7 +5566,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5533,7 +5579,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5547,7 +5593,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5575,7 +5621,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5585,7 +5631,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5598,7 +5644,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5611,7 +5657,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5626,7 +5672,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5643,7 +5689,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <note default-x="93.02" default-y="0">
         <pitch>
           <step>F</step>
@@ -5666,7 +5716,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5676,7 +5726,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5688,7 +5738,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5701,7 +5751,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5715,7 +5765,7 @@ Trois Gymnopédies</credit-words>
           <octave>1</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5752,7 +5802,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5762,7 +5812,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5774,7 +5824,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5788,7 +5838,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5837,7 +5887,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5847,7 +5897,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5859,7 +5909,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5871,7 +5921,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5885,7 +5935,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -5922,7 +5972,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -5933,7 +5983,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -5946,7 +5996,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5958,7 +6008,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -5972,7 +6022,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6040,7 +6090,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6050,7 +6100,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6063,7 +6113,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -6076,7 +6126,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6090,7 +6140,7 @@ Trois Gymnopédies</credit-words>
           <octave>1</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6144,7 +6194,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6154,7 +6204,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6166,7 +6216,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6178,7 +6228,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6192,7 +6242,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6209,7 +6259,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="3.25" default-y="-40" relative-y="-40">
@@ -6275,7 +6329,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6285,7 +6339,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6297,7 +6351,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6309,7 +6363,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6321,7 +6375,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6335,7 +6389,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6375,7 +6429,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6386,7 +6440,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -6399,7 +6453,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6411,7 +6465,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6423,7 +6477,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6437,7 +6491,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6488,7 +6542,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6499,7 +6553,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -6513,7 +6567,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6525,7 +6579,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6537,7 +6591,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6551,7 +6605,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6601,7 +6655,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6611,7 +6665,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6624,7 +6678,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -6638,7 +6692,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -6653,7 +6707,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6709,7 +6763,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6719,7 +6773,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6732,7 +6786,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -6745,7 +6799,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6759,7 +6813,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6776,7 +6830,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <direction placement="below">
         <direction-type>
           <dynamics default-x="3.25" default-y="-40" relative-y="-40">
@@ -6834,7 +6892,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6844,7 +6902,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6856,7 +6914,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6868,7 +6926,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6880,7 +6938,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6894,7 +6952,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -6931,7 +6989,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -6942,7 +7000,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -6955,7 +7013,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6967,7 +7025,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6979,7 +7037,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -6993,7 +7051,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -7053,7 +7111,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -7064,7 +7122,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -7078,7 +7136,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7090,7 +7148,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7102,7 +7160,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7116,7 +7174,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -7143,7 +7201,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -7153,7 +7211,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7165,7 +7223,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7177,7 +7235,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7191,7 +7249,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -7226,7 +7284,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -7236,7 +7294,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7248,7 +7306,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7261,7 +7319,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -7274,7 +7332,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7288,7 +7346,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -7355,7 +7413,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -7365,7 +7423,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7378,7 +7436,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -7392,7 +7450,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -7407,7 +7465,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -7424,7 +7482,11 @@ Trois Gymnopédies</credit-words>
           </system-margins>
           <system-distance>122.6</system-distance>
         </system-layout>
+        <staff-layout />
       </print>
+      <attributes>
+        <staff-details print-object="yes" />
+      </attributes>
       <note default-x="93.02" default-y="-5">
         <pitch>
           <step>E</step>
@@ -7469,7 +7531,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -7480,7 +7542,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -7493,7 +7555,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7505,7 +7567,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7519,7 +7581,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -7575,7 +7637,7 @@ Trois Gymnopédies</credit-words>
       <note>
         <rest />
         <duration>10080</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>quarter</type>
         <staff>2</staff>
       </note>
@@ -7585,7 +7647,7 @@ Trois Gymnopédies</credit-words>
           <octave>3</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7598,7 +7660,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -7612,7 +7674,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <accidental>natural</accidental>
         <stem>up</stem>
@@ -7625,7 +7687,7 @@ Trois Gymnopédies</credit-words>
           <octave>4</octave>
         </pitch>
         <duration>20160</duration>
-        <voice>6</voice>
+        <voice>7</voice>
         <type>half</type>
         <stem>up</stem>
         <staff>2</staff>
@@ -7639,7 +7701,7 @@ Trois Gymnopédies</credit-words>
           <octave>2</octave>
         </pitch>
         <duration>30240</duration>
-        <voice>7</voice>
+        <voice>8</voice>
         <type>half</type>
         <dot />
         <stem>down</stem>
@@ -7809,6 +7871,12 @@ Trois Gymnopédies</credit-words>
           <words />
         </direction-type>
         <staff>1</staff>
+      </direction>
+      <direction placement="above">
+        <direction-type>
+          <words />
+        </direction-type>
+        <staff>1</staff>
         <sound tempo="46" />
       </direction>
       <note default-x="17.74" default-y="-50">
@@ -7906,6 +7974,12 @@ Trois Gymnopédies</credit-words>
       <direction placement="above">
         <direction-type>
           <words default-y="11.74" font-size="10" font-style="italic" relative-x="-17.19" relative-y="21.74">34</words>
+        </direction-type>
+        <staff>1</staff>
+      </direction>
+      <direction placement="above">
+        <direction-type>
+          <words />
         </direction-type>
         <staff>1</staff>
       </direction>
