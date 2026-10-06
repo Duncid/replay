@@ -104,7 +104,7 @@ export interface FetchTeacherGreetingParams {
  */
 export async function startCurriculumLesson(
   params: StartCurriculumLessonParams
-): Promise<LessonStartResponse | { prompt: string; lessonBrief: any; setup: any }> {
+): Promise<LessonStartResponse | { prompt: string; lessonBrief: LessonBrief; setup: LessonRunSetup }> {
   const { data, error } = await supabase.functions.invoke("lesson-start", {
     body: {
       lessonKey: params.lessonKey,
@@ -123,7 +123,7 @@ export async function startCurriculumLesson(
 
   // In debug mode, the response structure is different
   if (params.debug) {
-    return data as { prompt: string; lessonBrief: any; setup: any };
+    return data as { prompt: string; lessonBrief: LessonBrief; setup: LessonRunSetup };
   }
 
   return data as LessonStartResponse;

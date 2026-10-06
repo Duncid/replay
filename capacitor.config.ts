@@ -1,11 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.replay.app',
+  appId: 'com.playbk.app',
   appName: 'Replay',
   webDir: 'dist',
   ios: {
-    contentInset: 'always',
+    // The root layout applies the actual native safe-area CSS variables.
+    contentInset: 'never',
   },
 };
 

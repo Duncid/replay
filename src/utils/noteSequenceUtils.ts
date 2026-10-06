@@ -1,3 +1,4 @@
+import { loadMagentaScript } from "@/lib/magenta";
 import { DEFAULT_QPM, Note, NoteSequence } from "@/types/noteSequence";
 
 // MIDI note number constants
@@ -471,9 +472,7 @@ export async function musicXmlToNoteSequence(
   } = options;
   const { pyodide } = await loadMusic21Runtime();
 
-  if (!window.mm?.midiToSequenceProto) {
-    throw new Error("Magenta MIDI conversion is unavailable.");
-  }
+  await loadMagentaScript();
 
   pyodide.globals.set("xml_text", xmlText);
   pyodide.globals.set("merge_ties", mergeTies);

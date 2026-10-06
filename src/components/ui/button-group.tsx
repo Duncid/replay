@@ -19,7 +19,7 @@ const ButtonGroup = React.forwardRef<
         const isFirst = index === 0
         const isLast = index === childrenArray.length - 1
 
-        return React.cloneElement(child as React.ReactElement<any>, {
+        return React.cloneElement(child as React.ReactElement<{ className?: string }>, {
           className: cn(
             child.props.className,
             !isFirst && "rounded-l-none",

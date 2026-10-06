@@ -8,7 +8,7 @@ import type {
   WorkletMode,
   WorkletToMainMessage,
 } from "@/transcription/types";
-import micWorkletUrl from "@/audio/mic/worklet/MicWorkletProcessor.ts?url";
+import micWorkletUrl from "@/audio/mic/worklet/MicWorkletProcessor.ts?worker&url";
 
 type MicCaptureOptions = {
   chunkSize?: number;

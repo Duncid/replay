@@ -30,26 +30,25 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func requestAccess(_ call: CAPPluginCall) {
-        // NSLog("===== [MIDI Bridge] [DEBUG] requestAccess ENTRY - native Swift method invoked =====")
-        let webView = bridge?.webView
-        midiManager.start(webView: webView)
-        if webView == nil {
-            for delay in [0.1, 0.3, 0.6, 1.0] as [Double] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                    let wv = self?.bridge?.webView
-                    self?.midiManager.updateWebView(wv)
-                }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let webView = self.bridge?.webView else {
+                call.reject("MIDI bridge is not ready. Please reconnect.")
+                return
+            }
+            do {
+                try self.midiManager.start(webView: webView)
+                call.resolve(["sources": self.midiManager.getSourceNames()])
+            } catch {
+                call.reject(error.localizedDescription)
             }
         }
-        let sources = midiManager.getSourceNames()
-        // NSLog("[MIDI Bridge] [DEBUG] requestAccess: resolving with sources: %@", sources.description)
-        call.resolve(["sources": sources])
-        // NSLog("[MIDI Bridge] [DEBUG] requestAccess EXIT - call resolved")
     }
 
     @objc func disconnect(_ call: CAPPluginCall) {
-        midiManager.stop()
-        call.resolve()
+        DispatchQueue.main.async { [weak self] in
+            self?.midiManager.stop()
+            call.resolve()
+        }
     }
 }
 
@@ -61,35 +60,48 @@ private final class MidiManager {
     private var inputPort: MIDIPortRef = 0
     private var connectedSources: Set<MIDIEndpointRef> = []
     private weak var webView: WKWebView?
-    private let queue = DispatchQueue(label: "com.replay.midi", qos: .userInitiated)
 
     /// Thread-safe buffer + single main-queue flush to avoid one evaluateJavaScript per packet.
     private let pendingLock = NSLock()
     private var pendingPackets: [[UInt8]] = []
     private var flushScheduled = false
 
-    func start(webView: WKWebView?) {
+    func start(webView: WKWebView) throws {
         self.webView = webView
+        if client != 0 && inputPort != 0 {
+            try connectAllSources()
+            return
+        }
         // print("[MIDI Bridge] [DEBUG] MidiManager.start ENTRY, webView is nil:", webView == nil)
 
         var result = MIDIClientCreateWithBlock("Replay MIDI" as CFString, &client) { [weak self] message in
             self?.handleNotify(message)
         }
         guard result == noErr else {
-            // print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIClientCreateWithBlock failed, result:", result)
-            return
+            throw midiError("Create MIDI client", status: result)
         }
 
         result = MIDIInputPortCreateWithBlock(client, "Replay Input" as CFString, &inputPort) { [weak self] packetList, _ in
             self?.handlePacketList(packetList)
         }
         guard result == noErr else {
-            // print("[MIDI Bridge] [DEBUG] MidiManager.start: MIDIInputPortCreateWithBlock failed, result:", result)
-            return
+            stop()
+            throw midiError("Create MIDI input", status: result)
         }
         // print("[MIDI Bridge] [DEBUG] MidiManager.start: CoreMIDI client and port created OK")
 
-        connectAllSources()
+        do {
+            try connectAllSources()
+        } catch {
+            stop()
+            throw error
+        }
+    }
+
+    private func midiError(_ operation: String, status: OSStatus) -> NSError {
+        NSError(domain: "ReplayMIDI", code: Int(status), userInfo: [
+            NSLocalizedDescriptionKey: "\(operation) failed (CoreMIDI \(status)). Reconnect your piano."
+        ])
     }
 
     func updateWebView(_ newWebView: WKWebView?) {
@@ -118,8 +130,14 @@ private final class MidiManager {
         let msg = message.pointee
         switch msg.messageID {
         case .msgObjectAdded, .msgObjectRemoved:
-            queue.async { [weak self] in
-                self?.connectAllSources()
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.inputPort != 0 else { return }
+                do {
+                    try self.connectAllSources()
+                    self.publishSourceNames()
+                } catch {
+                    NSLog("[MIDI Bridge] %@", error.localizedDescription)
+                }
             }
         default:
             break
@@ -145,18 +163,26 @@ private final class MidiManager {
         return names
     }
 
-    private func connectAllSources() {
-        let count = MIDIGetNumberOfSources()
-        // NSLog("===== [MIDI Bridge] [DEBUG] connectAllSources: %d MIDI source(s) =====", count)
-        for i in 0..<count {
-            let source = MIDIGetSource(i)
-            let name = getName(for: source)
-            // NSLog("[MIDI Bridge]   source[%d]: %@", i, name)
-            if !connectedSources.contains(source) {
-                MIDIPortConnectSource(inputPort, source, nil)
-                connectedSources.insert(source)
-            }
+    private func connectAllSources() throws {
+        let sources = Set((0..<MIDIGetNumberOfSources()).map { MIDIGetSource($0) })
+        for source in connectedSources.subtracting(sources) {
+            MIDIPortDisconnectSource(inputPort, source)
+            connectedSources.remove(source)
         }
+        for source in sources.subtracting(connectedSources) {
+            let status = MIDIPortConnectSource(inputPort, source, nil)
+            guard status == noErr else {
+                throw midiError("Connect to \(getName(for: source))", status: status)
+            }
+            connectedSources.insert(source)
+        }
+    }
+
+    private func publishSourceNames() {
+        guard let webView,
+              let json = try? JSONSerialization.data(withJSONObject: getSourceNames()),
+              let sources = String(data: json, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.__dispatchIOSMidiSources?.(\(sources));")
     }
 
     private func disconnectAllSources() {
@@ -175,18 +201,16 @@ private final class MidiManager {
         var currentPtr = UnsafeMutablePointer<MIDIPacket>(mutating: firstPacketPtr)
 
         for i in 0..<numPackets {
-            var packet = currentPtr.pointee
-            let length = Int(packet.length)
+            let length = Int(currentPtr.pointee.length)
             if length > 0 {
-                withUnsafeMutablePointer(to: &packet) { pkt in
-                    // MIDIPacketBytePtr is a C macro and not always visible to Swift; use data field offset.
-                    let offset = MemoryLayout<MIDIPacket>.offset(of: \MIDIPacket.data)
-                        ?? (MemoryLayout<MIDITimeStamp>.size + MemoryLayout<UInt16>.size)
-                    let bytes = UnsafeRawPointer(pkt).advanced(by: offset).assumingMemoryBound(to: UInt8.self)
-                    parseMidiPacketData(bytes, length: length, emit: { [weak self] in
-                        self?.enqueuePacketForWeb($0)
-                    })
-                }
+                // Read the original variable-length packet, rather than a
+                // copied Swift struct whose data tuple holds only 256 bytes.
+                let offset = MemoryLayout<MIDIPacket>.offset(of: \MIDIPacket.data)
+                    ?? (MemoryLayout<MIDITimeStamp>.size + MemoryLayout<UInt16>.size)
+                let bytes = UnsafeRawPointer(currentPtr).advanced(by: offset).assumingMemoryBound(to: UInt8.self)
+                parseMidiPacketData(bytes, length: length, emit: { [weak self] in
+                    self?.enqueuePacketForWeb($0)
+                })
             }
             if i < numPackets - 1 {
                 currentPtr = MIDIPacketNext(currentPtr)

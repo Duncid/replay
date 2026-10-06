@@ -1,7 +1,4 @@
-import {
-  PianoSheetPixi,
-  getRecommendedBaseUnit,
-} from "@/components/PianoSheetPixi";
+import { getRecommendedBaseUnit } from "@/components/PianoSheetPixiLayout";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -88,6 +85,8 @@ import {
 } from "lucide-react";
 import {
   createContext,
+  lazy,
+  Suspense,
   Fragment,
   useCallback,
   useContext,
@@ -98,10 +97,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  OpenSheetMusicDisplayView,
-  type OpenSheetMusicDisplayViewHandle,
-} from "../OpenSheetMusicDisplayView";
+import type { OpenSheetMusicDisplayViewHandle } from "../OpenSheetMusicDisplayView";
+const OpenSheetMusicDisplayView = lazy(() => import("../OpenSheetMusicDisplayView").then(module => ({ default: module.OpenSheetMusicDisplayView })));
+const PianoSheetPixi = lazy(() => import("../PianoSheetPixi").then(module => ({ default: module.PianoSheetPixi })));
 import type { NoteEvent } from "../PianoSheetPixiLayout.ts";
 
 interface TuneManagementProps {
@@ -160,6 +158,29 @@ const mergeNoteSequences = (
   };
 };
 
+/** Which MIDI / inst file tracks to hear in “full hand” mode (inst1 ≈ LH, inst2 ≈ RH). */
+type InstPartSelection = "both" | "inst1" | "inst2";
+
+const noteInstrumentIndex = (note: NoteSequence["notes"][number]): number =>
+  typeof note.instrument === "number" ? note.instrument : 0;
+
+const hasMultipleInstrumentTracks = (seq: NoteSequence): boolean =>
+  seq.notes.length > 0 && new Set(seq.notes.map(noteInstrumentIndex)).size >= 2;
+
+const filterNoteSequenceByInstPart = (
+  seq: NoteSequence,
+  part: InstPartSelection,
+): NoteSequence => {
+  if (part === "both" || !seq.notes.length) return seq;
+  const want = part === "inst1" ? 0 : 1;
+  const filtered = seq.notes.filter((n) => noteInstrumentIndex(n) === want);
+  if (!filtered.length) {
+    return { ...seq, notes: [], totalTime: 0 };
+  }
+  const totalTime = Math.max(...filtered.map((n) => n.endTime));
+  return { ...seq, notes: filtered, totalTime };
+};
+
 type TuneSource = "published" | "local";
 type TargetType = "full" | "nuggets" | "assemblies";
 type HandType = "full" | "left" | "right";
@@ -175,6 +196,11 @@ type TuneManagementContextValue = {
   setSelectedItemId: React.Dispatch<React.SetStateAction<string>>;
   selectedHand: HandType;
   setSelectedHand: React.Dispatch<React.SetStateAction<HandType>>;
+  selectedInstParts: InstPartSelection;
+  setSelectedInstParts: React.Dispatch<
+    React.SetStateAction<InstPartSelection>
+  >;
+  showInstPartSelector: boolean;
   showPublishDialog: boolean;
   setShowPublishDialog: React.Dispatch<React.SetStateAction<boolean>>;
   publishMode: "create" | string;
@@ -266,6 +292,8 @@ function useTuneManagementState(): TuneManagementContextValue {
   const [selectedTarget, setSelectedTarget] = useState<TargetType>("full");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
+  const [selectedInstParts, setSelectedInstParts] =
+    useState<InstPartSelection>("both");
 
   // Publish dialog state
   const [showPublishDialog, setShowPublishDialog] = useState(false);
@@ -505,8 +533,8 @@ function useTuneManagementState(): TuneManagementContextValue {
     }
   }, [getHandAvailability, selectedHand, selectedItemId, selectedTarget]);
 
-  // Derive sequences based on source
-  const labSequence = useMemo(() => {
+  // Derive sequences based on source (before inst1/inst2 filter in full-hand mode)
+  const labSequenceBase = useMemo(() => {
     if (selectedSource === "published") {
       if (!tuneAssets) return EMPTY_SEQUENCE;
       if (selectedTarget === "full") {
@@ -622,6 +650,20 @@ function useTuneManagementState(): TuneManagementContextValue {
     selectedItemId,
     selectedTune,
   ]);
+
+  const showInstPartSelector =
+    selectedHand === "full" && hasMultipleInstrumentTracks(labSequenceBase);
+
+  useEffect(() => {
+    if (!showInstPartSelector && selectedInstParts !== "both") {
+      setSelectedInstParts("both");
+    }
+  }, [showInstPartSelector, selectedInstParts]);
+
+  const labSequence = useMemo(() => {
+    if (selectedHand !== "full") return labSequenceBase;
+    return filterNoteSequenceByInstPart(labSequenceBase, selectedInstParts);
+  }, [labSequenceBase, selectedHand, selectedInstParts]);
 
   // Derive full XMLs based on source
   const xmlFull = useMemo(() => {
@@ -817,11 +859,18 @@ function useTuneManagementState(): TuneManagementContextValue {
         : selectedHand === "left"
           ? ", Left hand"
           : ", Right hand";
-    return `${baseLabel}${handSuffix}`;
+    const instSuffix =
+      selectedHand === "full" && selectedInstParts === "inst1"
+        ? ", Inst 1"
+        : selectedHand === "full" && selectedInstParts === "inst2"
+          ? ", Inst 2"
+          : "";
+    return `${baseLabel}${handSuffix}${instSuffix}`;
   }, [
     assemblyMenuItems,
     nuggetMenuItems,
     selectedHand,
+    selectedInstParts,
     selectedItemId,
     selectedTarget,
   ]);
@@ -834,6 +883,7 @@ function useTuneManagementState(): TuneManagementContextValue {
     setSelectedTarget("full");
     setSelectedItemId("");
     setSelectedHand("full");
+    setSelectedInstParts("both");
   }, []);
 
   // Rename handler
@@ -957,6 +1007,7 @@ function useTuneManagementState(): TuneManagementContextValue {
         // Switch to viewing the published tune
         setSelectedSource("published");
         setSelectedTune(finalTuneKey);
+        setSelectedInstParts("both");
       } else {
         throw new Error(data.error || "Unknown error");
       }
@@ -977,6 +1028,7 @@ function useTuneManagementState(): TuneManagementContextValue {
     newTuneTitle,
     toast,
     queryClient,
+    setSelectedInstParts,
   ]);
 
   return {
@@ -990,6 +1042,9 @@ function useTuneManagementState(): TuneManagementContextValue {
     setSelectedItemId,
     selectedHand,
     setSelectedHand,
+    selectedInstParts,
+    setSelectedInstParts,
+    showInstPartSelector,
     showPublishDialog,
     setShowPublishDialog,
     publishMode,
@@ -1618,6 +1673,9 @@ export function TuneManagementActionBar() {
     selectedTarget,
     selectedItemId,
     selectedHand,
+    selectedInstParts,
+    setSelectedInstParts,
+    showInstPartSelector,
     setSelectedTarget,
     setSelectedItemId,
     setSelectedHand,
@@ -1634,9 +1692,16 @@ export function TuneManagementActionBar() {
       setSelectedTarget(target);
       setSelectedItemId(itemId);
       setSelectedHand(hand);
+      setSelectedInstParts("both");
     },
-    [setSelectedHand, setSelectedItemId, setSelectedTarget],
+    [setSelectedHand, setSelectedInstParts, setSelectedItemId, setSelectedTarget],
   );
+
+  const tracksLabel = useMemo(() => {
+    if (selectedInstParts === "inst1") return "Inst 1";
+    if (selectedInstParts === "inst2") return "Inst 2";
+    return "Both tracks";
+  }, [selectedInstParts]);
 
   const handLabel = useCallback((hand: HandType) => {
     return hand === "left" ? "Left hand" : "Right hand";
@@ -1982,6 +2047,47 @@ export function TuneManagementActionBar() {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {showInstPartSelector && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={!selectedTune}>
+              {tracksLabel}
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover">
+            <DropdownMenuItem onClick={() => setSelectedInstParts("both")}>
+              <span className="flex-1">Both tracks</span>
+              {selectedInstParts === "both" && (
+                <Check className="h-4 w-4 ml-2 shrink-0" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedInstParts("inst1")}>
+              <span className="flex-1 flex flex-col items-start gap-0 min-w-0">
+                <span>Inst 1</span>
+                <span className="text-xs text-muted-foreground">
+                  Left hand
+                </span>
+              </span>
+              {selectedInstParts === "inst1" && (
+                <Check className="h-4 w-4 ml-2 shrink-0" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedInstParts("inst2")}>
+              <span className="flex-1 flex flex-col items-start gap-0 min-w-0">
+                <span>Inst 2</span>
+                <span className="text-xs text-muted-foreground">
+                  Right hand
+                </span>
+              </span>
+              {selectedInstParts === "inst2" && (
+                <Check className="h-4 w-4 ml-2 shrink-0" />
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
       {/* Edit / Publish */}
       {selectedTune &&
         (selectedSource === "published" ? (
@@ -2042,12 +2148,17 @@ export function TuneManagementTabContent({
   onRegisterExpectedNotesProvider,
   expectedNotesRegistrationActive = true,
 }: TuneManagementTabContentProps) {
+  const [hasOpened, setHasOpened] = useState(expectedNotesRegistrationActive);
+  useEffect(() => {
+    if (expectedNotesRegistrationActive) setHasOpened(true);
+  }, [expectedNotesRegistrationActive]);
   return (
     <TabsContent
       value="lab"
       forceMount
       className="w-full h-full flex-1 min-h-0 flex items-stretch justify-start data-[state=inactive]:hidden"
     >
+      {(hasOpened || expectedNotesRegistrationActive) && <Suspense fallback={<p className="p-4 text-muted-foreground">Loading notation...</p>}>
       <TuneManagement
         onPlaybackInputEventRef={onPlaybackInputEventRef}
         onActivePitchesChange={onActivePitchesChange}
@@ -2055,6 +2166,7 @@ export function TuneManagementTabContent({
         onRegisterExpectedNotesProvider={onRegisterExpectedNotesProvider}
         expectedNotesRegistrationActive={expectedNotesRegistrationActive}
       />
+      </Suspense>}
     </TabsContent>
   );
 }
