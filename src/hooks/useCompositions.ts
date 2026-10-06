@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { PlayEntry } from '@/components/modes/PlayMode';
 import { useToast } from '@/hooks/use-toast';
 
@@ -106,7 +107,7 @@ export function useCompositions(options: UseCompositionsOptions = {}) {
   ): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const updates: Record<string, unknown> = {
+      const updates: TablesUpdate<'compositions'> = {
         data: JSON.parse(JSON.stringify(data)),
       };
       if (instrument !== undefined) updates.instrument = instrument;

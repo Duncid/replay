@@ -1,4 +1,6 @@
+import { loadMagentaScript } from "@/lib/magenta";
 import { useState, useRef, useCallback, useEffect } from "react";
+import type { MagentaNoteSequence as INoteSequence, MusicRNN, MusicVAE } from "@/types/magenta";
 import { NoteSequence } from "@/types/noteSequence";
 
 // Magenta model types
@@ -11,37 +13,6 @@ interface MagentaState {
   loadedModel: MagentaModelType | null;
   magentaLoaded: boolean;
 }
-
-declare global {
-  interface Window {
-    mm: any;
-  }
-}
-
-// Load Magenta from CDN (UMD bundle for browser compatibility)
-const loadMagentaScript = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (window.mm) {
-      resolve();
-      return;
-    }
-    
-    // Use the full UMD bundle which includes all modules
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/dist/magentamusic.min.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.mm) {
-        console.log("[Magenta] UMD bundle loaded successfully");
-        resolve();
-      } else {
-        reject(new Error("Magenta loaded but mm object not found"));
-      }
-    };
-    script.onerror = () => reject(new Error("Failed to load Magenta script"));
-    document.head.appendChild(script);
-  });
-};
 
 // Magenta MusicRNN valid pitch range (model-specific)
 const MAGENTA_MIN_PITCH = 36; // C2
@@ -61,7 +32,7 @@ const clampPitch = (pitch: number): number => {
 };
 
 // Convert our NoteSequence to Magenta's format
-const toMagentaSequence = (sequence: NoteSequence): any => {
+const toMagentaSequence = (sequence: NoteSequence): INoteSequence => {
   return {
     notes: sequence.notes.map((note) => ({
       pitch: clampPitch(note.pitch),
@@ -90,11 +61,11 @@ const estimateQuantizedSteps = (
 };
 
 // Convert Magenta's output back to our NoteSequence
-const fromMagentaSequence = (magentaSeq: any, bpm: number, timeSignature: string): NoteSequence => {
+const fromMagentaSequence = (magentaSeq: INoteSequence, bpm: number, timeSignature: string): NoteSequence => {
   const [numerator, denominator] = timeSignature.split("/").map(Number);
   
   return {
-    notes: (magentaSeq.notes || []).map((note: any) => ({
+    notes: (magentaSeq.notes || []).map((note) => ({
       pitch: note.pitch,
       startTime: note.startTime,
       endTime: note.endTime,
@@ -115,21 +86,8 @@ export const useMagenta = () => {
     magentaLoaded: false,
   });
 
-  const musicRnnRef = useRef<any>(null);
-  const musicVaeRef = useRef<any>(null);
-
-  // Pre-load Magenta scripts on mount
-  useEffect(() => {
-    loadMagentaScript()
-      .then(() => {
-        console.log("[Magenta] Scripts loaded from CDN");
-        setState((prev) => ({ ...prev, magentaLoaded: true }));
-      })
-      .catch((error) => {
-        console.error("[Magenta] Failed to load scripts:", error);
-        setState((prev) => ({ ...prev, error: error.message }));
-      });
-  }, []);
+  const musicRnnRef = useRef<MusicRNN>(null);
+  const musicVaeRef = useRef<MusicVAE>(null);
 
   const loadModel = useCallback(async (modelType: MagentaModelType) => {
     // Already loaded
@@ -225,7 +183,7 @@ export const useMagenta = () => {
         const baseSteps = Math.max(quantizedSteps, estimatedSteps);
         const clampedSteps = Math.max(Math.min(baseSteps, 2048), 32);
 
-        let outputSequence: any;
+        let outputSequence: INoteSequence;
 
         if (modelType === "magenta/music-rnn" && musicRnnRef.current) {
           // MusicRNN continuation
@@ -256,13 +214,13 @@ export const useMagenta = () => {
           // Encode input and sample around it
           const z = await musicVaeRef.current.encode([quantizedInput]);
 
-          const decodedSegments: any[] = [];
+          const decodedSegments: INoteSequence[] = [];
           for (let i = 0; i < segmentCount; i += 1) {
-            const samples = await musicVaeRef.current.decode(z, temperature, segmentSteps);
+            const samples = await musicVaeRef.current.decode(z, temperature);
             const sample = samples[0];
             const offset = i * segmentSteps;
 
-            const offsetNotes = (sample.notes || []).map((note: any) => {
+            const offsetNotes = (sample.notes || []).map((note) => {
               const quantizedStart = note.quantizedStartStep ?? note.startTime ?? 0;
               const quantizedEnd = note.quantizedEndStep ?? note.endTime ?? quantizedStart;
 
@@ -284,10 +242,10 @@ export const useMagenta = () => {
           const mergedNotes = decodedSegments.flatMap((segment) => segment.notes || []);
 
           const maxQuantizedEnd = mergedNotes.length
-            ? Math.max(...mergedNotes.map((note: any) => note.quantizedEndStep ?? 0))
+            ? Math.max(...mergedNotes.map((note) => note.quantizedEndStep ?? 0))
             : 0;
           const maxEndTime = mergedNotes.length
-            ? Math.max(...mergedNotes.map((note: any) => note.endTime ?? 0))
+            ? Math.max(...mergedNotes.map((note) => note.endTime ?? 0))
             : 0;
 
           const totalQuantizedSteps = Math.max(maxQuantizedEnd, segmentCount * segmentSteps);
@@ -321,9 +279,9 @@ export const useMagenta = () => {
         const unquantizedOutput = mm.sequences.unquantizeSequence(outputSequence);
         
         // Normalize times to start from 0
-        const minStartTime = Math.min(...unquantizedOutput.notes.map((n: any) => n.startTime));
+        const minStartTime = Math.min(...unquantizedOutput.notes.map((n) => n.startTime));
         if (minStartTime > 0) {
-          unquantizedOutput.notes.forEach((note: any) => {
+          unquantizedOutput.notes.forEach((note) => {
             note.startTime -= minStartTime;
             note.endTime -= minStartTime;
           });

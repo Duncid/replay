@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE score-partwise  PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='utf-8'?>
 <score-partwise version="4.0">
   <movement-title>Music21 Fragment</movement-title>
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-01</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -16,22 +15,22 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P011b73607d4c30505c01a779826b98cf">
+    <score-part id="P8f2005c8a444011ab79a1d39c4ed5ec6">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Ia2102328b79227c30fb799660ad8be14">
+      <score-instrument id="I1c041a3b0e316bcbde9d4ba3c8d65090">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Ia2102328b79227c30fb799660ad8be14">
+      <midi-instrument id="I1c041a3b0e316bcbde9d4ba3c8d65090">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
-  <!--=========================== Part 1 ===========================-->
-  <part id="P011b73607d4c30505c01a779826b98cf">
-    <!--========================= Measure 1 ==========================-->
+  
+  <part id="P8f2005c8a444011ab79a1d39c4ed5ec6">
+    
     <measure implicit="no" number="1">
       <attributes>
         <divisions>10080</divisions>
@@ -39,7 +38,70 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
-      </attributes>
+        <clef><sign>G</sign><line>2</line></clef></attributes>
+      <direction>
+        <direction-type>
+          <metronome parentheses="no">
+            <beat-unit>quarter</beat-unit>
+            <per-minute>120</per-minute>
+          </metronome>
+        </direction-type>
+        <sound tempo="120" />
+      </direction>
+      <note dynamics="113.33">
+        <pitch>
+          <step>C</step>
+          <alter>0</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
+      <note dynamics="113.33">
+        <pitch>
+          <step>E</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+        <accidental>flat</accidental>
+      </note>
+      <note dynamics="113.33">
+        <pitch>
+          <step>F</step>
+          <alter>0</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>5040</duration>
+        <staff>1</staff><type>eighth</type>
+        <stem>up</stem>
+        <beam number="1">begin</beam>
+      </note>
+      <note dynamics="113.33">
+        <pitch>
+          <step>F</step>
+          <alter>1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>5040</duration>
+        <staff>1</staff><type>eighth</type>
+        <accidental>sharp</accidental>
+        <stem>up</stem>
+        <beam number="1">end</beam>
+      </note>
+      <note dynamics="113.33">
+        <pitch>
+          <step>G</step>
+          <alter>0</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>10080</duration>
+        <staff>1</staff><type>quarter</type>
+      </note>
+    </measure>
+    
+    <measure implicit="no" number="2">
       <note dynamics="113.33">
         <pitch>
           <step>B</step>
@@ -47,7 +109,7 @@
           <octave>4</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>1</staff><type>quarter</type>
         <accidental>flat</accidental>
       </note>
       <note dynamics="113.33">
@@ -57,7 +119,8 @@
           <octave>4</octave>
         </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>1</staff><type>quarter</type>
+        <accidental>natural</accidental>
       </note>
       <note dynamics="113.33">
         <pitch>
@@ -66,8 +129,10 @@
           <octave>4</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <accidental>sharp</accidental>
+        <stem>up</stem>
+        <beam number="1">begin</beam>
       </note>
       <note dynamics="113.33">
         <pitch>
@@ -76,13 +141,20 @@
           <octave>4</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <accidental>natural</accidental>
+        <stem>up</stem>
+        <beam number="1">end</beam>
       </note>
-      <note print-object="no" print-spacing="yes">
-        <rest />
+      <note dynamics="113.33">
+        <pitch>
+          <step>E</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
         <duration>10080</duration>
-        <type>quarter</type>
+        <staff>1</staff><type>quarter</type>
+        <accidental>flat</accidental>
       </note>
     </measure>
   </part>

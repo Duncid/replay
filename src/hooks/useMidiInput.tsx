@@ -84,6 +84,9 @@ export const useMidiInput = (
     if (activeInputRef.current) {
       // Explicitly clear the handler
       activeInputRef.current.onmidimessage = null;
+      void activeInputRef.current.close().catch((error) => {
+        console.error("[MIDI] Failed to close input:", error);
+      });
       activeInputRef.current = null;
     }
     setConnectedDevice(null);
@@ -214,28 +217,33 @@ export const useMidiInput = (
       if (!activeInputRef.current) return;
       const name = activeInputRef.current.name;
       if (name === "No devices") {
-        activeInputRef.current.onmidimessage = null;
-        activeInputRef.current = null;
         setConnectedDevice(null);
         setDevices([]);
         setAttemptedNoDevice(true);
         onManualConnectNoDevices?.();
         return;
       }
-      setConnectedDevice((prev) =>
-        prev ? { ...prev, name: name || prev.name } : null
-      );
-      setDevices((prev) =>
-        prev.length > 0 && activeInputRef.current
-          ? prev.map((d, i) =>
-              i === 0 ? { ...d, name: activeInputRef.current!.name || d.name } : d
-            )
-          : prev
-      );
+      const device = {
+        id: activeInputRef.current.id,
+        name: name || "MIDI input",
+        manufacturer: activeInputRef.current.manufacturer || "CoreMIDI",
+      };
+      setConnectedDevice(device);
+      setDevices([device]);
+      setAttemptedNoDevice(false);
     };
     window.addEventListener("midi-sources-updated", onSourcesUpdated);
-    return () => window.removeEventListener("midi-sources-updated", onSourcesUpdated);
-  }, [onManualConnectNoDevices]);
+    const onConnectionError = (event: Event) => {
+      const message = (event as CustomEvent<{ message: string }>).detail.message;
+      setError(message);
+      onError?.(message);
+    };
+    window.addEventListener("midi-connection-error", onConnectionError);
+    return () => {
+      window.removeEventListener("midi-sources-updated", onSourcesUpdated);
+      window.removeEventListener("midi-connection-error", onConnectionError);
+    };
+  }, [onManualConnectNoDevices, onError]);
 
   // Cleanup on unmount - ensure all handlers are cleared
   useEffect(() => {

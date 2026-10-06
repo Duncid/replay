@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { QuestData } from '@/types/quest';
 import { useToast } from '@/hooks/use-toast';
 
@@ -90,7 +91,7 @@ export function useQuestGraphs() {
   ): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const updates: Record<string, unknown> = {
+      const updates: TablesUpdate<'quest_graphs'> = {
         data: JSON.parse(JSON.stringify(data)),
       };
       if (title !== undefined) updates.title = title;

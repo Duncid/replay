@@ -1,4 +1,4 @@
-import { PianoSheetPixi } from "@/components/PianoSheetPixi";
+import { getRecommendedBaseUnit } from "@/components/PianoSheetPixiLayout";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,24 +46,32 @@ import {
   bundleSingleTuneAssets,
   getAssemblyDspXml,
   getAssemblyLh,
+  getAssemblyInst,
   getAssemblyNs,
   getAssemblyRh,
   getAssemblyXml,
   getLocalAssemblyIds,
+  getLocalAssemblyMenuItems,
   getLocalNuggetIds,
+  getLocalNuggetMenuItems,
   getLocalTuneKeys,
   getNuggetDspXml,
   getNuggetLh,
+  getNuggetInst,
   getNuggetNs,
   getNuggetRh,
   getNuggetXml,
   getTuneDspXml,
   getTuneLh,
   getTuneLhXml,
+  getTuneInst1,
+  getTuneInst2,
   getTuneNs,
   getTuneRh,
   getTuneRhXml,
   getTuneXml,
+  type TuneMenuAssemblyItem,
+  type TuneMenuNuggetItem,
 } from "@/utils/tuneAssetBundler";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -77,6 +85,8 @@ import {
 } from "lucide-react";
 import {
   createContext,
+  lazy,
+  Suspense,
   Fragment,
   useCallback,
   useContext,
@@ -87,10 +97,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  OpenSheetMusicDisplayView,
-  type OpenSheetMusicDisplayViewHandle,
-} from "../OpenSheetMusicDisplayView";
+import type { OpenSheetMusicDisplayViewHandle } from "../OpenSheetMusicDisplayView";
+const OpenSheetMusicDisplayView = lazy(() => import("../OpenSheetMusicDisplayView").then(module => ({ default: module.OpenSheetMusicDisplayView })));
+const PianoSheetPixi = lazy(() => import("../PianoSheetPixi").then(module => ({ default: module.PianoSheetPixi })));
 import type { NoteEvent } from "../PianoSheetPixiLayout.ts";
 
 interface TuneManagementProps {
@@ -111,6 +120,67 @@ interface TuneManagementProps {
 
 const EMPTY_SEQUENCE: NoteSequence = { notes: [], totalTime: 0 };
 
+const isNoteSequence = (value: unknown): value is NoteSequence =>
+  Boolean(
+    value &&
+      typeof value === "object" &&
+      Array.isArray((value as NoteSequence).notes),
+  );
+
+const mergeNoteSequences = (
+  ...sequenceCandidates: Array<NoteSequence | null | undefined>
+): NoteSequence => {
+  const sequences = sequenceCandidates.filter(isNoteSequence);
+  if (!sequences.length) return EMPTY_SEQUENCE;
+
+  const mergedNotes = sequences
+    .flatMap((sequence) => sequence.notes)
+    .slice()
+    .sort(
+      (a, b) =>
+        a.startTime - b.startTime || a.pitch - b.pitch || a.endTime - b.endTime,
+    );
+  const totalTime = mergedNotes.length
+    ? Math.max(...mergedNotes.map((note) => note.endTime))
+    : Math.max(...sequences.map((sequence) => sequence.totalTime ?? 0), 0);
+  const tempoSource = sequences.find((sequence) => sequence.tempos?.length);
+  const signatureSource = sequences.find(
+    (sequence) => sequence.timeSignatures?.length,
+  );
+
+  return {
+    ...sequences[0],
+    notes: mergedNotes,
+    totalTime,
+    tempos: tempoSource?.tempos ?? sequences[0].tempos,
+    timeSignatures:
+      signatureSource?.timeSignatures ?? sequences[0].timeSignatures,
+  };
+};
+
+/** Which MIDI / inst file tracks to hear in “full hand” mode (inst1 ≈ LH, inst2 ≈ RH). */
+type InstPartSelection = "both" | "inst1" | "inst2";
+
+const noteInstrumentIndex = (note: NoteSequence["notes"][number]): number =>
+  typeof note.instrument === "number" ? note.instrument : 0;
+
+const hasMultipleInstrumentTracks = (seq: NoteSequence): boolean =>
+  seq.notes.length > 0 && new Set(seq.notes.map(noteInstrumentIndex)).size >= 2;
+
+const filterNoteSequenceByInstPart = (
+  seq: NoteSequence,
+  part: InstPartSelection,
+): NoteSequence => {
+  if (part === "both" || !seq.notes.length) return seq;
+  const want = part === "inst1" ? 0 : 1;
+  const filtered = seq.notes.filter((n) => noteInstrumentIndex(n) === want);
+  if (!filtered.length) {
+    return { ...seq, notes: [], totalTime: 0 };
+  }
+  const totalTime = Math.max(...filtered.map((n) => n.endTime));
+  return { ...seq, notes: filtered, totalTime };
+};
+
 type TuneSource = "published" | "local";
 type TargetType = "full" | "nuggets" | "assemblies";
 type HandType = "full" | "left" | "right";
@@ -126,6 +196,11 @@ type TuneManagementContextValue = {
   setSelectedItemId: React.Dispatch<React.SetStateAction<string>>;
   selectedHand: HandType;
   setSelectedHand: React.Dispatch<React.SetStateAction<HandType>>;
+  selectedInstParts: InstPartSelection;
+  setSelectedInstParts: React.Dispatch<
+    React.SetStateAction<InstPartSelection>
+  >;
+  showInstPartSelector: boolean;
   showPublishDialog: boolean;
   setShowPublishDialog: React.Dispatch<React.SetStateAction<boolean>>;
   publishMode: "create" | string;
@@ -157,6 +232,8 @@ type TuneManagementContextValue = {
   labSequence: NoteSequence;
   nuggetIds: string[];
   assemblyIds: string[];
+  nuggetMenuItems: TuneMenuNuggetItem[];
+  assemblyMenuItems: TuneMenuAssemblyItem[];
   xmlFull: string | null;
   xmlDsp: string | null;
   selectionLabel: string;
@@ -215,6 +292,8 @@ function useTuneManagementState(): TuneManagementContextValue {
   const [selectedTarget, setSelectedTarget] = useState<TargetType>("full");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
+  const [selectedInstParts, setSelectedInstParts] =
+    useState<InstPartSelection>("both");
 
   // Publish dialog state
   const [showPublishDialog, setShowPublishDialog] = useState(false);
@@ -300,22 +379,59 @@ function useTuneManagementState(): TuneManagementContextValue {
     selectedSource === "published" ? selectedTune : null,
   );
 
-  // Derive nugget/assembly IDs based on source
-  const nuggetIds = useMemo(() => {
+  const nuggetMenuItems = useMemo((): TuneMenuNuggetItem[] => {
+    if (!selectedTune) return [];
     if (selectedSource === "published") {
       const briefing = tuneAssets?.briefing as TuneBriefing | null;
-      return briefing?.teachingOrder ?? [];
+      const order = briefing?.teachingOrder ?? [];
+      const nuggets = (tuneAssets?.nuggets as TuneNugget[] | null) ?? [];
+      const byId = new Map(nuggets.map((n) => [n.id, n]));
+      return order.map((id) => {
+        const n = byId.get(id);
+        const loc = n?.location;
+        let subtitle: string | undefined;
+        if (loc && typeof loc.startMeasure === "number") {
+          const sm = loc.startMeasure;
+          const em = loc.endMeasure;
+          subtitle =
+            typeof em === "number" && em !== sm ? `m. ${sm}–${em}` : `m. ${sm}`;
+        }
+        return { id, label: n?.label ?? id, subtitle };
+      });
     }
-    return getLocalNuggetIds(selectedTune);
-  }, [selectedSource, tuneAssets, selectedTune]);
+    return getLocalNuggetMenuItems(selectedTune);
+  }, [selectedSource, selectedTune, tuneAssets]);
 
-  const assemblyIds = useMemo(() => {
+  const assemblyMenuItems = useMemo((): TuneMenuAssemblyItem[] => {
+    if (!selectedTune) return [];
     if (selectedSource === "published") {
       const briefing = tuneAssets?.briefing as TuneBriefing | null;
-      return briefing?.assemblyOrder ?? [];
+      const order = briefing?.assemblyOrder ?? [];
+      const assemblies = (tuneAssets?.assemblies as TuneAssembly[] | null) ?? [];
+      const byId = new Map(assemblies.map((a) => [a.id, a]));
+      return order.map((id) => {
+        const a = byId.get(id);
+        const tier = a?.tier;
+        return {
+          id,
+          label: a?.label ?? id,
+          tier,
+          subtitle: tier != null ? `Tier ${tier}` : undefined,
+        };
+      });
     }
-    return getLocalAssemblyIds(selectedTune);
-  }, [selectedSource, tuneAssets, selectedTune]);
+    return getLocalAssemblyMenuItems(selectedTune);
+  }, [selectedSource, selectedTune, tuneAssets]);
+
+  const nuggetIds = useMemo(
+    () => nuggetMenuItems.map((item) => item.id),
+    [nuggetMenuItems],
+  );
+
+  const assemblyIds = useMemo(
+    () => assemblyMenuItems.map((item) => item.id),
+    [assemblyMenuItems],
+  );
 
   // Helper functions for dropdown (for published tunes from list)
   const getNuggetIdsForTune = useCallback(
@@ -417,8 +533,8 @@ function useTuneManagementState(): TuneManagementContextValue {
     }
   }, [getHandAvailability, selectedHand, selectedItemId, selectedTarget]);
 
-  // Derive sequences based on source
-  const labSequence = useMemo(() => {
+  // Derive sequences based on source (before inst1/inst2 filter in full-hand mode)
+  const labSequenceBase = useMemo(() => {
     if (selectedSource === "published") {
       if (!tuneAssets) return EMPTY_SEQUENCE;
       if (selectedTarget === "full") {
@@ -467,7 +583,12 @@ function useTuneManagementState(): TuneManagementContextValue {
       if (selectedHand === "right") {
         return (getTuneRh(selectedTune) as NoteSequence) ?? EMPTY_SEQUENCE;
       }
-      return (getTuneNs(selectedTune) as NoteSequence) ?? EMPTY_SEQUENCE;
+      const grouped = getTuneNs(selectedTune) as NoteSequence | null;
+      if (isNoteSequence(grouped)) return grouped;
+      return mergeNoteSequences(
+        getTuneInst1(selectedTune) as NoteSequence | null,
+        getTuneInst2(selectedTune) as NoteSequence | null,
+      );
     }
     if (selectedTarget === "assemblies") {
       if (selectedHand === "left") {
@@ -482,9 +603,18 @@ function useTuneManagementState(): TuneManagementContextValue {
           EMPTY_SEQUENCE
         );
       }
-      return (
-        (getAssemblyNs(selectedTune, selectedItemId) as NoteSequence) ??
-        EMPTY_SEQUENCE
+      const grouped = getAssemblyNs(
+        selectedTune,
+        selectedItemId,
+      ) as NoteSequence | null;
+      if (isNoteSequence(grouped)) return grouped;
+      return mergeNoteSequences(
+        getAssemblyInst(selectedTune, selectedItemId, "inst1") as
+          | NoteSequence
+          | null,
+        getAssemblyInst(selectedTune, selectedItemId, "inst2") as
+          | NoteSequence
+          | null,
       );
     }
     if (selectedHand === "left") {
@@ -499,9 +629,18 @@ function useTuneManagementState(): TuneManagementContextValue {
         EMPTY_SEQUENCE
       );
     }
-    return (
-      (getNuggetNs(selectedTune, selectedItemId) as NoteSequence) ??
-      EMPTY_SEQUENCE
+    const grouped = getNuggetNs(
+      selectedTune,
+      selectedItemId,
+    ) as NoteSequence | null;
+    if (isNoteSequence(grouped)) return grouped;
+    return mergeNoteSequences(
+      getNuggetInst(selectedTune, selectedItemId, "inst1") as
+        | NoteSequence
+        | null,
+      getNuggetInst(selectedTune, selectedItemId, "inst2") as
+        | NoteSequence
+        | null,
     );
   }, [
     selectedSource,
@@ -511,6 +650,20 @@ function useTuneManagementState(): TuneManagementContextValue {
     selectedItemId,
     selectedTune,
   ]);
+
+  const showInstPartSelector =
+    selectedHand === "full" && hasMultipleInstrumentTracks(labSequenceBase);
+
+  useEffect(() => {
+    if (!showInstPartSelector && selectedInstParts !== "both") {
+      setSelectedInstParts("both");
+    }
+  }, [showInstPartSelector, selectedInstParts]);
+
+  const labSequence = useMemo(() => {
+    if (selectedHand !== "full") return labSequenceBase;
+    return filterNoteSequenceByInstPart(labSequenceBase, selectedInstParts);
+  }, [labSequenceBase, selectedHand, selectedInstParts]);
 
   // Derive full XMLs based on source
   const xmlFull = useMemo(() => {
@@ -691,15 +844,36 @@ function useTuneManagementState(): TuneManagementContextValue {
     if (!selectedItemId && selectedTarget !== "full") {
       return selectedTarget.charAt(0).toUpperCase() + selectedTarget.slice(1);
     }
-    const baseLabel = selectedTarget === "full" ? "Full" : selectedItemId;
+    let baseLabel = selectedTarget === "full" ? "Full" : selectedItemId;
+    if (selectedTarget === "nuggets") {
+      const row = nuggetMenuItems.find((item) => item.id === selectedItemId);
+      if (row) baseLabel = row.label;
+    }
+    if (selectedTarget === "assemblies") {
+      const row = assemblyMenuItems.find((item) => item.id === selectedItemId);
+      if (row) baseLabel = row.label;
+    }
     const handSuffix =
       selectedHand === "full"
         ? ""
         : selectedHand === "left"
           ? ", Left hand"
           : ", Right hand";
-    return `${baseLabel}${handSuffix}`;
-  }, [selectedHand, selectedItemId, selectedTarget]);
+    const instSuffix =
+      selectedHand === "full" && selectedInstParts === "inst1"
+        ? ", Inst 1"
+        : selectedHand === "full" && selectedInstParts === "inst2"
+          ? ", Inst 2"
+          : "";
+    return `${baseLabel}${handSuffix}${instSuffix}`;
+  }, [
+    assemblyMenuItems,
+    nuggetMenuItems,
+    selectedHand,
+    selectedInstParts,
+    selectedItemId,
+    selectedTarget,
+  ]);
 
   // Selection handler
   const selectTune = useCallback((source: TuneSource, tune: string) => {
@@ -709,6 +883,7 @@ function useTuneManagementState(): TuneManagementContextValue {
     setSelectedTarget("full");
     setSelectedItemId("");
     setSelectedHand("full");
+    setSelectedInstParts("both");
   }, []);
 
   // Rename handler
@@ -832,6 +1007,7 @@ function useTuneManagementState(): TuneManagementContextValue {
         // Switch to viewing the published tune
         setSelectedSource("published");
         setSelectedTune(finalTuneKey);
+        setSelectedInstParts("both");
       } else {
         throw new Error(data.error || "Unknown error");
       }
@@ -852,6 +1028,7 @@ function useTuneManagementState(): TuneManagementContextValue {
     newTuneTitle,
     toast,
     queryClient,
+    setSelectedInstParts,
   ]);
 
   return {
@@ -865,6 +1042,9 @@ function useTuneManagementState(): TuneManagementContextValue {
     setSelectedItemId,
     selectedHand,
     setSelectedHand,
+    selectedInstParts,
+    setSelectedInstParts,
+    showInstPartSelector,
     showPublishDialog,
     setShowPublishDialog,
     publishMode,
@@ -896,6 +1076,8 @@ function useTuneManagementState(): TuneManagementContextValue {
     labSequence,
     nuggetIds,
     assemblyIds,
+    nuggetMenuItems,
+    assemblyMenuItems,
     xmlFull,
     xmlDsp,
     selectionLabel,
@@ -932,6 +1114,8 @@ export const TuneManagement = ({
   const {
     selectedSource,
     selectedTune,
+    selectedTarget,
+    selectedHand,
     showPublishDialog,
     setShowPublishDialog,
     publishMode,
@@ -966,26 +1150,63 @@ export const TuneManagement = ({
 
   // ── Interactive playback engine ──────────────────────────────────
 
-  const notes = useMemo<NoteEvent[]>(() => {
-    return labSequence.notes.map((note, index) => {
+  const { notes, noteInstrumentById, instrumentIds } = useMemo(() => {
+    const instrumentById = new Map<string, number>();
+    const eventRows = labSequence.notes.map((note, index) => {
       const noteName = midiToNoteName(note.pitch);
+      const instrumentId = typeof note.instrument === "number" ? note.instrument : 0;
+      const id = `${note.pitch}-${note.startTime}-${note.endTime}-${instrumentId}-${index}`;
+      instrumentById.set(id, instrumentId);
       return {
-        id: `${note.pitch}-${note.startTime}-${index}`,
+        id,
         midi: note.pitch,
         start: note.startTime,
         dur: Math.max(0, note.endTime - note.startTime),
-        accidental: noteName.includes("#") ? "sharp" : null,
+        accidental: noteName.includes("#") ? ("sharp" as const) : null,
       };
     });
+    return {
+      notes: eventRows,
+      noteInstrumentById: instrumentById,
+      instrumentIds: Array.from(new Set(instrumentById.values())).sort(
+        (a, b) => a - b,
+      ),
+    };
   }, [labSequence.notes]);
 
-  const onTickRef = useRef<((timeSec: number) => void) | null>(null);
+  const onTickRefPrimary = useRef<((timeSec: number) => void) | null>(null);
+  const onTickRefSecondary = useRef<((timeSec: number) => void) | null>(null);
   const osmdTickRef = useRef<((timeSec: number) => void) | null>(null);
 
   const onTick = useCallback((t: number) => {
-    onTickRef.current?.(t);
+    onTickRefPrimary.current?.(t);
+    onTickRefSecondary.current?.(t);
     osmdTickRef.current?.(t);
   }, []);
+
+  const showDualPixi =
+    selectedSource === "local" &&
+    selectedHand === "full" &&
+    instrumentIds.length >= 2;
+  const topInstrumentId = instrumentIds[0] ?? 0;
+  const bottomInstrumentId = instrumentIds[1] ?? 1;
+
+  const topNotes = useMemo(
+    () =>
+      showDualPixi
+        ? notes.filter((note) => noteInstrumentById.get(note.id) === topInstrumentId)
+        : notes,
+    [noteInstrumentById, notes, showDualPixi, topInstrumentId],
+  );
+  const bottomNotes = useMemo(
+    () =>
+      showDualPixi
+        ? notes.filter(
+            (note) => noteInstrumentById.get(note.id) === bottomInstrumentId,
+          )
+        : [],
+    [bottomInstrumentId, noteInstrumentById, notes, showDualPixi],
+  );
 
   const noteById = useMemo(() => {
     return new Map(notes.map((note) => [note.id, note]));
@@ -1109,6 +1330,27 @@ export const TuneManagement = ({
 
   const pixiContainerRef = useRef<HTMLDivElement>(null);
   const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
+  const dualPixiGap = 8;
+  const dualPaneHeight = showDualPixi
+    ? Math.max(0, (pixiSize.height - dualPixiGap) / 2)
+    : pixiSize.height;
+
+  const getTrackCount = useCallback((rows: NoteEvent[]) => {
+    if (!rows.length) return 1;
+    const minMidi = Math.min(...rows.map((note) => note.midi));
+    const maxMidi = Math.max(...rows.map((note) => note.midi));
+    return maxMidi - minMidi + 1;
+  }, []);
+
+  const sharedPixiSize = useMemo(() => {
+    if (!showDualPixi) return undefined;
+    const topTracks = getTrackCount(topNotes);
+    const bottomTracks = getTrackCount(bottomNotes);
+    return Math.min(
+      getRecommendedBaseUnit(dualPaneHeight, topTracks),
+      getRecommendedBaseUnit(dualPaneHeight, bottomTracks),
+    );
+  }, [bottomNotes, dualPaneHeight, getTrackCount, showDualPixi, topNotes]);
 
   // Re-run when the component transitions past early returns
   // (isLoadingList starts true on mount → pixi div isn't in DOM yet)
@@ -1230,18 +1472,57 @@ export const TuneManagement = ({
         className="w-full flex-1 min-h-0 overflow-hidden"
       >
         {pixiSize.width > 0 && pixiSize.height > 0 && (
-          <PianoSheetPixi
-            notes={notes}
-            width={pixiSize.width}
-            height={pixiSize.height}
-            timeSignatures={labSequence.timeSignatures}
-            qpm={bpm}
-            onTickRef={onTickRef}
-            focusedNoteIds={playback.focusedNoteIds}
-            activeNoteIds={playback.activeNoteIds}
-            followPlayhead
-            isAutoplay={playback.isAutoplay}
-          />
+          <>
+            {showDualPixi ? (
+              <div
+                className="w-full h-full grid"
+                style={{
+                  gridTemplateRows: "1fr 1fr",
+                  rowGap: `${dualPixiGap}px`,
+                }}
+              >
+                <PianoSheetPixi
+                  notes={topNotes}
+                  width={pixiSize.width}
+                  height={dualPaneHeight}
+                  size={sharedPixiSize}
+                  timeSignatures={labSequence.timeSignatures}
+                  qpm={bpm}
+                  onTickRef={onTickRefPrimary}
+                  focusedNoteIds={playback.focusedNoteIds}
+                  activeNoteIds={playback.activeNoteIds}
+                  followPlayhead
+                  isAutoplay={playback.isAutoplay}
+                />
+                <PianoSheetPixi
+                  notes={bottomNotes}
+                  width={pixiSize.width}
+                  height={dualPaneHeight}
+                  size={sharedPixiSize}
+                  timeSignatures={labSequence.timeSignatures}
+                  qpm={bpm}
+                  onTickRef={onTickRefSecondary}
+                  focusedNoteIds={playback.focusedNoteIds}
+                  activeNoteIds={playback.activeNoteIds}
+                  followPlayhead
+                  isAutoplay={playback.isAutoplay}
+                />
+              </div>
+            ) : (
+              <PianoSheetPixi
+                notes={notes}
+                width={pixiSize.width}
+                height={pixiSize.height}
+                timeSignatures={labSequence.timeSignatures}
+                qpm={bpm}
+                onTickRef={onTickRefPrimary}
+                focusedNoteIds={playback.focusedNoteIds}
+                activeNoteIds={playback.activeNoteIds}
+                followPlayhead
+                isAutoplay={playback.isAutoplay}
+              />
+            )}
+          </>
         )}
       </div>
 
@@ -1392,12 +1673,17 @@ export function TuneManagementActionBar() {
     selectedTarget,
     selectedItemId,
     selectedHand,
+    selectedInstParts,
+    setSelectedInstParts,
+    showInstPartSelector,
     setSelectedTarget,
     setSelectedItemId,
     setSelectedHand,
     targetLabel,
     nuggetIds,
     assemblyIds,
+    nuggetMenuItems,
+    assemblyMenuItems,
     getHandAvailability,
   } = useTuneManagementContext();
 
@@ -1406,9 +1692,16 @@ export function TuneManagementActionBar() {
       setSelectedTarget(target);
       setSelectedItemId(itemId);
       setSelectedHand(hand);
+      setSelectedInstParts("both");
     },
-    [setSelectedHand, setSelectedItemId, setSelectedTarget],
+    [setSelectedHand, setSelectedInstParts, setSelectedItemId, setSelectedTarget],
   );
+
+  const tracksLabel = useMemo(() => {
+    if (selectedInstParts === "inst1") return "Inst 1";
+    if (selectedInstParts === "inst2") return "Inst 2";
+    return "Both tracks";
+  }, [selectedInstParts]);
 
   const handLabel = useCallback((hand: HandType) => {
     return hand === "left" ? "Left hand" : "Right hand";
@@ -1430,6 +1723,27 @@ export function TuneManagementActionBar() {
       assemblyIds.map((id) => [id, getHandAvailability("assemblies", id)]),
     );
   }, [assemblyIds, getHandAvailability]);
+
+  const assemblyTierGroups = useMemo(() => {
+    const tierMap = new Map<number, typeof assemblyMenuItems>();
+    for (const item of assemblyMenuItems) {
+      const t = item.tier ?? 0;
+      if (!tierMap.has(t)) tierMap.set(t, []);
+      tierMap.get(t)!.push(item);
+    }
+    return [...tierMap.entries()].sort((a, b) => a[0] - b[0]);
+  }, [assemblyMenuItems]);
+
+  const tuneMenuCaption = (primary: string, secondary?: string) => (
+    <span className="flex flex-col items-start gap-0 min-w-0">
+      <span className="leading-tight">{primary}</span>
+      {secondary ? (
+        <span className="text-xs text-muted-foreground leading-tight">
+          {secondary}
+        </span>
+      ) : null}
+    </span>
+  );
 
   return (
     <>
@@ -1593,47 +1907,55 @@ export function TuneManagementActionBar() {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
-              {nuggetIds.length > 0 ? (
-                nuggetIds.map((id) => (
-                  <Fragment key={id}>
+              {nuggetMenuItems.length > 0 ? (
+                nuggetMenuItems.map((item) => (
+                  <Fragment key={item.id}>
                     <DropdownMenuItem
-                      key={`${id}-full`}
-                      onClick={() => selectTarget("nuggets", id, "full")}
+                      key={`${item.id}-full`}
+                      onClick={() => selectTarget("nuggets", item.id, "full")}
                     >
-                      <span className="flex-1">{id}</span>
+                      <span className="flex-1">
+                        {tuneMenuCaption(item.label, item.subtitle)}
+                      </span>
                       {selectedTarget === "nuggets" &&
-                        selectedItemId === id &&
+                        selectedItemId === item.id &&
                         selectedHand === "full" && (
-                          <Check className="h-4 w-4 ml-2" />
+                          <Check className="h-4 w-4 ml-2 shrink-0" />
                         )}
                     </DropdownMenuItem>
-                    {nuggetHandAvailability.get(id)?.left && (
+                    {nuggetHandAvailability.get(item.id)?.left && (
                       <DropdownMenuItem
-                        key={`${id}-left`}
-                        onClick={() => selectTarget("nuggets", id, "left")}
+                        key={`${item.id}-left`}
+                        onClick={() => selectTarget("nuggets", item.id, "left")}
                       >
                         <span className="flex-1">
-                          {id}, {handLabel("left")}
+                          {tuneMenuCaption(
+                            `${item.label}, ${handLabel("left")}`,
+                            item.subtitle,
+                          )}
                         </span>
                         {selectedTarget === "nuggets" &&
-                          selectedItemId === id &&
+                          selectedItemId === item.id &&
                           selectedHand === "left" && (
-                            <Check className="h-4 w-4 ml-2" />
+                            <Check className="h-4 w-4 ml-2 shrink-0" />
                           )}
                       </DropdownMenuItem>
                     )}
-                    {nuggetHandAvailability.get(id)?.right && (
+                    {nuggetHandAvailability.get(item.id)?.right && (
                       <DropdownMenuItem
-                        key={`${id}-right`}
-                        onClick={() => selectTarget("nuggets", id, "right")}
+                        key={`${item.id}-right`}
+                        onClick={() => selectTarget("nuggets", item.id, "right")}
                       >
                         <span className="flex-1">
-                          {id}, {handLabel("right")}
+                          {tuneMenuCaption(
+                            `${item.label}, ${handLabel("right")}`,
+                            item.subtitle,
+                          )}
                         </span>
                         {selectedTarget === "nuggets" &&
-                          selectedItemId === id &&
+                          selectedItemId === item.id &&
                           selectedHand === "right" && (
-                            <Check className="h-4 w-4 ml-2" />
+                            <Check className="h-4 w-4 ml-2 shrink-0" />
                           )}
                       </DropdownMenuItem>
                     )}
@@ -1648,51 +1970,74 @@ export function TuneManagementActionBar() {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
-              {assemblyIds.length > 0 ? (
-                assemblyIds.map((id) => (
-                  <Fragment key={id}>
-                    <DropdownMenuItem
-                      key={`${id}-full`}
-                      onClick={() => selectTarget("assemblies", id, "full")}
-                    >
-                      <span className="flex-1">{id}</span>
-                      {selectedTarget === "assemblies" &&
-                        selectedItemId === id &&
-                        selectedHand === "full" && (
-                          <Check className="h-4 w-4 ml-2" />
+              {assemblyMenuItems.length > 0 ? (
+                assemblyTierGroups.map(([tier, items]) => (
+                  <div key={tier}>
+                    {(assemblyTierGroups.length > 1 || tier !== 0) && (
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground sticky top-0 bg-popover">
+                        {tier === 0 ? "Other" : `Tier ${tier}`}
+                      </div>
+                    )}
+                    {items.map((item) => (
+                      <Fragment key={item.id}>
+                        <DropdownMenuItem
+                          key={`${item.id}-full`}
+                          onClick={() =>
+                            selectTarget("assemblies", item.id, "full")
+                          }
+                        >
+                          <span className="flex-1">
+                            {tuneMenuCaption(item.label, item.subtitle)}
+                          </span>
+                          {selectedTarget === "assemblies" &&
+                            selectedItemId === item.id &&
+                            selectedHand === "full" && (
+                              <Check className="h-4 w-4 ml-2 shrink-0" />
+                            )}
+                        </DropdownMenuItem>
+                        {assemblyHandAvailability.get(item.id)?.left && (
+                          <DropdownMenuItem
+                            key={`${item.id}-left`}
+                            onClick={() =>
+                              selectTarget("assemblies", item.id, "left")
+                            }
+                          >
+                            <span className="flex-1">
+                              {tuneMenuCaption(
+                                `${item.label}, ${handLabel("left")}`,
+                                item.subtitle,
+                              )}
+                            </span>
+                            {selectedTarget === "assemblies" &&
+                              selectedItemId === item.id &&
+                              selectedHand === "left" && (
+                                <Check className="h-4 w-4 ml-2 shrink-0" />
+                              )}
+                          </DropdownMenuItem>
                         )}
-                    </DropdownMenuItem>
-                    {assemblyHandAvailability.get(id)?.left && (
-                      <DropdownMenuItem
-                        key={`${id}-left`}
-                        onClick={() => selectTarget("assemblies", id, "left")}
-                      >
-                        <span className="flex-1">
-                          {id}, {handLabel("left")}
-                        </span>
-                        {selectedTarget === "assemblies" &&
-                          selectedItemId === id &&
-                          selectedHand === "left" && (
-                            <Check className="h-4 w-4 ml-2" />
-                          )}
-                      </DropdownMenuItem>
-                    )}
-                    {assemblyHandAvailability.get(id)?.right && (
-                      <DropdownMenuItem
-                        key={`${id}-right`}
-                        onClick={() => selectTarget("assemblies", id, "right")}
-                      >
-                        <span className="flex-1">
-                          {id}, {handLabel("right")}
-                        </span>
-                        {selectedTarget === "assemblies" &&
-                          selectedItemId === id &&
-                          selectedHand === "right" && (
-                            <Check className="h-4 w-4 ml-2" />
-                          )}
-                      </DropdownMenuItem>
-                    )}
-                  </Fragment>
+                        {assemblyHandAvailability.get(item.id)?.right && (
+                          <DropdownMenuItem
+                            key={`${item.id}-right`}
+                            onClick={() =>
+                              selectTarget("assemblies", item.id, "right")
+                            }
+                          >
+                            <span className="flex-1">
+                              {tuneMenuCaption(
+                                `${item.label}, ${handLabel("right")}`,
+                                item.subtitle,
+                              )}
+                            </span>
+                            {selectedTarget === "assemblies" &&
+                              selectedItemId === item.id &&
+                              selectedHand === "right" && (
+                                <Check className="h-4 w-4 ml-2 shrink-0" />
+                              )}
+                          </DropdownMenuItem>
+                        )}
+                      </Fragment>
+                    ))}
+                  </div>
                 ))
               ) : (
                 <DropdownMenuItem disabled>No assemblies</DropdownMenuItem>
@@ -1701,6 +2046,47 @@ export function TuneManagementActionBar() {
           </DropdownMenuSub>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {showInstPartSelector && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={!selectedTune}>
+              {tracksLabel}
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover">
+            <DropdownMenuItem onClick={() => setSelectedInstParts("both")}>
+              <span className="flex-1">Both tracks</span>
+              {selectedInstParts === "both" && (
+                <Check className="h-4 w-4 ml-2 shrink-0" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedInstParts("inst1")}>
+              <span className="flex-1 flex flex-col items-start gap-0 min-w-0">
+                <span>Inst 1</span>
+                <span className="text-xs text-muted-foreground">
+                  Left hand
+                </span>
+              </span>
+              {selectedInstParts === "inst1" && (
+                <Check className="h-4 w-4 ml-2 shrink-0" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedInstParts("inst2")}>
+              <span className="flex-1 flex flex-col items-start gap-0 min-w-0">
+                <span>Inst 2</span>
+                <span className="text-xs text-muted-foreground">
+                  Right hand
+                </span>
+              </span>
+              {selectedInstParts === "inst2" && (
+                <Check className="h-4 w-4 ml-2 shrink-0" />
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Edit / Publish */}
       {selectedTune &&
@@ -1762,12 +2148,17 @@ export function TuneManagementTabContent({
   onRegisterExpectedNotesProvider,
   expectedNotesRegistrationActive = true,
 }: TuneManagementTabContentProps) {
+  const [hasOpened, setHasOpened] = useState(expectedNotesRegistrationActive);
+  useEffect(() => {
+    if (expectedNotesRegistrationActive) setHasOpened(true);
+  }, [expectedNotesRegistrationActive]);
   return (
     <TabsContent
       value="lab"
       forceMount
       className="w-full h-full flex-1 min-h-0 flex items-stretch justify-start data-[state=inactive]:hidden"
     >
+      {(hasOpened || expectedNotesRegistrationActive) && <Suspense fallback={<p className="p-4 text-muted-foreground">Loading notation...</p>}>
       <TuneManagement
         onPlaybackInputEventRef={onPlaybackInputEventRef}
         onActivePitchesChange={onActivePitchesChange}
@@ -1775,6 +2166,7 @@ export function TuneManagementTabContent({
         onRegisterExpectedNotesProvider={onRegisterExpectedNotesProvider}
         expectedNotesRegistrationActive={expectedNotesRegistrationActive}
       />
+      </Suspense>}
     </TabsContent>
   );
 }

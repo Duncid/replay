@@ -1,9 +1,8 @@
-import { OpenSheetMusicDisplayView } from "@/components/OpenSheetMusicDisplayView";
+
 import {
   DEFAULT_BASE_UNIT,
   getRecommendedBaseUnit,
-  PianoSheetPixi,
-} from "@/components/PianoSheetPixi";
+} from "@/components/PianoSheetPixiLayout";
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
 import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +41,8 @@ import {
   X,
 } from "lucide-react";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -49,6 +50,9 @@ import {
   useRef,
   useState,
 } from "react";
+
+const OpenSheetMusicDisplayView = lazy(() => import("@/components/OpenSheetMusicDisplayView").then(module => ({ default: module.OpenSheetMusicDisplayView })));
+const PianoSheetPixi = lazy(() => import("@/components/PianoSheetPixi").then(module => ({ default: module.PianoSheetPixi })));
 import { useTranslation } from "react-i18next";
 
 interface TunePracticeProps {
@@ -615,6 +619,7 @@ export function TunePractice({
   };
 
   return (
+    <Suspense fallback={<p className="p-4 text-muted-foreground">Loading notation...</p>}>
     <div className="relative flex h-full w-full flex-col gap-2 py-2">
       {/* Feedback card: bottom-right, max 1/3 width */}
       <div
@@ -921,5 +926,6 @@ export function TunePractice({
         </div>
       </div>
     </div>
+    </Suspense>
   );
 }

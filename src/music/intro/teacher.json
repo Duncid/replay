@@ -1,177 +1,203 @@
 {
-    "schemaVersion": "teacher.v2",
-    "title": "C-minor-ish scalar phrase (single-line)",
-    "pipelineSettings": {
-        "staffToHandDefault": {
-            "1": "RH",
-            "2": "LH"
-        },
-        "handSplitPolicy": {
-            "mode": "unknownOrSingleStaff"
-        }
-    },
-    "motifs": [
-        {
-            "id": "M1",
-            "label": "Ascending 5-note stepwise cell",
-            "importance": 0.85,
-            "description": "Stepwise rise 60→63→65→66→67 (minor/Chromatic flavor) as a pickup/arrival."
-        },
-        {
-            "id": "M2",
-            "label": "Turnaround: leap up then stepwise down",
-            "importance": 0.75,
-            "description": "Leap to a high point then descend by steps back toward the start tone."
-        },
-        {
-            "id": "M3",
-            "label": "Repetition of opening idea",
-            "importance": 0.65,
-            "description": "Second statement of the opening ascent, extended to a higher peak."
-        }
-    ],
-    "motifOccurrences": [
-        {
-            "motifId": "M1",
-            "location": {
-                "startMeasure": 1,
-                "startBeat": 1,
-                "endMeasure": 1,
-                "endBeat": 4
-            }
-        },
-        {
-            "motifId": "M2",
-            "location": {
-                "startMeasure": 2,
-                "startBeat": 1,
-                "endMeasure": 2,
-                "endBeat": 4
-            }
-        },
-        {
-            "motifId": "M1",
-            "location": {
-                "startMeasure": 3,
-                "startBeat": 1,
-                "endMeasure": 3,
-                "endBeat": 4
-            }
-        },
-        {
-            "motifId": "M3",
-            "location": {
-                "startMeasure": 3,
-                "startBeat": 1,
-                "endMeasure": 4,
-                "endBeat": 4
-            }
-        }
-    ],
-    "nuggets": [
-        {
-            "id": "N1",
-            "location": {
-                "startMeasure": 1,
-                "startBeat": 1,
-                "endMeasure": 1,
-                "endBeat": 4
-            },
-            "dependsOn": [
-                "M1"
-            ]
-        },
-        {
-            "id": "N2",
-            "location": {
-                "startMeasure": 2,
-                "startBeat": 1,
-                "endMeasure": 2,
-                "endBeat": 4
-            },
-            "dependsOn": [
-                "M2",
-                "N1"
-            ]
-        },
-        {
-            "id": "N3",
-            "location": {
-                "startMeasure": 3,
-                "startBeat": 1,
-                "endMeasure": 3,
-                "endBeat": 4
-            },
-            "dependsOn": [
-                "M1",
-                "M3"
-            ]
-        },
-        {
-            "id": "N4",
-            "location": {
-                "startMeasure": 4,
-                "startBeat": 1,
-                "endMeasure": 4,
-                "endBeat": 4
-            },
-            "dependsOn": [
-                "M2",
-                "M3",
-                "N3"
-            ]
-        }
-    ],
-    "assemblies": [
-        {
-            "id": "A1",
-            "tier": 1,
-            "nuggetIds": [
-                "N1",
-                "N2"
-            ]
-        },
-        {
-            "id": "A2",
-            "tier": 1,
-            "nuggetIds": [
-                "N3",
-                "N4"
-            ]
-        },
-        {
-            "id": "A3",
-            "tier": 2,
-            "nuggetIds": [
-                "N1",
-                "N2",
-                "N3"
-            ]
-        }
-    ],
-    "tuneHints": {
-        "goal": "Shape a clear two-phrase melody: an opening ascent to a peak, a stepwise return, then a repeat that climbs higher before resolving down.",
-        "counting": "4/4 at 120 qpm. Feel each measure as 4 beats; keep the short notes (eighths) even where they appear.",
-        "commonMistakes": [
-            "Rushing the short notes around beats 3–4 of each phrase",
-            "Missing the peak notes (70/72) by undershooting the leap",
-            "Letting the descent get uneven (stepwise line should be smooth)"
-        ],
-        "whatToListenFor": [
-            "A single connected line (legato finger changes where possible)",
-            "A gentle dynamic arch toward the peak, then relax on the way down",
-            "Consistent rhythm: same spacing for repeated patterns in measures 1 and 3"
-        ]
-    },
-    "teachingOrder": [
+  "assemblies": [
+    {
+      "id": "A1",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
         "N1",
-        "N2",
+        "N3"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A2",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N5",
+        "N7"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A3",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N1",
         "N3",
-        "N4"
-    ],
-    "assemblyOrder": [
-        "A1",
-        "A2",
-        "A3"
-    ]
+        "N5",
+        "N7"
+      ],
+      "tier": 2
+    }
+  ],
+  "assemblyOrder": [
+    "A1",
+    "A2",
+    "A3"
+  ],
+  "instrumentPlans": [
+    {
+      "id": "inst1",
+      "name": "Piano RH"
+    }
+  ],
+  "nuggets": [
+    {
+      "dependsOn": [],
+      "id": "N1",
+      "label": "Bar 1",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 2,
+        "startBeat": 1.0,
+        "startMeasure": 1
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N1",
+        "N3"
+      ],
+      "id": "N2",
+      "label": "Bars 1\u20133",
+      "length": 10,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 3,
+        "startBeat": 1.0,
+        "startMeasure": 1
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N1"
+      ],
+      "id": "N3",
+      "label": "Bar 2",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 3,
+        "startBeat": 1.0,
+        "startMeasure": 2
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N3",
+        "N5"
+      ],
+      "id": "N4",
+      "label": "Bars 2\u20134",
+      "length": 10,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 2
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N3"
+      ],
+      "id": "N5",
+      "label": "Bar 3",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 3
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N5",
+        "N7"
+      ],
+      "id": "N6",
+      "label": "Bars 3\u20134",
+      "length": 9,
+      "location": {
+        "endBeat": 5.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 3
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N5"
+      ],
+      "id": "N7",
+      "label": "Bar 4",
+      "length": 4,
+      "location": {
+        "endBeat": 5.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 4
+      },
+      "modes": [
+        "RH"
+      ]
+    }
+  ],
+  "pipelineSettings": {
+    "dsp": {
+      "chordCap": 6,
+      "gridQuarterLength": 0.25
+    },
+    "handAssignmentPolicy": {
+      "instrumentToHand": {
+        "inst1": "RH"
+      },
+      "mode": "byInstrument"
+    },
+    "metadata": {
+      "assumedMeasuresFromTotalTime": 6,
+      "assumedTempoQpm": 120.0,
+      "assumedTimeSignature": "4/4"
+    }
+  },
+  "schemaVersion": "teacher.v2",
+  "teachingOrder": [
+    "N1",
+    "N3",
+    "N2",
+    "N5",
+    "N4",
+    "N7",
+    "N6"
+  ],
+  "title": "intro"
 }

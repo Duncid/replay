@@ -2009,7 +2009,9 @@ export function QuestEditor({
                 });
                 return;
               }
-            } catch {}
+            } catch {
+              // Fall back to the original error if the response is not JSON.
+            }
           }
         }
         if ("message" in errObj) {

@@ -14,7 +14,8 @@ interface AddNoteSequenceDialogProps {
   initialSequence?: NoteSequence;
 }
 
-function validateNoteSequence(data: any): data is NoteSequence {
+function validateNoteSequence(value: unknown): value is NoteSequence {
+  const data = value as Partial<NoteSequence> | null;
   if (!data || typeof data !== 'object') {
     return false;
   }

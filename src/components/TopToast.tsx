@@ -18,7 +18,7 @@ export function TopToast({ show, children }: TopToastProps) {
       requestAnimationFrame(() => {
         if (containerRef.current) {
           // Force reflow
-          containerRef.current.offsetHeight;
+          void containerRef.current.offsetHeight;
         }
         requestAnimationFrame(() => {
           setIsAnimatedIn(true);

@@ -1,15 +1,44 @@
-# iOS Build
+# Replay for iOS / iPadOS
 
-## Setup
+The native app uses Capacitor 8.5, a scene lifecycle, and a custom CoreMIDI bridge. The installed bundle identity is `com.playbk.app`. The minimum supported iOS/iPadOS version is **18.6**.
 
-After cloning or pulling changes, run `pod install` in the `App` directory to install CocoaPods dependencies and apply build phase fixes.
+## Build
 
-## SwiftDriver Incremental Build Warnings
+Use Node 24 (`nvm install && nvm use`), Xcode 26 or later, and CocoaPods 1.16.2 with a supported Ruby. Avoid relying on macOS's old system Ruby for a fresh CocoaPods installation.
 
-If you see "Could not read priors, will not do cross-module incremental builds" for App or Capacitor targets:
+```sh
+npm ci
+npm run check
+npm run ios
+```
 
-1. **Clear DerivedData:** Delete `~/Library/Developer/Xcode/DerivedData/App-*` (or use Xcode > Settings > Locations > Derived Data > arrow to open folder, then delete the App folder)
-2. **Clean build:** Product > Clean Build Folder (Cmd+Shift+K)
-3. **Rebuild** the project
+`cap sync ios` copies the web assets and runs CocoaPods; a second `pod install` is unnecessary. Open `ios/App/App.xcworkspace`, select your signing team/device, and build. `./sync-ios.sh` checks CocoaPods availability before building, syncing, and opening Xcode.
 
-If the warning persists, try **Whole Module** compilation: Build Settings > Swift Compiler - Code Generation > Compilation Mode > Whole Module.
+For a command-line build:
+
+```sh
+xcodebuild -workspace ios/App/App.xcworkspace -scheme App \
+  -configuration Debug -destination 'generic/platform=iOS' \
+  -derivedDataPath /tmp/replay-ipad-build -allowProvisioningUpdates build
+```
+
+No deployment-target override is required.
+
+## Install on a paired iPad
+
+```sh
+xcrun devicectl list devices
+xcrun devicectl device install app --device YOUR_DEVICE_ID \
+  /tmp/replay-ipad-build/Build/Products/Debug-iphoneos/App.app
+xcrun devicectl device process launch --device YOUR_DEVICE_ID com.playbk.app
+```
+
+If iPadOS requires developer trust, use Settings → General → VPN & Device Management on the iPad.
+
+## Input verification
+
+- USB MIDI: power on the piano and use its USB COMPUTER port. Tap Connect MIDI. Play notes; unplug/replug and verify the device state updates and notes resume. Replay aggregates native CoreMIDI sources into one virtual input.
+- Microphone: select microphone input, grant permission, and verify levels and recognized notes. Then test denial and background/foreground interruption recovery on the physical device.
+- Test portrait, landscape, and resized iPad windows. Browser WebKit tests cover layout and audio worklet behavior; they do not replace physical-device MIDI or microphone permission testing.
+
+The web/PWA version uses browser Web MIDI where available. Safari's lack of Web MIDI is shown explicitly; USB MIDI on iPad uses the native wrapper.

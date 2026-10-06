@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 class AppViewController: CAPBridgeViewController {
 
@@ -7,6 +8,48 @@ class AppViewController: CAPBridgeViewController {
         super.capacitorDidLoad()
         // print("[MIDI Bridge] [DEBUG] AppViewController.capacitorDidLoad - registering MidiBridgePlugin")
         bridge?.registerPluginInstance(MidiBridgePlugin())
+        bridge?.webView?.configuration.userContentController.add(
+            SafeAreaHandler(owner: self), name: "replaySafeArea"
+        )
+        bridge?.webView?.configuration.userContentController.addUserScript(
+            WKUserScript(source: "window.webkit.messageHandlers.replaySafeArea.postMessage({});", injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
         // print("[MIDI Bridge] [DEBUG] AppViewController.capacitorDidLoad - MidiBridgePlugin registered")
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        updateSafeAreaInsets()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        updateSafeAreaInsets()
+    }
+
+    fileprivate func updateSafeAreaInsets() {
+        bridge?.webView?.evaluateJavaScript(safeAreaScript())
+    }
+
+    private func safeAreaScript() -> String {
+        let insets = view.safeAreaInsets
+        return """
+        document.documentElement.style.setProperty('--safe-area-inset-top', '\(insets.top)px');
+        document.documentElement.style.setProperty('--safe-area-inset-right', '\(insets.right)px');
+        document.documentElement.style.setProperty('--safe-area-inset-bottom', '\(insets.bottom)px');
+        document.documentElement.style.setProperty('--safe-area-inset-left', '\(insets.left)px');
+        """
+    }
+}
+
+private final class SafeAreaHandler: NSObject, WKScriptMessageHandler {
+    private weak var owner: AppViewController?
+
+    init(owner: AppViewController) {
+        self.owner = owner
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        owner?.updateSafeAreaInsets()
     }
 }

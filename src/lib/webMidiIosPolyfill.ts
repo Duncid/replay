@@ -25,6 +25,7 @@ interface WindowWithIosBridge extends Window {
   };
   __dispatchIOSMidiMessage?: (packet: MidiPacket) => void;
   __dispatchIOSMidiMessageBatch?: (packets: MidiPacket[]) => void;
+  __dispatchIOSMidiSources?: (sources: string[]) => void;
 }
 
 const NOTE_DATA_LENGTH = 3;
@@ -122,6 +123,9 @@ const installIosWebMidiPolyfill = () => {
           if (timedOut) return;
           clearTimeout(timeoutId);
           nativeStarted = false;
+          scopedWindow.dispatchEvent(new CustomEvent("midi-connection-error", {
+            detail: { message: err instanceof Error ? err.message : String(err) },
+          }));
           inputDisplayName = "No devices";
           inputsMap.clear();
           scopedWindow.dispatchEvent(new CustomEvent("midi-sources-updated"));
@@ -223,7 +227,13 @@ const installIosWebMidiPolyfill = () => {
     removeEventListener: () => {},
     dispatchEvent: () => true,
     open: async () => input,
-    close: async () => input,
+    close: async () => {
+      midiHandler = null;
+      nativeStarted = false;
+      if (capacitorPlugin) await capacitorPlugin.disconnect();
+      else webkitBridge?.postMessage({ type: "midi/disconnect" });
+      return input;
+    },
     onstatechange: null,
   } as MIDIInput;
 
@@ -266,6 +276,15 @@ const installIosWebMidiPolyfill = () => {
   scopedWindow.addEventListener(IOS_MIDI_EVENT_NAME, onNativeMidiEvent as EventListener);
   scopedWindow.__dispatchIOSMidiMessage = emitMidiMessage;
   scopedWindow.__dispatchIOSMidiMessageBatch = emitMidiMessageBatch;
+  scopedWindow.__dispatchIOSMidiSources = applyNativeResult;
+
+  const refreshSources = () => {
+    if (!nativeStarted || !capacitorPlugin) return;
+    void capacitorPlugin.requestAccess()
+      .then(result => applyNativeResult(result.sources ?? []))
+      .catch(error => console.error("[MIDI] Failed to refresh sources:", error));
+  };
+  document.addEventListener("resume", refreshSources);
 
   const getCapacitorPlugin = (): Promise<CapacitorMidiBridge | null> => {
     console.log("[MIDI Polyfill] [DEBUG] getCapacitorPlugin ENTRY");
@@ -290,7 +309,15 @@ const installIosWebMidiPolyfill = () => {
         console.log("[MIDI Polyfill] [DEBUG] getCapacitorPlugin: import DONE, registerPlugin:", !!mod.registerPlugin);
         const { registerPlugin } = mod;
         console.log("[MIDI Polyfill] [DEBUG] getCapacitorPlugin: calling registerPlugin('MidiBridge')...");
-        capacitorPlugin = registerPlugin("MidiBridge") as CapacitorMidiBridge;
+        const nativePlugin = registerPlugin("MidiBridge") as CapacitorMidiBridge;
+        // Capacitor 6 proxies expose every property, including `then`, as a
+        // plugin method. Resolving a Promise with that proxy invokes its fake
+        // `then` method and never settles. Return a plain facade instead.
+        capacitorPlugin = {
+          ping: () => nativePlugin.ping(),
+          requestAccess: () => nativePlugin.requestAccess(),
+          disconnect: () => nativePlugin.disconnect(),
+        };
         console.log("[MIDI Polyfill] [DEBUG] getCapacitorPlugin: registerPlugin DONE, plugin:", !!capacitorPlugin);
         return capacitorPlugin;
       } catch (err) {
@@ -357,6 +384,7 @@ const installIosWebMidiPolyfill = () => {
       webkitBridge.postMessage({ type: "midi/disconnect" });
     }
     scopedWindow.removeEventListener(IOS_MIDI_EVENT_NAME, onNativeMidiEvent as EventListener);
+    document.removeEventListener("resume", refreshSources);
   });
 };
 

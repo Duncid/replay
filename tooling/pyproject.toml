@@ -5,9 +5,13 @@ description = "Local tune pipeline CLI"
 requires-python = ">=3.10"
 dependencies = [
   "music21>=9.1.0",
+  "networkx>=3.2",
   "pretty_midi>=0.2.10",
   "pydantic>=2.6.0",
 ]
+
+[dependency-groups]
+dev = ["pytest>=7.0"]
 
 [project.scripts]
 tune-pipeline = "tune_pipeline.cli:main"

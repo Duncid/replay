@@ -1,510 +1,503 @@
 {
-  "schemaVersion": "teacher.v2",
-  "title": "St. Louis Blues (melody lead-sheet, single staff)",
-  "pipelineSettings": {
-    "staffToHandDefault": {
-      "1": "RH",
-      "2": "LH"
-    },
-    "handSplitPolicy": {
-      "mode": "unknownOrSingleStaff"
-    }
-  },
-  "motifs": [
-    {
-      "id": "M1",
-      "label": "Triple pickup (same pitch, 3x eighths)",
-      "importance": 0.6,
-      "description": "Three repeated eighth-notes setting up a phrase entry."
-    },
-    {
-      "id": "M2",
-      "label": "Chromatic approach: D#–E–G–Bb–A",
-      "importance": 0.85,
-      "description": "Bluesy chromatic climb into Bb then resolves to A; appears as a signature color line."
-    },
-    {
-      "id": "M3",
-      "label": "Blues riff: C–C–C#–D then drop/hold",
-      "importance": 0.8,
-      "description": "Repeated C with C# leading to D, then falls to a longer tone (often A/A# or a held note)."
-    },
-    {
-      "id": "M4",
-      "label": "Cadence/anchor: long G (whole/held)",
-      "importance": 0.9,
-      "description": "Big resting point on G used to end phrases/sections; sustain and release cleanly."
-    },
-    {
-      "id": "M5",
-      "label": "A-hook: B–D–B–G (tie into sustain)",
-      "importance": 0.75,
-      "description": "Call-and-response hook: B to D back to B then resolves to G with a tie."
-    },
-    {
-      "id": "M6",
-      "label": "Answer figure: F#–A–F#–D (tie)",
-      "importance": 0.65,
-      "description": "Descending/answer gesture that lands on a tied D."
-    }
-  ],
-  "motifOccurrences": [
-    {
-      "motifId": "M1",
-      "location": {
-        "startMeasure": 1,
-        "startBeat": 1,
-        "endMeasure": 1,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M1",
-      "location": {
-        "startMeasure": 33,
-        "startBeat": 2,
-        "endMeasure": 33,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M2",
-      "location": {
-        "startMeasure": 11,
-        "startBeat": 2,
-        "endMeasure": 11,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M2",
-      "location": {
-        "startMeasure": 15,
-        "startBeat": 2,
-        "endMeasure": 15,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M2",
-      "location": {
-        "startMeasure": 23,
-        "startBeat": 2,
-        "endMeasure": 23,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M2",
-      "location": {
-        "startMeasure": 27,
-        "startBeat": 2,
-        "endMeasure": 27,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M3",
-      "location": {
-        "startMeasure": 3,
-        "startBeat": 2,
-        "endMeasure": 3,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M3",
-      "location": {
-        "startMeasure": 7,
-        "startBeat": 2,
-        "endMeasure": 7,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M3",
-      "location": {
-        "startMeasure": 35,
-        "startBeat": 2,
-        "endMeasure": 35,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M3",
-      "location": {
-        "startMeasure": 43,
-        "startBeat": 2,
-        "endMeasure": 43,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 12,
-        "startBeat": 1,
-        "endMeasure": 12,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 16,
-        "startBeat": 1,
-        "endMeasure": 16,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 20,
-        "startBeat": 1,
-        "endMeasure": 20,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 24,
-        "startBeat": 1,
-        "endMeasure": 24,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 28,
-        "startBeat": 1,
-        "endMeasure": 28,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 32,
-        "startBeat": 1,
-        "endMeasure": 32,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 40,
-        "startBeat": 1,
-        "endMeasure": 40,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 52,
-        "startBeat": 1,
-        "endMeasure": 52,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 56,
-        "startBeat": 1,
-        "endMeasure": 56,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 60,
-        "startBeat": 1,
-        "endMeasure": 60,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M4",
-      "location": {
-        "startMeasure": 61,
-        "startBeat": 1,
-        "endMeasure": 61,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M5",
-      "location": {
-        "startMeasure": 10,
-        "startBeat": 1,
-        "endMeasure": 10,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M5",
-      "location": {
-        "startMeasure": 22,
-        "startBeat": 1,
-        "endMeasure": 22,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M6",
-      "location": {
-        "startMeasure": 18,
-        "startBeat": 1,
-        "endMeasure": 18,
-        "endBeat": 4
-      }
-    },
-    {
-      "motifId": "M6",
-      "location": {
-        "startMeasure": 30,
-        "startBeat": 1,
-        "endMeasure": 30,
-        "endBeat": 4
-      }
-    }
-  ],
-  "nuggets": [
-    {
-      "id": "N1",
-      "length": 5,
-      "location": {
-        "startMeasure": 1,
-        "startBeat": 1,
-        "endMeasure": 2,
-        "endBeat": 4
-      },
-      "dependsOn": ["M1"]
-    },
-    {
-      "id": "N2",
-      "length": 10,
-      "location": {
-        "startMeasure": 3,
-        "startBeat": 1,
-        "endMeasure": 5,
-        "endBeat": 4
-      },
-      "dependsOn": ["M3"]
-    },
-    {
-      "id": "N3",
-      "length": 11,
-      "location": {
-        "startMeasure": 6,
-        "startBeat": 1,
-        "endMeasure": 9,
-        "endBeat": 4
-      },
-      "dependsOn": ["M3"]
-    },
-    {
-      "id": "N4",
-      "length": 10,
-      "location": {
-        "startMeasure": 10,
-        "startBeat": 1,
-        "endMeasure": 13,
-        "endBeat": 4
-      },
-      "dependsOn": ["M5", "M2", "M4"]
-    },
-    {
-      "id": "N5",
-      "length": 10,
-      "location": {
-        "startMeasure": 14,
-        "startBeat": 1,
-        "endMeasure": 17,
-        "endBeat": 4
-      },
-      "dependsOn": ["M2", "M4"]
-    },
-    {
-      "id": "N6",
-      "length": 9,
-      "location": {
-        "startMeasure": 18,
-        "startBeat": 1,
-        "endMeasure": 21,
-        "endBeat": 4
-      },
-      "dependsOn": ["M6", "M4"]
-    },
-    {
-      "id": "N7",
-      "length": 12,
-      "location": {
-        "startMeasure": 22,
-        "startBeat": 1,
-        "endMeasure": 25,
-        "endBeat": 4
-      },
-      "dependsOn": ["M5", "M2", "M4"]
-    },
-    {
-      "id": "N8",
-      "length": 11,
-      "location": {
-        "startMeasure": 26,
-        "startBeat": 1,
-        "endMeasure": 29,
-        "endBeat": 4
-      },
-      "dependsOn": ["M2", "M4"]
-    },
-    {
-      "id": "N9",
-      "length": 12,
-      "location": {
-        "startMeasure": 30,
-        "startBeat": 1,
-        "endMeasure": 33,
-        "endBeat": 4
-      },
-      "dependsOn": ["M6", "M1", "M4"]
-    },
-    {
-      "id": "N10",
-      "length": 10,
-      "location": {
-        "startMeasure": 34,
-        "startBeat": 1,
-        "endMeasure": 37,
-        "endBeat": 4
-      },
-      "dependsOn": ["M3"]
-    },
-    {
-      "id": "N11",
-      "length": 8,
-      "location": {
-        "startMeasure": 38,
-        "startBeat": 1,
-        "endMeasure": 41,
-        "endBeat": 4
-      },
-      "dependsOn": ["M4"]
-    },
-    {
-      "id": "N12",
-      "length": 9,
-      "location": {
-        "startMeasure": 42,
-        "startBeat": 1,
-        "endMeasure": 45,
-        "endBeat": 4
-      },
-      "dependsOn": ["M3"]
-    },
-    {
-      "id": "N13",
-      "length": 11,
-      "location": {
-        "startMeasure": 46,
-        "startBeat": 1,
-        "endMeasure": 49,
-        "endBeat": 4
-      },
-      "dependsOn": ["M4"]
-    },
-    {
-      "id": "N14",
-      "length": 18,
-      "location": {
-        "startMeasure": 50,
-        "startBeat": 1,
-        "endMeasure": 53,
-        "endBeat": 4
-      },
-      "dependsOn": ["M4"]
-    },
-    {
-      "id": "N15",
-      "length": 16,
-      "location": {
-        "startMeasure": 54,
-        "startBeat": 1,
-        "endMeasure": 57,
-        "endBeat": 4
-      },
-      "dependsOn": ["M4"]
-    },
-    {
-      "id": "N16",
-      "length": 16,
-      "location": {
-        "startMeasure": 58,
-        "startBeat": 1,
-        "endMeasure": 61,
-        "endBeat": 4
-      },
-      "dependsOn": ["M4"]
-    }
-  ],
   "assemblies": [
-    { "id": "A1", "tier": 1, "nuggetIds": ["N1", "N2"] },
-    { "id": "A2", "tier": 1, "nuggetIds": ["N3", "N4"] },
-    { "id": "A3", "tier": 1, "nuggetIds": ["N5", "N6"] },
-    { "id": "A4", "tier": 1, "nuggetIds": ["N7", "N8"] },
-    { "id": "A5", "tier": 1, "nuggetIds": ["N9", "N10"] },
-    { "id": "A6", "tier": 1, "nuggetIds": ["N11", "N12"] },
-    { "id": "A7", "tier": 1, "nuggetIds": ["N13", "N14"] },
-    { "id": "A8", "tier": 1, "nuggetIds": ["N15", "N16"] },
-    { "id": "A9", "tier": 2, "nuggetIds": ["N1", "N2", "N3"] },
-    { "id": "A10", "tier": 2, "nuggetIds": ["N4", "N5", "N6"] },
-    { "id": "A11", "tier": 2, "nuggetIds": ["N7", "N8", "N9"] },
-    { "id": "A12", "tier": 2, "nuggetIds": ["N10", "N11", "N12", "N13"] },
-    { "id": "A13", "tier": 2, "nuggetIds": ["N14", "N15", "N16"] }
-  ],
-  "tuneHints": {
-    "goal": "Learn the melody as a singing line with clear phrase shapes, then add a relaxed blues inflection (especially around chromatic passing tones like C#, D#, and A#).",
-    "counting": "Count steady 4/4, but keep the eighths light—many phrases feel like pickup-to-downbeat with long holds at cadences.",
-    "commonMistakes": [
-      "Rushing the short pickup figures before a tied/held note",
-      "Playing chromatic notes (C#, D#, A#) too loud instead of as passing color",
-      "Not sustaining the long G cadences evenly (tone droops or releases early)",
-      "Blurring rests—phrase starts lose their punch"
-    ],
-    "whatToListenFor": [
-      "Call-and-response between short hooks and long holds",
-      "Smooth resolution into the long G anchors",
-      "Evenness of repeated notes (no accents unless intended)",
-      "A gentle blues ‘lean’ on the chromatic approaches without losing time"
-    ]
-  },
-  "teachingOrder": [
-    "N1",
-    "N2",
-    "N3",
-    "N4",
-    "N5",
-    "N6",
-    "N7",
-    "N8",
-    "N9",
-    "N10",
-    "N11",
-    "N12",
-    "N13",
-    "N14",
-    "N15",
-    "N16"
+    {
+      "id": "A1",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N1",
+        "N3"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A2",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N5",
+        "N8"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A3",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N10",
+        "N12"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A4",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N14",
+        "N16"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A5",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N18",
+        "N20"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A6",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N23",
+        "N25"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A7",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N28",
+        "N30"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A8",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N33",
+        "N35"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A9",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N38",
+        "N40"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A10",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N43",
+        "N45"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A11",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N48",
+        "N50"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A12",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N52",
+        "N55"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A13",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N57",
+        "N59"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A14",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N62",
+        "N64"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A15",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N66",
+        "N69"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A16",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N71",
+        "N73"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A17",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N75",
+        "N77"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A18",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N79",
+        "N81"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A19",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N84",
+        "N86"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A20",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N88",
+        "N91"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A21",
+      "label": "Assembly tier 1 (2 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N93",
+        "N95"
+      ],
+      "tier": 1
+    },
+    {
+      "id": "A22",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N1",
+        "N3",
+        "N5",
+        "N8"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A23",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N10",
+        "N12",
+        "N14",
+        "N16"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A24",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N18",
+        "N20",
+        "N23",
+        "N25"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A25",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N28",
+        "N30",
+        "N33",
+        "N35"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A26",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N38",
+        "N40",
+        "N43",
+        "N45"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A27",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N48",
+        "N50",
+        "N52",
+        "N55"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A28",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N57",
+        "N59",
+        "N62",
+        "N64"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A29",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N66",
+        "N69",
+        "N71",
+        "N73"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A30",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N75",
+        "N77",
+        "N79",
+        "N81"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A31",
+      "label": "Assembly tier 2 (4 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N84",
+        "N86",
+        "N88",
+        "N91"
+      ],
+      "tier": 2
+    },
+    {
+      "id": "A32",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N1",
+        "N3",
+        "N5",
+        "N8",
+        "N10",
+        "N12",
+        "N14",
+        "N16"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A33",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N18",
+        "N20",
+        "N23",
+        "N25",
+        "N28",
+        "N30",
+        "N33",
+        "N35"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A34",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N38",
+        "N40",
+        "N43",
+        "N45",
+        "N48",
+        "N50",
+        "N52",
+        "N55"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A35",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N57",
+        "N59",
+        "N62",
+        "N64",
+        "N66",
+        "N69",
+        "N71",
+        "N73"
+      ],
+      "tier": 3
+    },
+    {
+      "id": "A36",
+      "label": "Assembly tier 3 (8 cells)",
+      "modes": [
+        "RH"
+      ],
+      "nuggetIds": [
+        "N75",
+        "N77",
+        "N79",
+        "N81",
+        "N84",
+        "N86",
+        "N88",
+        "N91"
+      ],
+      "tier": 3
+    }
   ],
   "assemblyOrder": [
     "A1",
+    "A10",
+    "A11",
+    "A12",
+    "A13",
+    "A14",
+    "A15",
+    "A16",
+    "A17",
+    "A18",
+    "A19",
     "A2",
+    "A20",
+    "A21",
     "A3",
     "A4",
     "A5",
@@ -512,9 +505,1779 @@
     "A7",
     "A8",
     "A9",
-    "A10",
-    "A11",
-    "A12",
-    "A13"
-  ]
+    "A22",
+    "A23",
+    "A24",
+    "A25",
+    "A26",
+    "A27",
+    "A28",
+    "A29",
+    "A30",
+    "A31",
+    "A32",
+    "A33",
+    "A34",
+    "A35",
+    "A36"
+  ],
+  "instrumentPlans": [
+    {
+      "id": "inst1",
+      "name": "Piano RH"
+    }
+  ],
+  "nuggets": [
+    {
+      "dependsOn": [],
+      "id": "N1",
+      "label": "Bar 1",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 2,
+        "startBeat": 1.0,
+        "startMeasure": 1
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N1",
+        "N3"
+      ],
+      "id": "N2",
+      "label": "Bars 1\u20133",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 3,
+        "startBeat": 1.0,
+        "startMeasure": 1
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N1"
+      ],
+      "id": "N3",
+      "label": "Bar 2",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 3,
+        "startBeat": 1.0,
+        "startMeasure": 2
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N3",
+        "N5"
+      ],
+      "id": "N4",
+      "label": "Bars 2\u20134",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 2
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N3"
+      ],
+      "id": "N5",
+      "label": "Bar 3",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 4,
+        "startBeat": 1.0,
+        "startMeasure": 3
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N5"
+      ],
+      "id": "N6",
+      "label": "Bars 3\u20135",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 5,
+        "startBeat": 1.0,
+        "startMeasure": 3
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N8"
+      ],
+      "id": "N7",
+      "label": "Bars 4\u20136",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 6,
+        "startBeat": 1.0,
+        "startMeasure": 4
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N8",
+      "label": "Bar 5",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 6,
+        "startBeat": 1.0,
+        "startMeasure": 5
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N8",
+        "N10"
+      ],
+      "id": "N9",
+      "label": "Bars 5\u20137",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 7,
+        "startBeat": 1.0,
+        "startMeasure": 5
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N8"
+      ],
+      "id": "N10",
+      "label": "Bar 6",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 7,
+        "startBeat": 1.0,
+        "startMeasure": 6
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N10",
+        "N12"
+      ],
+      "id": "N11",
+      "label": "Bars 6\u20138",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 8,
+        "startBeat": 1.0,
+        "startMeasure": 6
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N10"
+      ],
+      "id": "N12",
+      "label": "Bar 7",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 8,
+        "startBeat": 1.0,
+        "startMeasure": 7
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N12",
+        "N14"
+      ],
+      "id": "N13",
+      "label": "Bars 7\u20139",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 9,
+        "startBeat": 1.0,
+        "startMeasure": 7
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N12"
+      ],
+      "id": "N14",
+      "label": "Bar 8",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 9,
+        "startBeat": 1.0,
+        "startMeasure": 8
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N14",
+        "N16"
+      ],
+      "id": "N15",
+      "label": "Bars 8\u201310",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 10,
+        "startBeat": 1.0,
+        "startMeasure": 8
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N14"
+      ],
+      "id": "N16",
+      "label": "Bar 9",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 10,
+        "startBeat": 1.0,
+        "startMeasure": 9
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N16",
+        "N18"
+      ],
+      "id": "N17",
+      "label": "Bars 9\u201311",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 11,
+        "startBeat": 1.0,
+        "startMeasure": 9
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N16"
+      ],
+      "id": "N18",
+      "label": "Bar 10",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 11,
+        "startBeat": 1.0,
+        "startMeasure": 10
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N18",
+        "N20"
+      ],
+      "id": "N19",
+      "label": "Bars 10\u201312",
+      "length": 9,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 12,
+        "startBeat": 1.0,
+        "startMeasure": 10
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N18"
+      ],
+      "id": "N20",
+      "label": "Bar 11",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 12,
+        "startBeat": 1.0,
+        "startMeasure": 11
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N20"
+      ],
+      "id": "N21",
+      "label": "Bars 11\u201313",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 13,
+        "startBeat": 1.0,
+        "startMeasure": 11
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N23"
+      ],
+      "id": "N22",
+      "label": "Bars 13\u201315",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 15,
+        "startBeat": 1.0,
+        "startMeasure": 13
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N23",
+      "label": "Bar 14",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 15,
+        "startBeat": 1.0,
+        "startMeasure": 14
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N23",
+        "N25"
+      ],
+      "id": "N24",
+      "label": "Bars 14\u201316",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 16,
+        "startBeat": 1.0,
+        "startMeasure": 14
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N23"
+      ],
+      "id": "N25",
+      "label": "Bar 15",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 16,
+        "startBeat": 1.0,
+        "startMeasure": 15
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N25"
+      ],
+      "id": "N26",
+      "label": "Bars 15\u201317",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 17,
+        "startBeat": 1.0,
+        "startMeasure": 15
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N28"
+      ],
+      "id": "N27",
+      "label": "Bars 17\u201319",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 19,
+        "startBeat": 1.0,
+        "startMeasure": 17
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N28",
+      "label": "Bar 18",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 19,
+        "startBeat": 1.0,
+        "startMeasure": 18
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N28",
+        "N30"
+      ],
+      "id": "N29",
+      "label": "Bars 18\u201320",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 20,
+        "startBeat": 1.0,
+        "startMeasure": 18
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N28"
+      ],
+      "id": "N30",
+      "label": "Bar 19",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 20,
+        "startBeat": 1.0,
+        "startMeasure": 19
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N30"
+      ],
+      "id": "N31",
+      "label": "Bars 19\u201321",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 21,
+        "startBeat": 1.0,
+        "startMeasure": 19
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N33"
+      ],
+      "id": "N32",
+      "label": "Bars 21\u201323",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 23,
+        "startBeat": 1.0,
+        "startMeasure": 21
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N33",
+      "label": "Bar 22",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 23,
+        "startBeat": 1.0,
+        "startMeasure": 22
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N33",
+        "N35"
+      ],
+      "id": "N34",
+      "label": "Bars 22\u201324",
+      "length": 10,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 24,
+        "startBeat": 1.0,
+        "startMeasure": 22
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N33"
+      ],
+      "id": "N35",
+      "label": "Bar 23",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 24,
+        "startBeat": 1.0,
+        "startMeasure": 23
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N35"
+      ],
+      "id": "N36",
+      "label": "Bars 23\u201325",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 25,
+        "startBeat": 1.0,
+        "startMeasure": 23
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N38"
+      ],
+      "id": "N37",
+      "label": "Bars 25\u201327",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 27,
+        "startBeat": 1.0,
+        "startMeasure": 25
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N38",
+      "label": "Bar 26",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 27,
+        "startBeat": 1.0,
+        "startMeasure": 26
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N38",
+        "N40"
+      ],
+      "id": "N39",
+      "label": "Bars 26\u201328",
+      "length": 9,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 28,
+        "startBeat": 1.0,
+        "startMeasure": 26
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N38"
+      ],
+      "id": "N40",
+      "label": "Bar 27",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 28,
+        "startBeat": 1.0,
+        "startMeasure": 27
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N40"
+      ],
+      "id": "N41",
+      "label": "Bars 27\u201329",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 29,
+        "startBeat": 1.0,
+        "startMeasure": 27
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N43"
+      ],
+      "id": "N42",
+      "label": "Bars 29\u201331",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 31,
+        "startBeat": 1.0,
+        "startMeasure": 29
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N43",
+      "label": "Bar 30",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 31,
+        "startBeat": 1.0,
+        "startMeasure": 30
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N43",
+        "N45"
+      ],
+      "id": "N44",
+      "label": "Bars 30\u201332",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 32,
+        "startBeat": 1.0,
+        "startMeasure": 30
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N43"
+      ],
+      "id": "N45",
+      "label": "Bar 31",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 32,
+        "startBeat": 1.0,
+        "startMeasure": 31
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N45"
+      ],
+      "id": "N46",
+      "label": "Bars 31\u201333",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 33,
+        "startBeat": 1.0,
+        "startMeasure": 31
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N48"
+      ],
+      "id": "N47",
+      "label": "Bars 32\u201334",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 34,
+        "startBeat": 1.0,
+        "startMeasure": 32
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N48",
+      "label": "Bar 33",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 34,
+        "startBeat": 1.0,
+        "startMeasure": 33
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N48",
+        "N50"
+      ],
+      "id": "N49",
+      "label": "Bars 33\u201335",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 35,
+        "startBeat": 1.0,
+        "startMeasure": 33
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N48"
+      ],
+      "id": "N50",
+      "label": "Bar 34",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 35,
+        "startBeat": 1.0,
+        "startMeasure": 34
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N50",
+        "N52"
+      ],
+      "id": "N51",
+      "label": "Bars 34\u201336",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 36,
+        "startBeat": 1.0,
+        "startMeasure": 34
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N50"
+      ],
+      "id": "N52",
+      "label": "Bar 35",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 36,
+        "startBeat": 1.0,
+        "startMeasure": 35
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N52"
+      ],
+      "id": "N53",
+      "label": "Bars 35\u201337",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 37,
+        "startBeat": 1.0,
+        "startMeasure": 35
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N55"
+      ],
+      "id": "N54",
+      "label": "Bars 36\u201338",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 38,
+        "startBeat": 1.0,
+        "startMeasure": 36
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N55",
+      "label": "Bar 37",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 38,
+        "startBeat": 1.0,
+        "startMeasure": 37
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N55",
+        "N57"
+      ],
+      "id": "N56",
+      "label": "Bars 37\u201339",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 39,
+        "startBeat": 1.0,
+        "startMeasure": 37
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N55"
+      ],
+      "id": "N57",
+      "label": "Bar 38",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 39,
+        "startBeat": 1.0,
+        "startMeasure": 38
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N57",
+        "N59"
+      ],
+      "id": "N58",
+      "label": "Bars 38\u201340",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 40,
+        "startBeat": 1.0,
+        "startMeasure": 38
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N57"
+      ],
+      "id": "N59",
+      "label": "Bar 39",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 40,
+        "startBeat": 1.0,
+        "startMeasure": 39
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N59"
+      ],
+      "id": "N60",
+      "label": "Bars 39\u201341",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 41,
+        "startBeat": 1.0,
+        "startMeasure": 39
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N62"
+      ],
+      "id": "N61",
+      "label": "Bars 40\u201342",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 42,
+        "startBeat": 1.0,
+        "startMeasure": 40
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N62",
+      "label": "Bar 41",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 42,
+        "startBeat": 1.0,
+        "startMeasure": 41
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N62",
+        "N64"
+      ],
+      "id": "N63",
+      "label": "Bars 41\u201343",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 43,
+        "startBeat": 1.0,
+        "startMeasure": 41
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N62"
+      ],
+      "id": "N64",
+      "label": "Bar 42",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 43,
+        "startBeat": 1.0,
+        "startMeasure": 42
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N64",
+        "N66"
+      ],
+      "id": "N65",
+      "label": "Bars 42\u201344",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 44,
+        "startBeat": 1.0,
+        "startMeasure": 42
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N64"
+      ],
+      "id": "N66",
+      "label": "Bar 43",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 44,
+        "startBeat": 1.0,
+        "startMeasure": 43
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N66"
+      ],
+      "id": "N67",
+      "label": "Bars 43\u201345",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 45,
+        "startBeat": 1.0,
+        "startMeasure": 43
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N69"
+      ],
+      "id": "N68",
+      "label": "Bars 44\u201346",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 46,
+        "startBeat": 1.0,
+        "startMeasure": 44
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N69",
+      "label": "Bar 45",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 46,
+        "startBeat": 1.0,
+        "startMeasure": 45
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N69",
+        "N71"
+      ],
+      "id": "N70",
+      "label": "Bars 45\u201347",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 47,
+        "startBeat": 1.0,
+        "startMeasure": 45
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N69"
+      ],
+      "id": "N71",
+      "label": "Bar 46",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 47,
+        "startBeat": 1.0,
+        "startMeasure": 46
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N71",
+        "N73"
+      ],
+      "id": "N72",
+      "label": "Bars 46\u201348",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 48,
+        "startBeat": 1.0,
+        "startMeasure": 46
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N71"
+      ],
+      "id": "N73",
+      "label": "Bar 47",
+      "length": 4,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 48,
+        "startBeat": 1.0,
+        "startMeasure": 47
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N73",
+        "N75"
+      ],
+      "id": "N74",
+      "label": "Bars 47\u201349",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 49,
+        "startBeat": 1.0,
+        "startMeasure": 47
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N73"
+      ],
+      "id": "N75",
+      "label": "Bar 48",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 49,
+        "startBeat": 1.0,
+        "startMeasure": 48
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N75",
+        "N77"
+      ],
+      "id": "N76",
+      "label": "Bars 48\u201350",
+      "length": 5,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 50,
+        "startBeat": 1.0,
+        "startMeasure": 48
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N75"
+      ],
+      "id": "N77",
+      "label": "Bar 49",
+      "length": 3,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 50,
+        "startBeat": 1.0,
+        "startMeasure": 49
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N77",
+        "N79"
+      ],
+      "id": "N78",
+      "label": "Bars 49\u201351",
+      "length": 9,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 51,
+        "startBeat": 1.0,
+        "startMeasure": 49
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N77"
+      ],
+      "id": "N79",
+      "label": "Bar 50",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 51,
+        "startBeat": 1.0,
+        "startMeasure": 50
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N79",
+        "N81"
+      ],
+      "id": "N80",
+      "label": "Bars 50\u201352",
+      "length": 13,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 52,
+        "startBeat": 1.0,
+        "startMeasure": 50
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N79"
+      ],
+      "id": "N81",
+      "label": "Bar 51",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 52,
+        "startBeat": 1.0,
+        "startMeasure": 51
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N81"
+      ],
+      "id": "N82",
+      "label": "Bars 51\u201353",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 53,
+        "startBeat": 1.0,
+        "startMeasure": 51
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N84"
+      ],
+      "id": "N83",
+      "label": "Bars 52\u201354",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 54,
+        "startBeat": 1.0,
+        "startMeasure": 52
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N84",
+      "label": "Bar 53",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 54,
+        "startBeat": 1.0,
+        "startMeasure": 53
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N84",
+        "N86"
+      ],
+      "id": "N85",
+      "label": "Bars 53\u201355",
+      "length": 8,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 55,
+        "startBeat": 1.0,
+        "startMeasure": 53
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N84"
+      ],
+      "id": "N86",
+      "label": "Bar 54",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 55,
+        "startBeat": 1.0,
+        "startMeasure": 54
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N86",
+        "N88"
+      ],
+      "id": "N87",
+      "label": "Bars 54\u201356",
+      "length": 13,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 56,
+        "startBeat": 1.0,
+        "startMeasure": 54
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N86"
+      ],
+      "id": "N88",
+      "label": "Bar 55",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 56,
+        "startBeat": 1.0,
+        "startMeasure": 55
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N88"
+      ],
+      "id": "N89",
+      "label": "Bars 55\u201357",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 57,
+        "startBeat": 1.0,
+        "startMeasure": 55
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N91"
+      ],
+      "id": "N90",
+      "label": "Bars 56\u201358",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 58,
+        "startBeat": 1.0,
+        "startMeasure": 56
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [],
+      "id": "N91",
+      "label": "Bar 57",
+      "length": 2,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 58,
+        "startBeat": 1.0,
+        "startMeasure": 57
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N91",
+        "N93"
+      ],
+      "id": "N92",
+      "label": "Bars 57\u201359",
+      "length": 9,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 59,
+        "startBeat": 1.0,
+        "startMeasure": 57
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N91"
+      ],
+      "id": "N93",
+      "label": "Bar 58",
+      "length": 7,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 59,
+        "startBeat": 1.0,
+        "startMeasure": 58
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N93",
+        "N95"
+      ],
+      "id": "N94",
+      "label": "Bars 58\u201360",
+      "length": 13,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 60,
+        "startBeat": 1.0,
+        "startMeasure": 58
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N93"
+      ],
+      "id": "N95",
+      "label": "Bar 59",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 60,
+        "startBeat": 1.0,
+        "startMeasure": 59
+      },
+      "modes": [
+        "RH"
+      ]
+    },
+    {
+      "dependsOn": [
+        "N95"
+      ],
+      "id": "N96",
+      "label": "Bars 59\u201361",
+      "length": 6,
+      "location": {
+        "endBeat": 1.0,
+        "endMeasure": 61,
+        "startBeat": 1.0,
+        "startMeasure": 59
+      },
+      "modes": [
+        "RH"
+      ]
+    }
+  ],
+  "pipelineSettings": {
+    "dsp": {
+      "chordCap": 6,
+      "gridQuarterLength": 0.25
+    },
+    "handAssignmentPolicy": {
+      "instrumentToHand": {
+        "inst1": "RH"
+      },
+      "mode": "byInstrument"
+    },
+    "metadata": {
+      "assumedTempoQpm": 120,
+      "assumedTimeSignature": "4/4"
+    }
+  },
+  "schemaVersion": "teacher.v2",
+  "teachingOrder": [
+    "N1",
+    "N3",
+    "N2",
+    "N5",
+    "N4",
+    "N6",
+    "N8",
+    "N7",
+    "N10",
+    "N9",
+    "N12",
+    "N11",
+    "N14",
+    "N13",
+    "N16",
+    "N15",
+    "N18",
+    "N17",
+    "N20",
+    "N19",
+    "N21",
+    "N23",
+    "N22",
+    "N25",
+    "N24",
+    "N26",
+    "N28",
+    "N27",
+    "N30",
+    "N29",
+    "N31",
+    "N33",
+    "N32",
+    "N35",
+    "N34",
+    "N36",
+    "N38",
+    "N37",
+    "N40",
+    "N39",
+    "N41",
+    "N43",
+    "N42",
+    "N45",
+    "N44",
+    "N46",
+    "N48",
+    "N47",
+    "N50",
+    "N49",
+    "N52",
+    "N51",
+    "N53",
+    "N55",
+    "N54",
+    "N57",
+    "N56",
+    "N59",
+    "N58",
+    "N60",
+    "N62",
+    "N61",
+    "N64",
+    "N63",
+    "N66",
+    "N65",
+    "N67",
+    "N69",
+    "N68",
+    "N71",
+    "N70",
+    "N73",
+    "N72",
+    "N75",
+    "N74",
+    "N77",
+    "N76",
+    "N79",
+    "N78",
+    "N81",
+    "N80",
+    "N82",
+    "N84",
+    "N83",
+    "N86",
+    "N85",
+    "N88",
+    "N87",
+    "N89",
+    "N91",
+    "N90",
+    "N93",
+    "N92",
+    "N95",
+    "N94",
+    "N96"
+  ],
+  "title": "st-louis-blues"
 }

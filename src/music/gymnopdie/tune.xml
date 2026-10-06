@@ -9,7 +9,7 @@
     <creator type="composer">Erik Satie(1866 – 1925)</creator>
     <creator type="lyricist">Éric Alfred Leslie Satie</creator>
     <encoding>
-      <encoding-date>2026-02-01</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
       <software>MuseScore 3.6.2</software>
       <supports attribute="new-system" element="print" type="yes" value="yes" />
@@ -53,11 +53,11 @@ Trois Gymnopédies</credit-words>
     <score-part id="P1">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="Ic51850fbfb7bf43c7b2e1dc2694810b9">
+      <score-instrument id="I78dc3cd76dc3ae82f39cafeb5a73e2b7">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Ic51850fbfb7bf43c7b2e1dc2694810b9">
+      <midi-instrument id="I78dc3cd76dc3ae82f39cafeb5a73e2b7">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>

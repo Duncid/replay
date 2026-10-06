@@ -1,0 +1,72 @@
+{
+  "notes": [
+    {
+      "endTime": 2.2222130000000107,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 72,
+      "program": 0,
+      "startTime": 1.1111020000000025,
+      "velocity": 0.49606299212598426
+    },
+    {
+      "endTime": 3.3333240000000046,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 74,
+      "program": 0,
+      "startTime": 2.2222130000000107,
+      "velocity": 0.49606299212598426
+    },
+    {
+      "endTime": 4.444435000000013,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 76,
+      "program": 0,
+      "startTime": 3.3333240000000046,
+      "velocity": 0.6377952755905512
+    },
+    {
+      "endTime": 5.555546000000007,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 74,
+      "program": 0,
+      "startTime": 4.444435000000013,
+      "velocity": 0.6377952755905512
+    },
+    {
+      "endTime": 6.666657000000015,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 71,
+      "program": 0,
+      "startTime": 5.555546000000007,
+      "velocity": 0.6377952755905512
+    },
+    {
+      "endTime": 12.222212000000013,
+      "instrument": 0,
+      "isDrum": false,
+      "pitch": 74,
+      "program": 0,
+      "startTime": 6.666657000000015,
+      "velocity": 0.6377952755905512
+    }
+  ],
+  "totalTime": 12.222212000000013,
+  "tempos": [
+    {
+      "time": 0.0,
+      "qpm": 120.0
+    }
+  ],
+  "timeSignatures": [
+    {
+      "time": 0.0,
+      "numerator": 3,
+      "denominator": 4
+    }
+  ]
+}

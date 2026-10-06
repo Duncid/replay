@@ -1,3 +1,4 @@
+import { loadMagentaScript } from "@/lib/magenta";
 import { AddNoteSequenceDialog } from "@/components/AddNoteSequenceDialog";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
 import {
@@ -1070,15 +1071,7 @@ const Index = () => {
     };
 
     const processMidiFile = async (file: File) => {
-      if (!window.mm) {
-        toast({
-          title: "MIDI import unavailable",
-          description:
-            "Magenta is still loading. Please wait a moment and try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+      await loadMagentaScript();
 
       const arrayBuffer = await file.arrayBuffer();
       const midiData = new Uint8Array(arrayBuffer);
@@ -2115,7 +2108,7 @@ const Index = () => {
 
   return (
     <TuneManagementProvider>
-      <div className="h-screen flex flex-col items-center justify-start bg-background overflow-hidden pt-[var(--safe-area-inset-top)]">
+      <div className="h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-[var(--safe-area-inset-top)] pr-[var(--safe-area-inset-right)] pb-[var(--safe-area-inset-bottom)] pl-[var(--safe-area-inset-left)]">
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}

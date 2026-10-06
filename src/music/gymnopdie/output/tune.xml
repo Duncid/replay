@@ -8,7 +8,7 @@
     <creator type="composer">Erik Satie(1866 – 1925)</creator>
     <creator type="lyricist">Éric Alfred Leslie Satie</creator>
     <encoding>
-      <encoding-date>2026-02-01</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
       <software>MuseScore 3.6.2</software>
     </encoding>
@@ -23,23 +23,23 @@
     <score-part id="P1">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I3a63a5fd6c8a0a25b1328bf009a34fe6">
+      <score-instrument id="Ie15cda969192ab85d2c81d5149a1b7d9">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I3a63a5fd6c8a0a25b1328bf009a34fe6">
+      <midi-instrument id="Ie15cda969192ab85d2c81d5149a1b7d9">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
-    <score-part id="Pf8f209e35427584b9c39640a3e1c1704">
+    <score-part id="P67025e30fb4252b08ef632c9c1ed920f">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I0be3602d494f736bfa17d479a26506a0">
+      <score-instrument id="I65ddccbfb854e69f4ba719a3eff3c414">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I0be3602d494f736bfa17d479a26506a0">
+      <midi-instrument id="I65ddccbfb854e69f4ba719a3eff3c414">
         <midi-channel>2</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
@@ -2777,7 +2777,7 @@
     </measure>
   </part>
   
-  <part id="Pf8f209e35427584b9c39640a3e1c1704">
+  <part id="P67025e30fb4252b08ef632c9c1ed920f">
     
     <measure implicit="no" number="1" width="275.41">
       <print>

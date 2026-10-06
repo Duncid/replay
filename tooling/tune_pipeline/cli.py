@@ -10,13 +10,9 @@ from typing import Dict, Optional
 from music21 import converter, instrument, stream, tempo, meter, note as m21note
 
 from tune_pipeline.io import read_json, write_json
-from tune_pipeline.midi_to_ns import midi_to_note_sequence
 from tune_pipeline.nuggets_extract import extract_nuggets, extract_assemblies
+from tune_pipeline.structure_generate import generate_teacher_payload, infer_metadata_from_ns
 from tune_pipeline.validate_teacher import validate_teacher
-from tune_pipeline.xml_split_hands import HandSplitResult, split_by_staff
-from tune_pipeline.xml_simplify import simplify_part_for_dsp2
-from tune_pipeline.nuggets_extract import _apply_clef_heuristic_to_xml
-from tune_pipeline.xml_to_midi import write_midi
 
 
 class PipelineError(RuntimeError):
@@ -114,39 +110,41 @@ def _write_musicxml(score: stream.Score, path: Path) -> Path:
     return path
 
 
-def _process_track(output_dir: Path, base_name: str, suffix: str, part: stream.Part, note_sequences: Dict[str, Dict[str, object]], tracks: Dict[str, Dict[str, object]]) -> None:
-    # Create a temporary score for the part to write it
-    score = stream.Score()
-    score.insert(0, part)
-    
-    # Define filenames
-    mid_name = f"{base_name}.{suffix}.mid" if suffix else f"{base_name}.mid"
-    ns_name = f"{base_name}.{suffix}.ns.json" if suffix else f"{base_name}.ns.json"
-    xml_name = f"{base_name}.{suffix}.xml" if suffix else f"{base_name}.xml" # Optional, mainly for RH/LH debugging
-    
-    if suffix:
-         # Write XML for debugging/completeness for separated parts
-        _write_musicxml(score, output_dir / xml_name)
+def _load_instrument_note_sequences(tune_folder: Path) -> Dict[str, Dict[str, object]]:
+    note_sequences: Dict[str, Dict[str, object]] = {}
+    inst_paths = sorted(
+        tune_folder.glob("tune.inst*.ns.json"),
+        key=lambda path: int(path.stem.split(".inst")[-1].split(".ns")[0]),
+    )
+    for path in inst_paths:
+        key = path.stem.split(".")[-2]
+        note_sequences[key] = read_json(path)
 
-    midi_path = output_dir / mid_name
-    write_midi(score, midi_path)
-    
-    ns_key = suffix if suffix else "full"
-    ns_data = midi_to_note_sequence(midi_path)
-    
-    # Ensure totalTime logic if needed? 
-    # Usually full track dictates total time, but independent generation is safer for now unless specified.
-    # The previous logic copied full_total to rh/lh. Let's stick to independent for now unless it causes issues, 
-    # or copy if "full" exists.
-    if "full" in note_sequences:
-        ns_data["totalTime"] = note_sequences["full"]["totalTime"]
-        
-    note_sequences[ns_key] = ns_data
-    tracks[ns_key] = {
-        "notesCount": len(ns_data["notes"]),
-        "noteSequenceFile": ns_name,
-    }
-    write_json(output_dir / ns_name, ns_data)
+    # Backward-compatible fallback for single-track folders.
+    if not note_sequences:
+        fallback_path = tune_folder / "tune.ns.json"
+        if fallback_path.exists():
+            note_sequences["inst1"] = read_json(fallback_path)
+    return note_sequences
+
+
+def _write_instrument_note_sequences(
+    output_dir: Path,
+    note_sequences: Dict[str, Dict[str, object]],
+) -> Dict[str, Dict[str, object]]:
+    tracks: Dict[str, Dict[str, object]] = {}
+    for inst_key, ns_data in note_sequences.items():
+        ns_name = f"tune.{inst_key}.ns.json"
+        write_json(output_dir / ns_name, ns_data)
+        tracks[inst_key] = {
+            "notesCount": len(ns_data.get("notes", [])),
+            "noteSequenceFile": ns_name,
+        }
+    # Single-track bundles also emit tune.ns.json (app publish + getTuneNs glob).
+    if len(note_sequences) == 1:
+        sole = next(iter(note_sequences.values()))
+        write_json(output_dir / "tune.ns.json", sole)
+    return tracks
 
 
 
@@ -256,15 +254,58 @@ def _score_from_note_sequence(ns: Dict[str, object], metadata: Dict[str, object]
     score.makeMeasures(inPlace=True)
     return score
 
-def build_tune(tune_folder: Path) -> Dict[str, object]:
+
+def write_teacher_json(tune_folder: Path) -> Dict[str, object]:
+    """Generate teacher.json from tune.xml (or instrument NS) + NoteSequences."""
+    note_sequences = _load_instrument_note_sequences(tune_folder)
+    if not note_sequences:
+        raise PipelineError(
+            "Missing NoteSequence input: expected tune.inst*.ns.json or tune.ns.json"
+        )
+
+    tune_xml = tune_folder / "tune.xml"
+    metadata: Dict[str, object] = {}
+    if tune_xml.exists():
+        score = converter.parse(str(tune_xml))
+        raw_piano_parts = _get_piano_parts(score)
+        if not raw_piano_parts:
+            raw_piano_parts = [score.parts[0]]
+        piano_score = _build_piano_score(score, raw_piano_parts)
+        combined_part = _combine_parts(raw_piano_parts)
+        score_for_bounds = piano_score
+    else:
+        primary_key = sorted(note_sequences.keys())[0]
+        metadata = infer_metadata_from_ns(note_sequences[primary_key])
+        score_for_bounds = _score_from_note_sequence(
+            note_sequences[primary_key], metadata
+        )
+        combined_part = score_for_bounds.parts[0]
+
+    title = tune_folder.name
+    payload = generate_teacher_payload(
+        score_for_bounds,
+        combined_part,
+        note_sequences,
+        tune_title=title,
+        metadata=metadata if metadata else None,
+    )
+    teacher_path = tune_folder / "teacher.json"
+    write_json(teacher_path, payload)
+    return payload
+
+
+def build_tune(tune_folder: Path, *, no_generate: bool = False) -> Dict[str, object]:
     # 1. Inspection
     if not tune_folder.exists():
         raise PipelineError(f"Folder not found: {tune_folder}")
-    
+
+    if not no_generate:
+        write_teacher_json(tune_folder)
+
     teacher_path = tune_folder / "teacher.json"
     if not teacher_path.exists():
         raise PipelineError(f"Missing file: {teacher_path.name}")
-    
+
     teacher = read_json(teacher_path)
     validate_teacher(teacher)
 
@@ -283,6 +324,13 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     grid = float(dsp_settings.get("gridQuarterLength", 0.25))
     chord_cap_value = dsp_settings.get("chordCap", 6)
     chord_cap = int(chord_cap_value) if chord_cap_value is not None else None
+    note_sequences = _load_instrument_note_sequences(tune_folder)
+    if not note_sequences:
+        raise PipelineError(
+            "Missing NoteSequence input: expected tune.inst*.ns.json or fallback tune.ns.json"
+        )
+    tracks = _write_instrument_note_sequences(output_dir, note_sequences)
+    split_info = "instrument tracks"
 
     # Priority: XML -> NS
     if tune_xml.exists():
@@ -304,113 +352,30 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
         _write_musicxml(piano_score, tune_xml_out)
         _strip_lyrics_from_xml(tune_xml_out)
 
-        # Combined Part (Always needed for 'full')
+        # Combined Part is used only for timeline offsets during chunk extraction.
         combined_part = _combine_parts(raw_piano_parts)
-        
-        # Determine tracks to process
-        parts_to_process = [("", combined_part)]
-        parts_by_track: Dict[str, stream.Part] = {"full": combined_part}
-        
-        hand_policy = settings.get("handSplitPolicy", {})
-        mode = hand_policy.get("mode", "none")
-        split_info = "not requested"
-
-        if mode == "byStaff":
-            staff_to_hand = settings.get("staffToHandDefault", {"1": "RH", "2": "LH"})
-            # Always use algorithmic split on the combined part
-            split_result = split_by_staff(score, combined_part, staff_to_hand)
-            
-            if split_result.rh_score and split_result.lh_score:
-                # Extract parts from the scores returned by split_result
-                parts_to_process.append(("rh", split_result.rh_score.parts[0]))
-                parts_to_process.append(("lh", split_result.lh_score.parts[0]))
-                parts_by_track["rh"] = split_result.rh_score.parts[0]
-                parts_by_track["lh"] = split_result.lh_score.parts[0]
-                split_info = split_result.reason
-            else:
-                split_info = f"Split failed: {split_result.reason}"
-
-        # 5. Process Output (MIDI -> NS)
-        note_sequences: Dict[str, Dict[str, object]] = {}
-        tracks: Dict[str, Dict[str, object]] = {}
-        
-        for suffix, part in parts_to_process:
-            _process_track(output_dir, base_name, suffix, part, note_sequences, tracks)
-            
         combined_part_for_nuggets = combined_part
         metadata = settings.get("metadata", {})
-
-        # DSP XML (cleaned from XML)
-        for track_name, part in parts_by_track.items():
-            suffix = "" if track_name == "full" else f".{track_name}"
-            chord_keep = "lowest" if track_name == "lh" else "highest"
-            dsp2_part = simplify_part_for_dsp2(
-                part,
-                grid,
-                chord_cap=chord_cap,
-                chord_keep=chord_keep,
-            )
-            dsp_path = output_dir / f"tune.dsp{suffix}.xml"
-            _write_musicxml(dsp2_part, dsp_path)
-            _apply_clef_heuristic_to_xml(dsp_path)
+        parts_by_track: Dict[str, stream.Part] = {}
 
     elif tune_ns_candidates:
         # --- NS PATH ---
-        print("XML missing, falling back to NS input...")
-        
-        # Identify source NS
-        # Prefer 'tune.ns.json', then '{folder}.ns.json', then first found
-        src_ns_path = tune_folder / "tune.ns.json"
-        if not src_ns_path.exists():
-            # Try folder name
-            folder_ns = tune_folder / f"{tune_folder.name}.ns.json"
-            if folder_ns.exists():
-                src_ns_path = folder_ns
-            else:
-                src_ns_path = tune_ns_candidates[0]
-        
-        base_name = src_ns_path.stem.replace(".ns", "") 
-        # base_name e.g. "intro" if file is "intro.ns.json"
-        
-        # Copy to output
-        output_ns_path = output_dir / "tune.ns.json"
-        source_ns_data = read_json(src_ns_path)
-        write_json(output_ns_path, source_ns_data)
-        
-        note_sequences = {"full": source_ns_data}
-        tracks = {
-            "full": {
-                "notesCount": len(source_ns_data.get("notes", [])),
-                "noteSequenceFile": "tune.ns.json",
-            }
-        }
-        split_info = "not applicable (NS source)"
+        print("XML missing, falling back to instrument NoteSequence input...")
+        base_name = "tune"
         parts_by_track = {}
-        
-        # Build score from NS and use as XML input
+
+        # Build score from first instrument NS and use as XML input.
         metadata = settings.get("metadata", {})
-        
         if not metadata:
              print("Warning: No metadata in teacher.json for NS-derived score.")
-
-        score = _score_from_note_sequence(source_ns_data, metadata)
+        primary_key = sorted(note_sequences.keys())[0]
+        score = _score_from_note_sequence(note_sequences[primary_key], metadata)
         _write_musicxml(score, output_dir / "tune.xml")
         combined_part_for_nuggets = score.parts[0]
-        parts_by_track = {"full": score.parts[0]}
-
-        # DSP XML (cleaned from XML)
-        dsp2_part = simplify_part_for_dsp2(
-            score.parts[0],
-            grid,
-            chord_cap=chord_cap,
-            chord_keep="highest",
-        )
-        dsp_path = output_dir / "tune.dsp.xml"
-        _write_musicxml(dsp2_part, dsp_path)
-        _apply_clef_heuristic_to_xml(dsp_path)
-        
     else:
-         raise PipelineError(f"Missing input file: expected tune.xml or *.ns.json in {tune_folder}")
+         raise PipelineError(
+             f"Missing input file: expected tune.xml, tune.inst*.ns.json, or tune.ns.json in {tune_folder}"
+         )
 
     # 6. Nugget Extraction
     if teacher and "nuggets" in teacher:
@@ -449,17 +414,79 @@ def build_tune(tune_folder: Path) -> Dict[str, object]:
     return summary
 
 
+def build_all(
+    parent_folder: Path,
+    *,
+    no_generate: bool = False,
+) -> Dict[str, object]:
+    """Run build_tune on each immediate subfolder that has tune inputs."""
+    if not parent_folder.is_dir():
+        raise PipelineError(f"Not a directory: {parent_folder}")
+    results: Dict[str, object] = {}
+    for child in sorted(parent_folder.iterdir()):
+        if not child.is_dir() or child.name.startswith("."):
+            continue
+        has_input = (
+            (child / "tune.ns.json").exists()
+            or any(child.glob("tune.inst*.ns.json"))
+            or (child / "tune.xml").exists()
+        )
+        if not has_input:
+            print(f"[build-all] skip {child.name}: no tune.ns.json / tune.inst*.ns.json / tune.xml")
+            continue
+        print(f"[build-all] === {child.name} ===")
+        try:
+            results[child.name] = build_tune(child, no_generate=no_generate)
+        except PipelineError as err:
+            print(f"[build-all] ERROR {child.name}: {err}")
+            results[child.name] = {"error": str(err)}
+    return results
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Tune pipeline CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    gen_parser = subparsers.add_parser(
+        "generate",
+        help="Write teacher.json only (curriculum from score + NoteSequences)",
+    )
+    gen_parser.add_argument("tune_folder", type=Path)
+
     build_parser = subparsers.add_parser("build", help="Build tune artifacts")
     build_parser.add_argument("tune_folder", type=Path)
+    build_parser.add_argument(
+        "--no-generate",
+        action="store_true",
+        help="Use existing teacher.json instead of regenerating curriculum",
+    )
+
+    build_all_parser = subparsers.add_parser(
+        "build-all",
+        help="Run build on every direct subfolder of a directory (e.g. src/music)",
+    )
+    build_all_parser.add_argument("parent_folder", type=Path)
+    build_all_parser.add_argument(
+        "--no-generate",
+        action="store_true",
+        help="Use existing teacher.json in each tune folder",
+    )
+
     args = parser.parse_args()
-    if args.command == "build":
-        summary = build_tune(args.tune_folder)
+    if args.command == "generate":
+        write_teacher_json(args.tune_folder)
+        print(f"Wrote {args.tune_folder / 'teacher.json'}")
+    elif args.command == "build":
+        summary = build_tune(args.tune_folder, no_generate=args.no_generate)
         print("Build summary:")
         for key, value in summary.items():
             print(f"- {key}: {value}")
+    elif args.command == "build-all":
+        summaries = build_all(
+            args.parent_folder,
+            no_generate=args.no_generate,
+        )
+        print("Done. Folders built:", len(summaries))
 
 
 if __name__ == "__main__":

@@ -15,6 +15,11 @@ const tuneNsModules = import.meta.glob<{ default: object }>(
   { eager: true },
 );
 
+const tuneInstModules = import.meta.glob<{ default: object }>(
+  "/src/music/*/output/tune.inst*.ns.json",
+  { eager: true },
+);
+
 const tuneLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.lh.ns.json",
   { eager: true },
@@ -31,6 +36,11 @@ const nuggetNsModules = import.meta.glob<{ default: object }>(
   { eager: true },
 );
 
+const nuggetInstModules = import.meta.glob<{ default: object }>(
+  "/src/music/*/output/nuggets/*.inst*.ns.json",
+  { eager: true },
+);
+
 const nuggetLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.lh.ns.json",
   { eager: true },
@@ -44,6 +54,11 @@ const nuggetRhModules = import.meta.glob<{ default: object }>(
 // Pre-load all assembly note sequences
 const assemblyNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.ns.json",
+  { eager: true },
+);
+
+const assemblyInstModules = import.meta.glob<{ default: object }>(
+  "/src/music/*/output/assemblies/*.inst*.ns.json",
   { eager: true },
 );
 
@@ -113,12 +128,15 @@ const getGlobModule = (
 // Export local tune keys discovered from file system
 // Only returns folders that have an output/tune.ns.json file (required for publishing)
 export const getLocalTuneKeys = (): string[] => {
-  return Object.keys(tuneNsModules)
-    .map((path) => {
-      const match = path.match(/\/music\/([^/]+)\/output\/tune\.ns\.json$/);
-      return match ? match[1] : null;
-    })
-    .filter(Boolean) as string[];
+  const keys = new Set<string>();
+  const paths = [...Object.keys(tuneNsModules), ...Object.keys(tuneInstModules)];
+  paths.forEach((path) => {
+    const match = path.match(
+      /\/music\/([^/]+)\/output\/tune(?:\.inst\d+)?\.ns\.json$/,
+    );
+    if (match?.[1]) keys.add(match[1]);
+  });
+  return Array.from(keys);
 };
 
 // Validation result for pre-publish checks
@@ -178,6 +196,18 @@ export const getTeacher = (musicRef: string): Record<string, unknown> | null =>
 export const getTuneNs = (musicRef: string): object | null =>
   getGlobModule(tuneNsModules, `/src/music/${musicRef}/output/tune.ns.json`);
 
+export const getTuneInst = (musicRef: string, instId: string): object | null =>
+  getGlobModule(
+    tuneInstModules,
+    `/src/music/${musicRef}/output/tune.${instId}.ns.json`,
+  );
+
+export const getTuneInst1 = (musicRef: string): object | null =>
+  getTuneInst(musicRef, "inst1");
+
+export const getTuneInst2 = (musicRef: string): object | null =>
+  getTuneInst(musicRef, "inst2");
+
 export const getTuneLh = (musicRef: string): object | null =>
   getGlobModule(tuneLhModules, `/src/music/${musicRef}/output/tune.lh.ns.json`);
 
@@ -191,6 +221,16 @@ export const getNuggetNs = (
   getGlobModule(
     nuggetNsModules,
     `/src/music/${musicRef}/output/nuggets/${nuggetId}.ns.json`,
+  );
+
+export const getNuggetInst = (
+  musicRef: string,
+  nuggetId: string,
+  instId: string,
+): object | null =>
+  getGlobModule(
+    nuggetInstModules,
+    `/src/music/${musicRef}/output/nuggets/${nuggetId}.${instId}.ns.json`,
   );
 
 export const getNuggetLh = (
@@ -218,6 +258,16 @@ export const getAssemblyNs = (
   getGlobModule(
     assemblyNsModules,
     `/src/music/${musicRef}/output/assemblies/${assemblyId}.ns.json`,
+  );
+
+export const getAssemblyInst = (
+  musicRef: string,
+  assemblyId: string,
+  instId: string,
+): object | null =>
+  getGlobModule(
+    assemblyInstModules,
+    `/src/music/${musicRef}/output/assemblies/${assemblyId}.${instId}.ns.json`,
   );
 
 export const getAssemblyLh = (
@@ -305,24 +355,85 @@ export const getLocalBriefing = (musicRef: string): TuneBriefing | null => {
 
 // Get local nuggets data (for dropdown population)
 export const getLocalNuggetIds = (musicRef: string): string[] => {
+  return getLocalNuggetMenuItems(musicRef).map((item) => item.id);
+};
+
+export interface TuneMenuNuggetItem {
+  id: string;
+  label: string;
+  subtitle?: string;
+}
+
+export function formatNuggetLocationSubtitle(
+  location?: Record<string, unknown> | null,
+): string | undefined {
+  if (!location || typeof location.startMeasure !== "number") return undefined;
+  const sm = location.startMeasure as number;
+  const em = location.endMeasure;
+  if (typeof em === "number" && em !== sm) return `m. ${sm}–${em}`;
+  return `m. ${sm}`;
+}
+
+/** Ordered nugget rows for Lab UI (labels from teacher.json). */
+export const getLocalNuggetMenuItems = (musicRef: string): TuneMenuNuggetItem[] => {
   const teacher = getTeacher(musicRef);
   if (!teacher) return [];
   const teachingOrder = teacher.teachingOrder as string[] | undefined;
-  if (teachingOrder) return teachingOrder;
-
-  const nuggets = teacher.nuggets as Array<{ id: string }> | undefined;
-  return nuggets?.map((n) => n.id) ?? [];
+  const nuggets = teacher.nuggets as
+    | Array<{ id: string; label?: string; location?: Record<string, unknown> }>
+    | undefined;
+  const byId = new Map((nuggets ?? []).map((n) => [n.id, n]));
+  const order =
+    teachingOrder && teachingOrder.length > 0
+      ? teachingOrder
+      : (nuggets ?? []).map((n) => n.id);
+  return order.map((id) => {
+    const n = byId.get(id);
+    return {
+      id,
+      label: (n?.label as string | undefined) || id,
+      subtitle: formatNuggetLocationSubtitle(n?.location ?? null),
+    };
+  });
 };
+
+export interface TuneMenuAssemblyItem {
+  id: string;
+  label: string;
+  tier?: number;
+  subtitle?: string;
+}
 
 // Get local assembly IDs (for dropdown population)
 export const getLocalAssemblyIds = (musicRef: string): string[] => {
+  return getLocalAssemblyMenuItems(musicRef).map((item) => item.id);
+};
+
+/** Ordered assembly rows for Lab UI (tiers / labels from teacher.json). */
+export const getLocalAssemblyMenuItems = (
+  musicRef: string,
+): TuneMenuAssemblyItem[] => {
   const teacher = getTeacher(musicRef);
   if (!teacher) return [];
   const assemblyOrder = teacher.assemblyOrder as string[] | undefined;
-  if (assemblyOrder) return assemblyOrder;
-
-  const assemblies = teacher.assemblies as Array<{ id: string }> | undefined;
-  return assemblies?.map((a) => a.id) ?? [];
+  const assemblies = teacher.assemblies as
+    | Array<{ id: string; label?: string; tier?: number }>
+    | undefined;
+  const byId = new Map((assemblies ?? []).map((a) => [a.id, a]));
+  const order =
+    assemblyOrder && assemblyOrder.length > 0
+      ? assemblyOrder
+      : (assemblies ?? []).map((a) => a.id);
+  return order.map((id) => {
+    const a = byId.get(id);
+    const tier = a?.tier;
+    return {
+      id,
+      label: (a?.label as string | undefined) || id,
+      tier,
+      subtitle: tier != null ? `Tier ${tier}` : undefined,
+    };
+  });
 };
 
 // Type for bundled tune assets matching the edge function interface

@@ -8,7 +8,7 @@ import {
 } from "@/hooks/useTuneQueries";
 import { useTuneState } from "@/hooks/useTuneState";
 import type { TuneEvaluationDebugData } from "@/types/tunePractice";
-import type { INoteSequence } from "@magenta/music/es6";
+import type { MagentaNoteSequence as INoteSequence } from "@/types/magenta";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -260,8 +260,8 @@ export function TuneMode({
             nuggetId: currentNugget.itemId,
             targetSequence: sanitizedTargetSequence,
             userSequence: sanitizedRecording,
-            prompt: (debugResponse as any).prompt,
-            request: (debugResponse as any).request,
+            prompt: (debugResponse as { prompt?: string }).prompt,
+            request: (debugResponse as { request?: unknown }).request,
           });
           const promptText =
             (debugResponse as { prompt?: string }).prompt ||
@@ -519,7 +519,7 @@ export function TuneMode({
             debug: true,
           })
           .then((debugResponse) => {
-            const promptText = (debugResponse as any).prompt;
+            const promptText = (debugResponse as { prompt?: string }).prompt;
             if (promptText) {
               setCoachDebugCall((prev) => ({
                 ...prev,

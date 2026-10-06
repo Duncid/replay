@@ -145,3 +145,25 @@ export function computeLayout(
     measureLines,
   };
 }
+
+export const MIN_BASE_UNIT = 8;
+export const MAX_BASE_UNIT = 24;
+export const DEFAULT_BASE_UNIT = 12;
+
+/**
+ * Returns the largest base unit (px) in [MIN_BASE_UNIT, MAX_BASE_UNIT] that fits
+ * in the given available height. minHeight = baseUnit * (2 + trackCount).
+ */
+export function getRecommendedBaseUnit(
+  availableHeight: number,
+  trackCount: number
+): number {
+  const denominator = 2 + trackCount;
+  if (denominator <= 0) return MAX_BASE_UNIT;
+  const ideal = availableHeight / denominator;
+  const clamped = Math.min(
+    MAX_BASE_UNIT,
+    Math.max(MIN_BASE_UNIT, ideal)
+  );
+  return Math.floor(clamped);
+}

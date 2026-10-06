@@ -9,7 +9,7 @@
     <creator type="composer">W. C. Handy</creator>
     <rights>1914</rights>
     <encoding>
-      <encoding-date>2026-01-20</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
       <software>MuseScore 2.1.0</software>
       <supports attribute="new-system" element="print" type="yes" value="yes" />
@@ -47,11 +47,11 @@
     <score-part id="P1">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno.</part-abbreviation>
-      <score-instrument id="I93c07330b26e1257215cb9f2a581a75f">
+      <score-instrument id="I9e257360594ecfd066a6529a243d5ac4">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I93c07330b26e1257215cb9f2a581a75f">
+      <midi-instrument id="I9e257360594ecfd066a6529a243d5ac4">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>

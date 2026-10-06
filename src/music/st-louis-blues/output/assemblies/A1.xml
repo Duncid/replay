@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE score-partwise  PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='utf-8'?>
 <score-partwise version="4.0">
   <movement-title>Music21 Fragment</movement-title>
   <identification>
     <creator type="composer">Music21</creator>
     <encoding>
-      <encoding-date>2026-02-01</encoding-date>
+      <encoding-date>2026-03-31</encoding-date>
       <software>music21 v.9.9.1</software>
     </encoding>
   </identification>
@@ -16,22 +15,22 @@
     </scaling>
   </defaults>
   <part-list>
-    <score-part id="P85d5c0bfe474cf359974267eed9a3bb7">
+    <score-part id="P175ba87ab1d95b7c2694cb85cd346158">
       <part-name>Piano</part-name>
       <part-abbreviation>Pno</part-abbreviation>
-      <score-instrument id="I460d6b1d571873bc8b3425b2f4bf60b6">
+      <score-instrument id="Iaa6f5977b4c65135000ca34843333618">
         <instrument-name>Piano</instrument-name>
         <instrument-abbreviation>Pno</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="I460d6b1d571873bc8b3425b2f4bf60b6">
+      <midi-instrument id="Iaa6f5977b4c65135000ca34843333618">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
-  <!--=========================== Part 1 ===========================-->
-  <part id="P85d5c0bfe474cf359974267eed9a3bb7">
-    <!--========================= Measure 1 ==========================-->
+  
+  <part id="P175ba87ab1d95b7c2694cb85cd346158">
+    
     <measure implicit="no" number="1">
       <print>
         <system-layout>
@@ -51,18 +50,14 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
-        <clef>
-          <sign>G</sign>
-          <line>2</line>
-        </clef>
-      </attributes>
+        <clef><sign>G</sign><line>2</line></clef></attributes>
       <note default-x="86.19" default-y="-10">
         <pitch>
           <step>D</step>
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <stem>down</stem>
         <beam number="1">begin</beam>
       </note>
@@ -72,7 +67,7 @@
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <stem>down</stem>
         <beam number="1">continue</beam>
       </note>
@@ -82,7 +77,7 @@
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <stem>down</stem>
         <beam number="1">end</beam>
       </note>
@@ -97,7 +92,7 @@
         <type>eighth</type>
       </note>
     </measure>
-    <!--========================= Measure 2 ==========================-->
+    
     <measure implicit="no" number="2">
       <direction placement="above">
         <direction-type>
@@ -110,7 +105,7 @@
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <type>eighth</type>
+        <staff>1</staff><type>eighth</type>
         <stem>down</stem>
         <beam number="1">begin</beam>
       </note>
@@ -120,7 +115,7 @@
           <octave>5</octave>
         </pitch>
         <duration>5040</duration>
-        <tie type="start" />
+        <staff>1</staff><tie type="start" />
         <type>eighth</type>
         <stem>down</stem>
         <beam number="1">end</beam>
@@ -134,136 +129,13 @@
           <octave>5</octave>
         </pitch>
         <duration>30240</duration>
-        <tie type="stop" />
+        <staff>1</staff><tie type="stop" />
         <type>half</type>
         <dot />
         <stem>down</stem>
         <notations>
           <tied type="stop" />
         </notations>
-      </note>
-    </measure>
-    <!--========================= Measure 3 ==========================-->
-    <measure implicit="no" number="3">
-      <note>
-        <rest />
-        <duration>5040</duration>
-        <type>eighth</type>
-      </note>
-      <note default-x="53.71" default-y="-15">
-        <pitch>
-          <step>C</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">begin</beam>
-      </note>
-      <note default-x="95.22" default-y="-15">
-        <pitch>
-          <step>C</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">continue</beam>
-      </note>
-      <note default-x="136.73" default-y="-15">
-        <pitch>
-          <step>C</step>
-          <alter>1</alter>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <type>eighth</type>
-        <accidental>sharp</accidental>
-        <stem>down</stem>
-        <beam number="1">end</beam>
-      </note>
-      <note default-x="178.24" default-y="-10">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <type>eighth</type>
-        <stem>down</stem>
-      </note>
-      <note default-x="219.74" default-y="-25">
-        <pitch>
-          <step>A</step>
-          <alter>1</alter>
-          <octave>4</octave>
-        </pitch>
-        <duration>15120</duration>
-        <type>quarter</type>
-        <dot />
-        <accidental>sharp</accidental>
-        <stem>up</stem>
-      </note>
-    </measure>
-    <!--========================= Measure 4 ==========================-->
-    <measure implicit="no" number="4">
-      <note default-x="12" default-y="-25">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>40320</duration>
-        <tie type="start" />
-        <type>whole</type>
-        <notations>
-          <tied type="start" />
-        </notations>
-      </note>
-    </measure>
-    <!--========================= Measure 5 ==========================-->
-    <measure implicit="no" number="5">
-      <note default-x="12" default-y="-25">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>20160</duration>
-        <tie type="stop" />
-        <tie type="start" />
-        <type>half</type>
-        <stem>up</stem>
-        <notations>
-          <tied type="stop" />
-          <tied type="start" />
-        </notations>
-      </note>
-      <note default-x="100.05" default-y="-25">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>5040</duration>
-        <tie type="stop" />
-        <type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">begin</beam>
-        <notations>
-          <tied type="stop" />
-        </notations>
-      </note>
-      <note default-x="139.92" default-y="-15">
-        <pitch>
-          <step>C</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>5040</duration>
-        <type>eighth</type>
-        <stem>down</stem>
-        <beam number="1">continue</beam>
-      </note>
-      <note print-object="no" print-spacing="yes">
-        <rest />
-        <duration>10080</duration>
-        <type>quarter</type>
       </note>
     </measure>
   </part>
