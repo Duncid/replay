@@ -7,6 +7,7 @@ import {
   MetronomeSoundType,
 } from "@/components/Metronome";
 import { MidiConnector } from "@/components/MidiConnector";
+import { useMidiSoundPreference } from "@/hooks/useMidiSoundPreference";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
 import { TopToastLabel, TopToastProgress } from "@/components/TopToast";
@@ -202,6 +203,7 @@ const Index = () => {
   >(STORAGE_KEYS.MUSIC_NOTATION, "auto");
 
   // Persisted preferences
+  const midiHasOwnSoundRef = useRef(false);
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(
     STORAGE_KEYS.INSTRUMENT,
     "acoustic-piano",
@@ -532,7 +534,9 @@ const Index = () => {
         return;
       }
       midiPressedKeysRef.current.add(noteKey);
-      pianoRef.current?.handleKeyPress(noteKey, frequency, velocity);
+      pianoRef.current?.handleKeyPress(noteKey, frequency, velocity, {
+        muteAudio: midiHasOwnSoundRef.current,
+      });
     },
     [appState],
   );
@@ -540,6 +544,7 @@ const Index = () => {
   const handleMidiNoteOff = useCallback(
     (noteKey: string, frequency: number) => {
       midiPressedKeysRef.current.delete(noteKey);
+      // Always release app audio, including when the setting changed mid-note.
       pianoRef.current?.handleKeyRelease(noteKey, frequency);
     },
     [],
@@ -577,6 +582,9 @@ const Index = () => {
     handleNoMidiDevices,
     handleMidiError,
   );
+  const { hasOwnSound: midiHasOwnSound, setHasOwnSound: setMidiHasOwnSound } =
+    useMidiSoundPreference(connectedDevice);
+  midiHasOwnSoundRef.current = midiHasOwnSound;
 
   const stopAiPlayback = useCallback(() => {
     shouldStopAiRef.current = true;
@@ -2378,6 +2386,8 @@ const Index = () => {
                   isSupported={isMidiSupported}
                   onConnect={requestAccess}
                   onDisconnect={disconnect}
+                  hasOwnSound={midiHasOwnSound}
+                  onHasOwnSoundChange={setMidiHasOwnSound}
                 />
               </div>
             </div>

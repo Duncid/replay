@@ -153,3 +153,105 @@ test("notation and quest editor chunks load when their tabs open", async ({ page
   await expect(page.getByText("Loading notation...", { exact: true })).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test("keyboard sound preference mutes MIDI audio while keeping input and screen audio", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("replay-instrument", JSON.stringify("classic"));
+    const input = { id: "test-piano", name: "Test Piano", manufacturer: "Test", onmidimessage: null, close: async () => {} };
+    window["testMidiInput"] = input;
+    Object.defineProperty(navigator, "requestMIDIAccess", {
+      configurable: true,
+      value: async () => ({ inputs: new Map([[input.id, input]]), outputs: new Map() }),
+    });
+    window["pianoStarts"] = 0;
+    const start = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (...args) {
+      if (this.type === "triangle") window["pianoStarts"] += 1;
+      return start.apply(this, args);
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Connect MIDI" }).click();
+  const preference = page.getByRole("switch", { name: "Keyboard has its own sound" });
+  await expect(preference).not.toBeChecked();
+  await preference.click();
+  const key = page.getByRole("button", { name: "C4", exact: true });
+  await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [144, 60, 100] }));
+  await expect(key).toHaveClass(/bg-red-500|bg-blue-500/);
+  expect(await page.evaluate(() => window["pianoStarts"])).toBe(0);
+  await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [128, 60, 0] }));
+  await key.dispatchEvent("mousedown");
+  await expect.poll(() => page.evaluate(() => window["pianoStarts"])).toBe(1);
+  await key.dispatchEvent("mouseup");
+  await preference.click();
+  await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [144, 60, 100] }));
+  await expect.poll(() => page.evaluate(() => window["pianoStarts"])).toBe(2);
+  await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [128, 60, 0] }));
+  await preference.click();
+  await page.reload();
+  await page.getByRole("button", { name: "Connect MIDI" }).click();
+  await expect(preference).toBeChecked();
+});
+
+test("MIDI model recognition distinguishes controllers, variants, and unknown names", async ({ page }) => {
+  await page.route("**/__test__/blank", route => route.fulfill({ contentType: "text/html", body: "Model test" }));
+  await page.goto("/__test__/blank");
+  const source = readFileSync("src/utils/midiDeviceProfiles.ts", "utf8");
+  const script = ts.transpileModule(source, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  await page.addScriptTag({ type: "module", content: `${script}\nwindow.recognize = recognizeMidiDevice; window.preferenceKey = midiSoundPreferenceKey;` });
+  const results = await page.evaluate(() => {
+    const device = (name: string, manufacturer = "CoreMIDI") => ({ name, manufacturer });
+    return {
+      fp10: window["recognize"](device("FP-10 MIDI 1"))?.hasOwnSound,
+      fp30x: window["recognize"](device("Roland FP30X"))?.hasOwnSound,
+      yamaha: window["recognize"](device("P-145"))?.hasOwnSound,
+      korg: window["recognize"](device("B2", "KORG"))?.hasOwnSound,
+      controller: window["recognize"](device("MPK mini 3"))?.hasOwnSound,
+      play: window["recognize"](device("MPK mini Play"))?.hasOwnSound,
+      play3: window["recognize"](device("MPK mini Play mk3"))?.model,
+      unknown: window["recognize"](device("Roland Digital Piano")),
+      ambiguous: window["recognize"](device("B2")),
+      otherVariant: window["recognize"](device("FP-10X")),
+      stableKey: window["preferenceKey"](device("FP-10")) === window["preferenceKey"](device("Roland FP10 MIDI 1", "Roland")),
+    };
+  });
+  expect(results).toEqual({ fp10: true, fp30x: true, yamaha: true, korg: true, controller: false, play: true,
+    play3: "MPK mini Play mk3", unknown: null, ambiguous: null, otherVariant: null, stableKey: true });
+});
+
+test("recognized MIDI defaults and overrides follow the connected keyboard", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("replay-instrument", JSON.stringify("classic"));
+    const input = { id: "native-source", name: "FP-10", manufacturer: "CoreMIDI", onmidimessage: null, close: async () => {} };
+    window["testMidiInput"] = input;
+    Object.defineProperty(navigator, "requestMIDIAccess", {
+      configurable: true,
+      value: async () => ({ inputs: new Map([[input.id, input]]), outputs: new Map() }),
+    });
+  });
+  await page.goto("/");
+  const connect = page.getByRole("button", { name: "Connect MIDI" });
+  const disconnect = page.getByRole("button", { name: "Disconnect" });
+  const preference = page.getByRole("switch", { name: "Keyboard has its own sound" });
+  await connect.click();
+  await expect(preference).toBeChecked();
+  await preference.click();
+  await disconnect.click();
+  await page.evaluate(() => { window["testMidiInput"].name = "MPK mini 3"; });
+  await connect.click();
+  await expect(preference).not.toBeChecked();
+  await preference.click();
+  await disconnect.click();
+  await page.evaluate(() => { window["testMidiInput"].name = "Roland FP10 MIDI 1"; });
+  await connect.click();
+  await expect(preference).not.toBeChecked();
+  await page.reload();
+  await connect.click();
+  await expect(preference).not.toBeChecked();
+  await disconnect.click();
+  await page.evaluate(() => { window["testMidiInput"].name = "Unknown Keyboard"; });
+  await connect.click();
+  await expect(preference).not.toBeChecked();
+});

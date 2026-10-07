@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "react-i18next";
 import { AlertCircle, KeyboardMusic, Unplug } from "lucide-react";
 
 interface MidiConnectorProps {
@@ -8,6 +10,8 @@ interface MidiConnectorProps {
   isSupported: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
+  hasOwnSound: boolean;
+  onHasOwnSoundChange: (value: boolean) => void;
 }
 
 export const MidiConnector = ({
@@ -17,7 +21,10 @@ export const MidiConnector = ({
   isSupported,
   onConnect,
   onDisconnect,
+  hasOwnSound,
+  onHasOwnSoundChange,
 }: MidiConnectorProps) => {
+  const { t } = useTranslation();
   if (!isSupported) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -43,6 +50,10 @@ export const MidiConnector = ({
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           <span className="text-foreground font-medium">{deviceName}</span>
         </div>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <Switch checked={hasOwnSound} onCheckedChange={onHasOwnSoundChange} />
+          <span>{t("piano.keyboardHasOwnSound")}</span>
+        </label>
         <Button
           variant="ghost"
           size="sm"

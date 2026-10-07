@@ -2,6 +2,7 @@ export const STORAGE_KEYS = {
   ACTIVE_MODE: "replay-active-mode",
   AI_MODEL: "replay-ai-model",
   INSTRUMENT: "replay-instrument",
+  MIDI_SOUND_OVERRIDES: "replay-midi-sound-overrides",
   BPM: "replay-bpm",
   TIME_SIGNATURE: "replay-time-signature",
   METRONOME_BEAT_UNIT: "replay-metronome-beat-unit",
