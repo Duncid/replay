@@ -18,6 +18,10 @@
 		AA0000000000000000000208 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000108 /* RootView.swift */; };
 		AA0000000000000000000209 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000109 /* WelcomeView.swift */; };
 		AA000000000000000000020A /* LessonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010A /* LessonView.swift */; };
+		AA00000000000000000002C0 /* HighwayClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001C0 /* HighwayClock.swift */; };
+		AA00000000000000000002C1 /* HitJudge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001C1 /* HitJudge.swift */; };
+		AA00000000000000000002C2 /* NoteHighwayScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001C2 /* NoteHighwayScene.swift */; };
+		AA00000000000000000002C3 /* NoteHighwayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001C3 /* NoteHighwayView.swift */; };
 		AA000000000000000000020B /* PianoKeyboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010B /* PianoKeyboardView.swift */; };
 /* End PBXBuildFile section */
 
@@ -35,6 +39,10 @@
 		AA0000000000000000000108 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/RootView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000109 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/WelcomeView.swift; sourceTree = "<group>"; };
 		AA000000000000000000010A /* LessonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/LessonView.swift; sourceTree = "<group>"; };
+		AA00000000000000000001C0 /* HighwayClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Highway/HighwayClock.swift; sourceTree = "<group>"; };
+		AA00000000000000000001C1 /* HitJudge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Highway/HitJudge.swift; sourceTree = "<group>"; };
+		AA00000000000000000001C2 /* NoteHighwayScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Highway/NoteHighwayScene.swift; sourceTree = "<group>"; };
+		AA00000000000000000001C3 /* NoteHighwayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Highway/NoteHighwayView.swift; sourceTree = "<group>"; };
 		AA000000000000000000010B /* PianoKeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/PianoKeyboardView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -72,6 +80,10 @@
 				AA0000000000000000000109 /* WelcomeView.swift */,
 				AA000000000000000000010A /* LessonView.swift */,
 				AA000000000000000000010B /* PianoKeyboardView.swift */,
+				AA00000000000000000001C0 /* HighwayClock.swift */,
+				AA00000000000000000001C1 /* HitJudge.swift */,
+				AA00000000000000000001C2 /* NoteHighwayScene.swift */,
+				AA00000000000000000001C3 /* NoteHighwayView.swift */,
 				AA0000000000000000000007 /* Info.plist */,
 			);
 			path = ReplayLearn;
@@ -165,6 +177,10 @@
 				AA0000000000000000000209 /* WelcomeView.swift in Sources */,
 				AA000000000000000000020A /* LessonView.swift in Sources */,
 				AA000000000000000000020B /* PianoKeyboardView.swift in Sources */,
+				AA00000000000000000002C0 /* HighwayClock.swift in Sources */,
+				AA00000000000000000002C1 /* HitJudge.swift in Sources */,
+				AA00000000000000000002C2 /* NoteHighwayScene.swift in Sources */,
+				AA00000000000000000002C3 /* NoteHighwayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

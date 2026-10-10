@@ -17,9 +17,21 @@ struct LessonView: View {
                 }
                 .padding(24)
             }
-            PianoKeyboardView(activePitch: viewModel.activePitch,
-                              heldPitches: viewModel.heldPitches)
-                .frame(height: 180)
+            ZStack(alignment: .topTrailing) {
+                NoteHighwayView(scene: viewModel.highway)
+                if viewModel.phase == .recording {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(viewModel.score)").font(.title2.monospacedDigit().bold())
+                        if viewModel.streak > 1 {
+                            Text("x\(viewModel.streak)").font(.caption.bold())
+                        }
+                    }
+                    .padding(12)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                    .padding(12)
+                }
+            }
+            .frame(height: 420)
             MidiStatusBar()
         }
     }
