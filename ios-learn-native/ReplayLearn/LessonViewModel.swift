@@ -26,6 +26,14 @@ final class LessonViewModel: ObservableObject {
     let piano = PianoAudioEngine()
     let metronome = MetronomeEngine()
 
+    // Note highway: drawing (scene), timing (clock) and scoring (judge) are separate.
+    let clock = HighwayClock()
+    lazy var highway = NoteHighwayScene(clock: clock)
+    private var judge = HitJudge()
+    private var sweepTask: Task<Void, Never>?
+    @Published private(set) var score = 0
+    @Published private(set) var streak = 0
+
     private var demoTask: Task<Void, Never>?
     private var recordedNotes: [Note] = []
     private var openNotes: [Int: (start: Double, velocity: Int)] = [:]
@@ -61,6 +69,7 @@ final class LessonViewModel: ObservableObject {
                 lesson = response
                 evaluation = nil
                 phase = .practice
+                loadHighway()
                 startMetronomeIfNeeded()
             } catch {
                 phase = .error(error.localizedDescription)
@@ -71,9 +80,69 @@ final class LessonViewModel: ObservableObject {
     func playDemo() {
         guard let sequence = lesson?.demoSequence else { return }
         demoTask?.cancel()
-        demoTask = piano.play(sequence: sequence) { [weak self] pitch in
+        stopHighway()
+        highway.setMode(.demo)
+        let anchor = clock.start(leadIn: leadIn)
+        demoTask = piano.play(sequence: sequence, startingAt: anchor) { [weak self] pitch in
             self?.activePitch = pitch
+            self?.syncKeys()
         }
+        scheduleHighwayStop(after: leadIn + sequence.totalTime + 0.5)
+    }
+
+    // MARK: - Highway
+
+    /// One bar of falling notes before t = 0.
+    private var leadIn: Double {
+        let bpm = lesson?.setup.bpm ?? lesson?.metronome?.bpm ?? 90
+        let beats = Double((lesson?.setup.meter ?? "4/4").split(separator: "/").first.flatMap { Int($0) } ?? 4)
+        return 60 / bpm * beats
+    }
+
+    private func loadHighway() {
+        stopHighway()
+        highway.bpm = lesson?.setup.bpm ?? lesson?.metronome?.bpm ?? 90
+        highway.beatsPerBar = (lesson?.setup.meter ?? "4/4").split(separator: "/").first.flatMap { Int($0) } ?? 4
+        highway.load(sequence: lesson?.demoSequence)
+        highway.setMode(.idle)
+    }
+
+    private func stopHighway() {
+        sweepTask?.cancel()
+        sweepTask = nil
+        clock.stop()
+    }
+
+    private func scheduleHighwayStop(after seconds: Double) {
+        sweepTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            self?.clock.stop()
+            self?.highway.setMode(.idle)
+        }
+    }
+
+    /// Play-along scoring loop: sweeps missed notes ~30x/s, independent of drawing.
+    private func startScoring() {
+        judge.reset(targets: lesson?.demoSequence?.notes ?? [])
+        score = 0; streak = 0
+        let end = leadIn + (lesson?.demoSequence?.totalTime ?? 0) + HitJudge.goodWindow
+        sweepTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled, let self, self.clock.isRunning {
+                for j in self.judge.sweepMisses(now: self.clock.inputTime) {
+                    self.highway.apply(j, streak: 0)
+                }
+                self.streak = self.judge.streak
+                if self.clock.inputTime > end - self.leadIn { break }
+                try? await Task.sleep(nanoseconds: 33_000_000)
+            }
+        }
+    }
+
+    private func syncKeys() {
+        var keys = heldPitches
+        if let activePitch { keys.insert(activePitch) }
+        highway.setHeld(keys)
     }
 
     // MARK: - Recording / evaluation
@@ -83,9 +152,18 @@ final class LessonViewModel: ObservableObject {
         openNotes = [:]
         recordingStart = CACurrentMediaTime()
         phase = .recording
+        demoTask?.cancel()
+        stopHighway()
+        if lesson?.demoSequence != nil {
+            highway.setMode(.play)
+            clock.start(leadIn: leadIn)
+            startScoring()
+        }
     }
 
     func stopAndEvaluate() {
+        stopHighway()
+        highway.setMode(.idle)
         let now = CACurrentMediaTime() - recordingStart
         // Close any notes still held.
         for (pitch, open) in openNotes {
@@ -141,6 +219,7 @@ final class LessonViewModel: ObservableObject {
                     self.lesson = response
                     self.evaluation = nil
                     phase = .practice
+                    loadHighway()
                 } catch {
                     phase = .error(error.localizedDescription)
                 }
@@ -150,6 +229,7 @@ final class LessonViewModel: ObservableObject {
 
     func leaveLesson() {
         demoTask?.cancel()
+        stopHighway()
         metronome.stop()
         lesson = nil
         evaluation = nil
@@ -163,6 +243,13 @@ final class LessonViewModel: ObservableObject {
         heldPitches.insert(pitch)
         activePitch = pitch
         piano.play(pitch: pitch, velocity: velocity)
+        syncKeys()
+        if phase == .recording, clock.isRunning {
+            let j = judge.noteOn(pitch: pitch, at: clock.inputTime)
+            highway.apply(j, streak: judge.streak)
+            score = judge.score
+            streak = judge.streak
+        }
         if phase == .recording {
             openNotes[pitch] = (CACurrentMediaTime() - recordingStart, velocity)
         }
@@ -171,6 +258,7 @@ final class LessonViewModel: ObservableObject {
     private func handleNoteOff(_ pitch: Int) {
         heldPitches.remove(pitch)
         if activePitch == pitch { activePitch = nil }
+        syncKeys()
         if phase == .recording, let open = openNotes.removeValue(forKey: pitch) {
             let end = CACurrentMediaTime() - recordingStart
             recordedNotes.append(Note(pitch: pitch, startTime: open.start,

@@ -55,9 +55,9 @@ final class PianoAudioEngine: ObservableObject {
     }
 
     /// Plays a note sequence (demo playback). Returns a task that can be cancelled.
-    func play(sequence: NoteSequence, onHighlight: @escaping (Int?) -> Void) -> Task<Void, Never> {
+    func play(sequence: NoteSequence, startingAt start: CFTimeInterval = CACurrentMediaTime(),
+              onHighlight: @escaping (Int?) -> Void) -> Task<Void, Never> {
         Task { @MainActor in
-            let start = CACurrentMediaTime()
             for note in sequence.notes.sorted(by: { $0.startTime < $1.startTime }) {
                 let delay = note.startTime - (CACurrentMediaTime() - start)
                 if delay > 0 {

@@ -265,11 +265,9 @@ final class NoteHighwayScene: SKScene {
         // Brief key glow.
         if let key = keySprites[pitch] {
             key.removeAction(forKey: "glow")
-            let base = key.color
             key.color = color
             key.run(.sequence([.wait(forDuration: 0.12), .run { [weak self] in
                 guard let self else { return }
-                if !self.held.contains(pitch) { key.color = base == color ? key.color : base }
                 self.setHeld(self.held)
             }]), withKey: "glow")
         }
