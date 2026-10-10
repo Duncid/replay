@@ -1,6 +1,209 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+@custom-variant dark (&:is(.dark *));
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@theme inline {
+  --container-6xl: 80rem;
+  --container-5xl: 64rem;
+
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-red-50: #f0f0f0;
+  --color-red-100: #ede2e2;
+  --color-red-200: #eecacb;
+  --color-red-300: #eda6a6;
+  --color-red-400: #ea7474;
+  --color-red-500: #e24a4a;
+  --color-red-600: #cf302f;
+  --color-red-700: #ad2625;
+  --color-red-800: #8d2322;
+  --color-red-900: #732322;
+  --color-red-950: #3b0f0e;
+
+  --color-orange-50: #ffffff;
+  --color-orange-100: #f9f8f6;
+  --color-orange-200: #f6e4ca;
+  --color-orange-300: #f3ca95;
+  --color-orange-400: #f1a65e;
+  --color-orange-500: #f08a3c;
+  --color-orange-600: #e2712d;
+  --color-orange-700: #bb5a28;
+  --color-orange-800: #944a28;
+  --color-orange-900: #764128;
+  --color-orange-950: #3e241a;
+
+  --color-yellow-50: #fffff7;
+  --color-yellow-100: #ffffd9;
+  --color-yellow-200: #ffffac;
+  --color-yellow-300: #fff674;
+  --color-yellow-400: #ffe256;
+  --color-yellow-500: #f2c94c;
+  --color-yellow-600: #d3a03f;
+  --color-yellow-700: #aa7733;
+  --color-yellow-800: #8e612f;
+  --color-yellow-900: #7a522e;
+  --color-yellow-950: #4b311e;
+
+  --color-green-50: #fbfbfb;
+  --color-green-100: #f4f4f4;
+  --color-green-200: #dbeade;
+  --color-green-300: #ade1b9;
+  --color-green-400: #7ad08d;
+  --color-green-500: #58bc6e;
+  --color-green-600: #43a458;
+  --color-green-700: #3d814c;
+  --color-green-800: #396643;
+  --color-green-900: #35533b;
+  --color-green-950: #242e26;
+
+  --color-teal-50: #e9f5f7;
+  --color-teal-100: #bff6fd;
+  --color-teal-200: #88effd;
+  --color-teal-300: #4de1f5;
+  --color-teal-400: #24c9df;
+  --color-teal-500: #1fa4b6;
+  --color-teal-600: #1a818f;
+  --color-teal-700: #18656f;
+  --color-teal-800: #164e56;
+  --color-teal-900: #163f45;
+  --color-teal-950: #092023;
+
+  --color-blue-50: #e6e6e6;
+  --color-blue-100: #dadada;
+  --color-blue-200: #bfcbda;
+  --color-blue-300: #95b6da;
+  --color-blue-400: #6298d8;
+  --color-blue-500: #3a78d4;
+  --color-blue-600: #205bca;
+  --color-blue-700: #1548b7;
+  --color-blue-800: #183990;
+  --color-blue-900: #1a326c;
+  --color-blue-950: #131d39;
+
+  --color-violet-50: #e1e1e1;
+  --color-violet-100: #d9d7e0;
+  --color-violet-200: #c9c4e0;
+  --color-violet-300: #b1a4df;
+  --color-violet-400: #957bdc;
+  --color-violet-500: #7a4dd8;
+  --color-violet-600: #6b2acf;
+  --color-violet-700: #5d15bc;
+  --color-violet-800: #4b0f9a;
+  --color-violet-900: #3c0d7a;
+  --color-violet-950: #20034c;
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-key-white: hsl(var(--key-white));
+  --color-key-white-shadow: hsl(var(--key-white-shadow));
+  --color-key-black: hsl(var(--key-black));
+  --color-key-black-light: hsl(var(--key-black-light));
+  --color-key-active-user: hsl(var(--key-active-user));
+  --color-key-active-ai: hsl(var(--key-active-ai));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-pulse-glow: pulse-glow 1.5s ease-in-out infinite;
+  --animate-pulse-glow-border: pulse-glow-border 4s ease-in-out infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    }
+    50% {
+      transform: scale(1.02);
+      opacity: 1;
+      box-shadow: 0 0 0 4px hsl(var(--primary) / 0.2);
+    }
+  }
+  @keyframes pulse-glow-border {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+    }
+    50% {
+      box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.

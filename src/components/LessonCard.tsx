@@ -113,7 +113,7 @@ export function LessonCard({
           /* Evaluation Mode */
           <>
             {/* Evaluation status */}
-            <div className="min-h-[2.5rem] flex flex-col gap-4 items-center justify-center text-amber-900">
+            <div className="min-h-10 flex flex-col gap-4 items-center justify-center text-amber-900">
               <AudioLines className="w-12 h-12" />
               {isEvaluating ? (
                 <div className="flex items-center gap-2">

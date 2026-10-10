@@ -14,7 +14,7 @@ const ButtonGroup = React.forwardRef<
       {...props}
     >
       {childrenArray.map((child, index) => {
-        if (!React.isValidElement(child)) return child
+        if (!React.isValidElement<{ className?: string }>(child)) return child
 
         const isFirst = index === 0
         const isLast = index === childrenArray.length - 1

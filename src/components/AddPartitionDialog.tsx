@@ -151,7 +151,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
         </SheetHeader>
         <div className="flex-1 flex flex-col space-y-4 py-4 overflow-y-auto min-h-0">
           {previewSequence && (
-            <div className="space-y-2 flex-shrink-0">
+            <div className="space-y-2 shrink-0">
               <Button variant="outline" className="gap-2" onClick={isPlaying ? handleStop : handlePlay}>
                 {isPlaying ? (
                   <>
@@ -179,7 +179,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
             className="flex-1 min-h-[200px] font-mono text-sm border-none border-top border-bottom rounded-none"
           />
         </div>
-        <SheetFooter className="gap-2 flex-shrink-0">
+        <SheetFooter className="gap-2 shrink-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>

@@ -5,10 +5,9 @@ import {
 import type { TimeSignature } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import { createStripeCanvas } from "@/utils/stripePattern";
-import { WRAP_MODES } from "@pixi/constants";
-import { Texture } from "@pixi/core";
-import { GlowFilter } from "@pixi/filter-glow";
-import { Container, Graphics, Stage } from "@pixi/react";
+import { Container, Graphics, Texture } from "pixi.js";
+import { GlowFilter } from "pixi-filters/glow";
+import { Application, extend, useApplication } from "@pixi/react";
 import {
   useCallback,
   useEffect,
@@ -26,6 +25,16 @@ import {
   type NoteEvent,
   type SheetConfig,
 } from "./PianoSheetPixiLayout.ts";
+
+extend({ Container, Graphics });
+
+function ResizeRenderer({ width, height }: { width: number; height: number }) {
+  const { app, isInitialised } = useApplication();
+  useEffect(() => {
+    if (isInitialised) app.renderer.resize(width, height);
+  }, [app, isInitialised, width, height]);
+  return null;
+}
 
 const DEFAULT_NOTE_COLORS = {
   idle: 0x9aa0a6,
@@ -75,7 +84,7 @@ function normalizeSharpNote(noteName: string) {
 function createStripeTexture(baseHex: string, stripeHex: string) {
   const canvas = createStripeCanvas(baseHex, stripeHex);
   const texture = Texture.from(canvas);
-  texture.baseTexture.wrapMode = WRAP_MODES.REPEAT;
+  texture.source.style.addressMode = "repeat";
   return texture;
 }
 
@@ -92,7 +101,7 @@ interface PianoSheetPixiProps {
   align?: PianoSheetAlign;
   timeSignatures?: TimeSignature[];
   qpm?: number;
-  onTickRef: React.MutableRefObject<((timeSec: number) => void) | null>;
+  onTickRef: React.RefObject<((timeSec: number) => void) | null>;
   focusedNoteIds?: Set<string>;
   activeNoteIds?: Set<string>;
   followPlayhead?: boolean;
@@ -113,6 +122,10 @@ export function PianoSheetPixi({
   followPlayhead = false,
   isAutoplay = false,
 }: PianoSheetPixiProps) {
+  // Pixi initializes asynchronously. Re-render with the latest dimensions once
+  // it is ready, rather than retaining the layout captured before initialization.
+  const [, setRendererReady] = useState(false);
+  const handleRendererInit = useCallback(() => setRendererReady(true), []);
   const config = useMemo<SheetConfig>(() => {
     const baseUnit = Math.min(
       MAX_BASE_UNIT,
@@ -193,8 +206,7 @@ export function PianoSheetPixi({
 
   // Ref for the playhead PixiJS container — position is updated
   // imperatively from the RAF loop, bypassing React re-renders.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const playheadContainerRef = useRef<any>(null);
+  const playheadContainerRef = useRef<Container>(null);
 
   const [viewportX, setViewportX] = useState(0);
   const viewportXRef = useRef(0);
@@ -393,13 +405,19 @@ export function PianoSheetPixi({
       onWheel={handleWheel}
       style={{ touchAction: "none" }}
     >
-      <Stage
+      <Application
+        onInit={handleRendererInit}
         width={config.viewWidth}
         height={config.viewHeight}
-        options={{ antialias: true, backgroundAlpha: 0 }}
+        antialias
+        backgroundAlpha={0}
+        preference="webgl"
+        resolution={window.devicePixelRatio}
+        autoDensity
       >
-        <Container x={centerOffsetX - viewportX}>
-          <Graphics
+        <ResizeRenderer width={config.viewWidth} height={config.viewHeight} />
+        <pixiContainer x={centerOffsetX - viewportX}>
+          <pixiGraphics
             draw={(g) => {
               g.clear();
               const topY = trackLines[0]?.y ?? config.trackTopY;
@@ -408,23 +426,21 @@ export function PianoSheetPixi({
                   ? trackLines[trackLines.length - 1].y + trackHeight
                   : topY;
               trackLines.forEach((track) => {
-                g.beginFill(
-                  trackLineColor,
-                  track.isBlack ? blackKeyAlpha : whiteKeyAlpha
-                );
-                g.drawRect(0, track.y, contentWidth, trackHeight);
-                g.endFill();
+                g.rect(0, track.y, contentWidth, trackHeight).fill({
+                  color: trackLineColor,
+                  alpha: track.isBlack ? blackKeyAlpha : whiteKeyAlpha,
+                });
               });
-              g.lineStyle(1, trackLineColor, beatLineAlpha);
               beatLines.forEach((x) => {
                 g.moveTo(x, topY);
                 g.lineTo(x, bottomY);
               });
-              g.lineStyle(2, trackLineColor, measureLineAlpha);
+              g.stroke({ width: 1, color: trackLineColor, alpha: beatLineAlpha });
               measureLines.forEach((x) => {
                 g.moveTo(x, topY);
                 g.lineTo(x, bottomY);
               });
+              g.stroke({ width: 2, color: trackLineColor, alpha: measureLineAlpha });
             }}
           />
           {noteRects.map((note) => {
@@ -465,47 +481,43 @@ export function PianoSheetPixi({
             filter.outerStrength = isFocused ? 3 : 2;
 
             return (
-              <Container key={note.id} x={note.x} y={note.y - note.height / 2}>
-                <Graphics
+              <pixiContainer key={note.id} x={note.x} y={note.y - note.height / 2}>
+                <pixiGraphics
                   visible={showGlow}
                   filters={showGlow ? [filter] : []}
                   draw={(g) => {
                     g.clear();
                     if (!showGlow) return;
-                    g.beginFill(fillColor);
-                    g.drawRoundedRect(
+                    g.roundRect(
                       0,
                       0,
                       note.width,
                       note.height,
                       config.noteCornerRadius
                     );
-                    g.endFill();
+                    g.fill(fillColor);
                   }}
                 />
-                <Graphics
+                <pixiGraphics
                   draw={(g) => {
                     g.clear();
-                    if (stripeTexture && state === "idle") {
-                      g.beginTextureFill({ texture: stripeTexture });
-                    } else {
-                      g.beginFill(fillColor);
-                    }
-                    g.drawRoundedRect(
+                    g.roundRect(
                       0,
                       0,
                       note.width,
                       note.height,
                       config.noteCornerRadius
                     );
-                    g.endFill();
+                    // Keep the tile at its native pixel size instead of fitting
+                    // one tile to the note's bounds (which stretches long notes).
+                    g.fill(stripeTexture && state === "idle" ? { texture: stripeTexture, textureSpace: "global" } : fillColor);
                   }}
                 />
-              </Container>
+              </pixiContainer>
             );
           })}
-          <Container ref={playheadContainerRef}>
-            <Graphics
+          <pixiContainer ref={playheadContainerRef}>
+            <pixiGraphics
               draw={(g) => {
                 g.clear();
                 const topY = trackLines[0]?.y ?? config.trackTopY;
@@ -513,15 +525,14 @@ export function PianoSheetPixi({
                   trackLines.length > 0
                     ? trackLines[trackLines.length - 1].y + trackHeight
                     : topY;
-                g.lineStyle(2, trackLineColor, 0.9);
                 g.moveTo(0, topY);
                 g.lineTo(0, bottomY);
-                g.lineStyle(0);
+                g.stroke({ width: 2, color: trackLineColor, alpha: 0.9 });
               }}
             />
-          </Container>
-        </Container>
-      </Stage>
+          </pixiContainer>
+        </pixiContainer>
+      </Application>
     </div>
   );
 }

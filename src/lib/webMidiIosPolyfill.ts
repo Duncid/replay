@@ -8,9 +8,12 @@ interface IosMidiBridgeHandler {
   postMessage: (message: IosMidiBridgeMessage) => void;
 }
 
+interface NativeMidiOutput { id: string; name: string }
+
 interface CapacitorMidiBridge {
   ping: () => Promise<{ ok: boolean; message?: string }>;
-  requestAccess: () => Promise<{ sources: string[] }>;
+  requestAccess: () => Promise<{ sources: string[]; outputs?: NativeMidiOutput[] }>;
+  send: (options: { destination: string; data: number[] }) => Promise<void>;
   disconnect: () => Promise<void>;
 }
 
@@ -25,7 +28,7 @@ interface WindowWithIosBridge extends Window {
   };
   __dispatchIOSMidiMessage?: (packet: MidiPacket) => void;
   __dispatchIOSMidiMessageBatch?: (packets: MidiPacket[]) => void;
-  __dispatchIOSMidiSources?: (sources: string[]) => void;
+  __dispatchIOSMidiSources?: (sources: string[], outputs?: NativeMidiOutput[]) => void;
 }
 
 const NOTE_DATA_LENGTH = 3;
@@ -86,7 +89,32 @@ const installIosWebMidiPolyfill = () => {
 
   const REQUEST_ACCESS_TIMEOUT_MS = 5000;
 
-  const applyNativeResult = (sources: string[]) => {
+  const applyNativeResult = (sources: string[], outputs: NativeMidiOutput[] = []) => {
+    for (const [id, port] of outputsMap) {
+      if (!outputs.some(item => item.id === id)) {
+        Object.assign(port, { state: "disconnected" });
+        outputsMap.delete(id);
+      }
+    }
+    for (const destination of outputs) {
+      if (outputsMap.has(destination.id)) continue;
+      const port = {
+        id: destination.id, name: destination.name, manufacturer: "CoreMIDI",
+        onstatechange: null, clear: () => {},
+        type: "output", state: "connected", connection: "open", version: "1.0",
+        send: (message: number[] | Uint8Array) => {
+          if (!capacitorPlugin || port.state === "disconnected") throw new Error("Keyboard output disconnected");
+          void capacitorPlugin.send({ destination: destination.id, data: Array.from(message) }).catch(error => {
+            scopedWindow.dispatchEvent(new CustomEvent("midi-connection-error", {
+              detail: { message: `Keyboard playback failed: ${String(error)}` },
+            }));
+          });
+        },
+        open: async () => port, close: async () => port,
+        addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
+      } as MIDIOutput;
+      outputsMap.set(destination.id, port);
+    }
     inputsMap.clear();
     if (sources.length >= 1) {
       inputDisplayName = sources[0];
@@ -117,7 +145,7 @@ const installIosWebMidiPolyfill = () => {
           if (timedOut) return;
           clearTimeout(timeoutId);
           const sources = result?.sources ?? [];
-          applyNativeResult(sources);
+          applyNativeResult(sources, result.outputs ?? []);
         })
         .catch((err) => {
           if (timedOut) return;
@@ -256,11 +284,12 @@ const installIosWebMidiPolyfill = () => {
     configurable: true,
   });
 
+  const outputsMap = new Map<string, MIDIOutput>();
   const inputsMap = new Map<string, MIDIInput>();
   const midiAccess = {
     sysexEnabled: false,
     inputs: inputsMap,
-    outputs: new Map(),
+    outputs: outputsMap,
     onstatechange: null,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -281,7 +310,7 @@ const installIosWebMidiPolyfill = () => {
   const refreshSources = () => {
     if (!nativeStarted || !capacitorPlugin) return;
     void capacitorPlugin.requestAccess()
-      .then(result => applyNativeResult(result.sources ?? []))
+      .then(result => applyNativeResult(result.sources ?? [], result.outputs ?? []))
       .catch(error => console.error("[MIDI] Failed to refresh sources:", error));
   };
   document.addEventListener("resume", refreshSources);
@@ -317,6 +346,7 @@ const installIosWebMidiPolyfill = () => {
           ping: () => nativePlugin.ping(),
           requestAccess: () => nativePlugin.requestAccess(),
           disconnect: () => nativePlugin.disconnect(),
+          send: options => nativePlugin.send(options),
         };
         console.log("[MIDI Polyfill] [DEBUG] getCapacitorPlugin: registerPlugin DONE, plugin:", !!capacitorPlugin);
         return capacitorPlugin;

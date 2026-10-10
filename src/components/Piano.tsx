@@ -1,13 +1,10 @@
 import { usePianoAudio } from "@/hooks/usePianoAudio";
 import {
   INSTRUMENT_NOTE_RANGES,
-  PIANO_SOUND_LABELS,
   PianoSoundType,
-  SAMPLED_INSTRUMENTS,
 } from "@/hooks/usePianoSound";
 import { cn } from "@/lib/utils";
 import { noteNameToSolfege } from "@/utils/noteSequenceUtils";
-import { Loader2 } from "lucide-react";
 import {
   forwardRef,
   useCallback,
@@ -48,12 +45,12 @@ export interface PianoHandle {
     noteKey: string,
     frequency: number,
     velocity?: number,
-    options?: { muteAudio?: boolean },
+    options?: { muteAudio?: boolean; localOnly?: boolean },
   ) => void;
   handleKeyRelease: (
     noteKey: string,
     frequency: number,
-    options?: { muteAudio?: boolean },
+    options?: { muteAudio?: boolean; localOnly?: boolean },
   ) => void;
 }
 
@@ -84,17 +81,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const audioRef = useRef(audio);
     audioRef.current = audio;
 
-    const isNativeIOS =
-      typeof window !== "undefined" &&
-      !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
-    const [showTapOverlay, setShowTapOverlay] = useState(isNativeIOS);
-
     const runFirstInteraction = useCallback(() => {
       if (hasUserInteractedRef.current) return;
       hasUserInteractedRef.current = true;
-      setShowTapOverlay(false);
-      const a = audioRef.current;
-      void a.ensureAudioReady().then(() => a.preload());
+      void audioRef.current.preload();
     }, []);
 
     // Piano owns preloading: on first user interaction, resume context and load current instrument
@@ -124,9 +114,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     // When sound type changes, preload the new instrument if user has already interacted
     useEffect(() => {
       if (hasUserInteractedRef.current && soundType) {
-        void audio.preload();
+        void audioRef.current.preload();
       }
-    }, [soundType, audio]);
+    }, [soundType]);
 
     const noteToMidi = useCallback((noteKey: string) => {
       const noteNames = [
@@ -162,7 +152,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     );
 
     // AZERTY keyboard mapping - C4 centered on 'e'
-    const keyboardMap: { [key: string]: string } = {
+    const keyboardMap = useMemo<Record<string, string>>(() => ({
       a: "A3",
       z: "B3",
       e: "C4",
@@ -199,7 +189,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       "2": "D#5",
       "°": "F#5",
       ")": "F#5",
-    };
+    }), []);
 
     const notes = useMemo(() => {
       const noteNames = [
@@ -245,9 +235,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         noteKey: string,
         frequency: number,
         velocity: number = 0.8,
-        options?: { muteAudio?: boolean },
+        options?: { muteAudio?: boolean; localOnly?: boolean },
       ) => {
         if (!allowInput || !isNotePlayable(noteKey)) return;
+        runFirstInteraction();
 
         const existingTimer = keyActivationTimers.current.get(noteKey);
         if (existingTimer) {
@@ -260,24 +251,22 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           next.delete(noteKey);
           return next;
         });
+        // Notify first so interrupting autoplay doesn't release the new note.
+        onNoteStart?.(noteKey, frequency, velocity);
         if (!options?.muteAudio) {
-          audio.startNote(noteKey, frequency);
+          audio.startNote(noteKey, frequency, options);
         }
         setUserPressedKeys((prev) => new Set([...prev, noteKey]));
-
-        onNoteStart?.(noteKey, frequency, velocity);
       },
-      [allowInput, audio, isNotePlayable, onNoteStart],
+      [allowInput, audio, isNotePlayable, onNoteStart, runFirstInteraction],
     );
 
     const handleKeyRelease = useCallback(
       (
         noteKey: string,
         frequency: number,
-        options?: { muteAudio?: boolean },
+        options?: { muteAudio?: boolean; localOnly?: boolean },
       ) => {
-        if (!allowInput || !isNotePlayable(noteKey)) return;
-
         if (!options?.muteAudio) {
           audio.stopNote(noteKey);
         }
@@ -289,7 +278,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
         onNoteEnd?.(noteKey, frequency);
       },
-      [allowInput, audio, isNotePlayable, onNoteEnd],
+      [audio, onNoteEnd],
     );
 
     // Manage sustained key state for visual feedback
@@ -395,7 +384,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
       };
-    }, [allowInput, handleKeyPress, handleKeyRelease, notes]);
+    }, [allowInput, handleKeyPress, handleKeyRelease, notes, keyboardMap]);
 
     useImperativeHandle(ref, () => ({
       playNote: audio.playNote,
@@ -432,14 +421,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       return notes.slice(0, noteIndex).filter((n) => !n.isBlack).length;
     };
 
-    // Loading message based on sound type
-    const getLoadingMessage = () => {
-      if (SAMPLED_INSTRUMENTS.includes(soundType)) {
-        return `Loading ${PIANO_SOUND_LABELS[soundType]} samples...`;
-      }
-      return "Initializing synthesizer...";
-    };
-
     return (
       <div
         className={cn(
@@ -447,31 +428,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
           className,
         )}
       >
-        {showTapOverlay && (
-          <div
-            className="absolute inset-0 z-20 flex items-center justify-center bg-background/90 backdrop-blur-sm cursor-pointer"
-            onClick={runFirstInteraction}
-            onTouchStart={runFirstInteraction}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") runFirstInteraction();
-            }}
-            aria-label="Tap to enable sound"
-          >
-            <p className="text-lg font-medium text-muted-foreground text-center px-4">
-              Tap to enable sound
-            </p>
-          </div>
-        )}
-        {!audio.isLoaded && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>{getLoadingMessage()}</span>
-            </div>
-          </div>
-        )}
         <div
           className={cn(
             "relative h-full rounded-t-lg border-t",

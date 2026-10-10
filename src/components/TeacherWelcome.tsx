@@ -47,7 +47,7 @@ export function TeacherWelcome({
           {greeting.suggestions.map((suggestion) => (
             <Card
               key={suggestion.activityKey}
-              className="min-w-[260px] max-w-[300px] flex-shrink-0 cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+              className="min-w-[260px] max-w-[300px] shrink-0 cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
               onClick={() => onSelectActivity(suggestion)}
             >
               <CardHeader>

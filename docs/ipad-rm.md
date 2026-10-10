@@ -2,7 +2,7 @@
 
 The Capacitor wrapper and native CoreMIDI bridge are implemented. See [the current iOS build and device runbook](../ios/README.md) for requirements, signing, build, install, and input checks.
 
-The app uses Node 24, Capacitor 8.5, and the iOS scene lifecycle. iOS/iPadOS 18.6 is the minimum. `com.playbk.app` is the existing installed app identity.
+The app uses Node 24, Capacitor 8.5, and the iOS scene lifecycle. iOS/iPadOS 26.2 is the minimum. `com.playbk.app` is the existing installed app identity.
 
 After web changes, run `npm run check`, then `npm run ios` to build web assets, sync native dependencies, and open Xcode. Install a freshly signed native build to update the iPad. Publishing the web app alone does not update its bundled native assets.
 

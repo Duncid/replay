@@ -59,7 +59,7 @@ export function TopToastProgress({ show, progress, label = "Stopping..." }: TopT
       <div className="text-sm font-medium text-center mb-2">{label}</div>
       <div className="h-1.5 bg-primary-foreground/20 rounded-full overflow-hidden">
         <div
-          className="h-full bg-primary-foreground transition-all duration-[16ms] ease-linear"
+          className="h-full bg-primary-foreground transition-all duration-16 ease-linear"
           style={{ width: `${progress}%` }}
         />
       </div>

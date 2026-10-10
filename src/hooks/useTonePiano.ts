@@ -11,14 +11,7 @@ let sharedAudioContext: AudioContext | null = null;
 
 function getSharedAudioContext() {
   if (!sharedAudioContext) {
-    const AudioContextClass =
-      window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-
-    if (!AudioContextClass) {
-      throw new Error("No AudioContext available in this environment");
-    }
-
-    sharedAudioContext = new AudioContextClass({
+    sharedAudioContext = new AudioContext({
       latencyHint: "interactive",
     });
   }
@@ -181,11 +174,13 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
     string,
     { time: number; sources: Tone.ToneBufferSource[]; timeoutId: ReturnType<typeof setTimeout> }
   >();
-  const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const nowMs = () => performance.now();
   
   let resolveLoad: () => void;
-  const loadPromise = new Promise<void>((resolve) => {
+  let rejectLoad: (reason: unknown) => void;
+  const loadPromise = new Promise<void>((resolve, reject) => {
     resolveLoad = resolve;
+    rejectLoad = reject;
   });
 
   const sampler = new Tone.Sampler({
@@ -196,7 +191,7 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
     },
     onerror: (err) => {
       console.error("Sampler load error:", err);
-      resolveLoad(); // Resolve anyway to not block
+      rejectLoad(err); // Keep using the basic tone if any required sample fails.
     }
   }).toDestination();
 
@@ -270,6 +265,8 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
 export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano") {
   const [isLoaded, setIsLoaded] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
+  const fallbackEngineRef = useRef<AudioEngine | null>(null);
+  const activeNotesRef = useRef(new Map<string, AudioEngine>());
   const soundTypeRef = useRef<PianoSoundType | null>(soundType);
   const loadPromiseRef = useRef<Promise<void> | null>(null);
   // Use ref to track isLoaded for stable callbacks
@@ -281,6 +278,11 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
   }, [isLoaded]);
 
   useEffect(() => {
+    const activeNotes = activeNotesRef.current;
+    activeNotes.forEach((engine, note) => engine.stopNote(note));
+    activeNotesRef.current.clear();
+    fallbackEngineRef.current?.dispose();
+    fallbackEngineRef.current = null;
     // Clean up previous engine before creating a new one
     if (engineRef.current) {
       console.log(`[AudioEngine] Disposing previous engine (type: ${engineRef.current.type})`);
@@ -306,10 +308,11 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
       loadPromiseRef.current = Promise.resolve();
     } else if (SAMPLED_INSTRUMENTS.includes(soundType)) {
       console.log(`[AudioEngine] Creating sampler engine for: ${soundType}`);
+      // Keys remain playable during a cold/failed sample download.
+      fallbackEngineRef.current = createClassicEngine();
       const { engine, loadPromise } = createSamplerEngine(soundType);
       engineRef.current = engine;
-      loadPromiseRef.current = loadPromise;
-      loadPromise.then(() => {
+      loadPromiseRef.current = loadPromise.then(() => {
         if (soundTypeRef.current === soundType && engineRef.current === engine) {
           setIsLoaded(true);
           isLoadedRef.current = true;
@@ -317,10 +320,16 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
         } else {
           console.log(`[AudioEngine] Sampler engine load completed but soundType changed or engine replaced`);
         }
+      }).catch(error => {
+        console.warn("[AudioEngine] Samples unavailable; using basic piano tone:", error);
       });
     }
 
     return () => {
+      activeNotes.forEach((engine, note) => engine.stopNote(note));
+      activeNotes.clear();
+      fallbackEngineRef.current?.dispose();
+      fallbackEngineRef.current = null;
       if (engineRef.current) {
         console.log(`[AudioEngine] Cleanup: Disposing engine (type: ${engineRef.current.type})`);
         engineRef.current.dispose();
@@ -332,19 +341,15 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
   // Stable callbacks using refs - no dependencies means reference never changes
   const ensureAudioReady = useCallback(async () => {
     const audioContext = getSharedAudioContext();
-    if (audioContext.state === "suspended") {
-      await audioContext.resume();
-    }
-
     const toneContext = Tone.getContext();
     toneContext.lookAhead = Math.min(toneContext.lookAhead, 0.01);
-    // Note: latencyHint is read-only and can only be set during context creation
-
-    if (toneContext.state === "suspended") {
-      await toneContext.resume();
-    }
-
-    await Tone.start();
+    // Start every resume synchronously inside the key/touch gesture. Awaiting
+    // one context first can lose WebKit's user activation for the next one.
+    const resumes: Promise<unknown>[] = [];
+    // WebKit may report an interruption after returning from the background.
+    if (audioContext.state !== "running" && audioContext.state !== "closed") resumes.push(audioContext.resume());
+    resumes.push(Tone.start());
+    await Promise.all(resumes);
   }, []);
 
   const preload = useCallback(async () => {
@@ -358,18 +363,21 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
   }, [ensureAudioReady]);
 
   const startNote = useCallback((noteKey: string) => {
-    if (!engineRef.current || !isLoadedRef.current) return;
-    engineRef.current.startNote(noteKey);
+    const engine = isLoadedRef.current ? engineRef.current : fallbackEngineRef.current;
+    if (!engine) return;
+    activeNotesRef.current.get(noteKey)?.stopNote(noteKey);
+    activeNotesRef.current.set(noteKey, engine);
+    engine.startNote(noteKey);
   }, []);
 
   const stopNote = useCallback((noteKey: string) => {
-    if (!engineRef.current || !isLoadedRef.current) return;
-    engineRef.current.stopNote(noteKey);
+    activeNotesRef.current.get(noteKey)?.stopNote(noteKey);
+    activeNotesRef.current.delete(noteKey);
   }, []);
 
   const playNote = useCallback(async (noteKey: string, duration: number = 0.3) => {
-    if (!engineRef.current || !isLoadedRef.current) return;
-    engineRef.current.playNote(noteKey, duration);
+    const engine = isLoadedRef.current ? engineRef.current : fallbackEngineRef.current;
+    engine?.playNote(noteKey, duration);
   }, []);
 
   return {

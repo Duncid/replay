@@ -19,6 +19,7 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "ping", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAccess", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "send", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disconnect", returnType: CAPPluginReturnPromise),
     ]
 
@@ -37,10 +38,26 @@ public class MidiBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             }
             do {
                 try self.midiManager.start(webView: webView)
-                call.resolve(["sources": self.midiManager.getSourceNames()])
+                call.resolve(["sources": self.midiManager.getSourceNames(), "outputs": self.midiManager.getOutputs()])
             } catch {
                 call.reject(error.localizedDescription)
             }
+        }
+    }
+
+    @objc func send(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let destination = call.getString("destination"),
+                  let data = call.getArray("data", Int.self), data.count == 3,
+                  data[0] == 0x90 || data[0] == 0x80,
+                  (0...127).contains(data[1]), (0...127).contains(data[2]) else {
+                call.reject("Invalid MIDI output message")
+                return
+            }
+            do {
+                try self.midiManager.send(destination: destination, data: data.map { UInt8($0) })
+                call.resolve()
+            } catch { call.reject(error.localizedDescription) }
         }
     }
 
@@ -58,6 +75,8 @@ private final class MidiManager {
 
     private var client: MIDIClientRef = 0
     private var inputPort: MIDIPortRef = 0
+    private var outputPort: MIDIPortRef = 0
+    private var outputNotes: [MIDIEndpointRef: Set<UInt8>] = [:]
     private var connectedSources: Set<MIDIEndpointRef> = []
     private weak var webView: WKWebView?
 
@@ -90,6 +109,11 @@ private final class MidiManager {
         }
         // print("[MIDI Bridge] [DEBUG] MidiManager.start: CoreMIDI client and port created OK")
 
+        result = MIDIOutputPortCreate(client, "Replay Output" as CFString, &outputPort)
+        guard result == noErr else {
+            stop()
+            throw midiError("Create MIDI output", status: result)
+        }
         do {
             try connectAllSources()
         } catch {
@@ -114,6 +138,11 @@ private final class MidiManager {
         flushScheduled = false
         pendingLock.unlock()
 
+        for (destination, notes) in outputNotes {
+            for note in notes { try? sendPacket(destination: destination, data: [0x80, note, 0]) }
+        }
+        outputNotes.removeAll()
+        if outputPort != 0 { MIDIPortDispose(outputPort); outputPort = 0 }
         disconnectAllSources()
         if inputPort != 0 {
             MIDIPortDispose(inputPort)
@@ -144,13 +173,33 @@ private final class MidiManager {
         }
     }
 
+    private func stringProperty(_ object: MIDIObjectRef, _ property: CFString) -> String? {
+        var value: Unmanaged<CFString>?
+        guard MIDIObjectGetStringProperty(object, property, &value) == noErr,
+              let cfString = value?.takeRetainedValue() else { return nil }
+        let text = cfString as String
+        return text.isEmpty ? nil : text
+    }
+
     private func getName(for endpoint: MIDIEndpointRef) -> String {
-        var param: Unmanaged<CFString>?
-        let err = MIDIObjectGetStringProperty(endpoint, kMIDIPropertyDisplayName, &param)
-        guard err == noErr, let cfStr = param?.takeRetainedValue() else {
-            return "(unnamed)"
+        // Endpoint names can be generic ("MIDI 1"). Include the owning device's
+        // model/manufacturer so online lookup receives the instrument identity.
+        var entity: MIDIEntityRef = 0
+        var device: MIDIDeviceRef = 0
+        MIDIEndpointGetEntity(endpoint, &entity)
+        if entity != 0 { MIDIEntityGetDevice(entity, &device) }
+        let display = stringProperty(endpoint, kMIDIPropertyDisplayName)
+            ?? stringProperty(endpoint, kMIDIPropertyName) ?? "(unnamed)"
+        let model = stringProperty(endpoint, kMIDIPropertyModel)
+            ?? (device != 0 ? stringProperty(device, kMIDIPropertyModel) : nil)
+            ?? (device != 0 ? stringProperty(device, kMIDIPropertyName) : nil)
+        let manufacturer = stringProperty(endpoint, kMIDIPropertyManufacturer)
+            ?? (device != 0 ? stringProperty(device, kMIDIPropertyManufacturer) : nil)
+        var name = display
+        for part in [model, manufacturer].compactMap({ $0 }) {
+            if name.range(of: part, options: .caseInsensitive) == nil { name = "\(part) \(name)" }
         }
-        return cfStr as String
+        return name
     }
 
     func getSourceNames() -> [String] {
@@ -161,6 +210,36 @@ private final class MidiManager {
             names.append(getName(for: source))
         }
         return names
+    }
+
+    func getOutputs() -> [[String: String]] {
+        (0..<MIDIGetNumberOfDestinations()).map { index in
+            let endpoint = MIDIGetDestination(index)
+            return ["id": String(endpoint), "name": getName(for: endpoint)]
+        }
+    }
+
+    private func sendPacket(destination: MIDIEndpointRef, data: [UInt8]) throws {
+        let memory = UnsafeMutableRawPointer.allocate(byteCount: 1024, alignment: MemoryLayout<MIDIPacketList>.alignment)
+        defer { memory.deallocate() }
+        let list = memory.bindMemory(to: MIDIPacketList.self, capacity: 1)
+        let packet = MIDIPacketListInit(list)
+        let added = data.withUnsafeBufferPointer {
+            MIDIPacketListAdd(list, 1024, packet, 0, data.count, $0.baseAddress!)
+        }
+        guard added != nil else { throw midiError("Create MIDI packet", status: -1) }
+        let status = MIDISend(outputPort, destination, list)
+        if status != noErr { throw midiError("Send MIDI note", status: status) }
+    }
+
+    func send(destination: String, data: [UInt8]) throws {
+        guard outputPort != 0, let endpoint = MIDIEndpointRef(destination),
+              (0..<MIDIGetNumberOfDestinations()).contains(where: { MIDIGetDestination($0) == endpoint }) else {
+            throw midiError("Keyboard output disconnected", status: -1)
+        }
+        try sendPacket(destination: endpoint, data: data)
+        if data[0] == 0x90 && data[2] > 0 { outputNotes[endpoint, default: []].insert(data[1]) }
+        else { outputNotes[endpoint]?.remove(data[1]) }
     }
 
     private func connectAllSources() throws {
@@ -182,7 +261,9 @@ private final class MidiManager {
         guard let webView,
               let json = try? JSONSerialization.data(withJSONObject: getSourceNames()),
               let sources = String(data: json, encoding: .utf8) else { return }
-        webView.evaluateJavaScript("window.__dispatchIOSMidiSources?.(\(sources));")
+        let outputData = try? JSONSerialization.data(withJSONObject: getOutputs())
+        let outputs = outputData.flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+        webView.evaluateJavaScript("window.__dispatchIOSMidiSources?.(\(sources), \(outputs));")
     }
 
     private func disconnectAllSources() {

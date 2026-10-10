@@ -312,7 +312,7 @@ export function FreePracticeMode({
         <p className="text-center text-base">{instruction}</p>
 
         {/* Feedback area */}
-        <div className="min-h-[2.5rem] flex items-center justify-center">
+        <div className="min-h-10 flex items-center justify-center">
           {isEvaluating ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
