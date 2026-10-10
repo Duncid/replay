@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
+import { selectMidiOutput, setMidiOutput } from "@/lib/midiOutput";
+
 interface MidiDevice {
   id: string;
   name: string;
@@ -81,6 +83,7 @@ export const useMidiInput = (
   );
 
   const disconnect = useCallback(() => {
+    setMidiOutput(null);
     if (activeInputRef.current) {
       // Explicitly clear the handler
       activeInputRef.current.onmidimessage = null;
@@ -141,6 +144,9 @@ export const useMidiInput = (
         ),
       ]);
       midiAccessRef.current = access;
+      access.onstatechange = () => {
+        setMidiOutput(activeInputRef.current ? selectMidiOutput(access, activeInputRef.current) : null);
+      };
       console.log("[MIDI] [DEBUG] requestMIDIAccess() returned successfully");
 
       const inputs = Array.from(access.inputs.values());
@@ -171,6 +177,7 @@ export const useMidiInput = (
       firstInput.onmidimessage = null;
 
       activeInputRef.current = firstInput;
+      setMidiOutput(selectMidiOutput(access, firstInput));
       firstInput.onmidimessage = handleMidiMessage;
       console.log("[MIDI] [DEBUG] onmidimessage SET - this triggers polyfill startNativeIfNeeded");
 
@@ -216,7 +223,9 @@ export const useMidiInput = (
     const onSourcesUpdated = () => {
       if (!activeInputRef.current) return;
       const name = activeInputRef.current.name;
+      if (midiAccessRef.current) setMidiOutput(selectMidiOutput(midiAccessRef.current, activeInputRef.current));
       if (name === "No devices") {
+        setMidiOutput(null);
         setConnectedDevice(null);
         setDevices([]);
         setAttemptedNoDevice(true);

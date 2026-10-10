@@ -635,7 +635,7 @@ export function WhistleImportSheet({
             <canvas ref={waveformCanvasRef} className="w-full h-24" />
           </div>
 
-          <div className="space-y-2 flex-shrink-0 min-h-36">
+          <div className="space-y-2 shrink-0 min-h-36">
             {hasRecording && (
               <>
                 <div className="flex items-center justify-between gap-2">
@@ -674,7 +674,7 @@ export function WhistleImportSheet({
           </div>
         </div>
 
-        <SheetFooter className="gap-2 flex-shrink-0">
+        <SheetFooter className="gap-2 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("menus.cancel")}
           </Button>

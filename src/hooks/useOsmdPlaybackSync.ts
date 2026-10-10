@@ -1,5 +1,5 @@
 import type { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -39,6 +39,8 @@ export function useOsmdPlaybackSync({
   // Scroll state
   const lastUserScrollMsRef = useRef<number | null>(null);
   const scrollingRef = useRef(false);
+  const scrollEndCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => scrollEndCleanupRef.current?.(), []);
 
   // ── Cursor helpers ──────────────────────────────────────────────
 
@@ -129,6 +131,22 @@ export function useOsmdPlaybackSync({
     // Don't re-trigger while a smooth scroll is in flight
     if (scrollingRef.current) return;
 
+    const beginScroll = (options: ScrollToOptions) => {
+      scrollEndCleanupRef.current?.();
+      const onDone = () => {
+        scrollingRef.current = false;
+        scrollEndCleanupRef.current = null;
+      };
+      // Register before scrolling; no event is expected for a no-op scroll.
+      container.addEventListener("scrollend", onDone, { once: true });
+      scrollEndCleanupRef.current = () => {
+        container.removeEventListener("scrollend", onDone);
+        scrollingRef.current = false;
+      };
+      scrollingRef.current = true;
+      container.scrollTo(options);
+    };
+
     if (scrollDirection === "vertical") {
       const cursorY = cursorEl.offsetTop;
       const containerHeight = container.clientHeight;
@@ -144,8 +162,8 @@ export function useOsmdPlaybackSync({
         Math.min(maxScroll, cursorY - containerHeight * 0.25),
       );
 
-      scrollingRef.current = true;
-      container.scrollTo({ top: targetScroll, behavior: "smooth" });
+      if (Math.abs(targetScroll - container.scrollTop) < 1) return;
+      beginScroll({ top: targetScroll, behavior: "smooth" });
     } else {
       const cursorX = cursorEl.offsetLeft;
       const containerWidth = container.clientWidth;
@@ -161,19 +179,10 @@ export function useOsmdPlaybackSync({
         Math.min(maxScroll, cursorX - containerWidth * 0.25),
       );
 
-      scrollingRef.current = true;
-      container.scrollTo({ left: targetScroll, behavior: "smooth" });
+      if (Math.abs(targetScroll - container.scrollLeft) < 1) return;
+      beginScroll({ left: targetScroll, behavior: "smooth" });
     }
 
-    // Reset scrolling flag when the animation finishes.
-    // Use scrollend event with a timeout fallback (scrollend isn't universal).
-    const onDone = () => {
-      scrollingRef.current = false;
-      container.removeEventListener("scrollend", onDone);
-      clearTimeout(fallback);
-    };
-    container.addEventListener("scrollend", onDone, { once: true });
-    const fallback = setTimeout(onDone, 600);
   }, [scrollContainerRef, scrollDirection]);
 
   // ── Per-frame tick (timestamp-based) ────────────────────────────

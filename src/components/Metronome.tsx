@@ -657,7 +657,7 @@ export const Metronome = ({
             key={idx}
             variant={isMuted ? "outline" : isAccent ? "default" : "secondary"}
             size="sm"
-            className="min-w-[3rem]"
+            className="min-w-12"
             onClick={() => {
               setUseCustomAccents(true);
               setCustomAccentLevels((prev) => {

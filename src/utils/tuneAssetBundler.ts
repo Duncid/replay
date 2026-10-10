@@ -1,129 +1,178 @@
 // Centralized Vite glob imports for tune assets
-// These are loaded at build time for local music files
+// Vite packages assets locally; load only the selected tune at runtime.
 
 import type { TuneBriefing } from "@/types/tuneAssets";
 
 // Auto-discover all teacher.json files at build time
 const teacherModules = import.meta.glob<{ default: Record<string, unknown> }>(
   "/src/music/*/teacher.json",
-  { eager: true },
+  {},
 );
 
-// Pre-load all tune note sequences at build time
+// Discover all tune note sequences at build time
 const tuneNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.ns.json",
-  { eager: true },
+  {},
 );
 
 const tuneInstModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.inst*.ns.json",
-  { eager: true },
+  {},
 );
 
 const tuneLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.lh.ns.json",
-  { eager: true },
+  {},
 );
 
 const tuneRhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/tune.rh.ns.json",
-  { eager: true },
+  {},
 );
 
-// Pre-load all nugget note sequences
+// Discover all nugget note sequences
 const nuggetNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.ns.json",
-  { eager: true },
+  {},
 );
 
 const nuggetInstModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.inst*.ns.json",
-  { eager: true },
+  {},
 );
 
 const nuggetLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.lh.ns.json",
-  { eager: true },
+  {},
 );
 
 const nuggetRhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/nuggets/*.rh.ns.json",
-  { eager: true },
+  {},
 );
 
-// Pre-load all assembly note sequences
+// Discover all assembly note sequences
 const assemblyNsModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.ns.json",
-  { eager: true },
+  {},
 );
 
 const assemblyInstModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.inst*.ns.json",
-  { eager: true },
+  {},
 );
 
 const assemblyLhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.lh.ns.json",
-  { eager: true },
+  {},
 );
 
 const assemblyRhModules = import.meta.glob<{ default: object }>(
   "/src/music/*/output/assemblies/*.rh.ns.json",
-  { eager: true },
+  {},
 );
 
-// Pre-load all XML files at build time (for sheet music rendering)
+// Discover all XML files at build time (for sheet music rendering)
 const tuneXmlModules = import.meta.glob<string>(
   "/src/music/*/output/tune.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
 const tuneLhXmlModules = import.meta.glob<string>(
   "/src/music/*/output/tune.lh.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
 const tuneRhXmlModules = import.meta.glob<string>(
   "/src/music/*/output/tune.rh.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
 const nuggetXmlModules = import.meta.glob<string>(
   "/src/music/*/output/nuggets/*.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
 const assemblyXmlModules = import.meta.glob<string>(
   "/src/music/*/output/assemblies/*.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
-// Pre-load all DSP XML files at build time (display-optimized MusicXML)
+// Discover all DSP XML files at build time (display-optimized MusicXML)
 const tuneDspXmlModules = import.meta.glob<string>(
   "/src/music/*/output/tune.dsp.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
 // Match all *.dsp.xml files in nuggets (includes N1.dsp.xml, N1.lh.dsp.xml, N1.rh.dsp.xml)
 const nuggetDspXmlModules = import.meta.glob<string>(
   "/src/music/*/output/nuggets/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
 // Match all *.dsp.xml files in assemblies
 const assemblyDspXmlModules = import.meta.glob<string>(
   "/src/music/*/output/assemblies/*.dsp.xml",
-  { eager: true, query: "?raw", import: "default" },
+  { query: "?raw", import: "default" },
 );
 
-// Helper to get module from glob by path
-const getGlobModule = (
-  modules: Record<string, { default?: object }>,
-  path: string,
-): object | null => {
-  const module = modules[path];
-  return module?.default || (module as unknown as object) || null;
+// Cache each tune as a group so a selection needs one loading transition.
+type AssetLoader = () => Promise<unknown>;
+const assetLoaders: Record<string, AssetLoader> = {
+  ...teacherModules,
+  ...tuneNsModules,
+  ...tuneInstModules,
+  ...tuneLhModules,
+  ...tuneRhModules,
+  ...nuggetNsModules,
+  ...nuggetInstModules,
+  ...nuggetLhModules,
+  ...nuggetRhModules,
+  ...assemblyNsModules,
+  ...assemblyInstModules,
+  ...assemblyLhModules,
+  ...assemblyRhModules,
+  ...tuneXmlModules,
+  ...tuneLhXmlModules,
+  ...tuneRhXmlModules,
+  ...nuggetXmlModules,
+  ...assemblyXmlModules,
+  ...tuneDspXmlModules,
+  ...nuggetDspXmlModules,
+  ...assemblyDspXmlModules,
 };
+const loadedAssets = new Map<string, unknown>();
+const tuneLoads = new Map<string, Promise<void>>();
+const tuneErrors = new Map<string, unknown>();
+
+const readAsset = (path: string): unknown => {
+  if (!assetLoaders[path]) return null;
+  if (loadedAssets.has(path)) return loadedAssets.get(path);
+  const musicRef = path.split("/")[3];
+  if (tuneErrors.has(musicRef)) throw tuneErrors.get(musicRef);
+  let pending = tuneLoads.get(musicRef);
+  if (!pending) {
+    pending = Promise.all(
+      Object.entries(assetLoaders)
+        .filter(([assetPath]) => assetPath.startsWith(`/src/music/${musicRef}/`))
+        .map(async ([assetPath, load]) => {
+          const module = await load();
+          loadedAssets.set(assetPath, typeof module === "string" ? module : (module as { default: unknown }).default);
+        }),
+    ).then(() => undefined).catch(error => {
+      tuneErrors.set(musicRef, error);
+      throw error;
+    });
+    tuneLoads.set(musicRef, pending);
+  }
+  // React Suspense keeps synchronous selection helpers simple while assets load.
+  throw pending;
+};
+
+const getGlobModule = (
+  _modules: Record<string, AssetLoader>,
+  path: string,
+): object | null => readAsset(path) as object | null;
 
 // Export local tune keys discovered from file system
 // Only returns folders that have an output/tune.ns.json file (required for publishing)
@@ -291,17 +340,17 @@ export const getAssemblyRh = (
 // XML helper functions
 export const getTuneXml = (musicRef: string): string | null => {
   const path = `/src/music/${musicRef}/output/tune.xml`;
-  return tuneXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 export const getTuneLhXml = (musicRef: string): string | null => {
   const path = `/src/music/${musicRef}/output/tune.lh.xml`;
-  return tuneLhXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 export const getTuneRhXml = (musicRef: string): string | null => {
   const path = `/src/music/${musicRef}/output/tune.rh.xml`;
-  return tuneRhXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 export const getNuggetXml = (
@@ -309,7 +358,7 @@ export const getNuggetXml = (
   nuggetId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.xml`;
-  return nuggetXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 export const getAssemblyXml = (
@@ -317,13 +366,13 @@ export const getAssemblyXml = (
   assemblyId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.xml`;
-  return assemblyXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 // DSP XML helper functions (display-optimized MusicXML)
 export const getTuneDspXml = (musicRef: string): string | null => {
   const path = `/src/music/${musicRef}/output/tune.dsp.xml`;
-  return tuneDspXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 export const getNuggetDspXml = (
@@ -331,7 +380,7 @@ export const getNuggetDspXml = (
   nuggetId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/nuggets/${nuggetId}.dsp.xml`;
-  return nuggetDspXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 export const getAssemblyDspXml = (
@@ -339,7 +388,7 @@ export const getAssemblyDspXml = (
   assemblyId: string,
 ): string | null => {
   const path = `/src/music/${musicRef}/output/assemblies/${assemblyId}.dsp.xml`;
-  return assemblyDspXmlModules[path] || null;
+  return readAsset(path) as string | null;
 };
 
 // Get local tune briefing (teachingOrder, assemblyOrder, etc.)

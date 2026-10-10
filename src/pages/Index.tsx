@@ -1,3 +1,4 @@
+import { releaseMidiOutputNotes } from "@/lib/midiOutput";
 import { loadMagentaScript } from "@/lib/magenta";
 import { AddNoteSequenceDialog } from "@/components/AddNoteSequenceDialog";
 import { AddPartitionDialog } from "@/components/AddPartitionDialog";
@@ -93,7 +94,6 @@ import {
   noteSequenceToAbc,
 } from "@/utils/noteSequenceUtils";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
-import JSZip from "jszip";
 import { ChevronDown, Mic } from "lucide-react";
 import {
   type ReactNode,
@@ -203,7 +203,7 @@ const Index = () => {
   >(STORAGE_KEYS.MUSIC_NOTATION, "auto");
 
   // Persisted preferences
-  const midiHasOwnSoundRef = useRef(false);
+  const midiSilentWhilePlayingRef = useRef(false);
   const [pianoSoundType, setPianoSoundType] = useLocalStorage<PianoSoundType>(
     STORAGE_KEYS.INSTRUMENT,
     "acoustic-piano",
@@ -384,12 +384,12 @@ const Index = () => {
   );
 
   // Refs for circular dependency handling
-  const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>();
-  const playModeRef = useRef<ReturnType<typeof PlayMode>>();
+  const handleReplaySequenceRef = useRef<(sequence: NoteSequence) => void>(undefined);
+  const playModeRef = useRef<ReturnType<typeof PlayMode>>(undefined);
   const handlePlayAllSequencesRef =
     useRef<
       (combinedSequence: NoteSequence, segments?: PlaybackSegment[]) => void
-    >();
+    >(undefined);
 
   // Learn mode recording state
   const [learnModeRecording, setLearnModeRecording] =
@@ -529,16 +529,13 @@ const Index = () => {
   // MIDI note handlers - memoized to ensure stable references for useMidiInput
   const handleMidiNoteOn = useCallback(
     (noteKey: string, frequency: number, velocity: number) => {
-      if (appState !== "idle" && appState !== "user_playing") {
-        console.warn("[MIDI] handleMidiNoteOn ignored: appState=", appState);
-        return;
-      }
       midiPressedKeysRef.current.add(noteKey);
       pianoRef.current?.handleKeyPress(noteKey, frequency, velocity, {
-        muteAudio: midiHasOwnSoundRef.current,
+        muteAudio: midiSilentWhilePlayingRef.current,
+        localOnly: true,
       });
     },
-    [appState],
+    [],
   );
 
   const handleMidiNoteOff = useCallback(
@@ -582,11 +579,12 @@ const Index = () => {
     handleNoMidiDevices,
     handleMidiError,
   );
-  const { hasOwnSound: midiHasOwnSound, setHasOwnSound: setMidiHasOwnSound } =
-    useMidiSoundPreference(connectedDevice);
-  midiHasOwnSoundRef.current = midiHasOwnSound;
+  const { silentWhilePlaying: midiSilentWhilePlaying, setSilentWhilePlaying: setMidiSilentWhilePlaying,
+    playOnKeyboard, setPlayOnKeyboard, canPlayOnKeyboard } = useMidiSoundPreference(connectedDevice);
+  midiSilentWhilePlayingRef.current = midiSilentWhilePlaying;
 
   const stopAiPlayback = useCallback(() => {
+    releaseMidiOutputNotes();
     shouldStopAiRef.current = true;
     isPlayingRef.current = false;
     setIsPlaying(false);
@@ -883,6 +881,7 @@ const Index = () => {
         if (fileName.endsWith(".mxl")) {
           // MXL files are ZIP archives - extract the XML
           const arrayBuffer = await file.arrayBuffer();
+          const { default: JSZip } = await import("jszip");
           const zip = await JSZip.loadAsync(arrayBuffer);
 
           const containerFile = zip.files["META-INF/container.xml"];
@@ -2115,8 +2114,8 @@ const Index = () => {
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
-    <TuneManagementProvider>
-      <div className="h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-[var(--safe-area-inset-top)] pr-[var(--safe-area-inset-right)] pb-[var(--safe-area-inset-bottom)] pl-[var(--safe-area-inset-left)]">
+    <TuneManagementProvider active={activeMode === "lab"}>
+      <div className="h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
@@ -2304,7 +2303,7 @@ const Index = () => {
                           side="bottom"
                           className="w-auto max-w-[min(320px,90vw)] p-2"
                         >
-                          <div className="font-mono text-[10px] leading-tight break-words whitespace-normal text-popover-foreground">
+                          <div className="font-mono text-[10px] leading-tight wrap-break-word whitespace-normal text-popover-foreground">
                             <div>
                               <span className="opacity-80">Live: </span>
                               {micInput.pitchDebug.liveHz != null ? (
@@ -2386,8 +2385,11 @@ const Index = () => {
                   isSupported={isMidiSupported}
                   onConnect={requestAccess}
                   onDisconnect={disconnect}
-                  hasOwnSound={midiHasOwnSound}
-                  onHasOwnSoundChange={setMidiHasOwnSound}
+                  silentWhilePlaying={midiSilentWhilePlaying}
+                  onSilentWhilePlayingChange={setMidiSilentWhilePlaying}
+                  playOnKeyboard={playOnKeyboard}
+                  onPlayOnKeyboardChange={setPlayOnKeyboard}
+                  canPlayOnKeyboard={canPlayOnKeyboard}
                 />
               </div>
             </div>
@@ -2396,11 +2398,7 @@ const Index = () => {
               className="flex-1 min-h-0"
               ref={pianoRef}
               activeKeys={activeKeys}
-              allowInput={
-                appState === "idle" ||
-                appState === "user_playing" ||
-                appState === "waiting_for_ai"
-              }
+              allowInput
               soundType={pianoSoundType}
               hasColor={isInTuneMode || activeMode === "lab"}
               language={language}

@@ -6,6 +6,16 @@ class AppViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--replay-performance"),
+           let url = Bundle.main.url(forResource: "performance-probe", withExtension: "js", subdirectory: "public"),
+           let source = try? String(contentsOf: url, encoding: .utf8) {
+            bridge?.webView?.configuration.userContentController.add(PerformanceHandler(), name: "replayPerformance")
+            bridge?.webView?.configuration.userContentController.addUserScript(
+                WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            )
+        }
+        #endif
         // print("[MIDI Bridge] [DEBUG] AppViewController.capacitorDidLoad - registering MidiBridgePlugin")
         bridge?.registerPluginInstance(MidiBridgePlugin())
         bridge?.webView?.configuration.userContentController.add(
@@ -53,3 +63,17 @@ private final class SafeAreaHandler: NSObject, WKScriptMessageHandler {
         owner?.updateSafeAreaInsets()
     }
 }
+
+#if DEBUG
+private final class PerformanceHandler: NSObject, WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard var result = message.body as? [String: Any] else { return }
+        result["nativeLaunchElapsedMs"] = (ProcessInfo.processInfo.systemUptime - AppDelegate.launchStartedAt) * 1000
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]),
+           let json = String(data: data, encoding: .utf8) {
+            print("[Replay Performance] " + json)
+            fflush(stdout)
+        }
+    }
+}
+#endif

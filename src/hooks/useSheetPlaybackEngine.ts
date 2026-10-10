@@ -1,3 +1,4 @@
+import { releaseMidiOutputNotes } from "@/lib/midiOutput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
 
@@ -499,6 +500,7 @@ export function useSheetPlaybackEngine({
   }, [enabled, setFocusedIfChanged]);
 
   const pause = useCallback(() => {
+    releaseMidiOutputNotes();
     isAutoplayRef.current = false;
     setIsAutoplay(false);
     playerAdvancingRef.current = false;
@@ -510,6 +512,7 @@ export function useSheetPlaybackEngine({
   }, [gates]);
 
   const stop = useCallback(() => {
+    releaseMidiOutputNotes();
     isAutoplayRef.current = false;
     setIsAutoplay(false);
     playerAdvancingRef.current = false;

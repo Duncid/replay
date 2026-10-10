@@ -166,7 +166,7 @@ export function AddNoteSequenceDialog({
             className="flex-1 min-h-[200px] font-mono text-sm"
           />
         </div>
-        <SheetFooter className="gap-2 flex-shrink-0">
+        <SheetFooter className="gap-2 shrink-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>

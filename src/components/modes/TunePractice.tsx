@@ -45,7 +45,6 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -280,22 +279,10 @@ export function TunePractice({
     const payload = `Prompt sent:\n${promptText}\n\nAnswer received:\n${answerText}`;
 
     try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(payload);
-        return;
-      }
+      await navigator.clipboard.writeText(payload);
     } catch {
-      // fall through to legacy copy approach
+      console.error("Unable to copy evaluation details to the clipboard");
     }
-
-    const textarea = document.createElement("textarea");
-    textarea.value = payload;
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
   };
   const statusLabels = {
     sending: t("tune.status.sending"),
@@ -435,28 +422,27 @@ export function TunePractice({
     setPixiSize({ width, height });
   }, []);
 
-  useLayoutEffect(() => {
-    const el = pixiContainerRef.current;
+  // Suspense can mount this element after the parent effects have already run.
+  // Observe the actual element lifetime, including remounts after suspension.
+  const attachPixiContainer = useCallback((el: HTMLDivElement | null) => {
+    pixiContainerRef.current = el;
     if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      setPixiSize({ width, height });
-    });
-    observer.observe(el);
-    // Initial measurement in case the first callback had zero size
-    const raf = requestAnimationFrame(() => {
+    const measure = () => {
       const { width, height } = el.getBoundingClientRect();
       setPixiSize((prev) =>
         prev.width === width && prev.height === height
           ? prev
           : { width, height },
       );
-    });
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    measure();
+    const raf = requestAnimationFrame(measure);
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
+      pixiContainerRef.current = null;
     };
   }, []);
 
@@ -635,7 +621,7 @@ export function TunePractice({
             currentNuggetId={currentNugget.itemId}
             messages={streakMessages}
           />
-          <div className="min-h-[1.5rem] text-center">
+          <div className="min-h-6 text-center">
             {leavingText ? (
               <p className="text-foreground text-base comment-typing-reverse motion-reduce:animate-none">
                 {leavingText}
@@ -662,7 +648,7 @@ export function TunePractice({
           <div className="relative w-full flex-1 min-h-0 overflow-hidden">
             {/* Pixi view: stays mounted, invisible when sheet view is shown */}
             <div
-              ref={pixiContainerRef}
+              ref={attachPixiContainer}
               className={cn(
                 "absolute inset-0 w-full h-full overflow-hidden",
                 showSheetView && "invisible",

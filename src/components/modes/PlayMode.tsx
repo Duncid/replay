@@ -107,9 +107,7 @@ function normalizeHistory(entries: PlayEntry[]): PlayEntry[] {
     ...entry,
     id:
       entry.id ||
-      (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `track-${Date.now()}-${Math.random()}`),
+      crypto.randomUUID(),
   }));
 }
 
@@ -200,7 +198,7 @@ export function PlayMode({
       setHistory((prev) => [
         ...prev,
         {
-          id: `track-${Date.now()}-${Math.random()}`,
+          id: crypto.randomUUID(),
           sequence,
           isAiGenerated,
         },

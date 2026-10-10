@@ -87,11 +87,11 @@ import {
   createContext,
   lazy,
   Suspense,
+  startTransition,
   Fragment,
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -282,7 +282,7 @@ function useTuneManagementContext() {
   return context;
 }
 
-function useTuneManagementState(): TuneManagementContextValue {
+function useTuneManagementState(active: boolean): TuneManagementContextValue {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -357,22 +357,24 @@ function useTuneManagementState(): TuneManagementContextValue {
 
   // Auto-select first tune when list loads (prefer "intro" if available)
   useEffect(() => {
-    if (!selectedTune) {
-      if (publishedTuneKeys.size > 0) {
-        const keys = Array.from(publishedTuneKeys);
-        const preferred =
-          keys.find((k) => k.toLowerCase() === "intro") ?? keys[0];
-        setSelectedTune(preferred);
-        setSelectedSource("published");
-      } else if (unpublishedTuneKeys.length > 0) {
-        const preferred =
-          unpublishedTuneKeys.find((k) => k.toLowerCase() === "intro") ??
-          unpublishedTuneKeys[0];
-        setSelectedTune(preferred);
-        setSelectedSource("local");
-      }
+    if (active && !selectedTune) {
+      startTransition(() => {
+        if (publishedTuneKeys.size > 0) {
+          const keys = Array.from(publishedTuneKeys);
+          const preferred =
+            keys.find((k) => k.toLowerCase() === "intro") ?? keys[0];
+          setSelectedTune(preferred);
+          setSelectedSource("published");
+        } else if (unpublishedTuneKeys.length > 0) {
+          const preferred =
+            unpublishedTuneKeys.find((k) => k.toLowerCase() === "intro") ??
+            unpublishedTuneKeys[0];
+          setSelectedTune(preferred);
+          setSelectedSource("local");
+        }
+      });
     }
-  }, [publishedTuneKeys, unpublishedTuneKeys, selectedTune]);
+  }, [active, publishedTuneKeys, unpublishedTuneKeys, selectedTune]);
 
   // Fetch tune assets from database (only when published source)
   const { data: tuneAssets, isLoading: isLoadingAssets } = useTuneAssets(
@@ -877,13 +879,15 @@ function useTuneManagementState(): TuneManagementContextValue {
 
   // Selection handler
   const selectTune = useCallback((source: TuneSource, tune: string) => {
-    setSelectedSource(source);
-    setSelectedTune(tune);
-    // Reset target to 'full' when changing tunes
-    setSelectedTarget("full");
-    setSelectedItemId("");
-    setSelectedHand("full");
-    setSelectedInstParts("both");
+    startTransition(() => {
+      setSelectedSource(source);
+      setSelectedTune(tune);
+      // Reset target to 'full' when changing tunes
+      setSelectedTarget("full");
+      setSelectedItemId("");
+      setSelectedHand("full");
+      setSelectedInstParts("both");
+    });
   }, []);
 
   // Rename handler
@@ -1095,8 +1099,8 @@ function useTuneManagementState(): TuneManagementContextValue {
   };
 }
 
-export function TuneManagementProvider({ children }: { children: ReactNode }) {
-  const value = useTuneManagementState();
+export function TuneManagementProvider({ children, active }: { children: ReactNode; active: boolean }) {
+  const value = useTuneManagementState(active);
   return (
     <TuneManagementContext.Provider value={value}>
       {children}
@@ -1352,34 +1356,29 @@ export const TuneManagement = ({
     );
   }, [bottomNotes, dualPaneHeight, getTrackCount, showDualPixi, topNotes]);
 
-  // Re-run when the component transitions past early returns
-  // (isLoadingList starts true on mount → pixi div isn't in DOM yet)
-  const showMainContent =
-    !isLoadingList &&
-    (publishedTuneKeys.size > 0 || unpublishedTuneKeys.length > 0);
-
-  useLayoutEffect(() => {
-    const el = pixiContainerRef.current;
-    console.log(
-      "[PIXI-DEBUG] useLayoutEffect, showMainContent:",
-      showMainContent,
-      "el:",
-      !!el,
-      "rect:",
-      el?.getBoundingClientRect(),
-    );
+  // Suspense can mount this element after the parent effects have already run.
+  // Observe the actual element lifetime, including remounts after suspension.
+  const attachPixiContainer = useCallback((el: HTMLDivElement | null) => {
+    pixiContainerRef.current = el;
     if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      setPixiSize({ width, height });
-    });
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect();
+      setPixiSize((prev) =>
+        prev.width === width && prev.height === height
+          ? prev
+          : { width, height },
+      );
     };
-  }, [showMainContent]);
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    measure();
+    const raf = requestAnimationFrame(measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+      pixiContainerRef.current = null;
+    };
+  }, []);
 
   const isAtStart =
     playback.playheadTime < 0.01 &&
@@ -1468,7 +1467,7 @@ export const TuneManagement = ({
 
       {/* Bottom section: full width interactive view */}
       <div
-        ref={pixiContainerRef}
+        ref={attachPixiContainer}
         className="w-full flex-1 min-h-0 overflow-hidden"
       >
         {pixiSize.width > 0 && pixiSize.height > 0 && (
