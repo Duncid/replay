@@ -23,7 +23,8 @@ test("nested traversal stays open and leaving closes descendants", async ({ page
   await page.getByRole("menuitem", { name: "English", exact: true }).hover();
   await expect(choice).not.toBeVisible();
   await expect(page.getByRole("menuitem", { name: "English", exact: true })).toBeVisible();
-  await page.mouse.move(900, 500);
+  // Stay inside the iPad viewport so WebKit dispatches document pointermove.
+  await page.mouse.move(page.viewportSize()!.width - 20, 500);
   await expect(page.getByRole("menuitem", { name: "English", exact: true })).not.toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Language", exact: true })).toBeVisible();
 });

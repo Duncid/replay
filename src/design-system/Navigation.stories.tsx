@@ -1,0 +1,11 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+const meta = { title: "Navigation/Navigation" } satisfies Meta;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Sections: Story = { render: () => <Tabs defaultValue="tunes" className="max-w-lg"><TabsList aria-label="Mode"><TabsTrigger value="tunes">Tunes</TabsTrigger><TabsTrigger value="compose">Compose</TabsTrigger></TabsList><TabsContent value="tunes" className="p-4">Choose a tune and start practicing.</TabsContent><TabsContent value="compose" className="p-4">Build a melody, one phrase at a time.</TabsContent></Tabs> };
+export const NestedMenu: Story = { render: () => <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline">Open menu</Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Replay</DropdownMenuLabel><DropdownMenuItem>Tunes</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuSub><DropdownMenuSubTrigger>Language</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem>English</DropdownMenuItem><DropdownMenuItem>Français</DropdownMenuItem><DropdownMenuSub><DropdownMenuSubTrigger>Music notation</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuItem>Auto</DropdownMenuItem><DropdownMenuItem>ABC</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub></DropdownMenuSubContent></DropdownMenuSub></DropdownMenuContent></DropdownMenu> };
+export const Scrolling: Story = { render: () => <ScrollArea className="h-56 max-w-sm rounded-lg border p-4" aria-label="Practice sections"><ol className="space-y-4">{Array.from({ length: 12 }, (_, i) => <li key={i}>Section {i + 1} · Listen, practice, repeat</li>)}</ol></ScrollArea> };

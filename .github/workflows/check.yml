@@ -12,3 +12,5 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run check
+      - run: npm run storybook:build
+      - run: npm run storybook:test

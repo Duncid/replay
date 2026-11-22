@@ -1,4 +1,4 @@
-# Replay Learn — native iPad app
+# Replay Nat — native iPad app
 
 A standalone Swift/SwiftUI iPad app for **Tunes**:
 published tune library → selected tune → practice → evaluation → feedback.
@@ -79,3 +79,11 @@ swiftc ReplayLearn/Models.swift Tests/main.swift -o /tmp/replay-tune-tests
 Full SwiftUI/SpriteKit compilation and on-device playback require Xcode on a
 Mac. Verify library loading, disabled locked tunes, demo sync, MIDI recording,
 evaluation, next section, and completion refreshing the library before install.
+
+## Native design system
+
+Tap **Design system** in Replay Nat to browse the offline component gallery, including
+colors, Dynamic Type typography, buttons, controls, tune cards and feedback states.
+The library and practice screens use the same components. In Xcode, preview
+`DesignSystemView` or launch with `--design-system` to bypass backend/audio setup.
+See [the design-system guide](../docs/design-system.md).

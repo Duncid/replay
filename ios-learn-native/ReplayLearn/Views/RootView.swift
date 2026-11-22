@@ -2,10 +2,11 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var viewModel: LessonViewModel
+    @State private var showingDesignSystem = false
 
     var body: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
+            ReplayTheme.background.ignoresSafeArea()
             switch viewModel.phase {
             case .loadingLibrary, .loadingTune:
                 ProgressView("Loading…")
@@ -23,11 +24,27 @@ struct RootView: View {
                     Button("Try Again") {
                         Task { await viewModel.loadLibrary() }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(ReplayButtonStyle())
                 }
                 .padding()
             }
         }
+        .tint(ReplayTheme.accent)
+        .safeAreaInset(edge: .top) {
+            // Keep the catalog available even if the backend is offline.
+            HStack {
+                Text("Replay Nat").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button { showingDesignSystem = true } label: {
+                    Label("Design system", systemImage: "paintpalette")
+                }
+                .buttonStyle(ReplayButtonStyle(kind: .secondary))
+                .accessibilityIdentifier("open-design-system")
+            }
+            .padding(.horizontal, ReplayTheme.Space.medium)
+            .padding(.vertical, ReplayTheme.Space.tiny)
+        }
+        .sheet(isPresented: $showingDesignSystem) { DesignSystemView() }
     }
 }
 

@@ -11,7 +11,7 @@ struct LessonView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     instructionCard
                     if viewModel.phase == .feedback, let evaluation = viewModel.evaluation {
-                        feedbackCard(evaluation)
+                        ReplayFeedbackCard(evaluation: evaluation.evaluation, feedback: evaluation.feedbackText, reasoning: evaluation.reasoning, completed: evaluation.tuneAcquired == true)
                     }
                 }
                 .padding(24)
@@ -42,7 +42,7 @@ struct LessonView: View {
             } label: {
                 Label("Leave", systemImage: "chevron.left")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(ReplayButtonStyle(kind: .secondary))
 
             Spacer()
 
@@ -70,7 +70,8 @@ struct LessonView: View {
     }
 
     private var instructionCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        ReplayCard {
+        VStack(alignment: .leading, spacing: ReplayTheme.Space.medium) {
             if let item = viewModel.currentItem {
                 Text(item.instruction)
                     .font(.body)
@@ -84,7 +85,7 @@ struct LessonView: View {
                     } label: {
                         Label("Play Demo", systemImage: "play.fill")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(ReplayButtonStyle(kind: .secondary))
                     .disabled(viewModel.phase == .recording || viewModel.phase == .evaluating)
                 }
 
@@ -95,15 +96,14 @@ struct LessonView: View {
                     } label: {
                         Label("Record My Attempt", systemImage: "record.circle")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(ReplayButtonStyle())
                 case .recording:
                     Button {
                         viewModel.stopAndEvaluate()
                     } label: {
                         Label("Done — Evaluate", systemImage: "stop.circle")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
+                    .buttonStyle(ReplayButtonStyle(kind: .destructive))
                 case .evaluating:
                     ProgressView("Evaluating…")
                 case .feedback:
@@ -112,7 +112,7 @@ struct LessonView: View {
                     } label: {
                         Label(continueLabel, systemImage: "arrow.right")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(ReplayButtonStyle())
                 default:
                     EmptyView()
                 }
@@ -120,9 +120,7 @@ struct LessonView: View {
 
 
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        }
     }
 
     private var continueLabel: String {
@@ -130,47 +128,7 @@ struct LessonView: View {
         return viewModel.evaluation?.suggestNewNugget == true ? "Next Section" : "Try Again"
     }
 
-    private func feedbackCard(_ evaluation: TuneEvaluationResponse) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: iconName(for: evaluation.evaluation))
-                    .foregroundStyle(color(for: evaluation.evaluation))
-                Text(evaluation.evaluation.capitalized)
-                    .font(.headline)
-            }
-            Text(evaluation.feedbackText)
-                .fixedSize(horizontal: false, vertical: true)
-            if let reasoning = evaluation.reasoning, !reasoning.isEmpty {
-                Text(reasoning)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if evaluation.tuneAcquired == true {
-                Label("Tune completed", systemImage: "checkmark.seal.fill")
-                    .font(.subheadline).foregroundStyle(.green)
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-    }
 
-    private func iconName(for evaluation: String) -> String {
-        switch evaluation {
-        case "pass": return "checkmark.circle.fill"
-        case "close": return "circle.lefthalf.filled"
-        default: return "xmark.circle.fill"
-        }
-    }
-
-    private func color(for evaluation: String) -> Color {
-        switch evaluation {
-        case "pass": return .green
-        case "close": return .orange
-        default: return .red
-        }
-    }
 }
 
 #Preview {

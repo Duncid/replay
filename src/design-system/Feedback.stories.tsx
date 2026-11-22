@@ -1,0 +1,14 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Toaster, toast as sonner } from "@/components/ui/sonner";
+import { toast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+const meta = { title: "Feedback/Feedback" } satisfies Meta;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Notifications: Story = { render: () => <><Toaster /><div className="flex flex-wrap gap-3"><Button onClick={() => toast({ title: "Composition saved", description: "Your latest changes are ready." })}>Show notification</Button><Button variant="destructive" onClick={() => toast({ title: "Unable to save", description: "Please try again.", variant: "destructive" })}>Show error</Button><Button variant="outline" onClick={() => sonner.success("Tune completed")}>Show success</Button></div></> };
+export const StatusBadges: Story = { render: () => <div className="flex gap-3"><Badge>Unlocked</Badge><Badge variant="secondary">Practicing</Badge><Badge variant="outline">Locked</Badge><Badge variant="destructive">Disconnected</Badge></div> };
+export const PracticeCard: Story = { render: () => <Card className="max-w-md"><CardHeader><CardTitle>Keep the rhythm steady</CardTitle><CardDescription>Section 1 of 4</CardDescription></CardHeader><CardContent>Listen once, then play the phrase. You can try again as often as you like.</CardContent></Card> };
+export const Loading: Story = { render: () => <div className="h-48"><LoadingSpinner message="Preparing your practice…" /></div> };

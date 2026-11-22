@@ -31,3 +31,7 @@ __pycache__/
 *.egg-info/
 /.pytest_cache/
 tooling/venv/
+
+# Component documentation build
+storybook-static/
+storybook-test-results/

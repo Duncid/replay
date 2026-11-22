@@ -6,9 +6,13 @@ struct ReplayLearnApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(viewModel)
-                .preferredColorScheme(.dark)
+            if ProcessInfo.processInfo.arguments.contains("--design-system") {
+                DesignSystemView()
+            } else {
+                RootView()
+                    .environmentObject(viewModel)
+                    .preferredColorScheme(.dark)
+            }
         }
     }
 }

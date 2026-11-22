@@ -3,11 +3,14 @@ import SwiftUI
 /// Published tune library. Locked tunes remain visible but cannot be selected.
 struct WelcomeView: View {
     @EnvironmentObject private var viewModel: LessonViewModel
-    private let columns = [GridItem(.adaptive(minimum: 280), spacing: 16)]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var columns: [GridItem] {
+        [GridItem(dynamicTypeSize.isAccessibilitySize ? .flexible() : .adaptive(minimum: 280), spacing: ReplayTheme.Space.medium)]
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: ReplayTheme.Space.large) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Tunes").font(.largeTitle.bold())
                     Spacer()
@@ -19,29 +22,13 @@ struct WelcomeView: View {
                 }
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(viewModel.tunes) { tune in
-                        Button { viewModel.startTune(tune.tuneKey) } label: {
-                            HStack(spacing: 16) {
-                                Image(systemName: tune.unlocked ? "music.note" : "lock.fill")
-                                    .font(.title2)
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(tune.tuneKey).font(.headline)
-                                    Text(tune.unlocked ? "Unlocked" : "Locked · Complete \(tune.prerequisites.joined(separator: ", "))")
-                                        .font(.subheadline).foregroundStyle(.secondary)
-                                }
-                                Spacer(minLength: 0)
-                                if tune.unlocked { Image(systemName: "arrow.right") }
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-                            .padding(20)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+                        ReplayTuneCard(title: tune.tuneKey, unlocked: tune.unlocked, prerequisites: tune.prerequisites) {
+                            viewModel.startTune(tune.tuneKey)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(!tune.unlocked)
-                        .accessibilityLabel("\(tune.unlocked ? "Practice" : "Locked"): \(tune.tuneKey)")
                     }
                 }
             }
-            .padding(32)
+            .padding(ReplayTheme.Space.page)
             .frame(maxWidth: 1000, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -55,14 +42,14 @@ struct MidiStatusBar: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(viewModel.midi.isConnected ? Color.green : Color.secondary)
-                .frame(width: 8, height: 8)
-            Text(viewModel.midi.isConnected
-                 ? (viewModel.midi.sourceName ?? "MIDI connected")
-                 : "No MIDI device — connect your piano's USB port")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            ReplayStatus(
+                title: viewModel.midi.isConnected
+                    ? (viewModel.midi.sourceName ?? "MIDI connected")
+                    : "No MIDI device — connect your piano's USB port",
+                systemImage: viewModel.midi.isConnected ? "checkmark.circle.fill" : "cable.connector",
+                color: viewModel.midi.isConnected ? ReplayTheme.success : .secondary,
+                font: .caption
+            )
             Spacer()
         }
         .padding(.horizontal)

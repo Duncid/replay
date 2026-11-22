@@ -1,0 +1,14 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+const meta = { title: "Overlays/Surfaces" } satisfies Meta;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Modal: Story = { render: () => <Dialog><DialogTrigger asChild><Button>Open practice details</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Practice details</DialogTitle><DialogDescription>Listen once, then try the phrase at your own pace.</DialogDescription></DialogHeader><p>Focus on an even rhythm and relaxed hands.</p><DialogFooter><DialogClose asChild><Button>Done</Button></DialogClose></DialogFooter></DialogContent></Dialog> };
+export const Confirmation: Story = { render: () => <AlertDialog><AlertDialogTrigger asChild><Button variant="destructive">Delete example</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete this example?</AlertDialogTitle><AlertDialogDescription>This is a component preview. No tune or progress will be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog> };
+export const DetailSheet: Story = { render: () => <Sheet><SheetTrigger asChild><Button variant="outline">View practice plan</Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Practice plan</SheetTitle><SheetDescription>Work through one short phrase at a time.</SheetDescription></SheetHeader><ol className="mt-6 list-decimal space-y-3 pl-5"><li>Listen to the demo</li><li>Play the first phrase</li><li>Review your feedback</li></ol></SheetContent></Sheet> };
+export const ContextualHelp: Story = { render: () => <div className="flex gap-4"><Popover><PopoverTrigger asChild><Button variant="outline">MIDI settings</Button></PopoverTrigger><PopoverContent><p className="text-sm">Connect your keyboard to choose its sound output.</p></PopoverContent></Popover><Tooltip><TooltipTrigger asChild><Button variant="ghost">Why practice?</Button></TooltipTrigger><TooltipContent>Short, regular sessions help build confidence.</TooltipContent></Tooltip></div> };
