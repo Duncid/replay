@@ -457,9 +457,9 @@ const Index = () => {
     setActiveMode(newMode);
   };
 
-  // Existing mode preferences now open the tune library instead.
+  // Unsupported legacy mode preferences open the tune library instead.
   useEffect(() => {
-    if (activeMode !== "learn" && activeMode !== "lab" && activeMode !== "quest") {
+    if (activeMode !== "learn" && activeMode !== "play" && activeMode !== "lab" && activeMode !== "quest") {
       setActiveMode("learn");
     }
   }, [activeMode, setActiveMode]);
@@ -2116,6 +2116,7 @@ const Index = () => {
                 />
                 <TabsList>
                   <TabsTrigger value="learn">Tunes</TabsTrigger>
+                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 </TabsList>
                 {activeMode === "lab" && <span className="text-sm text-muted-foreground">Tune Manager</span>}
                 {activeMode === "quest" && questHeaderTitle && (
