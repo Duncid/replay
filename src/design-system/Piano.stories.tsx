@@ -37,14 +37,13 @@ const meta = {
   render: args => <KeyboardExample {...args} />,
   args: {
     activeKeys: new Set<string>(), allowInput: true, soundType: "classic",
-    hasColor: true, language: "en", notationPreference: "abc", fullKeyboard: false,
+    language: "en", notationPreference: "abc", fullKeyboard: false,
   },
   argTypes: {
     activeKeys: { control: "select", options: ["None", "C major", "Sharps"], mapping: {
       None: new Set<string>(), "C major": new Set(["C4", "E4", "G4"]), Sharps: new Set(["C#4", "F#4", "A#4"]),
-    }, description: "External playback/MIDI highlights. Uses note names such as C4 and F#4, independently of displayed notation." },
+    }, description: "External playback highlights; MIDI enters through the player input handlers. Uses note names such as C4 and F#4, independently of displayed notation." },
     allowInput: { description: "Enables mouse, touch and mapped computer-key input. External highlights remain visible when false." },
-    hasColor: { description: "Shows pitch-colored labels, striped sharp labels, and pitch-colored active keys." },
     fullKeyboard: { description: "False: 37 notes, C3–C6. True: 88 notes, A0–C8, with internal horizontal scrolling below 1040 px." },
     notationPreference: { control: "select", options: ["auto", "abc", "solfege"], description: "Auto uses solfège for fr and letter names for other languages." },
     language: { control: "select", options: ["en", "fr"] },
@@ -59,19 +58,22 @@ const meta = {
       description: { component: `The piano is Replay's main practice surface. These stories render the production Piano and PianoKey components, with real local audio and no Cloud or MIDI connection.
 
 ### Anatomy and sizing
-White keys fill the keyboard height; black keys sit above them at 56% height, in groups of two and three. Labels sit near the bottom of each key. Give the component an explicit parent height (240 px here); it fills that space. The compact layout has 22 white and 15 black keys. The full layout has 52 white and 36 black keys and scrolls inside its frame on an iPad or narrow window.
+White keys fill the space remaining below the rail; black keys sit above them at 56% height, in groups of two and three. Labels live in the aligned 50 px rail above the keys. Give the component an explicit parent height (240 px here); it fills that space. The compact layout has 22 white and 15 black keys. The full layout has 52 white and 36 black keys and scrolls inside its frame on an iPad or narrow window.
 
 ### Musical identity
-C is red, D orange, E yellow, F green, G teal, A blue and B violet. Sharps use stripes combining the neighboring natural-note colors. With pitch colors enabled, an active key's label fades while the key itself carries the pitch color. Letter/solfège names include the octave; notation changes labels, not callback note names.
+C is red, D orange, E yellow, F green, G cyan, A blue and B violet. Rail cells carry pitch identity; sharps use the natural below. Keys carry source identity: lime for the player and blue for playback in Acid. The rail uses the same source color for its bottom bar. Colors come from the same palette as web notation and falling notes.
 
 ### State and motion
-A fresh press highlights immediately. After 50 ms it enters the sustained state, which uses a lighter shade with a 400 ms transition. Release transitions over 50 ms. External activeKeys and local held keys both drive these visuals. With pitch colors off, the current implementation uses red for attack and blue for sustained notes. Input-disabled keys and instrument-range-disabled keys are different states: range-disabled keys also use muted surfaces. See the Piano key catalog for the individual states.
+Local mouse, touch, MIDI and microphone input takes priority over external playback for a shared note. Releasing local input reveals any remaining playback highlight. Both the key and its rail cell update together within 70 ms, with transitions removed for reduced motion. Input-disabled and instrument-range-disabled states are distinct; out-of-range keys and rail cells use muted surfaces.
+
+### Full keyboard labels
+The full keyboard preserves the original 1040 px minimum width and scrolls keys and rail together. Its rail omits octaves, with 10 px labels on narrow sharp cells. Key accessible names and tooltips retain the complete localized note and octave.
 
 ### Input
 Mouse press/release and touch start/end/cancel play and release notes; leaving a key with the mouse releases it. Computer-key shortcuts follow the existing AZERTY mapping: E → C4, R → D4, T → E4, Y → F4, U → G4; 4 → C♯4 and 5 → D♯4. Focus the story canvas before trying shortcuts. Typing in text fields does not play notes. Playback highlights alone are silent.
 
 ### Accessibility and use
-Keep note names and octave labels; do not communicate pitch only through color. Disabled keys use native button semantics. These dense layouts are musical surfaces, not 44 px action-button grids: use the full layout's scrolling and a physical MIDI keyboard when appropriate. Computer shortcuts are the current keyboard-playing path; focused Space/Enter activation is not implemented. Check narrow layouts and label legibility before changing key dimensions.`,
+Keep complete note names and octaves on key accessible names; do not communicate pitch only through color. Disabled keys use native button semantics. These dense layouts are musical surfaces, not 44 px action-button grids: use the full layout's scrolling and a physical MIDI keyboard when appropriate. Computer shortcuts are the current keyboard-playing path; focused Space/Enter activation is not implemented. Check narrow layouts and label legibility before changing key dimensions.`,
       },
     },
   },
@@ -82,10 +84,11 @@ type Story = StoryObj<typeof meta>;
 export const Playable: Story = {};
 export const PlaybackChord: Story = {
   args: { activeKeys: new Set(["C4", "E4", "G4"]), allowInput: false },
-  parameters: { docs: { description: { story: "A sustained C-major chord supplied by playback. The visual highlight does not trigger audio." } } },
+  parameters: { docs: { description: { story: "A C-major chord supplied by playback. The visual highlight does not trigger audio." } } },
 };
 export const SharpHighlights: Story = { args: { activeKeys: new Set(["C#4", "F#4", "A#4"]), allowInput: false } };
 export const Solfege: Story = { args: { language: "fr", notationPreference: "auto" } };
-export const WithoutPitchColors: Story = { args: { hasColor: false } };
 export const InputDisabled: Story = { args: { allowInput: false } };
 export const Full88Keys: Story = { args: { fullKeyboard: true } };
+
+export const PlayerOverPlayback: Story = { args: { activeKeys: new Set(["C4", "E4", "G4"]) }, parameters: { docs: { description: { story: "Hold E or C4 to replace its blue playback highlight with lime; release to reveal blue again." } } } };

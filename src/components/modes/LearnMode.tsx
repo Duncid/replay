@@ -157,7 +157,7 @@ interface LearnModeActionBarProps {
 export function LearnModeActionBar({ selectedModel, setSelectedModel, aiModels, debugMode, setDebugMode, debugMenuState }: LearnModeActionBarProps) {
   return <>
     <div className="flex items-center gap-2 ml-auto">
-      <Label htmlFor="debug-mode" className="cursor-pointer text-sm text-muted-foreground">Debug</Label>
+      <Label htmlFor="debug-mode" className="cursor-pointer font-mono text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Debug</Label>
       <Switch id="debug-mode" checked={debugMode} onCheckedChange={setDebugMode} />
     </div>
     {debugMode && <DropdownMenu>

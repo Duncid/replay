@@ -2186,9 +2186,9 @@ const Index = () => {
         </Tabs>
 
         {activeMode !== "quest" && (
-          <div className="w-full h-[320px] shrink-0 z-30 bg-key-black border-t rounded-t-2xl flex flex-col">
+          <div className="keyboard-panel w-full shrink-0 z-30 bg-background flex flex-col">
             {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
-            <div className="w-full flex items-center justify-between gap-4 p-1 shrink-0">
+            <div className="keyboard-toolbar w-full flex flex-wrap items-center justify-between gap-2 p-1.5 shrink-0">
               <div className="flex items-center gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -2353,12 +2353,13 @@ const Index = () => {
                   </div>
                 )}
                 <Button
-                  variant={isMicEnabled ? "default" : "outline"}
+                  variant={isMicEnabled ? "live" : "outline"}
                   size="sm"
                   onClick={() => setIsMicEnabled((prev) => !prev)}
                   className="gap-2"
                 >
                   <Mic className="h-4 w-4" />
+                  {isMicEnabled && <span aria-hidden className="size-[7px] rounded-full bg-ai" />}
                   {isMicEnabled ? "Mic On" : "Mic Off"}
                 </Button>
                 <MidiConnector
@@ -2383,7 +2384,6 @@ const Index = () => {
               activeKeys={activeKeys}
               allowInput
               soundType={pianoSoundType}
-              hasColor={isInTuneMode || activeMode === "lab"}
               language={language}
               notationPreference={musicNotation}
               fullKeyboard={fullKeyboard}

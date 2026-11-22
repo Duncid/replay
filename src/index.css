@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './design-system/tokens.css';
+@import './design-system/piano.css';
 
 @plugin 'tailwindcss-animate';
 
@@ -17,6 +18,9 @@
 }
 
 @theme inline {
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
   --container-6xl: 80rem;
   --container-5xl: 64rem;
 
@@ -30,9 +34,9 @@
   --color-red-50: #f0f0f0;
   --color-red-100: #ede2e2;
   --color-red-200: #eecacb;
-  --color-red-300: #eda6a6;
-  --color-red-400: #ea7474;
-  --color-red-500: #e24a4a;
+  --color-red-300: hsl(var(--note-c-active));
+  --color-red-400: hsl(var(--note-c-focused));
+  --color-red-500: hsl(var(--note-c));
   --color-red-600: #cf302f;
   --color-red-700: #ad2625;
   --color-red-800: #8d2322;
@@ -42,9 +46,9 @@
   --color-orange-50: #ffffff;
   --color-orange-100: #f9f8f6;
   --color-orange-200: #f6e4ca;
-  --color-orange-300: #f3ca95;
-  --color-orange-400: #f1a65e;
-  --color-orange-500: #f08a3c;
+  --color-orange-300: hsl(var(--note-d-active));
+  --color-orange-400: hsl(var(--note-d-focused));
+  --color-orange-500: hsl(var(--note-d));
   --color-orange-600: #e2712d;
   --color-orange-700: #bb5a28;
   --color-orange-800: #944a28;
@@ -54,9 +58,9 @@
   --color-yellow-50: #fffff7;
   --color-yellow-100: #ffffd9;
   --color-yellow-200: #ffffac;
-  --color-yellow-300: #fff674;
-  --color-yellow-400: #ffe256;
-  --color-yellow-500: #f2c94c;
+  --color-yellow-300: hsl(var(--note-e-active));
+  --color-yellow-400: hsl(var(--note-e-focused));
+  --color-yellow-500: hsl(var(--note-e));
   --color-yellow-600: #d3a03f;
   --color-yellow-700: #aa7733;
   --color-yellow-800: #8e612f;
@@ -66,9 +70,9 @@
   --color-green-50: #fbfbfb;
   --color-green-100: #f4f4f4;
   --color-green-200: #dbeade;
-  --color-green-300: #ade1b9;
-  --color-green-400: #7ad08d;
-  --color-green-500: #58bc6e;
+  --color-green-300: hsl(var(--note-f-active));
+  --color-green-400: hsl(var(--note-f-focused));
+  --color-green-500: hsl(var(--note-f));
   --color-green-600: #43a458;
   --color-green-700: #3d814c;
   --color-green-800: #396643;
@@ -78,9 +82,9 @@
   --color-teal-50: #e9f5f7;
   --color-teal-100: #bff6fd;
   --color-teal-200: #88effd;
-  --color-teal-300: #4de1f5;
-  --color-teal-400: #24c9df;
-  --color-teal-500: #1fa4b6;
+  --color-teal-300: hsl(var(--note-g-active));
+  --color-teal-400: hsl(var(--note-g-focused));
+  --color-teal-500: hsl(var(--note-g));
   --color-teal-600: #1a818f;
   --color-teal-700: #18656f;
   --color-teal-800: #164e56;
@@ -90,9 +94,9 @@
   --color-blue-50: #e6e6e6;
   --color-blue-100: #dadada;
   --color-blue-200: #bfcbda;
-  --color-blue-300: #95b6da;
-  --color-blue-400: #6298d8;
-  --color-blue-500: #3a78d4;
+  --color-blue-300: hsl(var(--note-a-active));
+  --color-blue-400: hsl(var(--note-a-focused));
+  --color-blue-500: hsl(var(--note-a));
   --color-blue-600: #205bca;
   --color-blue-700: #1548b7;
   --color-blue-800: #183990;
@@ -102,9 +106,9 @@
   --color-violet-50: #e1e1e1;
   --color-violet-100: #d9d7e0;
   --color-violet-200: #c9c4e0;
-  --color-violet-300: #b1a4df;
-  --color-violet-400: #957bdc;
-  --color-violet-500: #7a4dd8;
+  --color-violet-300: hsl(var(--note-b-active));
+  --color-violet-400: hsl(var(--note-b-focused));
+  --color-violet-500: hsl(var(--note-b));
   --color-violet-600: #6b2acf;
   --color-violet-700: #5d15bc;
   --color-violet-800: #4b0f9a;
@@ -133,7 +137,13 @@
   --color-card-foreground: hsl(var(--card-foreground));
 
   --color-key-white: hsl(var(--key-white));
-  --color-key-white-shadow: hsl(var(--key-white-shadow));
+  --color-key-white-hover: hsl(var(--key-white-hover));
+  --color-key-white-disabled: hsl(var(--key-white-disabled));
+  --color-key-black-disabled: hsl(var(--key-black-disabled));
+  --color-ai: hsl(var(--ai));
+  --color-ai-foreground: hsl(var(--ai-foreground));
+  --color-border-strong: hsl(var(--border-strong));
+  --color-surface-raised: hsl(var(--surface-raised));
   --color-key-black: hsl(var(--key-black));
   --color-key-black-light: hsl(var(--key-black-light));
   --color-key-active-user: hsl(var(--key-active-user));
@@ -213,7 +223,10 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-size: 15px;
+    line-height: 22px;
+    -webkit-font-smoothing: antialiased;
     /* Optimize for touch interactions */
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
@@ -295,3 +308,5 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 }
+
+@layer base { h1, h2, h3 { font-family: var(--font-display); } }

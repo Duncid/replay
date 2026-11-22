@@ -10,14 +10,16 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border border-input bg-primary text-primary-foreground hover:bg-primary/90",
+          "border border-input bg-primary text-primary-foreground hover:shadow-[var(--glow-user)]",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-card hover:border-primary hover:text-primary",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-muted hover:text-primary",
+        connected: "border border-primary bg-transparent text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary))]",
+        live: "border border-ai bg-transparent text-ai shadow-[var(--glow-ai)]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -62,7 +64,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           buttonVariants({ variant, size, className }),
           isPulsating && "animate-pulse-glow",
-          "transition-transform transition-shadow duration-600",
+
         )}
         ref={ref}
         {...props}

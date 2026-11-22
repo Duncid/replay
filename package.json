@@ -15,13 +15,14 @@
     "cap:sync": "cap sync ios",
     "cap:open": "cap open ios",
     "ios": "npm run build && cap sync ios && cap open ios",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.storybook.json",
+    "typecheck": "node scripts/generate-theme.mjs --check && tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.storybook.json",
     "test": "playwright test",
     "test:list": "playwright test --list",
     "check": "npm run typecheck && npm run lint && npm run test",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "storybook:test": "playwright test --config playwright.storybook.config.ts"
+    "storybook:test": "playwright test --config playwright.storybook.config.ts",
+    "tokens:generate": "node scripts/generate-theme.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",

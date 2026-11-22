@@ -1,5 +1,3 @@
-import { getNoteColorForNoteName } from "@/constants/noteColors";
-
 const STRIPE_LINE_WIDTH = 3;
 
 export function createStripeCanvas(
@@ -24,25 +22,4 @@ export function createStripeCanvas(
     ctx.stroke();
   }
   return canvas;
-}
-
-const SHARP_PAIRS: [string, string, string][] = [
-  ["C#", "C", "D"],
-  ["D#", "D", "E"],
-  ["F#", "F", "G"],
-  ["G#", "G", "A"],
-  ["A#", "A", "B"],
-];
-
-let cachedDataUrls: Map<string, string> | null = null;
-
-export function getStripeDataUrls(): Map<string, string> {
-  if (cachedDataUrls) return cachedDataUrls;
-  cachedDataUrls = new Map();
-  const getHex = (note: string) => getNoteColorForNoteName(note) ?? "#9aa0a6";
-  for (const [sharp, lower, upper] of SHARP_PAIRS) {
-    const canvas = createStripeCanvas(getHex(lower), getHex(upper));
-    cachedDataUrls.set(sharp, canvas.toDataURL());
-  }
-  return cachedDataUrls;
 }

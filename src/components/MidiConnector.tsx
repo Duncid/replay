@@ -51,7 +51,7 @@ export const MidiConnector = ({
     return (
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-sm">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <div className="w-2 h-2 bg-primary rounded-full" />
           <span className="text-foreground font-medium">{deviceName}</span>
         </div>
         <Popover>
@@ -72,7 +72,7 @@ export const MidiConnector = ({
           </PopoverContent>
         </Popover>
         <Button
-          variant="ghost"
+          variant="connected"
           size="sm"
           onClick={onDisconnect}
           className="gap-2"

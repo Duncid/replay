@@ -4,13 +4,18 @@ import "../src/index.css";
 
 const preview: Preview = {
   tags: ["autodocs"],
-  decorators: [(Story) => <TooltipProvider><div className="p-6 text-foreground"><Story /></div></TooltipProvider>],
+  globalTypes: { theme: { description: "Replay palette", toolbar: { icon: "paintbrush", items: ["acid", "amber", "hotwire"], dynamicTitle: true } } },
+  decorators: [(Story, context) => {
+    const theme = context.globals.theme ?? "acid";
+    document.documentElement.dataset.theme = theme;
+    return <TooltipProvider key={theme}><div className={context.parameters.edgeToEdge ? "text-foreground" : "p-6 text-foreground"}><Story /></div></TooltipProvider>;
+  }],
   parameters: {
     layout: "fullscreen",
-    backgrounds: { options: { replay: { name: "Replay", value: "hsl(220 20% 8%)" } } },
+    backgrounds: { disable: true },
     controls: { expanded: true },
     options: { storySort: { order: ["Foundations", "Instruments", "Actions", "Inputs", "Navigation", "Overlays", "Feedback", "Patterns"] } },
   },
-  initialGlobals: { backgrounds: { value: "replay" } },
+  initialGlobals: { theme: "acid" },
 };
 export default preview;

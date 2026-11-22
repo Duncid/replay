@@ -209,7 +209,7 @@ test("keyboard sound preference mutes MIDI audio while keeping input and screen 
   await preference.click();
   const key = page.getByRole("button", { name: "C4", exact: true });
   await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [144, 60, 100] }));
-  await expect(key).toHaveClass(/bg-red-500|bg-blue-500/);
+  await expect(key).toHaveAttribute("data-activity", "user");
   expect(await page.evaluate(() => window["pianoStarts"])).toBe(0);
   await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [128, 60, 0] }));
   await key.dispatchEvent("mousedown");
@@ -379,7 +379,7 @@ for (const sampleState of ["loading", "failed"] as const) {
       if (browserName === "webkit") await key.tap();
       else await key.click();
       await expect.poll(() => page.evaluate(() => window["pianoStarts"])).toBe(1);
-      await expect(key).not.toHaveClass(/bg-red-500|bg-blue-500/);
+      await expect(key).not.toHaveAttribute("data-activity", "user");
       await expect.poll(() => page.evaluate(() => [...window["resumedContexts"]].every(context => context.state === "running"))).toBe(true);
       // Simulate audio suspension while the keyboard stays visible.
       await page.evaluate(() => Promise.all([...window["resumedContexts"]].map(context => context.suspend())));

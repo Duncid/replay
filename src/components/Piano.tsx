@@ -15,13 +15,8 @@ import {
   useState,
 } from "react";
 import { PianoKey } from "./PianoKey";
-
-interface PianoNote {
-  note: string;
-  octave: number;
-  frequency: number;
-  isBlack: boolean;
-}
+import { NoteRail, type RailNoteState } from "./NoteRail";
+import { createPianoLayout, type PianoNote } from "./pianoLayout";
 
 interface PianoProps {
   activeKeys: Set<string>;
@@ -29,7 +24,6 @@ interface PianoProps {
   soundType?: PianoSoundType;
   onNoteStart?: (noteKey: string, frequency: number, velocity: number) => void;
   onNoteEnd?: (noteKey: string, frequency: number) => void;
-  hasColor?: boolean;
   language: string;
   notationPreference: "auto" | "abc" | "solfege";
   className?: string;
@@ -62,7 +56,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       soundType = "acoustic-piano",
       onNoteStart,
       onNoteEnd,
-      hasColor = false,
       language,
       notationPreference,
       className,
@@ -73,13 +66,22 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     const [userPressedKeys, setUserPressedKeys] = useState<Set<string>>(
       new Set(),
     );
-    const [sustainedKeys, setSustainedKeys] = useState<Set<string>>(new Set());
     const pressedKeysRef = useRef<Set<string>>(new Set());
-    const keyActivationTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
     const hasUserInteractedRef = useRef(false);
     const audio = usePianoAudio(soundType);
     const audioRef = useRef(audio);
     audioRef.current = audio;
+    const heldNotesRef = useRef(new Map<string, number>());
+    const noteEndRef = useRef(onNoteEnd);
+    noteEndRef.current = onNoteEnd;
+    const releaseHeldNotes = useCallback(() => {
+      for (const [key, frequency] of heldNotesRef.current) {
+        audioRef.current.stopNote(key);
+        noteEndRef.current?.(key, frequency);
+      }
+      heldNotesRef.current.clear();
+    }, []);
+    useEffect(() => releaseHeldNotes, [releaseHeldNotes]);
 
     const runFirstInteraction = useCallback(() => {
       if (hasUserInteractedRef.current) return;
@@ -191,44 +193,8 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       ")": "F#5",
     }), []);
 
-    const notes = useMemo(() => {
-      const noteNames = [
-        "C",
-        "C#",
-        "D",
-        "D#",
-        "E",
-        "F",
-        "F#",
-        "G",
-        "G#",
-        "A",
-        "A#",
-        "B",
-      ];
-      const result: PianoNote[] = [];
-      if (!fullKeyboard) {
-        for (let i = 0; i < 37; i++) {
-          const octave = Math.floor(i / 12) + 3;
-          const noteIndex = i % 12;
-          const noteName = noteNames[noteIndex];
-          const isBlack = noteName.includes("#");
-          const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - 9);
-          const frequency = 440 * Math.pow(2, semitonesFromA4 / 12);
-          result.push({ note: noteName, octave, frequency, isBlack });
-        }
-      } else {
-        for (let midi = 21; midi <= 108; midi++) {
-          const octave = Math.floor(midi / 12) - 1;
-          const noteIndex = midi % 12;
-          const noteName = noteNames[noteIndex];
-          const isBlack = noteName.includes("#");
-          const frequency = 440 * Math.pow(2, (midi - 69) / 12);
-          result.push({ note: noteName, octave, frequency, isBlack });
-        }
-      }
-      return result;
-    }, [fullKeyboard]);
+    const layout = useMemo(() => createPianoLayout(fullKeyboard), [fullKeyboard]);
+    const { notes, whiteKeys, blackKeys } = layout;
 
     const handleKeyPress = useCallback(
       (
@@ -240,17 +206,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         if (!allowInput || !isNotePlayable(noteKey)) return;
         runFirstInteraction();
 
-        const existingTimer = keyActivationTimers.current.get(noteKey);
-        if (existingTimer) {
-          clearTimeout(existingTimer);
-          keyActivationTimers.current.delete(noteKey);
-        }
-        setSustainedKeys((prev) => {
-          if (!prev.has(noteKey)) return prev;
-          const next = new Set(prev);
-          next.delete(noteKey);
-          return next;
-        });
+        heldNotesRef.current.set(noteKey, frequency);
         // Notify first so interrupting autoplay doesn't release the new note.
         onNoteStart?.(noteKey, frequency, velocity);
         if (!options?.muteAudio) {
@@ -270,6 +226,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         if (!options?.muteAudio) {
           audio.stopNote(noteKey);
         }
+        heldNotesRef.current.delete(noteKey);
         setUserPressedKeys((prev) => {
           const newSet = new Set(prev);
           newSet.delete(noteKey);
@@ -281,56 +238,12 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       [audio, onNoteEnd],
     );
 
-    // Manage sustained key state for visual feedback
-    useEffect(() => {
-      // Combine both activeKeys (from playback) and userPressedKeys (from user input)
-      const allActiveKeys = new Set([...activeKeys, ...userPressedKeys]);
-
-      // Clear timers for keys that are no longer active
-      keyActivationTimers.current.forEach((timer, key) => {
-        if (!allActiveKeys.has(key)) {
-          clearTimeout(timer);
-          keyActivationTimers.current.delete(key);
-        }
-      });
-
-      // Remove keys from sustained set if they're no longer active
-      setSustainedKeys((prev) => {
-        const newSet = new Set(prev);
-        let changed = false;
-        prev.forEach((key) => {
-          if (!allActiveKeys.has(key)) {
-            newSet.delete(key);
-            changed = true;
-          }
-        });
-        return changed ? newSet : prev;
-      });
-
-      // Set timers for newly activated keys to transition to sustained state
-      allActiveKeys.forEach((key) => {
-        if (!keyActivationTimers.current.has(key)) {
-          // After 50ms of being pressed, transition to sustained state
-          const timer = setTimeout(() => {
-            setSustainedKeys((prev) => {
-              const newSet = new Set([...prev, key]);
-              return newSet;
-            });
-            keyActivationTimers.current.delete(key);
-          }, 50);
-          keyActivationTimers.current.set(key, timer);
-        }
-      });
-    }, [activeKeys, userPressedKeys]);
-
     // Clear pressed keys when sound type or keyboard layout changes to avoid stuck notes
     useEffect(() => {
+      releaseHeldNotes();
       pressedKeysRef.current.clear();
       setUserPressedKeys(new Set());
-      setSustainedKeys(new Set());
-      keyActivationTimers.current.forEach((timer) => clearTimeout(timer));
-      keyActivationTimers.current.clear();
-    }, [soundType, fullKeyboard]);
+    }, [soundType, fullKeyboard, allowInput, releaseHeldNotes]);
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -394,8 +307,6 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       handleKeyRelease,
     }));
 
-    const whiteKeys = notes.filter((n) => !n.isBlack);
-    const blackKeys = notes.filter((n) => n.isBlack);
 
     const resolvedNotation =
       notationPreference === "auto"
@@ -413,104 +324,30 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       return `${baseNote}${octave}`;
     };
 
-    const getBlackKeyColumn = (blackNote: PianoNote) => {
-      const noteIndex = notes.findIndex(
-        (n) =>
-          `${n.note}${n.octave}` === `${blackNote.note}${blackNote.octave}`,
-      );
-      return notes.slice(0, noteIndex).filter((n) => !n.isBlack).length;
+    const states: Record<string, RailNoteState> = Object.fromEntries(notes.map(note => {
+      const key = `${note.note}${note.octave}`, playable = isNotePlayable(key);
+      return [key, { label: getDisplayLabel(note), playable,
+        activity: !playable ? undefined : userPressedKeys.has(key) ? "user" : activeKeys.has(key) ? "ai" : undefined }];
+    }));
+    const renderKey = (note: PianoNote) => {
+      const key = `${note.note}${note.octave}`, state = states[key];
+      return <PianoKey key={key} note={key} displayLabel={state.label}
+        isBlack={note.isBlack} activity={state.activity} isPlayable={state.playable}
+        onPress={() => handleKeyPress(key, note.frequency)} onRelease={() => handleKeyRelease(key, note.frequency)}
+        disabled={!allowInput || !state.playable} gridColumn={note.gridColumn} />;
     };
 
-    return (
-      <div
-        className={cn(
-          "relative w-full h-full select-none flex flex-col px-1 mb-1  overflow-hidden bg-key-black",
-          className,
-        )}
-      >
-        <div
-          className={cn(
-            "relative h-full rounded-t-lg border-t",
-            fullKeyboard ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden",
-          )}
-        >
-          <div
-            className={cn(
-              "relative h-full",
-              fullKeyboard && "min-w-[1040px]",
-            )}
-          >
-            <div
-              className={cn(
-                "absolute inset-0 grid gap-px",
-                fullKeyboard ? "grid-cols-52" : "grid-cols-22",
-              )}
-            >
-              {whiteKeys.map((note) => {
-                const noteKey = `${note.note}${note.octave}`;
-                const isPlayable = isNotePlayable(noteKey);
-                const isActive =
-                  isPlayable &&
-                  (activeKeys.has(noteKey) || userPressedKeys.has(noteKey));
-                const isSustained = sustainedKeys.has(noteKey);
-
-                return (
-                  <PianoKey
-                    key={noteKey}
-                    note={noteKey}
-                    displayLabel={getDisplayLabel(note)}
-                    frequency={note.frequency}
-                    isBlack={false}
-                    isActive={isActive}
-                    isSustained={isSustained}
-                    isPlayable={isPlayable}
-                    hasColor={hasColor}
-                    onPress={() => handleKeyPress(noteKey, note.frequency)}
-                    onRelease={() => handleKeyRelease(noteKey, note.frequency)}
-                    disabled={!allowInput || !isPlayable}
-                  />
-                );
-              })}
-            </div>
-
-            <div
-              className={cn(
-                "absolute inset-0 grid gap-2 pointer-events-none",
-                fullKeyboard ? "grid-cols-104" : "grid-cols-44",
-              )}
-            >
-              {blackKeys.map((note) => {
-                const noteKey = `${note.note}${note.octave}`;
-                const isPlayable = isNotePlayable(noteKey);
-                const isActive =
-                  isPlayable &&
-                  (activeKeys.has(noteKey) || userPressedKeys.has(noteKey));
-                const isSustained = sustainedKeys.has(noteKey);
-                const column = getBlackKeyColumn(note);
-
-                return (
-                  <PianoKey
-                    key={noteKey}
-                    note={noteKey}
-                    displayLabel={getDisplayLabel(note)}
-                    frequency={note.frequency}
-                    isBlack={true}
-                    isActive={isActive}
-                    isSustained={isSustained}
-                    isPlayable={isPlayable}
-                    hasColor={hasColor}
-                    onPress={() => handleKeyPress(noteKey, note.frequency)}
-                    onRelease={() => handleKeyRelease(noteKey, note.frequency)}
-                    disabled={!allowInput || !isPlayable}
-                    gridColumn={column}
-                  />
-                );
-              })}
-            </div>
+    return <div className={cn("relative w-full h-full select-none flex flex-col px-1 mb-1 overflow-hidden bg-background", className)}>
+      <div className={cn("relative h-full rounded-t-lg border-t", fullKeyboard ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden")}>
+        <div className={cn("relative h-full flex flex-col", fullKeyboard && "min-w-[1040px]")}>
+          <NoteRail layout={layout} states={states} fullKeyboard={fullKeyboard} />
+          <div className="relative flex-1 min-h-0">
+            <div className={cn("absolute inset-0 grid gap-px z-0", layout.whiteGrid)}>{whiteKeys.map(renderKey)}</div>
+            <div className={cn("absolute inset-0 grid gap-2 pointer-events-none z-10", layout.blackGrid)}>{blackKeys.map(renderKey)}</div>
           </div>
         </div>
       </div>
-    );
+    </div>;
   },
 );
 

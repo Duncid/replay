@@ -4,10 +4,10 @@ export default defineConfig({
   testDir: "./storybook-tests",
   outputDir: "./storybook-test-results",
   workers: 2,
-  use: { baseURL: "http://127.0.0.1:6006" },
+  use: { baseURL: "http://127.0.0.1:6007/storybook/" },
   webServer: {
-    command: "npm run preview -- --outDir storybook-static --host 127.0.0.1 --port 6006",
-    url: "http://127.0.0.1:6006",
+    command: "npm run preview -- --outDir storybook-static --host 127.0.0.1 --port 6007 --base /storybook/",
+    url: "http://127.0.0.1:6007/storybook/",
     reuseExistingServer: !process.env.CI,
   },
   projects: [

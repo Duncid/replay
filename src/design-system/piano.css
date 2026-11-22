@@ -1,0 +1,49 @@
+/* Keys and rail share grid tracks in pianoLayout.ts, including the original gaps. */
+.piano-key {
+  background: hsl(var(--key-white));
+  box-shadow: var(--key-white-shadow);
+  transition: background-color 70ms ease-out, box-shadow 70ms ease-out;
+}
+.piano-key--black {
+  background: hsl(var(--key-black));
+  border-top: 1px solid hsl(var(--key-black-top));
+  box-shadow: var(--key-black-shadow);
+}
+.piano-key[data-playable="false"] { background: hsl(var(--key-white-disabled)); }
+.piano-key--black[data-playable="false"] { background: hsl(var(--key-black-disabled)); }
+.piano-key[data-activity="user"] { background: hsl(var(--primary)); box-shadow: var(--glow-user); }
+.piano-key[data-activity="ai"] { background: hsl(var(--ai)); box-shadow: var(--glow-ai); }
+.note-rail { position: relative; height: 50px; flex: 0 0 50px; container-type: inline-size; }
+.note-rail__cell {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  min-width: 0; height: 24px; border-radius: 4px;
+  background: color-mix(in srgb, var(--nc) 92%, hsl(var(--background)));
+  color: hsl(var(--note-ink)); font: 600 11px/12px var(--font-mono);
+  transition: background-color 70ms ease-out, box-shadow 70ms ease-out;
+}
+.note-rail__cell--black {
+  grid-column-end: span 2;
+  background: color-mix(in srgb, var(--nc) 60%, hsl(var(--key-black)));
+  color: var(--sharp-label);
+}
+.note-rail__cell[data-playable="false"] { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.note-rail__cell[data-activity] {
+  background: var(--nc); color: hsl(var(--note-ink));
+  box-shadow: inset 0 -3px 0 var(--who), 0 0 18px color-mix(in srgb, var(--nc) 75%, transparent);
+}
+.note-rail__cell[data-activity="user"] { --who: hsl(var(--primary)); }
+.note-rail__cell[data-activity="ai"] { --who: hsl(var(--ai)); }
+@container (max-width: 1150px) {
+  .note-rail[data-full="true"] .note-rail__cell--black { font-size: 10px; }
+  .note-rail[data-full="true"] .note-rail__cell--black > span[data-length="3"] { transform: scaleX(.75); }
+  .note-rail[data-full="true"] .note-rail__cell--black > span[data-length="4"] { transform: scaleX(.55); }
+}
+/* Solfège can be longer than the fixed full-keyboard cells; keep the complete accessible name on the key. */
+.note-rail[data-full="true"] .note-rail__cell > span { letter-spacing: -.07em; }
+.keyboard-panel { height: 320px; }
+.keyboard-toolbar {
+  background: hsl(var(--card)); border-top: 1px solid hsl(var(--primary) / .55);
+  box-shadow: 0 -1px 16px hsl(var(--primary) / .18);
+}
+.keyboard-toolbar button { flex-shrink: 0; }
+@media (pointer: coarse) { .keyboard-toolbar button { min-height: 44px; } }
