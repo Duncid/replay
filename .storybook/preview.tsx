@@ -1,6 +1,7 @@
 import type { Preview } from "@storybook/react-vite";
 import { TooltipProvider } from "../src/components/ui/tooltip";
 import "../src/index.css";
+import { themes } from "storybook/theming";
 
 const preview: Preview = {
   tags: ["autodocs"],
@@ -13,8 +14,9 @@ const preview: Preview = {
   parameters: {
     layout: "fullscreen",
     backgrounds: { disable: true },
+    docs: { theme: { ...themes.dark, appBg: "#000", appContentBg: "#000", appPreviewBg: "#000", barBg: "#000" } },
     controls: { expanded: true },
-    options: { storySort: { order: ["Foundations", "Instruments", "Actions", "Inputs", "Navigation", "Overlays", "Feedback", "Patterns"] } },
+    options: { storySort: { order: ["Foundations", "Instruments", "Actions", "Inputs", "Navigation", "Overlays", "Feedback", "Components", "Patterns"] } },
   },
   initialGlobals: { theme: "acid" },
 };
