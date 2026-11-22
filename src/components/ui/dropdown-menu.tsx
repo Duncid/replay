@@ -12,7 +12,53 @@ const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 
 const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
 
-const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+const SubmenuContext = React.createContext<{
+  owners: string[];
+  setOpen: (open: boolean) => void;
+} | null>(null);
+
+function DropdownMenuSub({ open: controlledOpen, defaultOpen = false, onOpenChange, children, ...props }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Sub>) {
+  const parent = React.useContext(SubmenuContext);
+  const id = React.useId();
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = React.useCallback((value: boolean) => {
+    setInternalOpen(value);
+    onOpenChange?.(value);
+  }, [onOpenChange]);
+  const owners = React.useMemo(() => [...(parent?.owners ?? []), id], [parent?.owners, id]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+    const trackPointer = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const element = event.target instanceof Element ? event.target : null;
+      const inside = element?.closest("[data-submenu-owners]")
+        ?.getAttribute("data-submenu-owners")?.split(" ").includes(id);
+      if (inside) {
+        clearTimeout(closeTimer);
+        closeTimer = undefined;
+      } else if (closeTimer === undefined) {
+        // Allow crossing the gap into the submenu without closing it.
+        closeTimer = setTimeout(() => setOpen(false), 200);
+      }
+    };
+    document.addEventListener("pointermove", trackPointer, true);
+    return () => {
+      clearTimeout(closeTimer);
+      document.removeEventListener("pointermove", trackPointer, true);
+    };
+  }, [id, open, setOpen]);
+
+  return (
+    <SubmenuContext.Provider value={{ owners, setOpen }}>
+      <DropdownMenuPrimitive.Sub {...props} open={open} onOpenChange={setOpen}>
+        {children}
+      </DropdownMenuPrimitive.Sub>
+    </SubmenuContext.Provider>
+  );
+}
 
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
@@ -21,7 +67,9 @@ const DropdownMenuSubTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
     inset?: boolean;
   }
->(({ className, inset, children, ...props }, ref) => (
+>(({ className, inset, children, onPointerEnter, ...props }, ref) => {
+  const submenu = React.useContext(SubmenuContext);
+  return (
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
@@ -30,27 +78,41 @@ const DropdownMenuSubTrigger = React.forwardRef<
       className
     )}
     {...props}
+    data-submenu-owners={submenu?.owners.join(" ")}
+    onPointerEnter={(event) => {
+      onPointerEnter?.(event);
+      if (event.pointerType === "mouse" && !event.defaultPrevented && !props.disabled) {
+        submenu?.setOpen(true);
+      }
+    }}
   >
     {children}
     <ChevronRight className="ml-auto h-4 w-4" />
   </DropdownMenuPrimitive.SubTrigger>
-));
+  );
+});
 DropdownMenuSubTrigger.displayName =
   DropdownMenuPrimitive.SubTrigger.displayName;
 
 const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
->(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.SubContent
-    ref={ref}
-    className={cn(
-      "z-50 min-w-32 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-      className
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const submenu = React.useContext(SubmenuContext);
+  return (
+  <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.SubContent
+      ref={ref}
+      className={cn(
+        "z-50 min-w-32 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        className
+      )}
+      {...props}
+      data-submenu-owners={submenu?.owners.join(" ")}
+    />
+  </DropdownMenuPrimitive.Portal>
+  );
+});
 DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName;
 
