@@ -8,6 +8,14 @@ Run `npm ci`, then `npm run storybook`. Open http://localhost:6006. Use `npm run
 
 The sidebar covers foundations, button variants, text fields, settings, navigation, dialogs/sheets/popovers, feedback and tune-card states. Stories import production components; they do not create alternative controls or call Cloud. Controls, generated documentation and the accessibility panel are available in Storybook.
 
+**Instruments → Piano keyboard** documents the central practice surface: playable
+C3–C6 keyboard, external chord/sharp highlights, French solfège, plain labels,
+disabled input, and the full 88-key scrolling layout. **Instruments → Piano key**
+isolates natural/sharp, attack/sustain and instrument-range-disabled states.
+The keyboard docs explain anatomy, sizing, pitch colors/stripes, timing, input
+shortcuts and current accessibility limits. Examples use the production components
+and local Patch oscillator, with sound only on interaction and no sample downloads.
+
 - Semantic colors, keyboard colors, base radius and motion tokens: `src/design-system/tokens.css`, imported by `src/index.css` in both the app and Storybook.
 - Musical pitch colors: `src/constants/noteColors.ts`. Keep labels alongside color.
 - Reusable primitives: `src/components/ui/`. Radix owns focus, keyboard and touch behavior.

@@ -11,7 +11,9 @@ final class MetronomeEngine: ObservableObject {
 
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
-    private let sampleRate: Double = 44100
+    // Keep the player and its click buffers in the same format; the mixer
+    // handles conversion to the hardware output format.
+    private let playbackFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
     private var clickBuffer: AVAudioPCMBuffer?
     private var accentBuffer: AVAudioPCMBuffer?
     private var timer: Timer?
@@ -24,7 +26,7 @@ final class MetronomeEngine: ObservableObject {
         guard !started else { return }
         started = true
         engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: nil)
+        engine.connect(player, to: engine.mainMixerNode, format: playbackFormat)
         clickBuffer = makeClick(frequency: 1600, gain: 0.5)
         accentBuffer = makeClick(frequency: 2200, gain: 0.8)
         do {
@@ -69,9 +71,9 @@ final class MetronomeEngine: ObservableObject {
 
     private func makeClick(frequency: Double, gain: Double) -> AVAudioPCMBuffer? {
         let duration = 0.05
+        let sampleRate = playbackFormat.sampleRate
         let frameCount = AVAudioFrameCount(sampleRate * duration)
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1),
-              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: playbackFormat, frameCapacity: frameCount) else {
             return nil
         }
         buffer.frameLength = frameCount

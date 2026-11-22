@@ -80,6 +80,20 @@ Full SwiftUI/SpriteKit compilation and on-device playback require Xcode on a
 Mac. Verify library loading, disabled locked tunes, demo sync, MIDI recording,
 evaluation, next section, and completion refreshing the library before install.
 
+Run the audio regression check from the repository root, with a booted iOS
+simulator (pass its UDID when more than one simulator is running):
+
+```sh
+bash ios-learn-native/Tests/audio-smoke.sh <simulator-udid>
+```
+
+This builds a temporary simulator app using the production piano and metronome
+engines, plays two demo sequences, reuses the voice pool, and starts/stops the
+metronome twice. It requires no Cloud access and removes its test app afterward.
+The first scheduled note reproduces the former mono-buffer/stereo-player crash
+if the explicit player connection format is removed. Player connections and
+PCM buffers must use the same format; the mixer handles hardware conversion.
+
 ## Native design system
 
 Tap **Design system** in Replay Nat to browse the offline component gallery, including

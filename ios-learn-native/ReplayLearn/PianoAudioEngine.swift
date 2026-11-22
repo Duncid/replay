@@ -15,7 +15,9 @@ final class PianoAudioEngine: ObservableObject {
     private var nextVoice = 0
     private let voiceCount = 16
     private var bufferCache: [Int: AVAudioPCMBuffer] = [:]
-    private let sampleRate: Double = 44100
+    // Player outputs must match the scheduled buffers. The mixer converts this
+    // mono format to the device's channel count and sample rate.
+    private let playbackFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
 
     @Published private(set) var isReady = false
 
@@ -26,7 +28,7 @@ final class PianoAudioEngine: ObservableObject {
         for _ in 0..<voiceCount {
             let node = AVAudioPlayerNode()
             engine.attach(node)
-            engine.connect(node, to: engine.mainMixerNode, format: nil)
+            engine.connect(node, to: engine.mainMixerNode, format: playbackFormat)
             voices.append(node)
         }
         engine.prepare()
@@ -79,9 +81,9 @@ final class PianoAudioEngine: ObservableObject {
     private func makeBuffer(pitch: Int) -> AVAudioPCMBuffer? {
         let frequency = 440.0 * pow(2.0, Double(pitch - 69) / 12.0)
         let duration = 1.5
+        let sampleRate = playbackFormat.sampleRate
         let frameCount = AVAudioFrameCount(sampleRate * duration)
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1),
-              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: playbackFormat, frameCapacity: frameCount) else {
             return nil
         }
         buffer.frameLength = frameCount

@@ -9,7 +9,7 @@ const preview: Preview = {
     layout: "fullscreen",
     backgrounds: { options: { replay: { name: "Replay", value: "hsl(220 20% 8%)" } } },
     controls: { expanded: true },
-    options: { storySort: { order: ["Foundations", "Actions", "Inputs", "Navigation", "Overlays", "Feedback", "Patterns"] } },
+    options: { storySort: { order: ["Foundations", "Instruments", "Actions", "Inputs", "Navigation", "Overlays", "Feedback", "Patterns"] } },
   },
   initialGlobals: { backgrounds: { value: "replay" } },
 };
