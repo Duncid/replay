@@ -459,7 +459,7 @@ const Index = () => {
 
   // Existing mode preferences now open the tune library instead.
   useEffect(() => {
-    if (activeMode !== "learn" && activeMode !== "lab") {
+    if (activeMode !== "learn" && activeMode !== "lab" && activeMode !== "quest") {
       setActiveMode("learn");
     }
   }, [activeMode, setActiveMode]);
@@ -2112,11 +2112,12 @@ const Index = () => {
                   onLanguageChange={setLanguage}
                   notationPreference={musicNotation}
                   onNotationChange={setMusicNotation}
+                  onOpenManagement={handleModeChange}
                 />
                 <TabsList>
                   <TabsTrigger value="learn">Tunes</TabsTrigger>
-                  <TabsTrigger value="lab">Tune Manager</TabsTrigger>
                 </TabsList>
+                {activeMode === "lab" && <span className="text-sm text-muted-foreground">Tune Manager</span>}
                 {activeMode === "quest" && questHeaderTitle && (
                   <span className="text-sm text-muted-foreground ml-2">
                     {questHeaderTitle}

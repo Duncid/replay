@@ -53,3 +53,14 @@ test("student tune list makes no teacher calls and blocks locked selection", asy
   await expect(page.getByRole("button", { name: "Locked: st-louis-blues", exact: true })).toBeDisabled();
   expect(teacherCalls).toEqual([]);
 });
+
+test("Admin navigation opens Quest and returns to student tunes", async ({ page }) => {
+  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Quest", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Add", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Tunes", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tunes", exact: true })).toBeVisible();
+});

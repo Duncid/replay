@@ -157,7 +157,9 @@ test("notation loads on demand in tune management", async ({ page }) => {
   expect(requests.some(url => /(?:teacher|tune\.ns|SheetMusicRenderer)-.*\.js/.test(url))).toBe(false);
   const key = page.getByRole("button", { name: "C4", exact: true });
   expect(await key.evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThan(10);
-  await page.getByRole("tab", { name: "Tune Manager", exact: true }).click();
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Tune Manager", exact: true }).click();
   await expect.poll(() => requests.some(url => /OpenSheetMusicDisplayView-.*\.js/.test(url))).toBe(true);
   await expect(page.getByText("Loading notation...", { exact: true })).toBeHidden();
   await expect.poll(() => requests.some(url => /teacher-.*\.js/.test(url))).toBe(true);
@@ -330,7 +332,9 @@ test("keyboard output sends notes without echoing physical keys and releases on 
   await output.click();
   await page.keyboard.press("Escape");
   await page.evaluate(() => { window["sentMidi"] = []; });
-  await page.getByRole("tab", { name: "Tune Manager", exact: true }).click();
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Tune Manager", exact: true }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window["sentMidi"].some(message => message[0] === 144))).toBe(true);
   expect(await page.evaluate(() => window["pianoStarts"])).toBe(1);

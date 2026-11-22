@@ -1,85 +1,102 @@
 import Foundation
 import SwiftUI
+import QuartzCore
 
-/// Drives the Learn flow: welcome → lesson (practice) → evaluation → feedback.
+/// Tune library → chosen tune → practice → evaluation. No teacher activity selection.
 @MainActor
 final class LessonViewModel: ObservableObject {
     enum Phase: Equatable {
-        case loadingGreeting
-        case welcome
-        case startingLesson
-        case practice
-        case recording
-        case evaluating
-        case feedback
+        case loadingLibrary, library, loadingTune, practice, recording, evaluating, feedback
         case error(String)
     }
 
-    @Published var phase: Phase = .loadingGreeting
-    @Published var greeting: TeacherGreetingResponse?
-    @Published var lesson: LessonStartResponse?
-    @Published var evaluation: EvaluationOutput?
+    @Published var phase: Phase = .loadingLibrary
+    @Published private(set) var tunes: [TuneLibraryItem] = []
+    @Published private(set) var tuneKey: String?
+    @Published private(set) var practicePlan: [TunePracticeItem] = []
+    @Published private(set) var currentIndex = 0
+    @Published var evaluation: TuneEvaluationResponse?
     @Published var activePitch: Int?
     @Published var heldPitches: Set<Int> = []
+    @Published private(set) var score = 0
+    @Published private(set) var streak = 0
 
     let midi = MidiManager()
     let piano = PianoAudioEngine()
     let metronome = MetronomeEngine()
-
-    // Note highway: drawing (scene), timing (clock) and scoring (judge) are separate.
     let clock = HighwayClock()
     lazy var highway = NoteHighwayScene(clock: clock)
     private var judge = HitJudge()
     private var sweepTask: Task<Void, Never>?
-    @Published private(set) var score = 0
-    @Published private(set) var streak = 0
-
     private var demoTask: Task<Void, Never>?
+    private var requestTask: Task<Void, Never>?
+    private var requestToken = UUID()
     private var recordedNotes: [Note] = []
     private var openNotes: [Int: (start: Double, velocity: Int)] = [:]
     private var recordingStart: Double = 0
+    private let leadIn: Double = 60 / 90 * 4
+
+    var currentItem: TunePracticeItem? {
+        guard practicePlan.indices.contains(currentIndex) else { return nil }
+        return practicePlan[currentIndex]
+    }
+    var targetSequence: NoteSequence? { currentItem?.sequence }
 
     init() {
         piano.preload()
         midi.onNoteOn = { [weak self] pitch, velocity in self?.handleNoteOn(pitch, velocity) }
         midi.onNoteOff = { [weak self] pitch in self?.handleNoteOff(pitch) }
         midi.start()
-        Task { await loadGreeting() }
+        Task { await loadLibrary() }
     }
 
-    // MARK: - Welcome
-
-    func loadGreeting() async {
-        phase = .loadingGreeting
+    func loadLibrary() async {
+        phase = .loadingLibrary
+        let token = UUID(); requestToken = token
         do {
-            greeting = try await APIClient.shared.fetchTeacherGreeting()
-            phase = .welcome
+            let library = try await APIClient.shared.fetchTuneLibrary()
+            guard requestToken == token else { return }
+            tunes = library
+            phase = .library
         } catch {
+            guard requestToken == token else { return }
             phase = .error(error.localizedDescription)
         }
     }
 
-    // MARK: - Lesson lifecycle
+    func startTune(_ key: String) {
+        guard tunes.contains(where: { $0.tuneKey == key && $0.unlocked }) else { return }
+        tuneKey = key
+        fetchPracticePlan()
+    }
 
-    func startLesson(activityKey: String) {
-        phase = .startingLesson
-        Task {
+    private func fetchPracticePlan() {
+        guard let tuneKey else { return }
+        requestTask?.cancel()
+        phase = .loadingTune
+        let token = UUID(); requestToken = token
+        requestTask = Task {
             do {
-                let response = try await APIClient.shared.startLesson(lessonKey: activityKey)
-                lesson = response
+                let response = try await APIClient.shared.startTune(tuneKey: tuneKey)
+                guard !Task.isCancelled, requestToken == token else { return }
+                guard !response.practicePlan.isEmpty,
+                      response.practicePlan.allSatisfy({ $0.sequence?.notes.isEmpty == false }) else {
+                    throw APIError.edge("No playable tune practice was returned.")
+                }
+                practicePlan = response.practicePlan
+                currentIndex = 0
                 evaluation = nil
-                phase = .practice
                 loadHighway()
-                startMetronomeIfNeeded()
+                phase = .practice
             } catch {
+                guard !Task.isCancelled, requestToken == token else { return }
                 phase = .error(error.localizedDescription)
             }
         }
     }
 
     func playDemo() {
-        guard let sequence = lesson?.demoSequence else { return }
-        demoTask?.cancel()
+        guard phase == .practice || phase == .feedback, let sequence = targetSequence else { return }
         stopHighway()
         highway.setMode(.demo)
         let anchor = clock.start(leadIn: leadIn)
@@ -87,56 +104,29 @@ final class LessonViewModel: ObservableObject {
             self?.activePitch = pitch
             self?.syncKeys()
         }
-        scheduleHighwayStop(after: leadIn + sequence.totalTime + 0.5)
-    }
-
-    // MARK: - Highway
-
-    /// One bar of falling notes before t = 0.
-    private var leadIn: Double {
-        let bpm = lesson?.setup.bpm ?? lesson?.metronome?.bpm ?? 90
-        let beats = Double((lesson?.setup.meter ?? "4/4").split(separator: "/").first.flatMap { Int($0) } ?? 4)
-        return 60 / bpm * beats
-    }
-
-    private func loadHighway() {
-        stopHighway()
-        highway.bpm = lesson?.setup.bpm ?? lesson?.metronome?.bpm ?? 90
-        highway.beatsPerBar = (lesson?.setup.meter ?? "4/4").split(separator: "/").first.flatMap { Int($0) } ?? 4
-        highway.load(sequence: lesson?.demoSequence)
-        highway.setMode(.idle)
-    }
-
-    private func stopHighway() {
-        sweepTask?.cancel()
-        sweepTask = nil
-        clock.stop()
-    }
-
-    private func scheduleHighwayStop(after seconds: Double) {
         sweepTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            try? await Task.sleep(nanoseconds: UInt64((leadIn + sequence.totalTime + 0.5) * 1_000_000_000))
             guard !Task.isCancelled else { return }
             self?.clock.stop()
             self?.highway.setMode(.idle)
         }
     }
 
-    /// Play-along scoring loop: sweeps missed notes ~30x/s, independent of drawing.
-    private func startScoring() {
-        judge.reset(targets: lesson?.demoSequence?.notes ?? [])
+    private func loadHighway() {
+        stopHighway()
+        highway.bpm = 90
+        highway.beatsPerBar = 4
+        highway.load(sequence: targetSequence)
+        highway.setMode(.idle)
         score = 0; streak = 0
-        let end = leadIn + (lesson?.demoSequence?.totalTime ?? 0) + HitJudge.goodWindow
-        sweepTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled, let self, self.clock.isRunning {
-                for j in self.judge.sweepMisses(now: self.clock.inputTime) {
-                    self.highway.apply(j, streak: 0)
-                }
-                self.streak = self.judge.streak
-                if self.clock.inputTime > end - self.leadIn { break }
-                try? await Task.sleep(nanoseconds: 33_000_000)
-            }
-        }
+    }
+
+    private func stopHighway() {
+        demoTask?.cancel(); demoTask = nil
+        sweepTask?.cancel(); sweepTask = nil
+        clock.stop()
+        activePitch = nil
+        syncKeys()
     }
 
     private func syncKeys() {
@@ -145,114 +135,109 @@ final class LessonViewModel: ObservableObject {
         highway.setHeld(keys)
     }
 
-    // MARK: - Recording / evaluation
-
     func startRecording() {
-        recordedNotes = []
-        openNotes = [:]
-        recordingStart = CACurrentMediaTime()
-        phase = .recording
-        demoTask?.cancel()
+        guard phase == .practice, let sequence = targetSequence else { return }
         stopHighway()
-        if lesson?.demoSequence != nil {
-            highway.setMode(.play)
-            clock.start(leadIn: leadIn)
-            startScoring()
+        recordedNotes = []; openNotes = [:]
+        evaluation = nil
+        phase = .recording
+        highway.setMode(.play)
+        recordingStart = clock.start(leadIn: leadIn)
+        judge.reset(targets: sequence.notes)
+        score = 0; streak = 0
+        sweepTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled, let self, self.clock.isRunning {
+                for result in self.judge.sweepMisses(now: self.clock.inputTime) {
+                    self.highway.apply(result, streak: 0)
+                }
+                self.streak = self.judge.streak
+                if self.clock.inputTime > sequence.totalTime + HitJudge.goodWindow {
+                    self.stopAndEvaluate()
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 33_000_000)
+            }
         }
     }
 
     func stopAndEvaluate() {
+        guard phase == .recording, let tuneKey, let item = currentItem else { return }
+        let now = max(0, CACurrentMediaTime() - recordingStart)
         stopHighway()
         highway.setMode(.idle)
-        let now = CACurrentMediaTime() - recordingStart
-        // Close any notes still held.
         for (pitch, open) in openNotes {
             recordedNotes.append(Note(pitch: pitch, startTime: open.start,
-                                      endTime: now, velocity: open.velocity))
+                                      endTime: max(now, open.start + 0.05), velocity: Double(open.velocity)))
         }
         openNotes = [:]
         recordedNotes.sort { $0.startTime < $1.startTime }
-        let sequence = NoteSequence(notes: recordedNotes,
-                                    totalTime: max(now, recordedNotes.last?.endTime ?? 0))
-        guard let lesson, !sequence.notes.isEmpty else {
-            phase = .practice
-            return
-        }
+        guard let first = recordedNotes.first else { phase = .practice; return }
+        // Match the web attempt format: trim silence before the first played note.
+        let notes = recordedNotes.map { Note(pitch: $0.pitch, startTime: $0.startTime - first.startTime,
+                                            endTime: $0.endTime - first.startTime, velocity: $0.velocity) }
+        let sequence = NoteSequence(notes: notes, totalTime: notes.map { $0.endTime }.max() ?? 0)
         phase = .evaluating
-        Task {
+        let token = UUID(); requestToken = token
+        requestTask = Task {
             do {
-                let bpm = lesson.setup.bpm ?? lesson.metronome?.bpm ?? 90
-                let meter = lesson.setup.meter ?? lesson.metronome?.timeSignature ?? "4/4"
-                let result = try await APIClient.shared.evaluateLesson(
-                    lessonRunId: lesson.lessonRunId, userSequence: sequence,
-                    bpm: bpm, meter: meter)
+                let result = try await APIClient.shared.evaluateTune(tuneKey: tuneKey, itemId: item.itemId, sequence: sequence)
+                guard !Task.isCancelled, requestToken == token else { return }
                 evaluation = result
                 phase = .feedback
-                if result.nextAction == .exitToMainTeacher {
-                    metronome.stop()
-                }
             } catch {
+                guard !Task.isCancelled, requestToken == token else { return }
                 phase = .error(error.localizedDescription)
             }
         }
     }
 
-    /// Continue after feedback, following the coach's next action.
     func continueAfterFeedback() {
-        guard let lesson, let result = evaluation else {
-            phase = .welcome
-            return
-        }
-        switch result.nextAction {
-        case .exitToMainTeacher, .none:
-            leaveLesson()
-        case .retrySame:
-            phase = .practice
-        case .makeEasier, .makeHarder:
-            phase = .startingLesson
-            Task {
-                do {
-                    let response = try await APIClient.shared.regenerateLesson(
-                        lessonKey: lesson.lessonBrief.lessonKey,
-                        lessonRunId: lesson.lessonRunId,
-                        setupOverrides: result.setupDelta)
-                    self.lesson = response
-                    self.evaluation = nil
-                    phase = .practice
-                    loadHighway()
-                } catch {
-                    phase = .error(error.localizedDescription)
-                }
-            }
-        }
+        if evaluation?.tuneAcquired == true { leaveTune(); return }
+        if evaluation?.suggestNewNugget == true { nextItem(); return }
+        evaluation = nil
+        loadHighway()
+        phase = .practice
     }
 
-    func leaveLesson() {
-        demoTask?.cancel()
+    func nextItem() {
+        guard phase == .practice || phase == .feedback else { return }
+        if currentIndex + 1 >= practicePlan.count { fetchPracticePlan(); return }
+        currentIndex += 1
+        evaluation = nil
+        loadHighway()
+        phase = .practice
+    }
+
+    func previousItem() {
+        guard (phase == .practice || phase == .feedback), currentIndex > 0 else { return }
+        currentIndex -= 1
+        evaluation = nil
+        loadHighway()
+        phase = .practice
+    }
+
+    func leaveTune() {
+        requestToken = UUID()
+        requestTask?.cancel()
         stopHighway()
         metronome.stop()
-        lesson = nil
-        evaluation = nil
-        phase = .welcome
-        Task { await loadGreeting() }
+        openNotes = [:]; recordedNotes = []
+        tuneKey = nil; practicePlan = []; evaluation = nil
+        Task { await loadLibrary() }
     }
 
-    // MARK: - MIDI input
-
     private func handleNoteOn(_ pitch: Int, _ velocity: Int) {
+        let alreadyHeld = heldPitches.contains(pitch)
         heldPitches.insert(pitch)
         activePitch = pitch
         piano.play(pitch: pitch, velocity: velocity)
         syncKeys()
-        if phase == .recording, clock.isRunning {
-            let j = judge.noteOn(pitch: pitch, at: clock.inputTime)
-            highway.apply(j, streak: judge.streak)
-            score = judge.score
-            streak = judge.streak
-        }
-        if phase == .recording {
-            openNotes[pitch] = (CACurrentMediaTime() - recordingStart, velocity)
-        }
+        // A held key during count-in is ignored until released and pressed again.
+        guard phase == .recording, clock.isRunning, clock.inputTime >= 0, !alreadyHeld else { return }
+        let result = judge.noteOn(pitch: pitch, at: clock.inputTime)
+        highway.apply(result, streak: judge.streak)
+        score = judge.score; streak = judge.streak
+        openNotes[pitch] = (clock.inputTime, velocity)
     }
 
     private func handleNoteOff(_ pitch: Int) {
@@ -260,20 +245,8 @@ final class LessonViewModel: ObservableObject {
         if activePitch == pitch { activePitch = nil }
         syncKeys()
         if phase == .recording, let open = openNotes.removeValue(forKey: pitch) {
-            let end = CACurrentMediaTime() - recordingStart
-            recordedNotes.append(Note(pitch: pitch, startTime: open.start,
-                                      endTime: max(end, open.start + 0.05),
-                                      velocity: open.velocity))
+            let end = max(CACurrentMediaTime() - recordingStart, open.start + 0.05)
+            recordedNotes.append(Note(pitch: pitch, startTime: open.start, endTime: end, velocity: Double(open.velocity)))
         }
-    }
-
-    // MARK: - Metronome
-
-    private func startMetronomeIfNeeded() {
-        guard let lesson else { return }
-        let settings = lesson.metronome
-        guard settings?.isActive == true, let bpm = settings?.bpm ?? lesson.setup.bpm else { return }
-        metronome.start(bpm: bpm,
-                        timeSignature: settings?.timeSignature ?? lesson.setup.meter ?? "4/4")
     }
 }

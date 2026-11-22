@@ -1,7 +1,6 @@
 import Foundation
 
-/// Thin client for the Lovable Cloud edge functions used by Learn mode.
-/// Mirrors src/services/lessonService.ts.
+/// Independent native client for the published tune library and tune practice.
 actor APIClient {
     static let shared = APIClient()
 
@@ -48,65 +47,90 @@ actor APIClient {
         return try decoder.decode(Response.self, from: data)
     }
 
-    // MARK: - teacher-greet
+    // MARK: - Published tunes (no teacher selection)
 
-    struct TeacherGreetBody: Encodable {
-        let language: String
-        let debug: Bool
+    private func read<Response: Decodable>(_ table: String, query: [URLQueryItem]) async throws -> Response {
+        var components = URLComponents(url: Config.supabaseURL.appendingPathComponent("rest/v1/\(table)"), resolvingAgainstBaseURL: false)
+        components?.queryItems = query
+        guard let url = components?.url else { throw APIError.invalidResponse }
+        var request = URLRequest(url: url)
+        request.setValue(Config.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(Config.anonKey)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
+        return try decoder.decode(Response.self, from: data)
+    }
+
+    /// Register the stable device identity before writing progress with a foreign key.
+    private func ensureLocalUser() async throws {
+        struct LocalUser: Decodable { let id: String }
+        let users: [LocalUser] = try await read("local_users", query: [
+            URLQueryItem(name: "select", value: "id"),
+            URLQueryItem(name: "id", value: "eq.\(Config.localUserId)")
+        ])
+        guard users.isEmpty else { return }
+        var request = URLRequest(url: Config.supabaseURL.appendingPathComponent("rest/v1/local_users"))
+        request.httpMethod = "POST"
+        request.setValue(Config.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(Config.anonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["id": Config.localUserId, "name": "iPad"])
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
+    }
+
+    func fetchTuneLibrary() async throws -> [TuneLibraryItem] {
+        try await ensureLocalUser()
+        async let tunes: [PublishedTune] = read("tune_assets", query: [
+            URLQueryItem(name: "select", value: "tune_key,curriculum_versions!inner(status,published_at)"),
+            URLQueryItem(name: "curriculum_versions.status", value: "eq.published"),
+            URLQueryItem(name: "order", value: "curriculum_versions(published_at).desc")
+        ])
+        async let exports: [TuneCurriculumExport] = read("curriculum_exports", query: [
+            URLQueryItem(name: "select", value: "snapshot,curriculum_versions!inner(status)"),
+            URLQueryItem(name: "curriculum_versions.status", value: "eq.published"),
+            URLQueryItem(name: "order", value: "created_at.desc"), URLQueryItem(name: "limit", value: "1")
+        ])
+        async let acquisitions: [TuneAcquisition] = read("user_tune_acquisition", query: [
+            URLQueryItem(name: "select", value: "tune_key"),
+            URLQueryItem(name: "local_user_id", value: "eq.\(Config.localUserId)")
+        ])
+        let (published, curriculum, progress) = try await (tunes, exports, acquisitions)
+        var seen = Set<String>()
+        let acquired = Set(progress.map { $0.tune_key })
+        return published.filter { seen.insert($0.tune_key).inserted }.map {
+            TuneAvailability.resolve($0.tune_key, snapshot: curriculum.first?.snapshot, acquired: acquired)
+        }
+    }
+
+    struct TuneCoachBody: Encodable {
+        let tuneKey: String
         let localUserId: String
-    }
-
-    func fetchTeacherGreeting() async throws -> TeacherGreetingResponse {
-        try await invoke("teacher-greet", body: TeacherGreetBody(
-            language: Config.language, debug: false, localUserId: Config.localUserId))
-    }
-
-    // MARK: - lesson-start
-
-    struct LessonStartBody: Encodable {
-        let lessonKey: String
         let language: String
-        let localUserId: String
-        let debug: Bool
-        let difficulty: Int?
-        let lessonRunId: String?
-        let regenerate: Bool?
-        let setupOverrides: LessonRunSetup?
+        let debug = false
     }
 
-    func startLesson(lessonKey: String, difficulty: Int? = nil) async throws -> LessonStartResponse {
-        try await invoke("lesson-start", body: LessonStartBody(
-            lessonKey: lessonKey, language: Config.language, localUserId: Config.localUserId,
-            debug: false, difficulty: difficulty, lessonRunId: nil, regenerate: nil,
-            setupOverrides: nil))
+    func startTune(tuneKey: String) async throws -> TuneCoachResponse {
+        try await invoke("tune-coach", body: TuneCoachBody(tuneKey: tuneKey, localUserId: Config.localUserId, language: Config.language))
     }
 
-    func regenerateLesson(lessonKey: String, lessonRunId: String,
-                          setupOverrides: LessonRunSetup? = nil,
-                          difficulty: Int? = nil) async throws -> LessonStartResponse {
-        try await invoke("lesson-start", body: LessonStartBody(
-            lessonKey: lessonKey, language: Config.language, localUserId: Config.localUserId,
-            debug: false, difficulty: difficulty, lessonRunId: lessonRunId, regenerate: true,
-            setupOverrides: setupOverrides))
-    }
-
-    // MARK: - lesson-evaluate
-
-    struct LessonEvaluateBody: Encodable {
-        let lessonRunId: String
+    struct TuneEvaluateBody: Encodable {
+        let tuneKey: String
+        let nuggetId: String
         let userSequence: NoteSequence
-        let metronomeContext: MetronomeContext
         let localUserId: String
-        let debug: Bool
+        let language: String
+        let debug = false
     }
 
-    func evaluateLesson(lessonRunId: String, userSequence: NoteSequence,
-                        bpm: Double, meter: String) async throws -> EvaluationOutput {
-        try await invoke("lesson-evaluate", body: LessonEvaluateBody(
-            lessonRunId: lessonRunId, userSequence: userSequence,
-            metronomeContext: MetronomeContext(bpm: bpm, meter: meter),
-            localUserId: Config.localUserId, debug: false))
+    func evaluateTune(tuneKey: String, itemId: String, sequence: NoteSequence) async throws -> TuneEvaluationResponse {
+        try await invoke("tune-evaluate", body: TuneEvaluateBody(tuneKey: tuneKey, nuggetId: itemId,
+            userSequence: sequence, localUserId: Config.localUserId, language: Config.language))
     }
+
+
 }
 
 enum APIError: LocalizedError {

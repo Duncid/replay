@@ -7,10 +7,10 @@ struct RootView: View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
             switch viewModel.phase {
-            case .loadingGreeting, .startingLesson:
+            case .loadingLibrary, .loadingTune:
                 ProgressView("Loading…")
                     .tint(.primary)
-            case .welcome:
+            case .library:
                 WelcomeView()
             case .practice, .recording, .evaluating, .feedback:
                 LessonView()
@@ -21,7 +21,7 @@ struct RootView: View {
                     Text(message)
                         .multilineTextAlignment(.center)
                     Button("Try Again") {
-                        Task { await viewModel.loadGreeting() }
+                        Task { await viewModel.loadLibrary() }
                     }
                     .buttonStyle(.borderedProminent)
                 }

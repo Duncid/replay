@@ -1,68 +1,52 @@
 import SwiftUI
 
-/// Teacher welcome screen: greeting + suggested lessons.
+/// Published tune library. Locked tunes remain visible but cannot be selected.
 struct WelcomeView: View {
     @EnvironmentObject private var viewModel: LessonViewModel
+    private let columns = [GridItem(.adaptive(minimum: 280), spacing: 16)]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                if let greeting = viewModel.greeting {
-                    Text(greeting.greeting)
-                        .font(.title2)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Suggested for you")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                        ForEach(greeting.suggestions) { suggestion in
-                            Button {
-                                viewModel.startLesson(activityKey: suggestion.activityKey)
-                            } label: {
-                                SuggestionRow(suggestion: suggestion)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Tunes").font(.largeTitle.bold())
+                    Spacer()
+                    Text("\(viewModel.tunes.filter { $0.unlocked }.count) / \(viewModel.tunes.count) unlocked")
+                        .foregroundStyle(.secondary)
+                }
+                if viewModel.tunes.isEmpty {
+                    Text("No published tunes yet.").foregroundStyle(.secondary)
+                }
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(viewModel.tunes) { tune in
+                        Button { viewModel.startTune(tune.tuneKey) } label: {
+                            HStack(spacing: 16) {
+                                Image(systemName: tune.unlocked ? "music.note" : "lock.fill")
+                                    .font(.title2)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(tune.tuneKey).font(.headline)
+                                    Text(tune.unlocked ? "Unlocked" : "Locked · Complete \(tune.prerequisites.joined(separator: ", "))")
+                                        .font(.subheadline).foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                                if tune.unlocked { Image(systemName: "arrow.right") }
                             }
-                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+                            .padding(20)
+                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
                         }
+                        .buttonStyle(.plain)
+                        .disabled(!tune.unlocked)
+                        .accessibilityLabel("\(tune.unlocked ? "Practice" : "Locked"): \(tune.tuneKey)")
                     }
                 }
             }
             .padding(32)
-            .frame(maxWidth: 700, alignment: .leading)
+            .frame(maxWidth: 1000, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .safeAreaInset(edge: .bottom) {
-            MidiStatusBar()
-        }
-    }
-}
-
-private struct SuggestionRow: View {
-    let suggestion: TeacherSuggestion
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(suggestion.label)
-                    .font(.headline)
-                Text(suggestion.why)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 8) {
-                    Text(suggestion.trackTitle)
-                    if let level = suggestion.level {
-                        Text("· \(level.capitalized)")
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .foregroundStyle(.tertiary)
-        }
-        .padding()
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+        .refreshable { await viewModel.loadLibrary() }
+        .safeAreaInset(edge: .bottom) { MidiStatusBar() }
     }
 }
 

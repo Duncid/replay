@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
-import { Check, Globe, Menu, UserPlus } from "lucide-react";
+import { Check, Globe, Menu, UserPlus, Settings2, GitBranch, Music2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +23,7 @@ interface UserMenuProps {
   onLanguageChange: (lang: string) => void;
   notationPreference: "auto" | "abc" | "solfege";
   onNotationChange: (notation: "auto" | "abc" | "solfege") => void;
+  onOpenManagement?: (mode: "quest" | "lab") => void;
 }
 
 const languageOptions = [
@@ -41,6 +42,7 @@ export function UserMenu({
   onLanguageChange,
   notationPreference,
   onNotationChange,
+  onOpenManagement,
 }: UserMenuProps) {
   const { t } = useTranslation();
   const { users, currentUser, switchUser, createUser, isLoading } =
@@ -90,6 +92,25 @@ export function UserMenu({
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
+
+          {onOpenManagement && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Settings2 className="h-4 w-4" />
+                Admin
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-popover">
+                <DropdownMenuItem onSelect={() => onOpenManagement("quest")}>
+                  <GitBranch className="h-4 w-4" />
+                  Quest
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onOpenManagement("lab")}>
+                  <Music2 className="h-4 w-4" />
+                  Tune Manager
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
 
           {/* Language Submenu */}
           <DropdownMenuSub>

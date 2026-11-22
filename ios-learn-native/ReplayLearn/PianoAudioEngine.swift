@@ -65,7 +65,8 @@ final class PianoAudioEngine: ObservableObject {
                 }
                 if Task.isCancelled { return }
                 onHighlight(note.pitch)
-                play(pitch: note.pitch, velocity: note.velocity ?? 100)
+                let velocity = note.velocity.map { $0 <= 1 ? $0 * 127 : $0 } ?? 100
+                play(pitch: note.pitch, velocity: Int(max(0, min(127, velocity))))
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: UInt64(max(note.endTime - note.startTime, 0.05) * 1_000_000_000))
                     onHighlight(nil)

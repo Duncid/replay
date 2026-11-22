@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Lesson screen: instruction, demo playback, practice recording, evaluation
-/// and feedback — the whole practice loop.
+/// Tune practice with pooled SpriteKit highway, MIDI recording, and coach feedback.
 struct LessonView: View {
     @EnvironmentObject private var viewModel: LessonViewModel
 
@@ -39,7 +38,7 @@ struct LessonView: View {
     private var header: some View {
         HStack {
             Button {
-                viewModel.leaveLesson()
+                viewModel.leaveTune()
             } label: {
                 Label("Leave", systemImage: "chevron.left")
             }
@@ -47,25 +46,23 @@ struct LessonView: View {
 
             Spacer()
 
-            if let brief = viewModel.lesson?.lessonBrief {
-                VStack(spacing: 2) {
-                    Text(brief.title).font(.headline)
-                    if let track = brief.trackTitle {
-                        Text(track).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
+            VStack(spacing: 2) {
+                Text(viewModel.tuneKey ?? "Tune").font(.headline)
+                Text("\(viewModel.currentIndex + 1) / \(viewModel.practicePlan.count)")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            if viewModel.metronome.isPlaying {
-                HStack(spacing: 6) {
-                    Image(systemName: "metronome")
-                    Text("\(Int(viewModel.lesson?.metronome?.bpm ?? viewModel.lesson?.setup.bpm ?? 0)) BPM")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack {
+                Button { viewModel.previousItem() } label: { Image(systemName: "backward.end.fill") }
+                    .disabled(viewModel.currentIndex == 0 || viewModel.phase == .recording || viewModel.phase == .evaluating)
+                    .accessibilityLabel("Previous section")
+                Button { viewModel.nextItem() } label: { Image(systemName: "forward.end.fill") }
+                    .disabled(viewModel.phase == .recording || viewModel.phase == .evaluating)
+                    .accessibilityLabel("Next section")
             }
+
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -74,14 +71,14 @@ struct LessonView: View {
 
     private var instructionCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if let lesson = viewModel.lesson {
-                Text(lesson.instruction)
+            if let item = viewModel.currentItem {
+                Text(item.instruction)
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             HStack(spacing: 12) {
-                if viewModel.lesson?.demoSequence != nil {
+                if viewModel.targetSequence != nil {
                     Button {
                         viewModel.playDemo()
                     } label: {
@@ -121,26 +118,19 @@ struct LessonView: View {
                 }
             }
 
-            if viewModel.phase == .recording {
-                Text("Recording — play the exercise on your piano, then tap Done.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var continueLabel: String {
-        switch viewModel.evaluation?.nextAction {
-        case .retrySame: return "Try Again"
-        case .makeEasier, .makeHarder: return "Continue"
-        case .exitToMainTeacher, .none: return "Back to Teacher"
-        }
+        if viewModel.evaluation?.tuneAcquired == true { return "Back to Tunes" }
+        return viewModel.evaluation?.suggestNewNugget == true ? "Next Section" : "Try Again"
     }
 
-    private func feedbackCard(_ evaluation: EvaluationOutput) -> some View {
+    private func feedbackCard(_ evaluation: TuneEvaluationResponse) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: iconName(for: evaluation.evaluation))
@@ -156,16 +146,14 @@ struct LessonView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if let skills = evaluation.awardedSkills, !skills.isEmpty {
-                Label("Skill unlocked: \(skills.joined(separator: ", "))",
-                      systemImage: "star.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.yellow)
+            if evaluation.tuneAcquired == true {
+                Label("Tune completed", systemImage: "checkmark.seal.fill")
+                    .font(.subheadline).foregroundStyle(.green)
             }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
     }
 
     private func iconName(for evaluation: String) -> String {
