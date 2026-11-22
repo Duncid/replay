@@ -1,11 +1,7 @@
-import {
-  getNoteColorForNoteName,
-  getNoteColorsForNoteName,
-} from "@/constants/noteColors";
+import { getNoteColorsForNoteName } from "@/constants/noteColors";
 import type { TimeSignature } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
-import { createStripeCanvas } from "@/utils/stripePattern";
-import { Container, Graphics, Texture } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import { GlowFilter } from "pixi-filters/glow";
 import { Application, extend, useApplication } from "@pixi/react";
 import {
@@ -55,37 +51,6 @@ function getNoteColorsFromMidi(midi: number) {
     active: hexToInt(colors.active),
     focused: hexToInt(colors.focused),
   };
-}
-
-function normalizeSharpNote(noteName: string) {
-  const base = noteName.replace(/[0-9]/g, "");
-  switch (base) {
-    case "C#":
-    case "D#":
-    case "F#":
-    case "G#":
-    case "A#":
-      return base;
-    case "Db":
-      return "C#";
-    case "Eb":
-      return "D#";
-    case "Gb":
-      return "F#";
-    case "Ab":
-      return "G#";
-    case "Bb":
-      return "A#";
-    default:
-      return null;
-  }
-}
-
-function createStripeTexture(baseHex: string, stripeHex: string) {
-  const canvas = createStripeCanvas(baseHex, stripeHex);
-  const texture = Texture.from(canvas);
-  texture.source.style.addressMode = "repeat";
-  return texture;
 }
 
 export type PianoSheetAlign = "start" | "center" | "end";
@@ -159,7 +124,7 @@ export function PianoSheetPixi({
     return {
       pixelsPerUnit: baseUnit * 4,
       noteHeight,
-      noteCornerRadius: baseUnit / 2,
+      noteCornerRadius: Math.min(4, baseUnit / 2),
       trackGap,
       trackTopY,
       leftPadding: baseUnit * 1.5,
@@ -181,16 +146,6 @@ export function PianoSheetPixi({
     () => computeLayout(notes, config, timeSignatures, qpm),
     [notes, config, timeSignatures, qpm]
   );
-  const stripeTextures = useMemo(() => {
-    const getHex = (note: string) => getNoteColorForNoteName(note) ?? "#9aa0a6";
-    const textures = new Map<string, Texture>();
-    textures.set("C#", createStripeTexture(getHex("C"), getHex("D")));
-    textures.set("D#", createStripeTexture(getHex("D"), getHex("E")));
-    textures.set("F#", createStripeTexture(getHex("F"), getHex("G")));
-    textures.set("G#", createStripeTexture(getHex("G"), getHex("A")));
-    textures.set("A#", createStripeTexture(getHex("A"), getHex("B")));
-    return textures;
-  }, []);
   // Cache GlowFilter instances per note to avoid re-creating WebGL shaders
   const glowFilterCache = useRef(new Map<string, GlowFilter>());
 
@@ -445,21 +400,12 @@ export function PianoSheetPixi({
           />
           {noteRects.map((note) => {
             const noteColors = getNoteColorsFromMidi(note.midi);
-            const lowerNeighborColors = getNoteColorsFromMidi(note.midi - 1);
-            const hasGradient =
-              note.accidental === "sharp" || note.accidental === "flat";
-            const stripeKey = hasGradient
-              ? normalizeSharpNote(midiToNoteName(note.midi))
-              : null;
-            const stripeTexture =
-              stripeKey !== null ? stripeTextures.get(stripeKey) : null;
-
             const isFocused = focusedNoteIds.has(note.id);
             const isActive = activeNoteIds.has(note.id);
             const state = isFocused ? "focused" : isActive ? "active" : "idle";
-            const fillColor = hasGradient
-              ? lowerNeighborColors[state]
-              : noteColors[state];
+            // Sharps share the natural below, just like the piano note rail.
+            // All states use solid fills from the shared design-system palette.
+            const fillColor = noteColors[state];
 
             const showGlow = isFocused || isActive;
 
@@ -508,9 +454,7 @@ export function PianoSheetPixi({
                       note.height,
                       config.noteCornerRadius
                     );
-                    // Keep the tile at its native pixel size instead of fitting
-                    // one tile to the note's bounds (which stretches long notes).
-                    g.fill(stripeTexture && state === "idle" ? { texture: stripeTexture, textureSpace: "global" } : fillColor);
+                    g.fill(fillColor);
                   }}
                 />
               </pixiContainer>
