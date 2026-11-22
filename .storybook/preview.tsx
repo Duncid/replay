@@ -1,6 +1,7 @@
 import type { Preview } from "@storybook/react-vite";
 import { TooltipProvider } from "../src/components/ui/tooltip";
 import "../src/index.css";
+import "../src/lib/i18n";
 import { themes } from "storybook/theming";
 
 const preview: Preview = {
