@@ -5,5 +5,12 @@ const config: StorybookConfig = {
   addons: ["@storybook/addon-docs", "@storybook/addon-a11y"],
   framework: "@storybook/react-vite",
   core: { disableTelemetry: true },
+  // Static builds are served from /storybook on the published app URL.
+  viteFinal: (viteConfig, { configType }) => {
+    if (configType === "PRODUCTION") {
+      viteConfig.base = "/storybook/";
+    }
+    return viteConfig;
+  },
 };
 export default config;
