@@ -155,7 +155,7 @@ const Index = () => {
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(
     STORAGE_KEYS.ACTIVE_MODE,
-    "play",
+    "learn",
   );
   const [isAutoreplyActive, setIsAutoreplyActive] = useLocalStorage<boolean>(
     STORAGE_KEYS.AUTOREPLY,
@@ -457,10 +457,10 @@ const Index = () => {
     setActiveMode(newMode);
   };
 
-  // Migrate away from removed "interactive" tab (fallback for stored preference)
+  // Existing mode preferences now open the tune library instead.
   useEffect(() => {
-    if ((activeMode as string) === "interactive") {
-      setActiveMode("play");
+    if (activeMode !== "learn" && activeMode !== "lab") {
+      setActiveMode("learn");
     }
   }, [activeMode, setActiveMode]);
 
@@ -1467,7 +1467,7 @@ const Index = () => {
     onEnableFreePractice: () => setLearnModeType("free-practice"),
   });
 
-  const { debugMenuState, switchToFreePractice } = learnMode;
+  const { debugMenuState } = learnMode;
 
   const { resetToStart: resetLearnToStart } = learnMode;
 
@@ -1584,12 +1584,6 @@ const Index = () => {
           // TuneMode: Always record when a tune is active
           if (isInTuneMode) {
             learnRecordingManager.addNoteStart(noteKey, velocity);
-          } else if (
-            learnMode.lesson.phase === "your_turn" &&
-            learnMode.lessonMode === "evaluation"
-          ) {
-            // Lesson mode: Only record in evaluation mode
-            learnRecordingManager.addNoteStart(noteKey, velocity);
           }
         } else if (learnModeType === "free-practice") {
           // Always record for free practice
@@ -1603,8 +1597,6 @@ const Index = () => {
       noteNameToMidi,
       recordingManager,
       learnMode.handleUserAction,
-      learnMode.lesson.phase,
-      learnMode.lessonMode,
       learnRecordingManager,
       freePracticeRecordingManager,
       learnModeType,
@@ -1652,12 +1644,6 @@ const Index = () => {
           if (isInTuneMode) {
             learnRecordingManager.addNoteEnd(noteKey);
             tuneNoteOffHandlerRef.current?.(noteKey);
-          } else if (
-            learnMode.lesson.phase === "your_turn" &&
-            learnMode.lessonMode === "evaluation"
-          ) {
-            // Lesson mode: Only record in evaluation mode
-            learnRecordingManager.addNoteEnd(noteKey);
           }
         } else if (learnModeType === "free-practice") {
           // Always record for free practice
@@ -1671,8 +1657,6 @@ const Index = () => {
       recordingManager,
       learnRecordingManager,
       freePracticeRecordingManager,
-      learnMode.lesson.phase,
-      learnMode.lessonMode,
       learnModeType,
       isInTuneMode,
     ],
@@ -2106,7 +2090,6 @@ const Index = () => {
         setDebugMode={setDebugMode}
         onEnableFreePractice={() => setLearnModeType("free-practice")}
         debugMenuState={debugMenuState}
-        onSwitchToFreePractice={switchToFreePractice}
       />
     ),
     quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
@@ -2131,10 +2114,8 @@ const Index = () => {
                   onNotationChange={setMusicNotation}
                 />
                 <TabsList>
-                  <TabsTrigger value="learn">{t("tabs.learn")}</TabsTrigger>
-                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
-                  <TabsTrigger value="quest">{t("tabs.quest")}</TabsTrigger>
-                  <TabsTrigger value="lab">{t("tabs.lab")}</TabsTrigger>
+                  <TabsTrigger value="learn">Tunes</TabsTrigger>
+                  <TabsTrigger value="lab">Tune Manager</TabsTrigger>
                 </TabsList>
                 {activeMode === "quest" && questHeaderTitle && (
                   <span className="text-sm text-muted-foreground ml-2">

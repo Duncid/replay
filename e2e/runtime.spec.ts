@@ -140,7 +140,7 @@ test("app starts without loading AI scripts and fits a resized viewport", async 
   await expect(page.getByRole("heading", { name: "404" })).toBeVisible();
 });
 
-test("notation and quest editor chunks load when their tabs open", async ({ page }) => {
+test("notation loads on demand in tune management", async ({ page }) => {
   // Exercise a cold notation load: the notes container mounts after Suspense.
   await page.route("**/OpenSheetMusicDisplayView-*.js", async route => {
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -152,16 +152,12 @@ test("notation and quest editor chunks load when their tabs open", async ({ page
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
   const tabs = page.getByRole("tab");
-  await expect(tabs).toHaveCount(4);
   expect(requests.some(url => /QuestEditor-.*\.js/.test(url))).toBe(false);
   expect(requests.some(url => /OpenSheetMusicDisplayView-.*\.js/.test(url))).toBe(false);
   expect(requests.some(url => /(?:teacher|tune\.ns|SheetMusicRenderer)-.*\.js/.test(url))).toBe(false);
   const key = page.getByRole("button", { name: "C4", exact: true });
   expect(await key.evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThan(10);
-  await tabs.nth(2).click();
-  await expect.poll(() => requests.some(url => /QuestEditor-.*\.js/.test(url))).toBe(true);
-  await expect(page.getByText("Loading editor...", { exact: true })).toBeHidden();
-  await tabs.nth(3).click();
+  await page.getByRole("tab", { name: "Tune Manager", exact: true }).click();
   await expect.poll(() => requests.some(url => /OpenSheetMusicDisplayView-.*\.js/.test(url))).toBe(true);
   await expect(page.getByText("Loading notation...", { exact: true })).toBeHidden();
   await expect.poll(() => requests.some(url => /teacher-.*\.js/.test(url))).toBe(true);
@@ -171,7 +167,8 @@ test("notation and quest editor chunks load when their tabs open", async ({ page
   const canvas = page.locator("canvas");
   // Initial sizing must work without a window resize or device rotation.
   await expect.poll(() => canvas.evaluate(element => {
-    const parent = element.parentElement!.parentElement!;
+    const parent = element.parentElement?.parentElement;
+    if (!parent) return false;
     const bounds = parent.getBoundingClientRect();
     return Math.abs(element.clientWidth - bounds.width) < 2 &&
       Math.abs(element.clientHeight - bounds.height) < 2;
@@ -333,7 +330,7 @@ test("keyboard output sends notes without echoing physical keys and releases on 
   await output.click();
   await page.keyboard.press("Escape");
   await page.evaluate(() => { window["sentMidi"] = []; });
-  await page.getByRole("tab").nth(3).click();
+  await page.getByRole("tab", { name: "Tune Manager", exact: true }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window["sentMidi"].some(message => message[0] === 144))).toBe(true);
   expect(await page.evaluate(() => window["pianoStarts"])).toBe(1);
