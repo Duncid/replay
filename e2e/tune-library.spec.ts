@@ -58,7 +58,6 @@ test("Admin navigation opens Quest and returns to student tunes", async ({ page 
   await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
   await page.goto("/");
   await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Quest", exact: true }).click();
   await expect(page.getByRole("button", { name: "Add", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Tunes", exact: true }).click();
@@ -81,7 +80,6 @@ test("Tune Management in the menu loads the published tune that was picked", asy
   await page.route("**/rest/v1/**", publishedTuneRoute);
   await page.goto("/");
   await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Published", exact: true }).hover();
   await page.getByRole("menuitem", { name: "st-louis-blues", exact: true }).click();
@@ -93,7 +91,6 @@ test("picking an unpublished tune from the menu offers Publish", async ({ page }
   await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
   await page.goto("/");
   await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
   await page.getByRole("menuitem", { name: "gymnopdie", exact: true }).click();

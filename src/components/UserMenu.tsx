@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
 import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
-import { Check, Globe, Menu, UserPlus, Settings2, GitBranch, Music2 } from "lucide-react";
+import { Check, Globe, Menu, UserPlus, GitBranch, Music2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -95,12 +96,11 @@ export function UserMenu({
           <DropdownMenuSeparator />
 
           {onOpenManagement && (
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <Settings2 className="h-4 w-4" />
+            <>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
                 Admin
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover">
+              </DropdownMenuLabel>
+              <DropdownMenuGroup>
                 <DropdownMenuItem onSelect={() => onOpenManagement("quest")}>
                   <GitBranch className="h-4 w-4" />
                   Quest
@@ -116,8 +116,9 @@ export function UserMenu({
                     />
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
           )}
 
           {/* Language Submenu */}

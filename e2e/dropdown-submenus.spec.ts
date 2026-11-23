@@ -6,11 +6,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("switching branches closes the abandoned submenu", async ({ page }) => {
-  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
-  await expect(page.getByRole("menuitem", { name: "Quest", exact: true })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
+  await expect(page.getByRole("menuitem", { name: "Published", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Language", exact: true }).hover();
   await expect(page.getByRole("menuitem", { name: "English", exact: true })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Quest", exact: true })).not.toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Published", exact: true })).not.toBeVisible();
 });
 
 test("nested traversal stays open and leaving closes descendants", async ({ page }) => {
@@ -30,11 +30,11 @@ test("nested traversal stays open and leaving closes descendants", async ({ page
 });
 
 test("keyboard can still enter and exit submenus", async ({ page }) => {
-  const admin = page.getByRole("menuitem", { name: "Admin", exact: true });
-  await admin.focus();
+  const tuneManagement = page.getByRole("menuitem", { name: "Tune Management", exact: true });
+  await tuneManagement.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("menuitem", { name: "Quest", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Published", exact: true })).toBeVisible();
   await page.keyboard.press("ArrowLeft");
-  await expect(page.getByRole("menuitem", { name: "Quest", exact: true })).not.toBeVisible();
-  await expect(admin).toBeFocused();
+  await expect(page.getByRole("menuitem", { name: "Published", exact: true })).not.toBeVisible();
+  await expect(tuneManagement).toBeFocused();
 });
