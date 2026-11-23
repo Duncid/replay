@@ -110,7 +110,7 @@ import { useTranslation } from "react-i18next";
 
 const AI_MODELS = {
   llm: [
-    { value: "google/gemini-2.5-flash", label: "Gemini Flash" },
+    { value: "google/gemini-3.8-flash", label: "Gemini Flash" },
     { value: "google/gemini-2.5-pro", label: "Gemini Pro" },
     { value: "openai/gpt-5", label: "GPT-5" },
   ],
@@ -454,7 +454,7 @@ const Index = () => {
 
   const handleModeChange = (newMode: ActiveMode) => {
     if (newMode === "learn" && magenta.isMagentaModel(selectedModel)) {
-      setSelectedModel("google/gemini-2.5-flash");
+      setSelectedModel("google/gemini-3.8-flash");
     } else if (newMode === "play" && !magenta.isMagentaModel(selectedModel)) {
       setSelectedModel("magenta/music-rnn");
     }

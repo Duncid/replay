@@ -57,7 +57,7 @@ serve(async (req) => {
   }
 
   try {
-    const { userSequence, model = "google/gemini-2.5-flash", metronome, instrument = "classic" } = await req.json();
+    const { userSequence, model = "google/gemini-3.8-flash", metronome, instrument = "classic" } = await req.json();
     console.log("Received user sequence:", JSON.stringify(userSequence), "Model:", model, "Metronome:", metronome, "Instrument:", instrument);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -144,10 +144,6 @@ Guidelines:
       ],
     };
 
-    if (model === "gpt-4o" || model === "gpt-4o-mini") {
-      requestBody.temperature = 0.9;
-    }
-
     // Add timeout to prevent edge function timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
@@ -167,7 +163,7 @@ Guidelines:
       clearTimeout(timeoutId);
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         console.error("AI gateway request timed out");
-        return new Response(JSON.stringify({ error: "AI request timed out. Try a faster model like gemini-2.5-flash." }), {
+        return new Response(JSON.stringify({ error: "AI request timed out. Try a faster model like Gemini Flash." }), {
           status: 504,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

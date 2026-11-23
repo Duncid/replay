@@ -448,7 +448,7 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
     ];
 
     const debugRequest = {
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3.8-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

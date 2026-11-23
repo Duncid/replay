@@ -726,7 +726,7 @@ OUTPUT JSON SCHEMA:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "openai/gpt-6.1-sol",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },

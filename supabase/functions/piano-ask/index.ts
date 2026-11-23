@@ -26,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, model = "google/gemini-2.5-flash" } = await req.json();
+    const { prompt, model = "google/gemini-3.8-flash" } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
       return new Response(JSON.stringify({ error: "Missing or invalid 'prompt' in request body" }), {

@@ -493,7 +493,7 @@ Return your response using the provided function.`;
     ];
 
     const debugRequest = {
-      model: "google/gemini-2.5-flash",
+      model: "openai/gpt-6.1-sol",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
