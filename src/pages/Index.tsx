@@ -112,8 +112,8 @@ import { useTranslation } from "react-i18next";
 const AI_MODELS = {
   llm: [
     { value: "google/gemini-3.8-flash", label: "Gemini Flash" },
-    { value: "google/gemini-2.5-pro", label: "Gemini Pro" },
-    { value: "openai/gpt-5", label: "GPT-5" },
+    { value: "google/gemini-4-argon", label: "Gemini 4 Argon" },
+    { value: "openai/gpt-6.2-sol", label: "GPT-6.2 Sol" },
   ],
   magenta: [
     {
