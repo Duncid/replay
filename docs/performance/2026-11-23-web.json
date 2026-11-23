@@ -1,0 +1,1706 @@
+{
+  "schema": 2,
+  "collectedAt": "2026-11-23T20:34:28.719368+00:00",
+  "commit": "f988c6362c84a5f75b4ac7a1c8f6426ba7360978",
+  "status": "M .gitignore\n M e2e/runtime.spec.ts\n M e2e/tune-library.spec.ts\n M ios-learn-native/ReplayLearn.xcodeproj/project.pbxproj\n M ios-learn-native/ReplayLearn/Highway/NoteHighwayScene.swift\n M ios-learn-native/ReplayLearn/LessonViewModel.swift\n M ios-learn-native/ReplayLearn/PianoAudioEngine.swift\n M ios-learn-native/ReplayLearn/ReplayLearnApp.swift\n M ios-learn-native/ReplayLearn/Views/LessonView.swift\n M ios/App/App/AppViewController.swift\n M package.json\n M public/performance-probe.js\n M src/components/TuneCard.tsx\n M src/components/TuneLibraryView.tsx\n M src/design-system/TuneCard.stories.tsx\n M src/design-system/TunesScreen.stories.tsx\n M src/design-system/piano.css\n M src/hooks/useTuneLibrary.ts\n M src/utils/tuneLibrary.ts\n?? ios-learn-native/ReplayLearn/NativePerformance.swift\n?? performance-tests/\n?? playwright.performance.config.ts\n?? scripts/measure-ipad-performance.py\n?? src/components/TuneThumbnail.tsx\n?? src/design-system/tuneCardFixtures.ts\n?? src/utils/tunePreview.ts",
+  "trackedDiffSHA256": "22ac96ca3a72bed2cc3cbb9985475aca337e9554f32b9f645b03ead86d0f34b5",
+  "build": "instrumented Debug, installed separately",
+  "runs": [
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "compact",
+      "repeat": 1,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 231.11100000096485,
+          "notes": 200,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 124
+        },
+        {
+          "elapsedMs": 144,
+          "full": false,
+          "nativeLaunchElapsedMs": 377.57762501132675,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1457.726458349498,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1074,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1218
+        },
+        {
+          "audioNotes": 64,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8001,
+          "fps": 59.99250093738283,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 4.0000000000000036,
+          "nativeLaunchElapsedMs": 9466.251500009093,
+          "notes": 200,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 2,
+          "relativeAudioScheduleErrorP95Ms": 2.666666666667261,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9502.390166686382,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "compact",
+      "repeat": 2,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 249.1066666552797,
+          "notes": 200,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 148
+        },
+        {
+          "elapsedMs": 160,
+          "full": false,
+          "nativeLaunchElapsedMs": 412.14287499315105,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1490.769875003025,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1078,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1238
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 16.000000000000014,
+          "nativeLaunchElapsedMs": 9503.973000013502,
+          "notes": 200,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 16.000000000000014,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9533.476916665677,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "compact",
+      "repeat": 3,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 240.91958333156072,
+          "notes": 200,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 138
+        },
+        {
+          "elapsedMs": 157,
+          "full": false,
+          "nativeLaunchElapsedMs": 401.3178333407268,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1494.0613750077318,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1081,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1238
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 4.666666666667041,
+          "nativeLaunchElapsedMs": 9508.967708330601,
+          "notes": 200,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 2,
+          "relativeAudioScheduleErrorP95Ms": 4.666666666667041,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9541.940791677916,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "full",
+      "repeat": 1,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 233.2320416753646,
+          "notes": 200,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 132
+        },
+        {
+          "elapsedMs": 160,
+          "full": true,
+          "nativeLaunchElapsedMs": 414.8940833401866,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1505.1468750170898,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1079,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1239
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8001,
+          "fps": 59.99250093738283,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 4.666666666667041,
+          "nativeLaunchElapsedMs": 9520.331208332209,
+          "notes": 200,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 4.666666666666375,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9553.345375024946,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "full",
+      "repeat": 2,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 234.99170833383687,
+          "notes": 200,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 132
+        },
+        {
+          "elapsedMs": 171,
+          "full": true,
+          "nativeLaunchElapsedMs": 438.15616666688584,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1524.3804999918211,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1084,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1255
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8001,
+          "fps": 59.99250093738283,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 4.666666666667041,
+          "nativeLaunchElapsedMs": 9531.975249992684,
+          "notes": 200,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 4.666666666667041,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9565.00312499702,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "full",
+      "repeat": 3,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 253.34845832549036,
+          "notes": 200,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 147
+        },
+        {
+          "elapsedMs": 160,
+          "full": true,
+          "nativeLaunchElapsedMs": 450.11758332839236,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1546.0616250056773,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1094,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1254
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8001,
+          "fps": 59.99250093738283,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 3.3333333333338544,
+          "nativeLaunchElapsedMs": 9554.809583321912,
+          "notes": 200,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 3.3333333333338544,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9588.102791662095,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "compact",
+      "repeat": 1,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 242.71391666843556,
+          "notes": 1000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 139
+        },
+        {
+          "elapsedMs": 174,
+          "full": false,
+          "nativeLaunchElapsedMs": 419.49770832434297,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1504.2781666561496,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1080,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1254
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8003,
+          "fps": 60.10246157690866,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 481,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 4.666666666667041,
+          "nativeLaunchElapsedMs": 9511.16695831297,
+          "notes": 1000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 4.666666666666375,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9543.750958313467,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "compact",
+      "repeat": 2,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 236.79620830807835,
+          "notes": 1000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 135
+        },
+        {
+          "elapsedMs": 181,
+          "full": false,
+          "nativeLaunchElapsedMs": 437.4144583125599,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1502.3098749807104,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1072,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1253
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8001,
+          "fps": 59.99250093738283,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 8.666666666666822,
+          "nativeLaunchElapsedMs": 9516.487708315253,
+          "notes": 1000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 7.333333333333414,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9549.260125000728,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "compact",
+      "repeat": 3,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 240.27524999110028,
+          "notes": 1000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 134
+        },
+        {
+          "elapsedMs": 166,
+          "full": false,
+          "nativeLaunchElapsedMs": 410.18383332993835,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1499.832375004189,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1078,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1244
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 6.000000000000227,
+          "nativeLaunchElapsedMs": 9514.672416669782,
+          "notes": 1000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 6.000000000000227,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9547.432083345484,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "full",
+      "repeat": 1,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 236.61208333214745,
+          "notes": 1000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 132
+        },
+        {
+          "elapsedMs": 177,
+          "full": true,
+          "nativeLaunchElapsedMs": 441.78266666131094,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1536.6530416649766,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1093,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1270
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 18.000000000000682,
+          "nativeLaunchElapsedMs": 9546.869375015376,
+          "notes": 1000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 18.000000000000682,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9579.403541662032,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "full",
+      "repeat": 2,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 235.0095000001602,
+          "notes": 1000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 134
+        },
+        {
+          "elapsedMs": 188,
+          "full": true,
+          "nativeLaunchElapsedMs": 454.03466664720327,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1540.569749980932,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1074,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1262
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 9.333333333334082,
+          "nativeLaunchElapsedMs": 9547.834541648626,
+          "notes": 1000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 9.333333333333416,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9580.748833308462,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "full",
+      "repeat": 3,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 242.56866663927212,
+          "notes": 1000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 138
+        },
+        {
+          "elapsedMs": 177,
+          "full": true,
+          "nativeLaunchElapsedMs": 456.62208332214504,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1536.6268333164044,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1078,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1255
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8001,
+          "fps": 59.99250093738283,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 16.000000000000014,
+          "nativeLaunchElapsedMs": 9547.161708323983,
+          "notes": 1000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 16.000000000000014,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9576.978083321592,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "compact",
+      "repeat": 1,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 234.5844166702591,
+          "notes": 5000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 135
+        },
+        {
+          "elapsedMs": 257,
+          "full": false,
+          "nativeLaunchElapsedMs": 509.93112500873394,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1568.4412500122562,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1072,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1329
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 13.333333333333641,
+          "nativeLaunchElapsedMs": 9576.681208331138,
+          "notes": 5000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 13.333333333333641,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9606.350666668732,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "compact",
+      "repeat": 2,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 243.69595834286883,
+          "notes": 5000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 141
+        },
+        {
+          "elapsedMs": 251,
+          "full": false,
+          "nativeLaunchElapsedMs": 510.5536250048317,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1583.84350000415,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1074,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1325
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 12.000000000000455,
+          "nativeLaunchElapsedMs": 9595.395874988753,
+          "notes": 5000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 10.000000000000675,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9628.366916673258,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "compact",
+      "repeat": 3,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": false,
+          "nativeLaunchElapsedMs": 233.08749997522682,
+          "notes": 5000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 134
+        },
+        {
+          "elapsedMs": 252,
+          "full": false,
+          "nativeLaunchElapsedMs": 500.5103749863338,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 1579.6820833347738,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1089,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1341
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8003,
+          "fps": 60.10246157690866,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 481,
+          "full": false,
+          "jsHeapBytes": null,
+          "keyCount": 37,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 4.666666666667041,
+          "nativeLaunchElapsedMs": 9587.246124981903,
+          "notes": 5000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 4.666666666667041,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "nativeLaunchElapsedMs": 9620.133999997051,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "full",
+      "repeat": 1,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 251.02520833024755,
+          "notes": 5000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 145
+        },
+        {
+          "elapsedMs": 245,
+          "full": true,
+          "nativeLaunchElapsedMs": 545.4599166696426,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1612.025291658938,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1079,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1324
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8001,
+          "fps": 59.99250093738283,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 7.333333333333414,
+          "nativeLaunchElapsedMs": 9619.475041661644,
+          "notes": 5000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 7.333333333333414,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9652.591541642323,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "full",
+      "repeat": 2,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 236.29383332445286,
+          "notes": 5000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 135
+        },
+        {
+          "elapsedMs": 247,
+          "full": true,
+          "nativeLaunchElapsedMs": 530.1367499923799,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1589.4501250004396,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1068,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1315
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8010,
+          "fps": 60.04993757802747,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 481,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 5.333333333333634,
+          "nativeLaunchElapsedMs": 9601.66591667803,
+          "notes": 5000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 5.333333333333634,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9634.590166650014,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "full",
+      "repeat": 3,
+      "records": [
+        {
+          "devicePixelRatio": 2,
+          "full": true,
+          "nativeLaunchElapsedMs": 235.25008332217112,
+          "notes": 5000,
+          "phase": "startup",
+          "platform": "web",
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+          "viewport": [
+            1590,
+            1192
+          ],
+          "webReadyMs": 139
+        },
+        {
+          "elapsedMs": 246,
+          "full": true,
+          "nativeLaunchElapsedMs": 532.0007499831263,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 1597.6086249866057,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "web",
+          "sceneToAudioMs": 1079,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1325
+        },
+        {
+          "audioNotes": 66,
+          "backingPixels": [
+            3164,
+            1484
+          ],
+          "elapsedMs": 8000,
+          "fps": 60,
+          "frameP50Ms": 17,
+          "frameP95Ms": 17,
+          "frameP99Ms": 17,
+          "frames": 480,
+          "full": true,
+          "jsHeapBytes": null,
+          "keyCount": 88,
+          "longTasks": null,
+          "maxFrameMs": 17,
+          "maxRelativeAudioScheduleErrorMs": 12.000000000000455,
+          "nativeLaunchElapsedMs": 9606.704249978065,
+          "notes": 5000,
+          "over25Ms": 0,
+          "over50Ms": 0,
+          "phase": "playback",
+          "platform": "web",
+          "rafWorkP95Ms": 3,
+          "relativeAudioScheduleErrorP95Ms": 12.00000000000001,
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "nativeLaunchElapsedMs": 9636.44945831038,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "web",
+          "schema": 2,
+          "seconds": 8
+        }
+      ]
+    }
+  ],
+  "summary": [
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "compact",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 157,
+        "sceneToAudioMs": 1078,
+        "audioNotes": 66,
+        "elapsedMs": 8000,
+        "fps": 60,
+        "frameP50Ms": 17,
+        "frameP95Ms": 17,
+        "frameP99Ms": 17,
+        "frames": 480,
+        "keyCount": 37,
+        "maxFrameMs": 17,
+        "maxRelativeAudioScheduleErrorMs": 4.666666666667041,
+        "nativeLaunchElapsedMs": 9503.973000013502,
+        "notes": 200,
+        "over25Ms": 0,
+        "over50Ms": 0,
+        "rafWorkP95Ms": 2,
+        "relativeAudioScheduleErrorP95Ms": 4.666666666667041,
+        "schema": 2,
+        "seconds": 8
+      },
+      "worstFrameMs": 17
+    },
+    {
+      "platform": "web",
+      "notes": 200,
+      "layout": "full",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 160,
+        "sceneToAudioMs": 1084,
+        "audioNotes": 66,
+        "elapsedMs": 8001,
+        "fps": 59.99250093738283,
+        "frameP50Ms": 17,
+        "frameP95Ms": 17,
+        "frameP99Ms": 17,
+        "frames": 480,
+        "keyCount": 88,
+        "maxFrameMs": 17,
+        "maxRelativeAudioScheduleErrorMs": 4.666666666667041,
+        "nativeLaunchElapsedMs": 9531.975249992684,
+        "notes": 200,
+        "over25Ms": 0,
+        "over50Ms": 0,
+        "rafWorkP95Ms": 3,
+        "relativeAudioScheduleErrorP95Ms": 4.666666666666375,
+        "schema": 2,
+        "seconds": 8
+      },
+      "worstFrameMs": 17
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "compact",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 174,
+        "sceneToAudioMs": 1078,
+        "audioNotes": 66,
+        "elapsedMs": 8001,
+        "fps": 60,
+        "frameP50Ms": 17,
+        "frameP95Ms": 17,
+        "frameP99Ms": 17,
+        "frames": 480,
+        "keyCount": 37,
+        "maxFrameMs": 17,
+        "maxRelativeAudioScheduleErrorMs": 6.000000000000227,
+        "nativeLaunchElapsedMs": 9514.672416669782,
+        "notes": 1000,
+        "over25Ms": 0,
+        "over50Ms": 0,
+        "rafWorkP95Ms": 3,
+        "relativeAudioScheduleErrorP95Ms": 6.000000000000227,
+        "schema": 2,
+        "seconds": 8
+      },
+      "worstFrameMs": 17
+    },
+    {
+      "platform": "web",
+      "notes": 1000,
+      "layout": "full",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 177,
+        "sceneToAudioMs": 1078,
+        "audioNotes": 66,
+        "elapsedMs": 8000,
+        "fps": 60,
+        "frameP50Ms": 17,
+        "frameP95Ms": 17,
+        "frameP99Ms": 17,
+        "frames": 480,
+        "keyCount": 88,
+        "maxFrameMs": 17,
+        "maxRelativeAudioScheduleErrorMs": 16.000000000000014,
+        "nativeLaunchElapsedMs": 9547.161708323983,
+        "notes": 1000,
+        "over25Ms": 0,
+        "over50Ms": 0,
+        "rafWorkP95Ms": 3,
+        "relativeAudioScheduleErrorP95Ms": 16.000000000000014,
+        "schema": 2,
+        "seconds": 8
+      },
+      "worstFrameMs": 17
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "compact",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 252,
+        "sceneToAudioMs": 1074,
+        "audioNotes": 66,
+        "elapsedMs": 8000,
+        "fps": 60,
+        "frameP50Ms": 17,
+        "frameP95Ms": 17,
+        "frameP99Ms": 17,
+        "frames": 480,
+        "keyCount": 37,
+        "maxFrameMs": 17,
+        "maxRelativeAudioScheduleErrorMs": 12.000000000000455,
+        "nativeLaunchElapsedMs": 9587.246124981903,
+        "notes": 5000,
+        "over25Ms": 0,
+        "over50Ms": 0,
+        "rafWorkP95Ms": 3,
+        "relativeAudioScheduleErrorP95Ms": 10.000000000000675,
+        "schema": 2,
+        "seconds": 8
+      },
+      "worstFrameMs": 17
+    },
+    {
+      "platform": "web",
+      "notes": 5000,
+      "layout": "full",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 246,
+        "sceneToAudioMs": 1079,
+        "audioNotes": 66,
+        "elapsedMs": 8001,
+        "fps": 60,
+        "frameP50Ms": 17,
+        "frameP95Ms": 17,
+        "frameP99Ms": 17,
+        "frames": 480,
+        "keyCount": 88,
+        "maxFrameMs": 17,
+        "maxRelativeAudioScheduleErrorMs": 7.333333333333414,
+        "nativeLaunchElapsedMs": 9606.704249978065,
+        "notes": 5000,
+        "over25Ms": 0,
+        "over50Ms": 0,
+        "rafWorkP95Ms": 3,
+        "relativeAudioScheduleErrorP95Ms": 7.333333333333414,
+        "schema": 2,
+        "seconds": 8
+      },
+      "worstFrameMs": 17
+    }
+  ],
+  "device": {
+    "model": "iPad Air 13-inch (M4)",
+    "orientation": "landscape",
+    "connection": "USB",
+    "os": "iPadOS 27.2.1 (24B156)",
+    "displayMaximumHz": 60
+  },
+  "artifactSHA256": "92ac410c8417b08c3fa476e237cc4f00715dc434b1718e7176891bf3618cc4af"
+}

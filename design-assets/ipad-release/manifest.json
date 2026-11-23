@@ -1,0 +1,280 @@
+{
+  "design": "Approved simple screen: centered 80px Space Grotesk Replay, production C3–C6 white/black keys, no highway notes.",
+  "icon": "Existing blue piano artwork, unchanged; resized from its opaque 1024px original.",
+  "regenerate": "npx storybook build -o dist/storybook && node scripts/export-ipad-assets.mjs",
+  "launch": "Native applications use independent adaptive storyboards and 1x/2x/3x sliced key assets. Full-screen PNGs are exports, not stretched native launch backgrounds.",
+  "sources": [
+    "https://developer.apple.com/documentation/xcode/specifying-your-apps-launch-screen",
+    "https://developer.apple.com/design/human-interface-guidelines/app-icons",
+    "https://www.apple.com/ipad-air/specs/",
+    "https://www.apple.com/ipad-pro/specs/",
+    "https://www.apple.com/ipad-mini/specs/",
+    "https://www.apple.com/ipad-11/specs/"
+  ],
+  "screens": [
+    {
+      "filename": "replay-1536x2048.png",
+      "width": 1536,
+      "height": 2048,
+      "orientation": "portrait",
+      "family": "9.7-inch iPad / earlier mini",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2048x1536.png",
+      "width": 2048,
+      "height": 1536,
+      "orientation": "landscape",
+      "family": "9.7-inch iPad / earlier mini",
+      "scale": 2
+    },
+    {
+      "filename": "replay-1620x2160.png",
+      "width": 1620,
+      "height": 2160,
+      "orientation": "portrait",
+      "family": "10.2-inch iPad",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2160x1620.png",
+      "width": 2160,
+      "height": 1620,
+      "orientation": "landscape",
+      "family": "10.2-inch iPad",
+      "scale": 2
+    },
+    {
+      "filename": "replay-1668x2224.png",
+      "width": 1668,
+      "height": 2224,
+      "orientation": "portrait",
+      "family": "10.5-inch iPad Air / legacy Pro",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2224x1668.png",
+      "width": 2224,
+      "height": 1668,
+      "orientation": "landscape",
+      "family": "10.5-inch iPad Air / legacy Pro",
+      "scale": 2
+    },
+    {
+      "filename": "replay-1640x2360.png",
+      "width": 1640,
+      "height": 2360,
+      "orientation": "portrait",
+      "family": "10.9-inch and 11-inch iPad / Air",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2360x1640.png",
+      "width": 2360,
+      "height": 1640,
+      "orientation": "landscape",
+      "family": "10.9-inch and 11-inch iPad / Air",
+      "scale": 2
+    },
+    {
+      "filename": "replay-1668x2388.png",
+      "width": 1668,
+      "height": 2388,
+      "orientation": "portrait",
+      "family": "11-inch iPad Pro, earlier display",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2388x1668.png",
+      "width": 2388,
+      "height": 1668,
+      "orientation": "landscape",
+      "family": "11-inch iPad Pro, earlier display",
+      "scale": 2
+    },
+    {
+      "filename": "replay-1668x2420.png",
+      "width": 1668,
+      "height": 2420,
+      "orientation": "portrait",
+      "family": "11-inch iPad Pro OLED",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2420x1668.png",
+      "width": 2420,
+      "height": 1668,
+      "orientation": "landscape",
+      "family": "11-inch iPad Pro OLED",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2048x2732.png",
+      "width": 2048,
+      "height": 2732,
+      "orientation": "portrait",
+      "family": "12.9-inch iPad Pro / 13-inch Air",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2732x2048.png",
+      "width": 2732,
+      "height": 2048,
+      "orientation": "landscape",
+      "family": "12.9-inch iPad Pro / 13-inch Air",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2064x2752.png",
+      "width": 2064,
+      "height": 2752,
+      "orientation": "portrait",
+      "family": "13-inch iPad Pro OLED",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2752x2064.png",
+      "width": 2752,
+      "height": 2064,
+      "orientation": "landscape",
+      "family": "13-inch iPad Pro OLED",
+      "scale": 2
+    },
+    {
+      "filename": "replay-1488x2266.png",
+      "width": 1488,
+      "height": 2266,
+      "orientation": "portrait",
+      "family": "8.3-inch iPad mini",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2266x1488.png",
+      "width": 2266,
+      "height": 1488,
+      "orientation": "landscape",
+      "family": "8.3-inch iPad mini",
+      "scale": 2
+    },
+    {
+      "filename": "replay-1512x2316.png",
+      "width": 1512,
+      "height": 2316,
+      "orientation": "portrait",
+      "family": "8.5-inch iPad mini",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2316x1512.png",
+      "width": 2316,
+      "height": 1512,
+      "orientation": "landscape",
+      "family": "8.5-inch iPad mini",
+      "scale": 2
+    },
+    {
+      "filename": "replay-2384x3180.png",
+      "width": 2384,
+      "height": 3180,
+      "orientation": "portrait",
+      "family": "Bouba screenshot / approved design preview size",
+      "scale": 2
+    },
+    {
+      "filename": "replay-3180x2384.png",
+      "width": 3180,
+      "height": 2384,
+      "orientation": "landscape",
+      "family": "Bouba screenshot / approved design preview size",
+      "scale": 2
+    }
+  ],
+  "icons": [
+    16,
+    20,
+    29,
+    32,
+    36,
+    40,
+    48,
+    57,
+    58,
+    60,
+    70,
+    72,
+    76,
+    80,
+    87,
+    96,
+    114,
+    120,
+    128,
+    144,
+    150,
+    152,
+    167,
+    180,
+    192,
+    256,
+    310,
+    512,
+    1024
+  ],
+  "parts": [
+    {
+      "filename": "LaunchWordmark@1x.png",
+      "scale": 1,
+      "width": 320,
+      "height": 120
+    },
+    {
+      "filename": "LaunchWhiteKey@1x.png",
+      "scale": 1,
+      "width": 72,
+      "height": 266
+    },
+    {
+      "filename": "LaunchBlackKey@1x.png",
+      "scale": 1,
+      "width": 58,
+      "height": 157
+    },
+    {
+      "filename": "LaunchWordmark@2x.png",
+      "scale": 2,
+      "width": 640,
+      "height": 240
+    },
+    {
+      "filename": "LaunchWhiteKey@2x.png",
+      "scale": 2,
+      "width": 144,
+      "height": 532
+    },
+    {
+      "filename": "LaunchBlackKey@2x.png",
+      "scale": 2,
+      "width": 116,
+      "height": 314
+    },
+    {
+      "filename": "LaunchWordmark@3x.png",
+      "scale": 3,
+      "width": 960,
+      "height": 360
+    },
+    {
+      "filename": "LaunchWhiteKey@3x.png",
+      "scale": 3,
+      "width": 216,
+      "height": 798
+    },
+    {
+      "filename": "LaunchBlackKey@3x.png",
+      "scale": 3,
+      "width": 174,
+      "height": 471
+    }
+  ],
+  "background": "rgb(6, 7, 9)"
+}

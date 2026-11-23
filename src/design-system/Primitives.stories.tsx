@@ -14,7 +14,7 @@ const meta = { title: "Components/Primitives" } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const SwitchToggle: Story = { name: "Switch (toggle)", render: function S() {
+export const SwitchToggle: Story = { name: "Switch (toggle)", parameters: { docs: { description: { story: "44 × 24 px track with a 1 px border. The off-state border uses the same input color token as outline buttons. The 20 px thumb keeps a 2 px inset from the outer edge in both states. Piano toolbars expand the touch target to 44 px high without changing the pill geometry. Radix owns toggle and keyboard semantics." } } }, render: function S() {
   const [on, setOn] = useState(true);
   return <div className="space-y-4">
     <div className="flex items-center gap-3"><Switch id="s1" checked={on} onCheckedChange={setOn} /><Label htmlFor="s1">{on ? "On" : "Off"}</Label></div>

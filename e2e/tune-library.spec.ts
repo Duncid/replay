@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { getTuneAvailability, type TuneLibrarySnapshot } from "../src/utils/tuneLibrary";
+import { getTuneAvailability, isTuneAcquired, type TuneLibrarySnapshot } from "../src/utils/tuneLibrary";
+
+import { getTunePreview } from "../src/utils/tunePreview";
 
 const snapshot: TuneLibrarySnapshot = {
   tunes: [
@@ -44,13 +46,14 @@ test("student tune list makes no teacher calls and blocks locked selection", asy
     const url = new URL(route.request().url());
     const table = url.pathname.split("/").pop();
     const body = table === "tune_assets"
-      ? [{ tune_key: "intro", briefing: null }, { tune_key: "st-louis-blues", briefing: null }]
+      ? [{ tune_key: "intro", note_sequence: { notes: [{ pitch: 60, startTime: 0, endTime: 2 }], totalTime: 3 } }, { tune_key: "st-louis-blues", briefing: null }]
       : table === "curriculum_exports" ? { snapshot } : [];
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Practice: intro", exact: true })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Locked: st-louis-blues", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Locked: St Louis Blues", exact: true })).toBeDisabled();
+  await expect(page.getByText("1 note · 3 sec", { exact: true })).toBeVisible();
   expect(teacherCalls).toEqual([]);
 });
 
@@ -96,4 +99,45 @@ test("picking an unpublished tune from the menu offers Publish", async ({ page }
   await page.getByRole("menuitem", { name: "gymnopdie", exact: true }).click();
   await expect(page.locator("div.sticky").first().getByText("gymnopdie", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
+});
+
+test("card completion recognizes both asset and curriculum identifiers", () => {
+  expect(isTuneAcquired("intro", snapshot, new Set(["first-node"]))).toBe(true);
+  expect(isTuneAcquired("intro", snapshot, new Set(["intro"]))).toBe(true);
+  expect(isTuneAcquired("st-louis-blues", snapshot, new Set(["intro"]))).toBe(false);
+});
+
+test("previews bound drawing work while retaining full tune metadata", () => {
+  const notes = Array.from({ length: 100 }, (_, index) => ({ pitch: 60, startTime: index, endTime: index + 1 }));
+  const preview = getTunePreview({ notes: [null, { pitch: -1 }, ...notes], totalTime: 110 });
+  expect(preview?.notes).toHaveLength(14);
+  expect(preview?.noteCount).toBe(100);
+  expect(preview?.duration).toBe(110);
+  expect(getTunePreview(null)).toBeUndefined();
+  expect(getTunePreview({ notes: [] })).toBeUndefined();
+});
+
+
+test("Admin Debug activation persists and controls header tools", async ({ page }) => {
+  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.goto("/");
+  await expect(page.locator("#debug-mode")).toHaveCount(0);
+  const tools = page.getByRole("button", { name: "Debug menu", exact: true });
+  await expect(tools).toHaveCount(0);
+  const openAdmin = async () => {
+    await page.getByRole("button", { name: "Menu", exact: true }).click();
+  };
+  await openAdmin();
+  const toggle = page.getByRole("menuitemcheckbox", { name: "Debug", exact: true });
+  await expect(toggle).not.toBeChecked();
+  await toggle.click();
+  await expect(tools).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("replay-debug-mode"))).toBe("true");
+  await page.reload();
+  await expect(tools).toBeVisible();
+  await openAdmin();
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+  await expect(tools).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("replay-debug-mode"))).toBe("false");
 });

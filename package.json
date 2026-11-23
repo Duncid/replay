@@ -22,7 +22,8 @@
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "storybook:test": "playwright test --config playwright.storybook.config.ts",
-    "tokens:generate": "node scripts/generate-theme.mjs"
+    "tokens:generate": "node scripts/generate-theme.mjs",
+    "perf:web": "playwright test --config playwright.performance.config.ts"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",

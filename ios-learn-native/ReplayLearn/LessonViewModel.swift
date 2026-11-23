@@ -91,6 +91,20 @@ final class LessonViewModel: ObservableObject {
         if ProcessInfo.processInfo.arguments.contains("--preview-practice") { startTune("intro") }
         #endif
     }
+    #if DEBUG
+    /// Local-only fixture; never reads Cloud or writes real learner progress.
+    func preparePerformanceFixture(count: Int) {
+        precondition(preview)
+        let notes = (0..<count).map { i in
+            Note(pitch: 48 + i % 25, startTime: Double(i / 2) * 0.25, endTime: Double(i / 2) * 0.25 + 0.2, velocity: 90)
+        }
+        let sequence = NoteSequence(notes: notes, totalTime: Double((count + 1) / 2) * 0.25)
+        tunes = [TuneLibraryItem(tuneKey: "performance-fixture", unlocked: true, prerequisites: [], sequence: sequence)]
+        let item = TunePracticeItem(itemId: "performance", itemType: "nugget", instruction: "Deterministic performance measurement", nugget: TunePlanSequence(noteSequence: sequence), assembly: nil, fullTune: nil)
+        resume = PracticeResume(tuneKey: "performance-fixture", title: "Performance fixture", plan: [item], index: 0, updatedAt: Date())
+    }
+    #endif
+
     func loadLibrary() async {
         if preview { phase = .library; return }
         phase = .loadingLibrary

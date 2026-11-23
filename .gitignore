@@ -35,3 +35,6 @@ tooling/venv/
 # Component documentation build
 storybook-static/
 storybook-test-results/
+
+# Opt-in performance measurements
+performance-results/

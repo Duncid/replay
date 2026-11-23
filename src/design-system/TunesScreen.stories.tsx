@@ -1,3 +1,4 @@
+import { tuneCarouselItems } from "./tuneCardFixtures";
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Menu, ChevronDown, Timer, Mic, KeyboardMusic } from "lucide-react";
@@ -13,14 +14,9 @@ function TunesScreen({ connected = false, live = false }: { connected?: boolean;
     <header className="flex items-center justify-between p-2">
       <div className="flex gap-2 items-center"><Button variant="ghost" size="icon" aria-label="Menu"><Menu /></Button>
         <Tabs value="tunes"><TabsList><TabsTrigger value="tunes">Tunes</TabsTrigger><TabsTrigger value="compose">Compose</TabsTrigger></TabsList></Tabs></div>
-      <label className="flex items-center gap-3 font-mono text-[11px] font-semibold tracking-[.12em] text-muted-foreground">DEBUG <Switch /></label>
     </header>
     <div className="flex-1 min-h-0 overflow-auto">
-      <TuneLibraryView tunes={[
-        { tune_key: "intro", unlocked: true, prerequisites: [] },
-        { tune_key: "st-louis-blues", unlocked: true, prerequisites: [] },
-        { tune_key: "autumn-leaves", unlocked: false, prerequisites: ["st-louis-blues"] },
-      ]} refetch={() => {}} onSelectTune={() => {}} />
+      <TuneLibraryView tunes={tuneCarouselItems} refetch={() => {}} onSelectTune={() => {}} />
     </div>
     <div className="keyboard-panel shrink-0 flex flex-col">
       <div className="keyboard-toolbar flex flex-wrap items-center justify-between gap-2 p-1.5 shrink-0">

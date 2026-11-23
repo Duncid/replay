@@ -649,13 +649,15 @@ export function TuneMode({
   // Loading states
   if (state.phase === "loading" || state.phase === "coaching") {
     return (
-      <LoadingSpinner
-        message={
-          state.phase === "loading"
-            ? t("tune.loadingTune")
-            : t("tune.preparingPlan")
-        }
-      />
+      <div className="flex h-full min-h-0 w-full items-center justify-center">
+        <LoadingSpinner
+          message={
+            state.phase === "loading"
+              ? t("tune.loadingTune")
+              : t("tune.preparingPlan")
+          }
+        />
+      </div>
     );
   }
 

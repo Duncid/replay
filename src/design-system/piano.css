@@ -13,7 +13,7 @@
 .piano-key--black[data-playable="false"] { background: hsl(var(--key-black-disabled)); }
 .piano-key[data-activity="user"] { background: hsl(var(--primary)); box-shadow: var(--glow-user); }
 .piano-key[data-activity="ai"] { background: hsl(var(--ai)); box-shadow: var(--glow-ai); }
-.note-rail { position: relative; height: 50px; flex: 0 0 50px; container-type: inline-size; background: hsl(var(--card)); }
+.note-rail { position: relative; height: 52px; flex: 0 0 52px; container-type: inline-size; background: hsl(var(--card)); }
 .note-rail__cell {
   position: relative; display: flex; align-items: center; justify-content: center;
   min-width: 0; height: 24px; border-radius: 4px;
@@ -45,7 +45,19 @@
   background: hsl(var(--card)); border-top: 1px solid hsl(var(--border));
 }
 .keyboard-toolbar button { flex-shrink: 0; }
-@media (pointer: coarse) { .keyboard-toolbar button { min-height: 44px; } }
+@media (pointer: coarse) {
+  .keyboard-toolbar button:not([role="switch"]) { min-height: 44px; }
+  /* Enlarge the hit area without turning the 44 × 24 pill into a circle. */
+  .keyboard-toolbar [role="switch"] { position: relative; }
+  .keyboard-toolbar [role="switch"]::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
 
 .note-rail__cell[data-in-range="false"] { opacity: .3; }
 .note-rail__cell[data-armed="true"] { outline: 2px solid hsl(var(--foreground)); outline-offset: -2px; }
@@ -77,3 +89,37 @@
 }
 /* Only practice allows its canvas to continue into the covered dock region. */
 #topContainer:has(.highway-stage), [role="tabpanel"]:has(.highway-stage) { overflow: visible; }
+
+/* The highway extends to the workspace top; controls remain above its canvas. */
+.practice-chrome { background: hsl(var(--card)); }
+.replay-header,
+.highway-top-header { background: transparent; }
+.tune-practice[data-highway-visible="true"] .practice-chrome,
+.highway-top-chrome {
+  background: hsl(var(--card) / var(--piano-dock-tint));
+  -webkit-backdrop-filter: blur(var(--piano-dock-blur));
+  backdrop-filter: blur(var(--piano-dock-blur));
+}
+@media (prefers-reduced-transparency: reduce) {
+  .tune-practice[data-highway-visible="true"] .practice-chrome,
+  .highway-top-chrome {
+    background: hsl(var(--card));
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}
+
+/* Feedback is an overlay: entry and exit never resize the playing surface. */
+.practice-feedback-toast { animation: practice-feedback-in 220ms ease-out both; }
+.practice-feedback-toast[data-state="leaving"] { animation: practice-feedback-out 220ms ease-in both; pointer-events: none; }
+@keyframes practice-feedback-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes practice-feedback-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .practice-feedback-toast { animation: none; }
+  .practice-feedback-toast[data-state="leaving"] { opacity: 0; }
+}

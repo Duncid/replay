@@ -10,6 +10,9 @@ import Foundation
 /// for sampled buffers later without touching the call sites.
 @MainActor
 final class PianoAudioEngine: ObservableObject {
+    #if DEBUG
+    var performanceNote: ((_ expected: Double, _ actual: Double) -> Void)?
+    #endif
     private let engine = AVAudioEngine()
     private var voices: [AVAudioPlayerNode] = []
     private var nextVoice = 0
@@ -96,6 +99,9 @@ final class PianoAudioEngine: ObservableObject {
                     counts[event.pitch, default: 0] += 1
                     let v = event.velocity.map { $0 <= 1 ? $0 * 127 : $0 } ?? 100
                     play(pitch: event.pitch, velocity: Int(max(0, min(127, v))), demo: true)
+                    #if DEBUG
+                    performanceNote?(event.time, (renderHostTime ?? start) - start)
+                    #endif
                 } else {
                     counts[event.pitch, default: 1] -= 1
                     if counts[event.pitch] == 0 { counts.removeValue(forKey: event.pitch); release(pitch: event.pitch, demo: true) }

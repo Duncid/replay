@@ -2119,7 +2119,6 @@ const Index = () => {
         setSelectedModel={setSelectedModel}
         aiModels={{ llm: AI_MODELS.llm }}
         debugMode={debugMode}
-        setDebugMode={setDebugMode}
         onEnableFreePractice={() => setLearnModeType("free-practice")}
         debugMenuState={debugMenuState}
       />
@@ -2130,16 +2129,18 @@ const Index = () => {
 
   return (
     <HighwayProvider fullKeyboard={fullKeyboard}><TuneManagementProvider active={activeMode === "lab"}>
-      <div className="h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
+      <div data-highway-surface className="replay-workspace relative isolate h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
         <Tabs
           value={activeMode}
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
           className="w-full flex-1 min-h-0 flex flex-col"
         >
-          <div className="sticky top-0 z-30 w-full bg-background">
+          <div className="replay-header sticky top-0 z-30 w-full">
             <div className="flex items-center justify-between p-2">
               <div className="flex items-center gap-2">
                 <UserMenu
+                  debugMode={debugMode}
+                  onDebugModeChange={setDebugMode}
                   language={language}
                   onLanguageChange={setLanguage}
                   notationPreference={musicNotation}

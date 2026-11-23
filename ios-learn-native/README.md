@@ -112,3 +112,25 @@ write live progress. `--design-system` is available in release builds too.
 Before release, verify real USB/Bluetooth MIDI and multi-finger input on hardware;
 simulator logic checks do not replace those physical checks. Check portrait,
 landscape, narrow windows, large accessibility text and reduced transparency.
+
+## Opt-in Note Highway performance baseline
+
+Debug builds accept `--replay-performance`, `--performance-notes=200` (also 1000/5000),
+`--performance-seconds=8`, and optional `--performance-full`. This renders the real
+practice screen with an isolated local fixture and plays its demo through the normal
+readiness gate and audio engine. It reports SpriteKit cadence, scene-update CPU time,
+and audio dispatch offsets; no scoring thresholds or audio scheduling rules change.
+All hooks and the fixture screen are excluded from Release builds.
+
+Use `scripts/measure-ipad-performance.py --platform native` from the repository root
+after installing a Debug build. See [methodology and results](../docs/ipad-performance.md)
+and [the shared runner command](../ios/README.md#opt-in-physical-device-performance-probe).
+The two apps keep independent implementations; only the external measurement runner
+and the documented workload convention cover both.
+
+
+### Launch artwork and icons
+
+The launch storyboard uses a centered Replay wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
+
+Both targets use the existing opaque blue piano icon at 1024px; Xcode derives the device icon sizes. Exported icon sizes, portrait/landscape start screens, and a size/source manifest live in `design-assets/ipad-release/`. Run `npx storybook build -o dist/storybook`, serve the build on port 8082, then `node scripts/export-ipad-assets.mjs`. The exporter also refreshes native launch assets, storyboards, and the existing web icon URLs. Start-screen PNGs are review/export assets; the native launch screen does not stretch a full-screen screenshot.

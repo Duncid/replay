@@ -1,10 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { usePublishedTuneKeys } from "@/hooks/useTuneQueries";
-import { getTuneAvailability, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
+import { getTunePreview } from "@/utils/tunePreview";
+import { getTuneAvailability, isTuneAcquired, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
 
 export function useTuneLibrary(localUserId?: string | null) {
-  const tunes = usePublishedTuneKeys();
+  const tunes = useQuery({
+    queryKey: ["published-tune-keys", "previews"],
+    queryFn: async () => {
+      // Fetch previews together; keep the admin's lightweight key query separate.
+      const { data, error } = await supabase.from("tune_assets")
+        .select("tune_key, note_sequence, curriculum_versions!inner(status, published_at)")
+        .eq("curriculum_versions.status", "published")
+        .order("curriculum_versions(published_at)", { ascending: false });
+      if (error) throw new Error(error.message);
+      const seen = new Set<string>();
+      return (data ?? []).filter(tune => {
+        if (seen.has(tune.tune_key)) return false;
+        seen.add(tune.tune_key);
+        return true;
+      }).map(tune => ({ tune_key: tune.tune_key, preview: getTunePreview(tune.note_sequence) }));
+    },
+  });
   const progress = useQuery({
     queryKey: ["tune-library-progress", localUserId ?? null],
     queryFn: async () => {
@@ -30,6 +46,7 @@ export function useTuneLibrary(localUserId?: string | null) {
   return {
     tunes: (tunes.data ?? []).map(tune => ({
       ...tune,
+      acquired: isTuneAcquired(tune.tune_key, progress.data?.snapshot ?? null, progress.data?.acquired ?? new Set()),
       ...getTuneAvailability(tune.tune_key, progress.data?.snapshot ?? null, progress.data?.acquired ?? new Set()),
     })),
     isLoading: tunes.isPending || progress.isPending,

@@ -3,6 +3,11 @@ export interface TuneLibrarySnapshot {
   edges?: Array<{ source_key: string; target_key: string; edge_type: string }>;
 }
 
+export function isTuneAcquired(musicRef: string, snapshot: TuneLibrarySnapshot | null, acquiredTuneKeys: Set<string>): boolean {
+  return acquiredTuneKeys.has(musicRef) || (snapshot?.tunes ?? []).some(node =>
+    node.musicRef === musicRef && acquiredTuneKeys.has(node.tuneKey));
+}
+
 /** Progression is between curriculum node keys; assets are addressed by musicRef. */
 export function getTuneAvailability(
   musicRef: string,

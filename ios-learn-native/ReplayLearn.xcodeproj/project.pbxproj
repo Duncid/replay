@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BC0000000000000000000301 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BC0000000000000000000300; };
+		BC0000000000000000000201 /* NativePerformance.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0000000000000000000101 /* NativePerformance.swift */; };
 		AA0000000000000000000200 /* ReplayLearnApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000100 /* ReplayLearnApp.swift */; };
 		AA0000000000000000000201 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000101 /* Config.swift */; };
 		AA0000000000000000000202 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000102 /* Models.swift */; };
@@ -35,6 +37,8 @@ BC0000000000000000000002 = {isa = PBXBuildFile; fileRef = BC00000000000000000000
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		BC0000000000000000000300 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		BC0000000000000000000101 /* NativePerformance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativePerformance.swift; sourceTree = "<group>"; };
 		AA0000000000000000000006 /* ReplayLearn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReplayLearn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000100 /* ReplayLearnApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayLearnApp.swift; sourceTree = "<group>"; };
@@ -86,6 +90,7 @@ BC0000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = folder.a
 		AA0000000000000000000004 /* ReplayLearn */ = {
 			isa = PBXGroup;
 			children = (
+BC0000000000000000000300 /* LaunchScreen.storyboard */,
 BC0000000000000000000001 /* Assets.xcassets */,
 1AD484C2601501D5AB8AB20E /* JetBrainsMono-OFL.txt */,
 65ACD36994BCE1EFF41576CA /* SpaceGrotesk-OFL.txt */,
@@ -94,6 +99,7 @@ BC0000000000000000000001 /* Assets.xcassets */,
 C382EE1185805AD85A308A32 /* MIDIByteParser.swift */,
 8E8DEF919C21F5DAB44B0764 /* PianoGeometry.swift */,
 				AA0000000000000000000100 /* ReplayLearnApp.swift */,
+				BC0000000000000000000101 /* NativePerformance.swift */,
 				AA0000000000000000000101 /* Config.swift */,
 				AA0000000000000000000102 /* Models.swift */,
 				AA0000000000000000000103 /* APIClient.swift */,
@@ -182,6 +188,7 @@ C382EE1185805AD85A308A32 /* MIDIByteParser.swift */,
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+BC0000000000000000000301 /* LaunchScreen.storyboard in Resources */,
 BC0000000000000000000002 /* Assets.xcassets */,
 EEA73DC5BCE5672F56FD92EF /* JetBrainsMono-OFL.txt */,
 0F060A5B5850ACBE78A771DF /* SpaceGrotesk-OFL.txt */,
@@ -200,6 +207,7 @@ EEA73DC5BCE5672F56FD92EF /* JetBrainsMono-OFL.txt */,
 A8961CC810B6E52D4925DE2A /* MIDIByteParser.swift */,
 5B73C4D1F1CB48AC44AFBA98 /* PianoGeometry.swift */,
 				AA0000000000000000000200 /* ReplayLearnApp.swift in Sources */,
+				BC0000000000000000000201 /* NativePerformance.swift in Sources */,
 				AA0000000000000000000201 /* Config.swift in Sources */,
 				AA0000000000000000000202 /* Models.swift in Sources */,
 				AA0000000000000000000203 /* APIClient.swift in Sources */,

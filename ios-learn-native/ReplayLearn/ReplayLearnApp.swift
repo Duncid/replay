@@ -7,7 +7,13 @@ struct ReplayLearnApp: App {
             if ProcessInfo.processInfo.arguments.contains("--design-system") {
                 DesignSystemView().preferredColorScheme(.dark)
             } else {
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--replay-performance") {
+                    NativePerformanceView()
+                } else { ReplayMainView() }
+                #else
                 ReplayMainView()
+                #endif
             }
         }
     }

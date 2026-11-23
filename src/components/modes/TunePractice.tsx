@@ -1,4 +1,6 @@
+import { PracticeFeedbackToast } from "@/components/PracticeFeedbackToast";
 import { practiceSceneReadiness, type SceneReadiness } from "@/lib/practiceSceneReadiness";
+import { useHighwayTopBleed } from "@/components/highway/useHighwayTopBleed";
 import { useHighway } from "@/components/highway/HighwayContext";
 import type { HighwayNote } from "@/components/highway/model";
 
@@ -270,12 +272,8 @@ export function TunePractice({
   const streakComplete = totalWins >= STREAK_THRESHOLD;
   const [shouldPulse, setShouldPulse] = useState(false);
   const [showSheetView, setShowSheetView] = useState(false);
+  const { stageRef, topBleed } = useHighwayTopBleed(!showSheetView);
   const [pulsedStreak, setPulsedStreak] = useState<number | null>(null);
-  const [commentKey, setCommentKey] = useState(0);
-  const [leavingText, setLeavingText] = useState<string | null>(null);
-  const [showSending, setShowSending] = useState(false);
-  const [feedbackArrivedPulse, setFeedbackArrivedPulse] = useState(false);
-  const leavingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstNugget = currentIndex === 0;
   const isLastNugget = currentIndex >= totalNuggets - 1;
   const handleCopyEvalDebug = async () => {
@@ -288,9 +286,6 @@ export function TunePractice({
     } catch {
       console.error("Unable to copy evaluation details to the clipboard");
     }
-  };
-  const statusLabels = {
-    sending: t("tune.status.sending"),
   };
   const streakMessages = {
     success: t("tune.feedback.greatJob"),
@@ -330,56 +325,6 @@ export function TunePractice({
   const sampleSequence = (currentNugget.nugget?.noteSequence ||
     currentNugget.assembly?.noteSequence ||
     currentNugget.fullTune?.noteSequence) as NoteSequence | undefined;
-
-  const commentText =
-    lastEvaluation?.feedbackText ?? t("tune.comments.noComments");
-  const evaluationLabel = lastEvaluation
-    ? lastEvaluation.evaluation === "pass"
-      ? t("tune.feedback.pass")
-      : lastEvaluation.evaluation === "close"
-        ? t("tune.feedback.close")
-        : t("tune.feedback.tryAgain")
-    : null;
-
-  useEffect(() => {
-    setCommentKey((prev) => prev + 1);
-  }, [lastEvaluation?.feedbackText]);
-
-  // Pulse card when feedback arrives
-  useEffect(() => {
-    if (!lastEvaluation?.feedbackText) return;
-    setFeedbackArrivedPulse(true);
-    const t = setTimeout(() => setFeedbackArrivedPulse(false), 2000);
-    return () => clearTimeout(t);
-  }, [lastEvaluation?.feedbackText]);
-
-  // Feedback card: on eval start, animate text out (reverse), then show "Sending"
-  useEffect(() => {
-    if (leavingTimeoutRef.current) {
-      clearTimeout(leavingTimeoutRef.current);
-      leavingTimeoutRef.current = null;
-    }
-    if (isEvaluating) {
-      const currentText = lastEvaluation
-        ? commentText
-        : currentNugget.instruction;
-      setLeavingText(currentText);
-      setShowSending(false);
-      leavingTimeoutRef.current = setTimeout(() => {
-        leavingTimeoutRef.current = null;
-        setLeavingText(null);
-        setShowSending(true);
-      }, 300);
-    } else {
-      setLeavingText(null);
-      setShowSending(false);
-    }
-    return () => {
-      if (leavingTimeoutRef.current) {
-        clearTimeout(leavingTimeoutRef.current);
-      }
-    };
-  }, [isEvaluating, commentText, currentNugget.instruction, lastEvaluation]);
 
   useEffect(() => {
     // Reset pulse state when streak is not complete
@@ -553,48 +498,34 @@ export function TunePractice({
 
   return (
     <Suspense fallback={<p className="p-4 text-muted-foreground">Loading notation...</p>}>
-    <div className="relative flex h-full min-h-0 w-full flex-col">
-      {/* Feedback card: bottom-right, max 1/3 width */}
-      <div
-        className={cn(
-          "self-end max-w-full shrink-0 px-4 py-2 border border-border bg-card/80 backdrop-blur-sm z-10",
-          showSending ? "w-[320px]" : "w-[440px]",
-        )}
-      >
-        <div className="flex items-center justify-center flex-col gap-2">
-          <StreakDisplay
-            totalWins={totalWins}
-            lastEvaluation={lastEvaluation}
-            currentNuggetId={currentNugget.itemId}
-            messages={streakMessages}
-          />
-          <div className="min-h-6 text-center">
-            {leavingText ? (
-              <p className="text-foreground text-base comment-typing-reverse motion-reduce:animate-none">
-                {leavingText}
-              </p>
-            ) : showSending ? (
-              <p className="text-muted-foreground text-base animate-pulse">
-                {statusLabels.sending}
-              </p>
-            ) : (
-              <p
-                key={commentKey}
-                className="text-foreground text-lg comment-typing motion-reduce:animate-none"
-              >
-                {lastEvaluation ? commentText : currentNugget.instruction}
-              </p>
-            )}
-          </div>
+    <div className="tune-practice relative flex h-full min-h-0 w-full flex-col" data-highway-visible={!showSheetView}>
+      {/* A zero-height anchor keeps feedback from shifting the highway or hit line. */}
+      <div className="pointer-events-none relative z-20 h-0 w-full shrink-0">
+        <div className="pointer-events-auto absolute right-3 top-3 w-[440px] max-w-[calc(100%-1.5rem)]">
+          <PracticeFeedbackToast
+            key={`${tuneKey}:${currentNugget.itemId}`}
+            event={lastEvaluation ?? currentNugget}
+            pending={isEvaluating}
+            message={isEvaluating ? t("tune.status.sending") : lastEvaluation?.feedbackText || currentNugget.instruction}
+            dismissLabel={t("tune.dismissFeedback")}
+          >
+            <StreakDisplay
+              totalWins={totalWins}
+              lastEvaluation={lastEvaluation}
+              currentNuggetId={currentNugget.itemId}
+              messages={streakMessages}
+              className="mb-2 flex-wrap"
+            />
+          </PracticeFeedbackToast>
         </div>
       </div>
 
       <div className="flex flex-1 min-h-0 flex-col items-center">
         <div className="flex w-full flex-1 min-h-0 flex-col items-center justify-center">
           {/* Shared container: Pixi (hidden when sheet) + Sheet (hidden when Pixi) */}
-          <div className="relative w-full flex-1 min-h-0 highway-stage">
+          <div ref={stageRef} className="relative w-full flex-1 min-h-0 highway-stage" data-highway-visible={!showSheetView}>
             <div ref={node => registerScroll(node, "highway")} onScroll={event => syncScroll(event.currentTarget)}
-              style={{ bottom: -bottomOcclusion }} className={cn("absolute inset-0 note-highway-viewport", showSheetView && "invisible")}>
+              style={{ top: -topBleed, bottom: -bottomOcclusion }} className={cn("absolute inset-0 note-highway-viewport", showSheetView && "invisible")}>
               <div className={cn("h-full", fullKeyboard && "min-w-[1040px]")}>
                 <NoteHighway onReadinessChange={onSceneReadiness} bottomOcclusion={bottomOcclusion} beatsPerSecond={bpm / 60} notes={highwayNotes} fullKeyboard={fullKeyboard} range={highwayRange} onArmedChange={onArmedChange}
                   transport={{ getBeat: () => playback.playheadTimeRef.current * bpm / 60,
@@ -762,8 +693,8 @@ export function TunePractice({
         </SheetContent>
       </Sheet>
 
-      <div className="order-first grid grid-cols-3 shrink-0 items-center gap-2 mx-auto w-full max-w-5xl">
-        <div className="flex items-center justify-start gap-1">
+      <div className="practice-transport relative z-20 order-first grid grid-cols-[1fr_auto_1fr] shrink-0 items-center gap-2 w-full px-2 py-1">
+        <div className="flex w-fit items-center justify-start gap-1">
           <Button
             variant="ghost"
             onClick={onPreviousNugget}
@@ -775,7 +706,7 @@ export function TunePractice({
           </Button>
         </div>
         <div className="flex items-center justify-center">
-          <div className="flex gap-1 bg-key-black p-1 border border-border rounded-2xl">
+          <div className="practice-chrome flex items-center gap-1 p-1 border border-border rounded-2xl">
             <Button
               variant="default"
               onClick={isPlaying ? () => onStopSample?.() : onPlaySample}
@@ -823,15 +754,20 @@ export function TunePractice({
             >
               <Music />
             </Button>
+            <Button
+              variant="ghost"
+              onClick={onLeave}
+              size="sm"
+              title={t("tune.buttons.leave")}
+              aria-label={t("tune.buttons.leave")}
+            >
+              <X />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" onClick={onLeave} size="sm">
-            {t("tune.buttons.leave")} <X />
-          </Button>
+        <div className="flex w-fit justify-self-end items-center justify-end gap-1">
           {!isLastNugget && (
             <>
-              <div className="w-px h-4 bg-border" />
               <Button
                 variant={shouldPulse ? "default" : "ghost"}
                 onClick={handleNextNugget}

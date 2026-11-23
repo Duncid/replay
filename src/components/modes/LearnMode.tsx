@@ -2,8 +2,6 @@ import { TuneLibrary } from "@/components/TuneLibrary";
 import { TuneMode } from "@/components/modes/TuneMode";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import type { LessonFeelPreset, LessonMetronomeSoundType } from "@/types/learningSession";
 import type { NoteSequence } from "@/types/noteSequence";
@@ -149,17 +147,12 @@ interface LearnModeActionBarProps {
   setSelectedModel: (value: string) => void;
   aiModels: { llm: ReadonlyArray<{ value: string; label: string }> };
   debugMode: boolean;
-  setDebugMode: (value: boolean) => void;
   onEnableFreePractice: () => void;
   debugMenuState?: DebugMenuState | null;
 }
 
-export function LearnModeActionBar({ selectedModel, setSelectedModel, aiModels, debugMode, setDebugMode, debugMenuState }: LearnModeActionBarProps) {
+export function LearnModeActionBar({ selectedModel, setSelectedModel, aiModels, debugMode, debugMenuState }: LearnModeActionBarProps) {
   return <>
-    <div className="flex items-center gap-2 ml-auto">
-      <Label htmlFor="debug-mode" className="cursor-pointer font-mono text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Debug</Label>
-      <Switch id="debug-mode" checked={debugMode} onCheckedChange={setDebugMode} />
-    </div>
     {debugMode && <DropdownMenu>
       <DropdownMenuTrigger asChild><Button variant="outline" size="sm" title="Debug menu"><Bug /><ChevronDown className="opacity-50" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">

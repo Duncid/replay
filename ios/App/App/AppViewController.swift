@@ -4,6 +4,11 @@ import WebKit
 
 class AppViewController: CAPBridgeViewController {
 
+    // UIKit updates the safe-area bridge when the iPad status bar disappears.
+    override var prefersStatusBarHidden: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad || super.prefersStatusBarHidden
+    }
+
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         #if DEBUG
@@ -12,7 +17,7 @@ class AppViewController: CAPBridgeViewController {
            let source = try? String(contentsOf: url, encoding: .utf8) {
             bridge?.webView?.configuration.userContentController.add(PerformanceHandler(), name: "replayPerformance")
             bridge?.webView?.configuration.userContentController.addUserScript(
-                WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+                WKUserScript(source: performanceConfiguration() + source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
             )
         }
         #endif
@@ -65,6 +70,15 @@ private final class SafeAreaHandler: NSObject, WKScriptMessageHandler {
 }
 
 #if DEBUG
+private func performanceConfiguration() -> String {
+    let args = ProcessInfo.processInfo.arguments
+    let count = args.first(where: { $0.hasPrefix("--performance-notes=") }).flatMap { Int($0.split(separator: "=").last!) } ?? 200
+    let seconds = args.first(where: { $0.hasPrefix("--performance-seconds=") }).flatMap { Int($0.split(separator: "=").last!) } ?? 8
+    let config: [String: Any] = ["notes": count, "seconds": seconds, "full": args.contains("--performance-full")]
+    let json = String(data: try! JSONSerialization.data(withJSONObject: config), encoding: .utf8)!
+    return "window.__replayPerformanceConfig = \(json);\n"
+}
+
 private final class PerformanceHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard var result = message.body as? [String: Any] else { return }

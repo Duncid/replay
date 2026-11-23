@@ -1,0 +1,1583 @@
+{
+  "schema": 2,
+  "collectedAt": "2026-11-23T20:38:00.960710+00:00",
+  "commit": "f988c6362c84a5f75b4ac7a1c8f6426ba7360978",
+  "status": "M .gitignore\n M docs/ipad-performance.md\n M e2e/runtime.spec.ts\n M e2e/tune-library.spec.ts\n M ios-learn-native/README.md\n M ios-learn-native/ReplayLearn.xcodeproj/project.pbxproj\n M ios-learn-native/ReplayLearn/Highway/NoteHighwayScene.swift\n M ios-learn-native/ReplayLearn/LessonViewModel.swift\n M ios-learn-native/ReplayLearn/PianoAudioEngine.swift\n M ios-learn-native/ReplayLearn/ReplayLearnApp.swift\n M ios-learn-native/ReplayLearn/Views/LessonView.swift\n M ios/App/App/AppViewController.swift\n M ios/README.md\n M package.json\n M public/performance-probe.js\n M src/components/TuneCard.tsx\n M src/components/TuneLibraryView.tsx\n M src/design-system/TuneCard.stories.tsx\n M src/design-system/TunesScreen.stories.tsx\n M src/design-system/piano.css\n M src/hooks/useTuneLibrary.ts\n M src/utils/tuneLibrary.ts\n?? ios-learn-native/ReplayLearn/NativePerformance.swift\n?? performance-tests/\n?? playwright.performance.config.ts\n?? scripts/measure-ipad-performance.py\n?? src/components/TuneThumbnail.tsx\n?? src/design-system/tuneCardFixtures.ts\n?? src/utils/tunePreview.ts",
+  "trackedDiffSHA256": "f4e8119a0f7f08b94ceb1d77f93c1407434a94639ad79c6eb9eb4aa1ad9b6586",
+  "untrackedSHA256": {
+    "ios-learn-native/ReplayLearn/NativePerformance.swift": "6b468cb5664df5907e4e2985223efa61f24d07f6ad513010a81b3acf891c651a",
+    "performance-tests/highway.spec.ts": "f446ba4608b4fe4a3c25fe99ad41d7bc67788bdceee551c1e11a50a10c44b61a",
+    "playwright.performance.config.ts": "eac6c3c5b00ecd0fc76d1a2b812e53d2ac72b43e25f1d6bda5a9a80cd580dc76",
+    "scripts/measure-ipad-performance.py": "3ec33e32c4c30f1fbc418f7fbb4c705cbfca6df2a95b84ca4b34ce4eb5e8a497",
+    "src/components/TuneThumbnail.tsx": "a0d7955c153c885f310886e96de7c43752c0a57089b8f5a04ce1eda6cff619ca",
+    "src/design-system/tuneCardFixtures.ts": "1b3e4c7b038097ee4fd8c6dc46a66ebb284df26ae62e86fa10fe5cefb0dfd5fe",
+    "src/utils/tunePreview.ts": "f1f82effa2136d7b470348e65730b8b95509e76d9dbe7f83e1e34fa03c072104"
+  },
+  "build": "instrumented Debug, installed separately",
+  "runs": [
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "compact",
+      "repeat": 1,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 200,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 127.79604166280478,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 275.2652916824445,
+          "full": false,
+          "loadMs": 36.61029165959917,
+          "maximumFramesPerSecond": 60,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1043.7765416572802,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1319.0418333397247
+        },
+        {
+          "audioDispatchErrorP95Ms": 53.38816667790525,
+          "audioNotes": 66,
+          "elapsedMs": 7998.968791653169,
+          "fps": 53.7569293242774,
+          "frameP50Ms": 16.682208341080695,
+          "frameP95Ms": 37.412791658425704,
+          "frameP99Ms": 49.51829166384414,
+          "frames": 430,
+          "full": false,
+          "maxAudioDispatchErrorMs": 57.355416676728055,
+          "maxFrameMs": 56.82391667505726,
+          "notes": 200,
+          "over25Ms": 35,
+          "over50Ms": 5,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.6079166778363287,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "compact",
+      "repeat": 2,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 200,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 137.7338750171475,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 244.529291667277,
+          "full": false,
+          "loadMs": 16.328833327861503,
+          "maximumFramesPerSecond": 60,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1034.6426249889191,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1279.1719166561961
+        },
+        {
+          "audioDispatchErrorP95Ms": 53.38704166933894,
+          "audioNotes": 66,
+          "elapsedMs": 7997.164958331268,
+          "fps": 55.01949782111444,
+          "frameP50Ms": 16.6825833148323,
+          "frameP95Ms": 36.47120832465589,
+          "frameP99Ms": 45.25258333887905,
+          "frames": 440,
+          "full": false,
+          "maxAudioDispatchErrorMs": 58.747250004671514,
+          "maxFrameMs": 60.704999981680885,
+          "notes": 200,
+          "over25Ms": 31,
+          "over50Ms": 2,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.600875006057322,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "compact",
+      "repeat": 3,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 200,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 135.23387498571537,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 242.63758334564045,
+          "full": false,
+          "loadMs": 16.41062501585111,
+          "maximumFramesPerSecond": 60,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1028.308458335232,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1270.9460416808724
+        },
+        {
+          "audioDispatchErrorP95Ms": 52.742250001756474,
+          "audioNotes": 66,
+          "elapsedMs": 7997.345916664926,
+          "fps": 55.01825287851121,
+          "frameP50Ms": 16.670750017510727,
+          "frameP95Ms": 35.121333348797634,
+          "frameP99Ms": 47.36633333959617,
+          "frames": 440,
+          "full": false,
+          "maxAudioDispatchErrorMs": 56.065541692078114,
+          "maxFrameMs": 56.37133333948441,
+          "notes": 200,
+          "over25Ms": 32,
+          "over50Ms": 3,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.6079583254177123,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "full",
+      "repeat": 1,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 200,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 137.08891667192802,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 357.2130000102334,
+          "full": true,
+          "loadMs": 16.403999994508922,
+          "maximumFramesPerSecond": 60,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1078.9534583163913,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1436.1664583266247
+        },
+        {
+          "audioDispatchErrorP95Ms": 70.10566667304374,
+          "audioNotes": 66,
+          "elapsedMs": 8000.063916668296,
+          "fps": 33.62473135239995,
+          "frameP50Ms": 16.682625020621344,
+          "frameP95Ms": 88.12037500320002,
+          "frameP99Ms": 95.96929166582413,
+          "frames": 269,
+          "full": true,
+          "maxAudioDispatchErrorMs": 72.68416666192934,
+          "maxFrameMs": 98.25741668464616,
+          "notes": 200,
+          "over25Ms": 64,
+          "over50Ms": 64,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.5481249827425927,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "full",
+      "repeat": 2,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 200,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 126.93979166215286,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 359.95179167366587,
+          "full": true,
+          "loadMs": 16.726708330679685,
+          "maximumFramesPerSecond": 60,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1064.8549999750685,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1424.8067916487344
+        },
+        {
+          "audioDispatchErrorP95Ms": 62.708958343137056,
+          "audioNotes": 66,
+          "elapsedMs": 8000.122666649986,
+          "fps": 33.74948250800525,
+          "frameP50Ms": 16.677833336871117,
+          "frameP95Ms": 88.8297499914188,
+          "frameP99Ms": 95.97516665235162,
+          "frames": 270,
+          "full": true,
+          "maxAudioDispatchErrorMs": 65.38750001345761,
+          "maxFrameMs": 98.07450001244433,
+          "notes": 200,
+          "over25Ms": 64,
+          "over50Ms": 64,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.5346666439436376,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "full",
+      "repeat": 3,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 200,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 127.27208333672024,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 362.5180833332706,
+          "full": true,
+          "loadMs": 16.754791664425284,
+          "maximumFramesPerSecond": 60,
+          "notes": 200,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 200,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1081.911791668972,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1444.4298750022426
+        },
+        {
+          "audioDispatchErrorP95Ms": 65.38375001400709,
+          "audioNotes": 66,
+          "elapsedMs": 8016.866000019945,
+          "fps": 33.30478518654743,
+          "frameP50Ms": 16.68441668152809,
+          "frameP95Ms": 86.89254164346494,
+          "frameP99Ms": 95.85270832758397,
+          "frames": 267,
+          "full": true,
+          "maxAudioDispatchErrorMs": 91.42641667858697,
+          "maxFrameMs": 97.77074999874458,
+          "notes": 200,
+          "over25Ms": 67,
+          "over50Ms": 67,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.5518333346117288,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 200,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "compact",
+      "repeat": 1,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 1000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 137.27899998775683,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 718.5988333367277,
+          "full": false,
+          "loadMs": 65.60708335018717,
+          "maximumFramesPerSecond": 60,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1032.9012916772626,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1751.5001250139903
+        },
+        {
+          "audioDispatchErrorP95Ms": 53.375291667180136,
+          "audioNotes": 66,
+          "elapsedMs": 7958.2854166510515,
+          "fps": 54.03173893465981,
+          "frameP50Ms": 16.673749982146546,
+          "frameP95Ms": 39.435000013327226,
+          "frameP99Ms": 49.9205416708719,
+          "frames": 430,
+          "full": false,
+          "maxAudioDispatchErrorMs": 60.02654167241417,
+          "maxFrameMs": 54.16233334108256,
+          "notes": 1000,
+          "over25Ms": 33,
+          "over50Ms": 4,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.9300833335146308,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "compact",
+      "repeat": 2,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 1000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 138.0185416492168,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 722.7604999789037,
+          "full": false,
+          "loadMs": 64.75383331417106,
+          "maximumFramesPerSecond": 60,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1036.5001250174828,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1759.2606249963865
+        },
+        {
+          "audioDispatchErrorP95Ms": 53.37383333244361,
+          "audioNotes": 66,
+          "elapsedMs": 8031.72266666661,
+          "fps": 54.409249190543484,
+          "frameP50Ms": 16.67154164169915,
+          "frameP95Ms": 37.137625011382625,
+          "frameP99Ms": 47.504000016488135,
+          "frames": 437,
+          "full": false,
+          "maxAudioDispatchErrorMs": 56.050874991342425,
+          "maxFrameMs": 61.56212498899549,
+          "notes": 1000,
+          "over25Ms": 31,
+          "over50Ms": 5,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.8201250166166574,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "compact",
+      "repeat": 3,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 1000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 137.8684166702442,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 718.3907916769385,
+          "full": false,
+          "loadMs": 64.86062501790002,
+          "maximumFramesPerSecond": 60,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1050.7194999954663,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 1769.1102916724049
+        },
+        {
+          "audioDispatchErrorP95Ms": 58.079375012312084,
+          "audioNotes": 66,
+          "elapsedMs": 8067.007416655542,
+          "fps": 54.04730372502359,
+          "frameP50Ms": 16.670541663188487,
+          "frameP95Ms": 38.11870832578279,
+          "frameP99Ms": 49.98374998103827,
+          "frames": 436,
+          "full": false,
+          "maxAudioDispatchErrorMs": 63.35116666741669,
+          "maxFrameMs": 57.52595834201202,
+          "notes": 1000,
+          "over25Ms": 32,
+          "over50Ms": 5,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.8312083373311907,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "full",
+      "repeat": 1,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 1000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 126.4765833329875,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 1005.0181666738354,
+          "full": true,
+          "loadMs": 65.75904166675173,
+          "maximumFramesPerSecond": 60,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1055.843999987701,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 2060.8621666615363
+        },
+        {
+          "audioDispatchErrorP95Ms": 84.68550001271069,
+          "audioNotes": 66,
+          "elapsedMs": 7953.2711666834075,
+          "fps": 31.55934140048559,
+          "frameP50Ms": 16.673333331709728,
+          "frameP95Ms": 91.03870831313543,
+          "frameP99Ms": 96.34045834536664,
+          "frames": 251,
+          "full": true,
+          "maxAudioDispatchErrorMs": 106.0190416756086,
+          "maxFrameMs": 99.50037498492748,
+          "notes": 1000,
+          "over25Ms": 68,
+          "over50Ms": 65,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.9814166696742177,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "full",
+      "repeat": 2,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 1000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 127.36300000688061,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 985.3978750179522,
+          "full": true,
+          "loadMs": 65.06445835111663,
+          "maximumFramesPerSecond": 60,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1090.5423333169892,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 2075.9402083349414
+        },
+        {
+          "audioDispatchErrorP95Ms": 95.38454166613519,
+          "audioNotes": 66,
+          "elapsedMs": 8033.48016666132,
+          "fps": 29.999451669793388,
+          "frameP50Ms": 16.74133332562633,
+          "frameP95Ms": 89.50333335087635,
+          "frameP99Ms": 96.24166664434597,
+          "frames": 241,
+          "full": true,
+          "maxAudioDispatchErrorMs": 102.68866666592658,
+          "maxFrameMs": 97.50208334298804,
+          "notes": 1000,
+          "over25Ms": 75,
+          "over50Ms": 72,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 1.0005416406784207,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "full",
+      "repeat": 3,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 1000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 127.56274998537265,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 991.283666662639,
+          "full": true,
+          "loadMs": 64.20316666481085,
+          "maximumFramesPerSecond": 60,
+          "notes": 1000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 1000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1070.4735833278392,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 2061.757249990478
+        },
+        {
+          "audioDispatchErrorP95Ms": 92.70495834061876,
+          "audioNotes": 66,
+          "elapsedMs": 8049.872041679919,
+          "fps": 30.186815236542394,
+          "frameP50Ms": 16.718208353267983,
+          "frameP95Ms": 87.49029168393463,
+          "frameP99Ms": 95.86450000642799,
+          "frames": 243,
+          "full": true,
+          "maxAudioDispatchErrorMs": 102.03479166375473,
+          "maxFrameMs": 98.340124997776,
+          "notes": 1000,
+          "over25Ms": 76,
+          "over50Ms": 71,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 0.9854999952949584,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 1000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 2
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "compact",
+      "repeat": 1,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 5000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 138.32608333905227,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 3118.1763333443087,
+          "full": false,
+          "loadMs": 304.830666660564,
+          "maximumFramesPerSecond": 60,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1064.0755416534375,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 4182.251874997746
+        },
+        {
+          "audioDispatchErrorP95Ms": 68.69241665117443,
+          "audioNotes": 66,
+          "elapsedMs": 8019.624333333923,
+          "fps": 22.07085926260806,
+          "frameP50Ms": 34.358875011093915,
+          "frameP95Ms": 84.59766666055657,
+          "frameP99Ms": 87.99270834424533,
+          "frames": 177,
+          "full": false,
+          "maxAudioDispatchErrorMs": 82.05554165760987,
+          "maxFrameMs": 90.29416667181067,
+          "notes": 5000,
+          "over25Ms": 177,
+          "over50Ms": 43,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 3.6089166824240237,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 0
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "compact",
+      "repeat": 2,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 5000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 138.6389583349228,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 3104.141249990789,
+          "full": false,
+          "loadMs": 310.4897083248943,
+          "maximumFramesPerSecond": 60,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1088.2328333391342,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 4192.374083329923
+        },
+        {
+          "audioDispatchErrorP95Ms": 70.69441667408682,
+          "audioNotes": 66,
+          "elapsedMs": 7978.386500006309,
+          "fps": 21.80892088893693,
+          "frameP50Ms": 34.38649998861365,
+          "frameP95Ms": 84.12308333208784,
+          "frameP99Ms": 86.93516667699441,
+          "frames": 174,
+          "full": false,
+          "maxAudioDispatchErrorMs": 75.34366665640846,
+          "maxFrameMs": 91.98649998870678,
+          "notes": 5000,
+          "over25Ms": 174,
+          "over50Ms": 46,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 3.485083347186446,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 0
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "compact",
+      "repeat": 3,
+      "records": [
+        {
+          "full": false,
+          "lowPowerMode": false,
+          "notes": 5000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 138.32908333279192,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 3100.4704166552983,
+          "full": false,
+          "loadMs": 306.93391666864045,
+          "maximumFramesPerSecond": 60,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            1590,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": false,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1120.782958343625,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 4221.253374998923
+        },
+        {
+          "audioDispatchErrorP95Ms": 70.02162499702536,
+          "audioNotes": 66,
+          "elapsedMs": 8026.2956250226125,
+          "fps": 21.67874298792848,
+          "frameP50Ms": 34.36904164846055,
+          "frameP95Ms": 84.73391667939723,
+          "frameP99Ms": 87.14312501251698,
+          "frames": 174,
+          "full": false,
+          "maxAudioDispatchErrorMs": 83.34770833607763,
+          "maxFrameMs": 88.02066667703912,
+          "notes": 5000,
+          "over25Ms": 174,
+          "over50Ms": 42,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 3.5339583118911833,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": false,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 0
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "full",
+      "repeat": 1,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 5000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 128.147583338432,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 4138.677041657502,
+          "full": true,
+          "loadMs": 307.54854166298173,
+          "maximumFramesPerSecond": 60,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1125.7462500070687,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 5264.423291664571
+        },
+        {
+          "audioDispatchErrorP95Ms": 108.67154167499393,
+          "audioNotes": 66,
+          "elapsedMs": 7920.504958339734,
+          "fps": 13.256730543352845,
+          "frameP50Ms": 86.21174999279901,
+          "frameP95Ms": 122.87291666143574,
+          "frameP99Ms": 125.65366667695343,
+          "frames": 105,
+          "full": true,
+          "maxAudioDispatchErrorMs": 111.33937499835156,
+          "maxFrameMs": 129.74666667287238,
+          "notes": 5000,
+          "over25Ms": 105,
+          "over50Ms": 64,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 3.6202083283569664,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 0
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "full",
+      "repeat": 2,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 5000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 127.42741667898372,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 4096.538166661048,
+          "full": true,
+          "loadMs": 305.9518333466258,
+          "maximumFramesPerSecond": 60,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1139.1144166700542,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 5235.6525833311025
+        },
+        {
+          "audioDispatchErrorP95Ms": 98.0027916666586,
+          "audioNotes": 66,
+          "elapsedMs": 8021.755833324278,
+          "fps": 13.463386600642014,
+          "frameP50Ms": 85.07283331709914,
+          "frameP95Ms": 119.80566664715298,
+          "frameP99Ms": 123.9460000069812,
+          "frames": 108,
+          "full": true,
+          "maxAudioDispatchErrorMs": 111.33458331460133,
+          "maxFrameMs": 126.01783333229832,
+          "notes": 5000,
+          "over25Ms": 108,
+          "over50Ms": 64,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 3.6731666477862746,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 0
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "full",
+      "repeat": 3,
+      "records": [
+        {
+          "full": true,
+          "lowPowerMode": false,
+          "notes": 5000,
+          "os": "27.2.1",
+          "phase": "startup",
+          "platform": "native",
+          "probeReadyMs": 138.4657500020694,
+          "reducedMotion": false,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "elapsedMs": 4162.432791665196,
+          "full": true,
+          "loadMs": 307.4441666540224,
+          "maximumFramesPerSecond": 60,
+          "notes": 5000,
+          "phase": "tune-ready",
+          "platform": "native",
+          "scenePoints": [
+            2704,
+            692
+          ],
+          "schema": 2,
+          "seconds": 8
+        },
+        {
+          "full": true,
+          "notes": 5000,
+          "phase": "audio-start",
+          "platform": "native",
+          "sceneToAudioMs": 1148.890708340332,
+          "schema": 2,
+          "seconds": 8,
+          "selectionToAudioMs": 5311.323500005528
+        },
+        {
+          "audioDispatchErrorP95Ms": 103.33012498449534,
+          "audioNotes": 66,
+          "elapsedMs": 8083.604708343046,
+          "fps": 12.989254644234403,
+          "frameP50Ms": 86.68145834235474,
+          "frameP95Ms": 123.97904167301022,
+          "frameP99Ms": 126.66579167125747,
+          "frames": 105,
+          "full": true,
+          "maxAudioDispatchErrorMs": 113.33079164614901,
+          "maxFrameMs": 127.52412498230115,
+          "notes": 5000,
+          "over25Ms": 105,
+          "over50Ms": 65,
+          "phase": "playback",
+          "platform": "native",
+          "sceneUpdateP95Ms": 3.6630833346862346,
+          "schema": 2,
+          "seconds": 8,
+          "thermalState": 0
+        },
+        {
+          "full": true,
+          "notes": 5000,
+          "phase": "complete",
+          "platform": "native",
+          "schema": 2,
+          "seconds": 8
+        }
+      ],
+      "noDrawableWarnings": 0
+    }
+  ],
+  "summary": [
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "compact",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 244.529291667277,
+        "sceneToAudioMs": 1034.6426249889191,
+        "audioDispatchErrorP95Ms": 53.38704166933894,
+        "audioNotes": 66,
+        "elapsedMs": 7997.345916664926,
+        "fps": 55.01825287851121,
+        "frameP50Ms": 16.682208341080695,
+        "frameP95Ms": 36.47120832465589,
+        "frameP99Ms": 47.36633333959617,
+        "frames": 440,
+        "maxAudioDispatchErrorMs": 57.355416676728055,
+        "maxFrameMs": 56.82391667505726,
+        "notes": 200,
+        "over25Ms": 32,
+        "over50Ms": 3,
+        "sceneUpdateP95Ms": 0.6079166778363287,
+        "schema": 2,
+        "seconds": 8,
+        "thermalState": 0
+      },
+      "worstFrameMs": 60.704999981680885
+    },
+    {
+      "platform": "native",
+      "notes": 200,
+      "layout": "full",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 359.95179167366587,
+        "sceneToAudioMs": 1078.9534583163913,
+        "audioDispatchErrorP95Ms": 65.38375001400709,
+        "audioNotes": 66,
+        "elapsedMs": 8000.122666649986,
+        "fps": 33.62473135239995,
+        "frameP50Ms": 16.682625020621344,
+        "frameP95Ms": 88.12037500320002,
+        "frameP99Ms": 95.96929166582413,
+        "frames": 269,
+        "maxAudioDispatchErrorMs": 72.68416666192934,
+        "maxFrameMs": 98.07450001244433,
+        "notes": 200,
+        "over25Ms": 64,
+        "over50Ms": 64,
+        "sceneUpdateP95Ms": 0.5481249827425927,
+        "schema": 2,
+        "seconds": 8,
+        "thermalState": 0
+      },
+      "worstFrameMs": 98.25741668464616
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "compact",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 718.5988333367277,
+        "sceneToAudioMs": 1036.5001250174828,
+        "audioDispatchErrorP95Ms": 53.375291667180136,
+        "audioNotes": 66,
+        "elapsedMs": 8031.72266666661,
+        "fps": 54.04730372502359,
+        "frameP50Ms": 16.67154164169915,
+        "frameP95Ms": 38.11870832578279,
+        "frameP99Ms": 49.9205416708719,
+        "frames": 436,
+        "maxAudioDispatchErrorMs": 60.02654167241417,
+        "maxFrameMs": 57.52595834201202,
+        "notes": 1000,
+        "over25Ms": 32,
+        "over50Ms": 5,
+        "sceneUpdateP95Ms": 0.8312083373311907,
+        "schema": 2,
+        "seconds": 8,
+        "thermalState": 0
+      },
+      "worstFrameMs": 61.56212498899549
+    },
+    {
+      "platform": "native",
+      "notes": 1000,
+      "layout": "full",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 991.283666662639,
+        "sceneToAudioMs": 1070.4735833278392,
+        "audioDispatchErrorP95Ms": 92.70495834061876,
+        "audioNotes": 66,
+        "elapsedMs": 8033.48016666132,
+        "fps": 30.186815236542394,
+        "frameP50Ms": 16.718208353267983,
+        "frameP95Ms": 89.50333335087635,
+        "frameP99Ms": 96.24166664434597,
+        "frames": 243,
+        "maxAudioDispatchErrorMs": 102.68866666592658,
+        "maxFrameMs": 98.340124997776,
+        "notes": 1000,
+        "over25Ms": 75,
+        "over50Ms": 71,
+        "sceneUpdateP95Ms": 0.9854999952949584,
+        "schema": 2,
+        "seconds": 8,
+        "thermalState": 0
+      },
+      "worstFrameMs": 99.50037498492748
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "compact",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 3104.141249990789,
+        "sceneToAudioMs": 1088.2328333391342,
+        "audioDispatchErrorP95Ms": 70.02162499702536,
+        "audioNotes": 66,
+        "elapsedMs": 8019.624333333923,
+        "fps": 21.80892088893693,
+        "frameP50Ms": 34.36904164846055,
+        "frameP95Ms": 84.59766666055657,
+        "frameP99Ms": 87.14312501251698,
+        "frames": 174,
+        "maxAudioDispatchErrorMs": 82.05554165760987,
+        "maxFrameMs": 90.29416667181067,
+        "notes": 5000,
+        "over25Ms": 174,
+        "over50Ms": 43,
+        "sceneUpdateP95Ms": 3.5339583118911833,
+        "schema": 2,
+        "seconds": 8,
+        "thermalState": 0
+      },
+      "worstFrameMs": 91.98649998870678
+    },
+    {
+      "platform": "native",
+      "notes": 5000,
+      "layout": "full",
+      "samples": 3,
+      "median": {
+        "tuneReadyMs": 4138.677041657502,
+        "sceneToAudioMs": 1139.1144166700542,
+        "audioDispatchErrorP95Ms": 103.33012498449534,
+        "audioNotes": 66,
+        "elapsedMs": 8021.755833324278,
+        "fps": 13.256730543352845,
+        "frameP50Ms": 86.21174999279901,
+        "frameP95Ms": 122.87291666143574,
+        "frameP99Ms": 125.65366667695343,
+        "frames": 105,
+        "maxAudioDispatchErrorMs": 111.33937499835156,
+        "maxFrameMs": 127.52412498230115,
+        "notes": 5000,
+        "over25Ms": 105,
+        "over50Ms": 64,
+        "sceneUpdateP95Ms": 3.6630833346862346,
+        "schema": 2,
+        "seconds": 8,
+        "thermalState": 0
+      },
+      "worstFrameMs": 129.74666667287238
+    }
+  ],
+  "device": {
+    "model": "iPad Air 13-inch (M4)",
+    "os": "iPadOS 27.2.1 (24B156)",
+    "orientation": "landscape",
+    "connection": "USB",
+    "displayMaximumHz": 60
+  },
+  "artifactSHA256": "60550cbf1bb5d7e158070b5afcd4ad808a7335a9886ebc739c4c76c2dc24bc9a"
+}

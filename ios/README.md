@@ -35,6 +35,10 @@ xcrun devicectl device process launch --device YOUR_DEVICE_ID com.playbk.app
 
 If iPadOS requires developer trust, use Settings → General → VPN & Device Management on the iPad.
 
+## iPad screen space
+
+Replay hides the iPad status bar (clock, date, Wi-Fi and battery) through the view controller's `prefersStatusBarHidden`. The existing safe-area bridge follows UIKit's actual insets, so the web layout reclaims that space without hard-coded offsets. Other device types retain Capacitor's default status-bar behavior.
+
 ## Input verification
 
 - USB MIDI: power on the piano and use its USB COMPUTER port. Tap Connect MIDI. Play notes; unplug/replug and verify the device state updates and notes resume. Replay aggregates native CoreMIDI sources into one virtual input.
@@ -50,11 +54,29 @@ The web bundle targets Safari 26.2+, Chrome 130+, and Firefox 128+. Tailwind 4 u
 
 ## Opt-in physical-device performance probe
 
-A Debug build can measure app readiness and playback animation cadence without changing normal launches:
+Debug builds support the current student library → tune demo → Note Highway flow:
 
 ```sh
 xcrun devicectl device process launch --terminate-existing --console \
-  --device YOUR_DEVICE_ID com.playbk.app --replay-performance
+  --device YOUR_DEVICE_ID com.playbk.app --replay-performance \
+  --performance-notes=200 --performance-seconds=8 --performance-full
 ```
 
-Keep the iPad unlocked and awake. The probe temporarily opens Compose and then Tune, restores the saved mode preference, and samples eight seconds of animation frames during playback. Console records tagged `[Replay Performance]` report startup readiness (including elapsed native launch time), time to open the selected tune, and frame interval percentiles. This measures visual responsiveness, not physical MIDI-to-audio latency. The first run after installation includes cold caches; collect several launches and report the median.
+Remove `--performance-full` for the compact keyboard. Note counts are 200, 1000, or 5000; sample duration is 2–20 seconds. Keep the iPad unlocked, awake, and in the foreground. The probe supplies local fixtures, blocks Cloud functions, restores saved mode/instrument preferences, and emits JSON tagged `[Replay Performance]`. It is injected only for this explicit Debug launch; normal launches do not load it. Fixture network isolation remains until reload. When launching manually, relaunch without probe arguments after completion to return to normal use.
+
+For repeatable runs across both independently built apps, use:
+
+```sh
+python3 scripts/measure-ipad-performance.py --device YOUR_DEVICE_ID \
+  --platform both --notes 200 1000 5000 --layouts compact full \
+  --repeats 3 --output /tmp/replay-performance-baseline
+```
+
+Build and install each app first. The runner does not build or install; it saves per-run console logs and `measurements.json`, fails on probe errors/timeouts, and relaunches each app normally afterward. See [the performance methodology and baseline](../docs/ipad-performance.md). For browser validation, run `npm run build` then `npm run perf:web`; this uses the same web probe and writes JSON attachments under `performance-results/`.
+
+
+### Launch artwork and icons
+
+The launch storyboard uses a centered Replay wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
+
+Both targets use the existing opaque blue piano icon at 1024px; Xcode derives the device icon sizes. Exported icon sizes, portrait/landscape start screens, and a size/source manifest live in `design-assets/ipad-release/`. Run `npx storybook build -o dist/storybook`, serve the build on port 8082, then `node scripts/export-ipad-assets.mjs`. The exporter also refreshes native launch assets, storyboards, and the existing web icon URLs. Start-screen PNGs are review/export assets; the native launch screen does not stretch a full-screen screenshot.

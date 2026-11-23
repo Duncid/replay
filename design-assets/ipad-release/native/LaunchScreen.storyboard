@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="23501" targetRuntime="iOS.CocoaTouch" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="launch-main-vc">
+<device id="ipad11_0rounded" orientation="landscape" layout="fullscreen" appearance="dark"/>
+<dependencies><deployment identifier="iOS"/><plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23501"/><capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/></dependencies>
+<scenes><scene sceneID="launch-main-sc"><objects>
+<viewController id="launch-main-vc" sceneMemberID="viewController"><view key="view" contentMode="scaleToFill" id="launch-root-vw">
+<rect key="frame" x="0" y="0" width="1194" height="834"/>
+<autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+<subviews>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="word-mark-img"><rect key="frame" x="437" y="357" width="320" height="120"/><constraints><constraint firstAttribute="width" constant="320" id="con-066-key"/><constraint firstAttribute="height" constant="120" id="con-067-key"/></constraints></imageView>
+<stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="1" translatesAutoresizingMaskIntoConstraints="NO" id="key-stack-vw"><rect key="frame" x="4" y="564" width="1186" height="266"/><subviews><imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-00-key"><rect key="frame" x="0" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-01-key"><rect key="frame" x="53.95454545454545" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-02-key"><rect key="frame" x="107.9090909090909" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-03-key"><rect key="frame" x="161.86363636363637" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-04-key"><rect key="frame" x="215.8181818181818" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-05-key"><rect key="frame" x="269.77272727272725" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-06-key"><rect key="frame" x="323.72727272727275" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-07-key"><rect key="frame" x="377.6818181818182" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-08-key"><rect key="frame" x="431.6363636363636" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-09-key"><rect key="frame" x="485.59090909090907" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-10-key"><rect key="frame" x="539.5454545454545" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-11-key"><rect key="frame" x="593.5" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-12-key"><rect key="frame" x="647.4545454545455" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-13-key"><rect key="frame" x="701.4090909090909" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-14-key"><rect key="frame" x="755.3636363636364" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-15-key"><rect key="frame" x="809.3181818181818" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-16-key"><rect key="frame" x="863.2727272727273" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-17-key"><rect key="frame" x="917.2272727272727" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-18-key"><rect key="frame" x="971.1818181818181" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-19-key"><rect key="frame" x="1025.1363636363635" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-20-key"><rect key="frame" x="1079.090909090909" y="0" width="52.95454545454545" height="266"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-21-key"><rect key="frame" x="1133.0454545454545" y="0" width="52.95454545454545" height="266"/></imageView></subviews><constraints><constraint firstAttribute="height" priority="750" constant="266" id="con-068-key"/></constraints></stackView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-00-key"><rect key="frame" x="34.09772727272727" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-01-key"><rect key="frame" x="88.05227272727272" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-02-key"><rect key="frame" x="195.96136363636364" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-03-key"><rect key="frame" x="249.91590909090908" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-04-key"><rect key="frame" x="303.87045454545455" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-05-key"><rect key="frame" x="411.7795454545454" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-06-key"><rect key="frame" x="465.73409090909087" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-07-key"><rect key="frame" x="573.6431818181818" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-08-key"><rect key="frame" x="627.5977272727273" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-09-key"><rect key="frame" x="681.5522727272727" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-10-key"><rect key="frame" x="789.4613636363636" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-11-key"><rect key="frame" x="843.415909090909" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-12-key"><rect key="frame" x="951.3249999999999" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-13-key"><rect key="frame" x="1005.2795454545453" y="564" width="46.71363636363636" height="156.96"/></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchBlackKey" translatesAutoresizingMaskIntoConstraints="NO" id="blk-14-key"><rect key="frame" x="1059.2340909090908" y="564" width="46.71363636363636" height="156.96"/></imageView>
+</subviews>
+<color key="backgroundColor" red="0.0235294117647" green="0.0274509803922" blue="0.0352941176471" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+<constraints><constraint firstItem="word-mark-img" firstAttribute="centerX" secondItem="launch-root-vw" secondAttribute="centerX" id="con-000-key"/>
+<constraint firstItem="word-mark-img" firstAttribute="centerY" secondItem="launch-root-vw" secondAttribute="centerY" id="con-001-key"/>
+<constraint firstItem="key-stack-vw" firstAttribute="leading" secondItem="launch-root-vw" secondAttribute="leading" constant="4" id="con-002-key"/>
+<constraint firstItem="launch-root-vw" firstAttribute="trailing" secondItem="key-stack-vw" secondAttribute="trailing" constant="4" id="con-003-key"/>
+<constraint firstItem="launch-root-vw" firstAttribute="bottom" secondItem="key-stack-vw" secondAttribute="bottom" constant="4" id="con-004-key"/>
+<constraint firstItem="key-stack-vw" firstAttribute="top" relation="greaterThanOrEqual" secondItem="word-mark-img" secondAttribute="bottom" constant="24" id="con-005-key"/>
+<constraint firstItem="blk-00-key" firstAttribute="centerX" secondItem="wht-00-key" secondAttribute="trailing" constant="0.5" id="con-006-key"/>
+<constraint firstItem="blk-00-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-007-key"/>
+<constraint firstItem="blk-00-key" firstAttribute="width" secondItem="wht-00-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-008-key"/>
+<constraint firstItem="blk-00-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-009-key"/>
+<constraint firstItem="blk-01-key" firstAttribute="centerX" secondItem="wht-01-key" secondAttribute="trailing" constant="0.5" id="con-010-key"/>
+<constraint firstItem="blk-01-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-011-key"/>
+<constraint firstItem="blk-01-key" firstAttribute="width" secondItem="wht-01-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-012-key"/>
+<constraint firstItem="blk-01-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-013-key"/>
+<constraint firstItem="blk-02-key" firstAttribute="centerX" secondItem="wht-03-key" secondAttribute="trailing" constant="0.5" id="con-014-key"/>
+<constraint firstItem="blk-02-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-015-key"/>
+<constraint firstItem="blk-02-key" firstAttribute="width" secondItem="wht-03-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-016-key"/>
+<constraint firstItem="blk-02-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-017-key"/>
+<constraint firstItem="blk-03-key" firstAttribute="centerX" secondItem="wht-04-key" secondAttribute="trailing" constant="0.5" id="con-018-key"/>
+<constraint firstItem="blk-03-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-019-key"/>
+<constraint firstItem="blk-03-key" firstAttribute="width" secondItem="wht-04-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-020-key"/>
+<constraint firstItem="blk-03-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-021-key"/>
+<constraint firstItem="blk-04-key" firstAttribute="centerX" secondItem="wht-05-key" secondAttribute="trailing" constant="0.5" id="con-022-key"/>
+<constraint firstItem="blk-04-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-023-key"/>
+<constraint firstItem="blk-04-key" firstAttribute="width" secondItem="wht-05-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-024-key"/>
+<constraint firstItem="blk-04-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-025-key"/>
+<constraint firstItem="blk-05-key" firstAttribute="centerX" secondItem="wht-07-key" secondAttribute="trailing" constant="0.5" id="con-026-key"/>
+<constraint firstItem="blk-05-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-027-key"/>
+<constraint firstItem="blk-05-key" firstAttribute="width" secondItem="wht-07-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-028-key"/>
+<constraint firstItem="blk-05-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-029-key"/>
+<constraint firstItem="blk-06-key" firstAttribute="centerX" secondItem="wht-08-key" secondAttribute="trailing" constant="0.5" id="con-030-key"/>
+<constraint firstItem="blk-06-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-031-key"/>
+<constraint firstItem="blk-06-key" firstAttribute="width" secondItem="wht-08-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-032-key"/>
+<constraint firstItem="blk-06-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-033-key"/>
+<constraint firstItem="blk-07-key" firstAttribute="centerX" secondItem="wht-10-key" secondAttribute="trailing" constant="0.5" id="con-034-key"/>
+<constraint firstItem="blk-07-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-035-key"/>
+<constraint firstItem="blk-07-key" firstAttribute="width" secondItem="wht-10-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-036-key"/>
+<constraint firstItem="blk-07-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-037-key"/>
+<constraint firstItem="blk-08-key" firstAttribute="centerX" secondItem="wht-11-key" secondAttribute="trailing" constant="0.5" id="con-038-key"/>
+<constraint firstItem="blk-08-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-039-key"/>
+<constraint firstItem="blk-08-key" firstAttribute="width" secondItem="wht-11-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-040-key"/>
+<constraint firstItem="blk-08-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-041-key"/>
+<constraint firstItem="blk-09-key" firstAttribute="centerX" secondItem="wht-12-key" secondAttribute="trailing" constant="0.5" id="con-042-key"/>
+<constraint firstItem="blk-09-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-043-key"/>
+<constraint firstItem="blk-09-key" firstAttribute="width" secondItem="wht-12-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-044-key"/>
+<constraint firstItem="blk-09-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-045-key"/>
+<constraint firstItem="blk-10-key" firstAttribute="centerX" secondItem="wht-14-key" secondAttribute="trailing" constant="0.5" id="con-046-key"/>
+<constraint firstItem="blk-10-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-047-key"/>
+<constraint firstItem="blk-10-key" firstAttribute="width" secondItem="wht-14-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-048-key"/>
+<constraint firstItem="blk-10-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-049-key"/>
+<constraint firstItem="blk-11-key" firstAttribute="centerX" secondItem="wht-15-key" secondAttribute="trailing" constant="0.5" id="con-050-key"/>
+<constraint firstItem="blk-11-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-051-key"/>
+<constraint firstItem="blk-11-key" firstAttribute="width" secondItem="wht-15-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-052-key"/>
+<constraint firstItem="blk-11-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-053-key"/>
+<constraint firstItem="blk-12-key" firstAttribute="centerX" secondItem="wht-17-key" secondAttribute="trailing" constant="0.5" id="con-054-key"/>
+<constraint firstItem="blk-12-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-055-key"/>
+<constraint firstItem="blk-12-key" firstAttribute="width" secondItem="wht-17-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-056-key"/>
+<constraint firstItem="blk-12-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-057-key"/>
+<constraint firstItem="blk-13-key" firstAttribute="centerX" secondItem="wht-18-key" secondAttribute="trailing" constant="0.5" id="con-058-key"/>
+<constraint firstItem="blk-13-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-059-key"/>
+<constraint firstItem="blk-13-key" firstAttribute="width" secondItem="wht-18-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-060-key"/>
+<constraint firstItem="blk-13-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-061-key"/>
+<constraint firstItem="blk-14-key" firstAttribute="centerX" secondItem="wht-19-key" secondAttribute="trailing" constant="0.5" id="con-062-key"/>
+<constraint firstItem="blk-14-key" firstAttribute="top" secondItem="key-stack-vw" secondAttribute="top" id="con-063-key"/>
+<constraint firstItem="blk-14-key" firstAttribute="width" secondItem="wht-19-key" secondAttribute="width" multiplier="0.58" constant="16" id="con-064-key"/>
+<constraint firstItem="blk-14-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-065-key"/></constraints>
+</view></viewController><placeholder placeholderIdentifier="IBFirstResponder" id="launch-first-rs" sceneMemberID="firstResponder"/>
+</objects></scene></scenes>
+<resources><image name="LaunchWordmark" width="320" height="120"/><image name="LaunchWhiteKey" width="72" height="266"/><image name="LaunchBlackKey" width="58" height="157"/></resources>
+</document>

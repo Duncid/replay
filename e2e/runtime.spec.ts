@@ -431,7 +431,7 @@ test("tune demo waits for the cold highway scene and a one-second preparation de
     }).observe(document, { subtree: true, attributes: true, attributeFilter: ["data-render-ready"] });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Practice: intro", exact: true }).click();
+  await page.getByRole("button", { name: "Practice: Intro", exact: true }).click();
   await expect(page.locator('.note-highway[data-render-ready="true"]')).toBeVisible({ timeout: 30000 });
   await expect.poll(() => page.evaluate(() => window["demoStarts"].length), { timeout: 10000 }).toBeGreaterThan(0);
   const timing = await page.evaluate(() => ({ first: window["demoStarts"][0], readyAt: window["sceneReadyAt"] }));
@@ -443,4 +443,23 @@ test("tune demo waits for the cold highway scene and a one-second preparation de
   const count = await page.evaluate(() => window["demoStarts"].length);
   await page.waitForTimeout(1300); // Assert that the cancelled one-second start never fires.
   expect(await page.evaluate(() => window["demoStarts"].length)).toBe(count);
+});
+
+
+test("toolbar switches keep pill geometry and generous touch targets", async ({ page }) => {
+  await page.goto("/");
+  const toggle = page.locator("#full-keyboard");
+  await expect(toggle).toBeVisible();
+  const track = (await toggle.boundingBox())!;
+  expect(track.width).toBe(44);
+  expect(track.height).toBe(24);
+  await toggle.click();
+  await expect(toggle).toBeChecked();
+  expect((await toggle.boundingBox())!.height).toBe(24);
+  if (await page.evaluate(() => matchMedia("(pointer: coarse)").matches)) {
+    // Outside the visible track, but inside its 44 px high touch target.
+    const box = (await toggle.boundingBox())!;
+    await page.touchscreen.tap(box.x + box.width / 2, box.y - 8);
+    await expect(toggle).not.toBeChecked();
+  }
 });

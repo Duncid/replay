@@ -30,6 +30,6 @@ export function NoteRail({ layout, states, fullKeyboard = false }: NoteRailProps
   };
   return <div className="note-rail" data-full={fullKeyboard} aria-hidden="true">
     <div className="absolute inset-x-0 top-0 h-6">{layout.blackKeys.map(cell)}</div>
-    <div className="absolute inset-x-0 bottom-0 h-6">{layout.whiteKeys.map(cell)}</div>
+    <div className="absolute inset-x-0 bottom-[2px] h-6">{layout.whiteKeys.map(cell)}</div>
   </div>;
 }

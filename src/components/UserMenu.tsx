@@ -4,6 +4,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -25,6 +26,8 @@ interface UserMenuProps {
   onLanguageChange: (lang: string) => void;
   notationPreference: "auto" | "abc" | "solfege";
   onNotationChange: (notation: "auto" | "abc" | "solfege") => void;
+  debugMode: boolean;
+  onDebugModeChange: (enabled: boolean) => void;
   onOpenManagement?: (mode: "quest" | "lab") => void;
 }
 
@@ -45,6 +48,8 @@ export function UserMenu({
   notationPreference,
   onNotationChange,
   onOpenManagement,
+  debugMode,
+  onDebugModeChange,
 }: UserMenuProps) {
   const { t } = useTranslation();
   const { users, currentUser, switchUser, createUser, isLoading } =
@@ -116,6 +121,9 @@ export function UserMenu({
                     />
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuCheckboxItem checked={debugMode} onCheckedChange={onDebugModeChange}>
+                  Debug
+                </DropdownMenuCheckboxItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
             </>

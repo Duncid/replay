@@ -73,8 +73,9 @@ export const NewUser: Story = { name: "New user dialog", render: function N() {
   return <><Button onClick={() => setOpen(true)}>New user</Button><NewUserDialog open={open} onOpenChange={setOpen} onCreateUser={async () => setOpen(false)} /></>;
 } };
 
-export const Menu: Story = { name: "User menu", render: function U() {
+export const Menu: Story = { name: "User menu", parameters: { docs: { description: { story: "Admin contains Quest, Tune Management and the Debug activation checkbox. Debug tools appear in the app header only while enabled." } } }, render: function U() {
   const [lang, setLang] = useState("en");
   const [notation, setNotation] = useState<"auto" | "abc" | "solfege">("auto");
-  return <UserMenu language={lang} onLanguageChange={setLang} notationPreference={notation} onNotationChange={setNotation} onOpenManagement={noop} />;
+  const [debug, setDebug] = useState(false);
+  return <UserMenu debugMode={debug} onDebugModeChange={setDebug} language={lang} onLanguageChange={setLang} notationPreference={notation} onNotationChange={setNotation} onOpenManagement={noop} />;
 } };

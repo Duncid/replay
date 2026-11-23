@@ -1,13 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { TuneCard } from "@/components/TuneCard";
+import { TuneCarousel, type TuneCarouselProps } from "@/components/TuneCarousel";
 
-export interface TuneLibraryViewProps {
-  tunes: { tune_key: string; unlocked: boolean; prerequisites: string[] }[];
+export interface TuneLibraryViewProps extends TuneCarouselProps {
   isLoading?: boolean;
   error?: Error | null;
   refetch: () => unknown;
-  onSelectTune: (key: string) => void;
 }
 export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune }: TuneLibraryViewProps) {
   if (isLoading) return <LoadingSpinner message="Loading tunes…" />;
@@ -22,14 +20,7 @@ export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune
       ) : tunes.length === 0 ? (
         <p className="text-center text-muted-foreground">No published tunes yet.</p>
       ) : (
-        <ul aria-label="Tunes" className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 px-[calc(50%-8rem)] sm:px-[calc(50%-9rem)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {tunes.map(tune => (
-            <li key={tune.tune_key} className="snap-center shrink-0 w-64 sm:w-72">
-              <TuneCard title={tune.tune_key} unlocked={tune.unlocked} prerequisites={tune.prerequisites}
-                onSelect={() => onSelectTune(tune.tune_key)} />
-            </li>
-          ))}
-        </ul>
+        <TuneCarousel tunes={tunes} onSelectTune={onSelectTune} />
       )}
     </section>
   );

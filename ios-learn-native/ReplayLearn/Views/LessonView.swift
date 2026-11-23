@@ -2,7 +2,13 @@ import SwiftUI
 
 struct LessonView: View {
     @EnvironmentObject private var model: LessonViewModel
-    @State private var fullKeyboard = false
+    @State private var fullKeyboard: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--replay-performance") && ProcessInfo.processInfo.arguments.contains("--performance-full")
+        #else
+        return false
+        #endif
+    }()
     private var busy: Bool { model.phase == .recording || model.phase == .evaluating }
     var body: some View {
         GeometryReader { proxy in

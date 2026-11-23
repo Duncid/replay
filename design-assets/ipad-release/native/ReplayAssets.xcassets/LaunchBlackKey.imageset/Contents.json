@@ -1,0 +1,65 @@
+{
+  "images": [
+    {
+      "filename": "LaunchBlackKey@1x.png",
+      "idiom": "universal",
+      "scale": "1x",
+      "resizing": {
+        "mode": "9-part",
+        "center": {
+          "mode": "stretch",
+          "width": 30,
+          "height": 141
+        },
+        "cap-insets": {
+          "top": 2,
+          "bottom": 14,
+          "left": 14,
+          "right": 14
+        }
+      }
+    },
+    {
+      "filename": "LaunchBlackKey@2x.png",
+      "idiom": "universal",
+      "scale": "2x",
+      "resizing": {
+        "mode": "9-part",
+        "center": {
+          "mode": "stretch",
+          "width": 60,
+          "height": 282
+        },
+        "cap-insets": {
+          "top": 4,
+          "bottom": 28,
+          "left": 28,
+          "right": 28
+        }
+      }
+    },
+    {
+      "filename": "LaunchBlackKey@3x.png",
+      "idiom": "universal",
+      "scale": "3x",
+      "resizing": {
+        "mode": "9-part",
+        "center": {
+          "mode": "stretch",
+          "width": 90,
+          "height": 423
+        },
+        "cap-insets": {
+          "top": 6,
+          "bottom": 42,
+          "left": 42,
+          "right": 42
+        }
+      }
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

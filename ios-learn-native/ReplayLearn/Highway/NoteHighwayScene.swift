@@ -5,10 +5,17 @@ import SwiftUI
 /// All nodes, paths, labels and effects are prepared at load/layout, never in update.
 @MainActor
 final class NoteHighwayScene: SKScene {
+    #if DEBUG
+    var performanceFrame: (() -> Void)?
+    var performanceUpdate: ((Double) -> Void)?
+    #endif
     private(set) var isPresentationReady = false
     override func didMove(to view: SKView) { isPresentationReady = false }
     override func willMove(from view: SKView) { isPresentationReady = false }
     override func didFinishUpdate() {
+        #if DEBUG
+        performanceFrame?()
+        #endif
         if view?.window != nil && size.width > 1 && size.height > bottomOcclusion + 1 { isPresentationReady = true }
     }
     enum Mode { case idle, demo, play }
@@ -130,6 +137,10 @@ final class NoteHighwayScene: SKScene {
         update(0)
     }
     override func update(_ currentTime: TimeInterval) {
+        #if DEBUG
+        let measuredStart = performanceUpdate == nil ? nil : CACurrentMediaTime()
+        defer { if let measuredStart { performanceUpdate?((CACurrentMediaTime() - measuredStart) * 1000) } }
+        #endif
         let time = previewBeat.map { $0 * 60 / bpm } ?? (clock.isRunning ? clock.time : 0)
         let beatDuration = 60 / max(1, bpm), firstBeat = floor(time / beatDuration)
         hitLine.glowWidth = reduceMotion ? 0 : 5
