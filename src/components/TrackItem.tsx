@@ -196,7 +196,7 @@ export function TrackItem({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={onRemove}
-                  className="text-destructive focus:text-destructive"
+                  className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
                 >
                   <Trash2 />
                   Remove
