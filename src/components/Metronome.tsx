@@ -1000,9 +1000,9 @@ export const Metronome = ({
                     ${isFirstBeat ? "w-3.5 h-3.5" : "w-2.5 h-2.5"}
                     ${
                       isActive
-                        ? `bg-foreground ${
+                        ? `bg-accent ${
                             isFirstBeat
-                              ? "ring-2 ring-foreground/50 scale-125"
+                              ? "ring-2 ring-accent/50 scale-125"
                               : "scale-110"
                           }`
                         : "bg-muted"
