@@ -12,22 +12,19 @@ export interface TuneLibraryViewProps {
 export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune }: TuneLibraryViewProps) {
   if (isLoading) return <LoadingSpinner message="Loading tunes…" />;
   return (
-    <section className="w-full max-w-4xl mx-auto self-start px-5 py-8 sm:px-8">
-      <header className="flex items-baseline justify-between gap-4 mb-6">
-        <h1 className="font-display text-[40px] leading-[44px] font-bold tracking-[-.02em]">Tunes</h1>
-        {!error && <span className="font-mono text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground"><span className="text-primary">{tunes.filter(tune => tune.unlocked).length}</span> / {tunes.length} unlocked</span>}
-      </header>
+    <section className="w-full flex-1 self-stretch flex flex-col justify-center py-8">
+      <h1 className="px-5 sm:px-8 mb-8 text-center font-display text-[32px] leading-[38px] sm:text-[40px] sm:leading-[44px] font-bold tracking-[-.02em]">What would you like to play?</h1>
       {error ? (
-        <div role="alert" className="space-y-3">
+        <div role="alert" className="space-y-3 text-center">
           <p className="text-destructive">Unable to load tunes.</p>
           <Button variant="outline" onClick={() => void refetch()}>Try again</Button>
         </div>
       ) : tunes.length === 0 ? (
-        <p className="text-muted-foreground">No published tunes yet.</p>
+        <p className="text-center text-muted-foreground">No published tunes yet.</p>
       ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <ul aria-label="Tunes" className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 px-[calc(50%-8rem)] sm:px-[calc(50%-9rem)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tunes.map(tune => (
-            <li key={tune.tune_key}>
+            <li key={tune.tune_key} className="snap-center shrink-0 w-64 sm:w-72">
               <TuneCard title={tune.tune_key} unlocked={tune.unlocked} prerequisites={tune.prerequisites}
                 onSelect={() => onSelectTune(tune.tune_key)} />
             </li>
