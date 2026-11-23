@@ -1,4 +1,4 @@
-/* Keys and rail share grid tracks in pianoLayout.ts, including the original gaps. */
+/* Highway, rail and keys share pixel geometry in pianoLayout.ts. */
 .piano-key {
   background: hsl(var(--key-white));
   box-shadow: var(--key-white-shadow);
@@ -13,7 +13,7 @@
 .piano-key--black[data-playable="false"] { background: hsl(var(--key-black-disabled)); }
 .piano-key[data-activity="user"] { background: hsl(var(--primary)); box-shadow: var(--glow-user); }
 .piano-key[data-activity="ai"] { background: hsl(var(--ai)); box-shadow: var(--glow-ai); }
-.note-rail { position: relative; height: 50px; flex: 0 0 50px; container-type: inline-size; }
+.note-rail { position: relative; height: 50px; flex: 0 0 50px; container-type: inline-size; background: hsl(var(--card)); }
 .note-rail__cell {
   position: relative; display: flex; align-items: center; justify-content: center;
   min-width: 0; height: 24px; border-radius: 4px;
@@ -22,7 +22,6 @@
   transition: background-color 70ms ease-out, box-shadow 70ms ease-out;
 }
 .note-rail__cell--black {
-  grid-column-end: span 2;
   background: color-mix(in srgb, var(--nc) 60%, hsl(var(--key-black)));
   color: var(--sharp-label);
 }
@@ -40,10 +39,41 @@
 }
 /* Solfège can be longer than the fixed full-keyboard cells; keep the complete accessible name on the key. */
 .note-rail[data-full="true"] .note-rail__cell > span { letter-spacing: -.07em; }
-.keyboard-panel { height: 320px; }
+.keyboard-panel { height: calc(54px + var(--piano-key-height, 266px) * var(--piano-key-scale, 1)); }
+.piano-dock[data-midi-connected="true"] { --piano-key-scale: .5; }
 .keyboard-toolbar {
-  background: hsl(var(--card)); border-top: 1px solid hsl(var(--primary) / .55);
-  box-shadow: 0 -1px 16px hsl(var(--primary) / .18);
+  background: hsl(var(--card)); border-top: 1px solid hsl(var(--border));
 }
 .keyboard-toolbar button { flex-shrink: 0; }
 @media (pointer: coarse) { .keyboard-toolbar button { min-height: 44px; } }
+
+.note-rail__cell[data-in-range="false"] { opacity: .3; }
+.note-rail__cell[data-armed="true"] { outline: 2px solid hsl(var(--foreground)); outline-offset: -2px; }
+.note-highway { position: relative; width: 100%; height: 100%; min-height: 120px; background: hsl(var(--background)); }
+.note-highway canvas { display: block; }
+.note-highway-viewport { padding-inline: 4px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.note-highway-viewport::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .note-rail__cell, .piano-key { transition: none; }
+}
+
+/* One translucent surface; opaque nested backgrounds would hide the falling notes. */
+:root { --piano-dock-blur: 16px; --piano-dock-tint: 70%; --piano-dock-rail-gap: 8px; }
+.piano-dock { position: relative; z-index: 30; width: 100%; flex-shrink: 0; }
+.piano-dock__backdrop { position: absolute; inset: 0 0 auto; height: var(--dock-occlusion); pointer-events: none; background: hsl(var(--card)); }
+.piano-dock > .keyboard-toolbar, .piano-dock__keys { position: relative; }
+.piano-dock .keyboard-toolbar, .piano-dock .note-rail, .piano-dock__keys > div, .piano-dock__keys .piano-surface { background: transparent; }
+.piano-dock .keyboard-toolbar { border-radius: 0; }
+.piano-dock__keys { padding-top: var(--piano-dock-rail-gap); }
+.piano-dock__keys .note-rail { border: 0; border-radius: 0; }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .piano-dock__backdrop {
+    background: linear-gradient(to bottom, hsl(var(--card) / var(--piano-dock-tint)) 0%, hsl(var(--card) / var(--piano-dock-tint)) 65%, hsl(var(--card)) 100%);
+    -webkit-backdrop-filter: blur(var(--piano-dock-blur)); backdrop-filter: blur(var(--piano-dock-blur));
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .piano-dock__backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; background: hsl(var(--card)); }
+}
+/* Only practice allows its canvas to continue into the covered dock region. */
+#topContainer:has(.highway-stage), [role="tabpanel"]:has(.highway-stage) { overflow: visible; }

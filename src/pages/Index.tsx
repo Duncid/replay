@@ -1,3 +1,7 @@
+import { practiceSceneReadiness } from "@/lib/practiceSceneReadiness";
+import { PianoDock } from "@/components/highway/PianoDock";
+import { prepareDemoTimeline, startDemoTimeline, stopDemoTimeline } from "@/lib/highwayAudioClock";
+import { HighwayProvider } from "@/components/highway/HighwayContext";
 import { releaseMidiOutputNotes } from "@/lib/midiOutput";
 import { loadMagentaScript } from "@/lib/magenta";
 import { AddNoteSequenceDialog } from "@/components/AddNoteSequenceDialog";
@@ -346,6 +350,7 @@ const Index = () => {
   const aiPlaybackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const noteTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const shouldStopAiRef = useRef<boolean>(false);
+  const playbackGeneration = useRef(0);
   const isPlayingRef = useRef<boolean>(false);
   const midiPressedKeysRef = useRef<Set<string>>(new Set());
   const micPressedKeysRef = useRef<Set<string>>(new Set());
@@ -584,6 +589,9 @@ const Index = () => {
   midiSilentWhilePlayingRef.current = midiSilentWhilePlaying;
 
   const stopAiPlayback = useCallback(() => {
+    playbackGeneration.current++;
+    stopDemoTimeline();
+    pianoRef.current?.stopPlayback();
     releaseMidiOutputNotes();
     shouldStopAiRef.current = true;
     isPlayingRef.current = false;
@@ -607,6 +615,7 @@ const Index = () => {
       isReplay: boolean = false,
       segments?: PlaybackSegment[],
     ) => {
+      const generation = ++playbackGeneration.current;
       setIsReplaying(isReplay);
       const playbackId = Math.random().toString(36).substring(7);
 
@@ -644,6 +653,10 @@ const Index = () => {
       );
       const playbackStartTime = Date.now();
 
+      stopDemoTimeline();
+      const needsScene = !segments?.length && practiceSceneReadiness.attached;
+      if (needsScene) prepareDemoTimeline(minStartTime);
+      pianoRef.current?.stopPlayback();
       // Clear previous playback state
       shouldStopAiRef.current = true;
       noteTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
@@ -655,16 +668,19 @@ const Index = () => {
       setActiveKeys(new Set());
       isPlayingRef.current = true;
       setIsPlaying(true);
+      // Preparation is already a cancellable demo state. This also renders bot
+      // ownership before waiting, instead of rebuilding Pixi at the first note.
+      if (needsScene) setAppState("ai_playing");
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      if (!isPlayingRef.current) {
+      if (!isPlayingRef.current || generation !== playbackGeneration.current) {
         console.log(`[Playback ${playbackId}] Cancelled during delay`);
         return;
       }
 
       shouldStopAiRef.current = false;
-      setAppState("ai_playing");
+      if (segments?.length) setAppState("ai_playing");
 
       // Handle visual state updates
       if (segments && segments.length > 0) {
@@ -710,6 +726,21 @@ const Index = () => {
         setPlayingSequence(sequence);
       }
 
+      if (!segments?.length) {
+        await pianoRef.current?.ensureAudioReady();
+        if (shouldStopAiRef.current || generation !== playbackGeneration.current) return;
+        if (needsScene && !await practiceSceneReadiness.wait(() => shouldStopAiRef.current || generation !== playbackGeneration.current)) {
+          if (generation === playbackGeneration.current) stopAiPlayback();
+          return;
+        }
+        startDemoTimeline(normalizedSequence.notes, normalizedSequence.totalTime, minStartTime,
+          (note, at) => pianoRef.current?.playNote(midiToFrequency(note.pitch), note.endTime - note.startTime, at),
+          pitches => setActiveKeys(new Set([...pitches].map(midiToNoteName))),
+          () => { setAppState("idle"); setPlayingSequence(null); setIsPlayingAll(false); setIsPlaying(false); isPlayingRef.current = false; });
+        setAppState("ai_playing");
+        return;
+      }
+
       normalizedSequence.notes.forEach((note) => {
         const noteKey = midiToNoteName(note.pitch);
         const frequency = midiToFrequency(note.pitch);
@@ -751,7 +782,7 @@ const Index = () => {
         }
       }, normalizedSequence.totalTime * 1000);
     },
-    [],
+    [stopAiPlayback],
   );
 
   const handleLabPlaySequence = useCallback(
@@ -1427,8 +1458,8 @@ const Index = () => {
   const learnMode = LearnMode({
     isPlaying: appState === "ai_playing",
     onPlaySequence: (sequence) => {
-      pianoRef.current?.ensureAudioReady();
-      setTimeout(() => playSequence(sequence, undefined, true), 50);
+      void pianoRef.current?.ensureAudioReady();
+      void playSequence(sequence, undefined, true);
     },
     onStopPlayback: stopAiPlayback,
     onStartRecording: () => {
@@ -2097,7 +2128,7 @@ const Index = () => {
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
-    <TuneManagementProvider active={activeMode === "lab"}>
+    <HighwayProvider fullKeyboard={fullKeyboard}><TuneManagementProvider active={activeMode === "lab"}>
       <div className="h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
         <Tabs
           value={activeMode}
@@ -2130,6 +2161,8 @@ const Index = () => {
               </div>
             </div>
           </div>
+
+
 
           <div
             id="topContainer"
@@ -2186,7 +2219,7 @@ const Index = () => {
         </Tabs>
 
         {activeMode !== "quest" && (
-          <div className="keyboard-panel w-full shrink-0 z-30 bg-background flex flex-col">
+          <PianoDock midiConnected={!!connectedDevice} toolbar={<>
             {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
             <div className="keyboard-toolbar w-full flex flex-wrap items-center justify-between gap-2 p-1.5 shrink-0">
               <div className="flex items-center gap-1">
@@ -2378,6 +2411,10 @@ const Index = () => {
               </div>
             </div>
 
+</>}>
+          <div className="keyboard-panel w-full flex flex-col">
+
+
             <Piano
               className="flex-1 min-h-0"
               ref={pianoRef}
@@ -2391,6 +2428,7 @@ const Index = () => {
               onNoteEnd={handleNoteEnd}
             />
           </div>
+          </PianoDock>
         )}
 
         {/* Add/Edit Partition Sheet */}
@@ -2557,7 +2595,7 @@ const Index = () => {
           defaultTitle={compositions.currentComposition?.title || ""}
         />
       </div>
-    </TuneManagementProvider>
+    </TuneManagementProvider></HighwayProvider>
   );
 };
 

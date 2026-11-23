@@ -1,3 +1,4 @@
+import { useHighway } from "./highway/HighwayContext";
 import { usePianoAudio } from "@/hooks/usePianoAudio";
 import {
   INSTRUMENT_NOTE_RANGES,
@@ -16,10 +17,12 @@ import {
 } from "react";
 import { PianoKey } from "./PianoKey";
 import { NoteRail, type RailNoteState } from "./NoteRail";
-import { createPianoLayout, type PianoNote } from "./pianoLayout";
+import { createPianoLayout, pianoKeyStyle, type PianoNote } from "./pianoLayout";
 
 interface PianoProps {
   activeKeys: Set<string>;
+  /** Judged player highlights supplied by a highway preview or transport. */
+  userActiveKeys?: Set<string>;
   allowInput: boolean;
   soundType?: PianoSoundType;
   onNoteStart?: (noteKey: string, frequency: number, velocity: number) => void;
@@ -32,7 +35,8 @@ interface PianoProps {
 }
 
 export interface PianoHandle {
-  playNote: (frequency: number, duration?: number) => void;
+  stopPlayback: () => void;
+  playNote: (frequency: number, duration?: number, at?: number) => void;
   ensureAudioReady: () => Promise<void>;
   preload: () => Promise<void>;
   handleKeyPress: (
@@ -52,6 +56,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
   (
     {
       activeKeys,
+      userActiveKeys,
       allowInput,
       soundType = "acoustic-piano",
       onNoteStart,
@@ -193,6 +198,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       ")": "F#5",
     }), []);
 
+    const highway = useHighway();
     const layout = useMemo(() => createPianoLayout(fullKeyboard), [fullKeyboard]);
     const { notes, whiteKeys, blackKeys } = layout;
 
@@ -301,6 +307,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
     useImperativeHandle(ref, () => ({
       playNote: audio.playNote,
+      stopPlayback: audio.stopPlayback,
       ensureAudioReady: audio.ensureAudioReady,
       preload: audio.preload,
       handleKeyPress,
@@ -326,24 +333,26 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
 
     const states: Record<string, RailNoteState> = Object.fromEntries(notes.map(note => {
       const key = `${note.note}${note.octave}`, playable = isNotePlayable(key);
-      return [key, { label: getDisplayLabel(note), playable,
-        activity: !playable ? undefined : userPressedKeys.has(key) ? "user" : activeKeys.has(key) ? "ai" : undefined }];
+      const midi = Math.round(69 + 12 * Math.log2(note.frequency / 440));
+      return [key, { label: getDisplayLabel(note), playable, armed: highway.guidance.armed.includes(midi),
+        inRange: !highway.guidance.range || (midi >= highway.guidance.range[0] && midi <= highway.guidance.range[1]),
+        activity: !playable ? undefined : (userPressedKeys.has(key) || userActiveKeys?.has(key)) ? "user" : activeKeys.has(key) ? "ai" : undefined }];
     }));
     const renderKey = (note: PianoNote) => {
       const key = `${note.note}${note.octave}`, state = states[key];
       return <PianoKey key={key} note={key} displayLabel={state.label}
-        isBlack={note.isBlack} activity={state.activity} isPlayable={state.playable}
+        style={pianoKeyStyle(layout, note)} isBlack={note.isBlack} activity={state.activity} isPlayable={state.playable}
         onPress={() => handleKeyPress(key, note.frequency)} onRelease={() => handleKeyRelease(key, note.frequency)}
-        disabled={!allowInput || !state.playable} gridColumn={note.gridColumn} />;
+        disabled={!allowInput || !state.playable} />;
     };
 
-    return <div className={cn("relative w-full h-full select-none flex flex-col px-1 mb-1 overflow-hidden bg-background", className)}>
-      <div className={cn("relative h-full rounded-t-lg border-t", fullKeyboard ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden")}>
+    return <div className={cn("piano-surface relative w-full h-full select-none flex flex-col px-1 mb-1 overflow-hidden bg-card", className)}>
+      <div ref={node => highway.registerScroll(node, "keys")} onScroll={event => highway.syncScroll(event.currentTarget)} className={cn("relative h-full", fullKeyboard ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden")}>
         <div className={cn("relative h-full flex flex-col", fullKeyboard && "min-w-[1040px]")}>
           <NoteRail layout={layout} states={states} fullKeyboard={fullKeyboard} />
           <div className="relative flex-1 min-h-0">
-            <div className={cn("absolute inset-0 grid gap-px z-0", layout.whiteGrid)}>{whiteKeys.map(renderKey)}</div>
-            <div className={cn("absolute inset-0 grid gap-2 pointer-events-none z-10", layout.blackGrid)}>{blackKeys.map(renderKey)}</div>
+            <div className="absolute inset-0 z-0">{whiteKeys.map(renderKey)}</div>
+            <div className="absolute inset-0 pointer-events-none z-10">{blackKeys.map(renderKey)}</div>
           </div>
         </div>
       </div>

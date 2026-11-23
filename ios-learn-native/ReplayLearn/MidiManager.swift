@@ -7,6 +7,8 @@ import Foundation
 final class MidiManager: ObservableObject {
     @Published private(set) var isConnected = false
     @Published private(set) var sourceName: String?
+    @Published private(set) var sourceNames: [String] = []
+    private var connectedSources: Set<MIDIEndpointRef> = []
 
     var onNoteOn: ((Int, Int) -> Void)?  // pitch, velocity
     var onNoteOff: ((Int) -> Void)?      // pitch
@@ -31,14 +33,14 @@ final class MidiManager: ObservableObject {
                 }
             }
         }
-        guard status == noErr else { return }
+        guard status == noErr else { started = false; return }
 
         let portStatus = MIDIInputPortCreateWithBlock(
             client, "ReplayLearn Input" as CFString, &inputPort
         ) { [weak self] packetList, _ in
             self?.handlePacketList(packetList)
         }
-        guard portStatus == noErr else { return }
+        guard portStatus == noErr else { stop(); return }
 
         refreshSources()
     }
@@ -50,19 +52,18 @@ final class MidiManager: ObservableObject {
         if client != 0 { MIDIClientDispose(client); client = 0 }
         isConnected = false
         sourceName = nil
+        sourceNames = []; connectedSources = []
     }
 
     private func refreshSources() {
-        var connectedName: String?
-        for index in 0..<MIDIGetNumberOfSources() {
-            let source = MIDIGetSource(index)
-            MIDIPortConnectSource(inputPort, source, nil)
-            if connectedName == nil {
-                connectedName = Self.displayName(for: source)
-            }
-        }
-        isConnected = connectedName != nil
-        sourceName = connectedName
+        let sources = Set((0..<MIDIGetNumberOfSources()).map { MIDIGetSource($0) })
+        for old in connectedSources.subtracting(sources) { MIDIPortDisconnectSource(inputPort, old) }
+        for new in sources.subtracting(connectedSources) { MIDIPortConnectSource(inputPort, new, nil) }
+        if !connectedSources.subtracting(sources).isEmpty { for pitch in 0...127 { onNoteOff?(pitch) } }
+        connectedSources = sources
+        sourceNames = Array(Set(sources.map(Self.displayName))).sorted()
+        sourceName = sourceNames.first
+        isConnected = !sources.isEmpty
     }
 
     private static func displayName(for endpoint: MIDIEndpointRef) -> String {
@@ -77,24 +78,23 @@ final class MidiManager: ObservableObject {
     /// Parses legacy MIDI 1.0 packet lists; note-on/off only. Runs on a CoreMIDI
     /// queue — hops to MainActor for the callbacks.
     private nonisolated func handlePacketList(_ packetListPtr: UnsafePointer<MIDIPacketList>) {
-        let packetList = packetListPtr.pointee
-        var packet = packetList.packet
-        for _ in 0..<packetList.numPackets {
-            let length = Int(packet.length)
-            if length >= 3 {
-                let status = packet.data.0 & 0xF0
-                let data1 = Int(packet.data.1)
-                let data2 = Int(packet.data.2)
-                switch status {
-                case 0x90 where data2 > 0: // note on
-                    Task { @MainActor [weak self] in self?.onNoteOn?(data1, data2) }
-                case 0x80, 0x90: // note off (or note on with velocity 0)
-                    Task { @MainActor [weak self] in self?.onNoteOff?(data1) }
-                default:
-                    break
+        // Walk the original variable-length packet list, never a copied packet.
+        let packetOffset = MemoryLayout<MIDIPacketList>.offset(of: \.packet)!
+        var packet = UnsafeRawPointer(packetListPtr).advanced(by: packetOffset).assumingMemoryBound(to: MIDIPacket.self)
+        do {
+            for _ in 0..<packetListPtr.pointee.numPackets {
+                let offset = MemoryLayout<MIDIPacket>.offset(of: \.data)!
+                let data = UnsafeRawPointer(packet).advanced(by: offset).assumingMemoryBound(to: UInt8.self)
+                let bytes = Array(UnsafeBufferPointer(start: data, count: Int(packet.pointee.length)))
+                let events = MIDIByteParser.parse(bytes)
+                Task { @MainActor [weak self] in
+                    for event in events {
+                        if event.velocity > 0 { self?.onNoteOn?(event.pitch, event.velocity) }
+                        else { self?.onNoteOff?(event.pitch) }
+                    }
                 }
+                packet = UnsafePointer(MIDIPacketNext(packet))
             }
-            packet = MIDIPacketNext(&packet).pointee
         }
     }
 }

@@ -9,6 +9,7 @@ struct HitJudge {
         let grade: Grade
         let pitch: Int
         let noteIndex: Int?
+        var timingOffset: Double? = nil
     }
 
     static let perfectWindow = 0.08
@@ -46,7 +47,7 @@ struct HitJudge {
         streak += 1
         bestStreak = max(bestStreak, streak)
         score += (grade == .perfect ? 100 : 60) * (1 + min(streak, 20) / 10)
-        return Judgment(grade: grade, pitch: pitch, noteIndex: best.index)
+        return Judgment(grade: grade, pitch: pitch, noteIndex: best.index, timingOffset: t - targets[best.index].startTime)
     }
 
     /// Marks notes whose window has fully passed as missed.

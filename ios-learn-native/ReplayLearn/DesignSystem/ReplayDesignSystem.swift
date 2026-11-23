@@ -1,103 +1,133 @@
 import SwiftUI
 
-/// Native tokens stay independent of the web implementation. Use semantic roles
-/// so components adapt to accessibility settings and the current color scheme.
+/// Acid tokens are native-owned. Glass belongs to controls; content stays solid.
 enum ReplayTheme {
-    static let background = Color(uiColor: .systemBackground)
-    static let surface = Color(uiColor: .secondarySystemBackground)
-    static let border = Color(uiColor: .separator)
-    static let accent = Color(hue: 45 / 360, saturation: 0.95, brightness: 0.98)
-    static let onAccent = Color.black
-    static let success = Color.green
-    static let warning = Color.orange
-    static let destructive = Color.red
-    static let radius: CGFloat = 12
+    static let background = Color(hex: 0x060709)
+    static let surface = Color(hex: 0x0F1116)
+    static let raised = Color(hex: 0x181B22)
+    static let border = Color(hex: 0x262A34)
+    static let strongBorder = Color(hex: 0x5C6272)
+    static let ink = Color(hex: 0xF3F5F7)
+    static let muted = Color(hex: 0x8F95A6)
+    static let accent = Color(hex: 0xC6FF1A)
+    static let ai = Color(hex: 0x25B8FF)
+    static let onAccent = Color(hex: 0x07080B)
+    static let success = accent
+    static let warning = Color(hex: 0xFFE14D)
+    static let destructive = Color(hex: 0xFF4D4D)
+    static let radius: CGFloat = 22
     static let controlHeight: CGFloat = 44
-
+    static let pianoRailGap: CGFloat = 8
+    static let pianoDockTint = 0.7
+    static let pitchHex: [UInt32] = [0xFF4D5E,0xFF4D5E,0xFF9A3D,0xFF9A3D,0xFFE14D,0x4DFF88,0x4DFF88,0x1FE0F0,0x1FE0F0,0x4D8DFF,0x4D8DFF,0xA66BFF]
+    static func pitch(_ midi: Int) -> Color { Color(hex: pitchHex[(midi % 12 + 12) % 12]) }
+    static func display(_ size: CGFloat) -> Font { .custom("SpaceGrotesk-Light_Regular", size: size, relativeTo: .largeTitle).weight(.semibold) }
+    static func mono(_ size: CGFloat = 11) -> Font { .custom("JetBrainsMono-Regular", size: size, relativeTo: .caption) }
     enum Space {
-        static let tiny: CGFloat = 4
-        static let small: CGFloat = 8
-        static let medium: CGFloat = 16
-        static let large: CGFloat = 24
-        static let page: CGFloat = 32
+        static let tiny: CGFloat = 4, small: CGFloat = 8, medium: CGFloat = 16, large: CGFloat = 24, page: CGFloat = 32
     }
 }
 
+extension Color {
+    init(hex: UInt32) { self.init(.sRGB, red: Double((hex >> 16) & 255)/255, green: Double((hex >> 8) & 255)/255, blue: Double(hex & 255)/255, opacity: 1) }
+}
+
+struct ReplayChrome: ViewModifier {
+    var radius: CGFloat = 22
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
+    func body(content: Content) -> some View {
+        if reduceTransparency {
+            content.background(ReplayTheme.raised, in: RoundedRectangle(cornerRadius: radius))
+                .overlay(RoundedRectangle(cornerRadius: radius).stroke(ReplayTheme.strongBorder, lineWidth: 1))
+        } else {
+            content.glassEffect(.regular, in: .rect(cornerRadius: radius))
+                .overlay(RoundedRectangle(cornerRadius: radius).stroke(contrast == .increased ? ReplayTheme.strongBorder : .clear, lineWidth: 1))
+        }
+    }
+}
+extension View { func replayChrome(radius: CGFloat = 22) -> some View { modifier(ReplayChrome(radius: radius)) } }
+
 struct ReplayCard<Content: View>: View {
+    @Environment(\.colorSchemeContrast) private var contrast
     private let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
     var body: some View {
-        content
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(ReplayTheme.Space.medium)
+        content.frame(maxWidth: .infinity, alignment: .leading).padding(24)
             .background(ReplayTheme.surface, in: RoundedRectangle(cornerRadius: ReplayTheme.radius))
+            .overlay(RoundedRectangle(cornerRadius: ReplayTheme.radius).stroke(contrast == .increased ? ReplayTheme.strongBorder : ReplayTheme.border, lineWidth: 1))
     }
 }
 
 struct ReplayButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, destructive }
     var kind: Kind = .primary
-    @Environment(\.isEnabled) private var isEnabled
-
-    private var background: Color {
-        switch kind {
-        case .primary: return ReplayTheme.accent
-        case .secondary: return ReplayTheme.surface
-        case .destructive: return ReplayTheme.destructive
-        }
-    }
+    @Environment(\.isEnabled) private var enabled
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.body.weight(.semibold))
-            .padding(.horizontal, ReplayTheme.Space.medium)
-            .padding(.vertical, ReplayTheme.Space.small)
-            .frame(minHeight: ReplayTheme.controlHeight)
-            .foregroundStyle(kind == .primary ? ReplayTheme.onAccent : kind == .destructive ? .white : .primary)
-            .background(background.opacity(configuration.isPressed ? 0.75 : 1), in: RoundedRectangle(cornerRadius: ReplayTheme.radius))
-            .opacity(isEnabled ? 1 : 0.45)
+        configuration.label.font(.body.weight(.semibold)).padding(.horizontal, 18).padding(.vertical, 10)
+            .frame(minHeight: 44)
+            .foregroundStyle(kind == .primary ? ReplayTheme.onAccent : kind == .destructive ? ReplayTheme.destructive : ReplayTheme.ink)
+            .background(kind == .primary ? ReplayTheme.accent : ReplayTheme.raised, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(kind == .destructive ? ReplayTheme.destructive : .clear))
+            .opacity(enabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
     }
 }
 
 struct ReplayStatus: View {
     let title: String
     let systemImage: String
-    var color: Color = .secondary
+    var color: Color = ReplayTheme.muted
     var font: Font = .subheadline
+    var body: some View { Label(title, systemImage: systemImage).font(font).foregroundStyle(color).fixedSize(horizontal: false, vertical: true) }
+}
+
+struct TuneThumbnail: View {
+    var sequence: NoteSequence?
     var body: some View {
-        Label(title, systemImage: systemImage)
-            .font(font)
-            .foregroundStyle(color)
-            .fixedSize(horizontal: false, vertical: true)
+        Canvas { context, size in
+            for row in 0..<6 {
+                let rect = CGRect(x: 0, y: CGFloat(row)*size.height/6, width: size.width, height: size.height/6-1)
+                context.fill(Path(rect), with: .color(row.isMultiple(of: 2) ? ReplayTheme.raised : ReplayTheme.surface))
+            }
+            let notes = Array((sequence?.notes ?? []).prefix(14))
+            let low = notes.map(\.pitch).min() ?? 60, high = notes.map(\.pitch).max() ?? 72
+            let start = notes.map(\.startTime).min() ?? 0
+            let duration = max(1, (notes.map(\.endTime).max() ?? 1)-start)
+            for note in notes {
+                let x = 12 + (note.startTime-start)/duration * (size.width-24)
+                let y = 12 + CGFloat(high-note.pitch)/CGFloat(max(1, high-low)) * (size.height-32)
+                let width = max(8, (note.endTime-note.startTime)/duration * (size.width-24)-2)
+                context.fill(Path(roundedRect: CGRect(x: x, y: y, width: width, height: 8), cornerRadius: 4), with: .color(ReplayTheme.pitch(note.pitch)))
+            }
+        }.overlay { if sequence == nil { Image(systemName: "music.note").font(.largeTitle).foregroundStyle(ReplayTheme.muted) } }
+        .accessibilityHidden(true)
     }
 }
 
 struct ReplayTuneCard: View {
-    let title: String
-    let unlocked: Bool
-    var prerequisites: [String] = []
+    let tune: TuneLibraryItem
     let action: () -> Void
-
     var body: some View {
         Button(action: action) {
-            ReplayCard {
-                HStack(spacing: ReplayTheme.Space.medium) {
-                    Image(systemName: unlocked ? "music.note" : "lock.fill")
-                        .font(.title2).foregroundStyle(unlocked ? ReplayTheme.accent : .secondary)
-                    VStack(alignment: .leading, spacing: ReplayTheme.Space.small) {
-                        Text(title).font(.headline)
-                        Text(unlocked ? "Unlocked" : "Locked · Complete \(prerequisites.joined(separator: ", "))")
-                            .font(.subheadline).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 0) {
+                TuneThumbnail(sequence: tune.sequence).frame(height: 120).opacity(tune.unlocked ? 1 : 0.45)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text(tune.acquired ? "ACQUIRED" : tune.unlocked ? "READY TO PLAY" : "LOCKED").font(ReplayTheme.mono())
+                            .foregroundStyle(tune.acquired ? ReplayTheme.accent : ReplayTheme.muted)
+                        Spacer()
+                        Image(systemName: tune.acquired ? "checkmark.seal" : tune.unlocked ? "arrow.up.right" : "lock")
                     }
-                    Spacer(minLength: 0)
-                    if unlocked { Image(systemName: "arrow.right") }
-                }
-                .frame(minHeight: 88)
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(!unlocked)
-        .accessibilityLabel("\(unlocked ? "Practice" : "Locked"): \(title)")
-        .accessibilityHint(unlocked ? "Open tune practice" : "Complete \(prerequisites.joined(separator: ", ")) first")
+                    Text(tune.title).font(ReplayTheme.display(21)).foregroundStyle(ReplayTheme.ink).lineLimit(2)
+                    if !tune.unlocked { Text("Complete \(tune.prerequisites.map(TuneLibraryItem.displayTitle).joined(separator: ", ")) first").font(.caption).foregroundStyle(ReplayTheme.muted) }
+                    if let sequence = tune.sequence {
+                        Text("\(sequence.notes.count) notes · \(Int(sequence.totalTime.rounded())) sec").font(ReplayTheme.mono()).foregroundStyle(ReplayTheme.muted)
+                    }
+                }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+            }.background(ReplayTheme.surface).clipShape(RoundedRectangle(cornerRadius: 22))
+                .overlay(RoundedRectangle(cornerRadius: 22).stroke(ReplayTheme.border))
+        }.buttonStyle(.plain).disabled(!tune.unlocked)
+        .accessibilityLabel("\(tune.title), \(tune.acquired ? "acquired" : tune.unlocked ? "ready to play" : "locked")")
     }
 }
 
@@ -106,34 +136,28 @@ struct ReplayFeedbackCard: View {
     let feedback: String
     var reasoning: String? = nil
     var completed = false
-
-    private var color: Color {
-        switch evaluation {
-        case "pass": return ReplayTheme.success
-        case "close": return ReplayTheme.warning
-        default: return ReplayTheme.destructive
-        }
-    }
-    private var icon: String {
-        switch evaluation {
-        case "pass": return "checkmark.circle.fill"
-        case "close": return "circle.lefthalf.filled"
-        default: return "xmark.circle.fill"
-        }
-    }
     var body: some View {
-        ReplayCard {
-            VStack(alignment: .leading, spacing: ReplayTheme.Space.medium) {
-                ReplayStatus(title: evaluation.capitalized, systemImage: icon, color: color)
-                Text(feedback).fixedSize(horizontal: false, vertical: true)
-                if let reasoning, !reasoning.isEmpty {
-                    Text(reasoning).font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if completed {
-                    ReplayStatus(title: "Tune completed", systemImage: "checkmark.seal.fill", color: ReplayTheme.success)
-                }
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            ReplayStatus(title: completed ? "Tune acquired" : evaluation.capitalized,
+                         systemImage: evaluation == "pass" ? "checkmark.seal.fill" : "arrow.counterclockwise",
+                         color: evaluation == "pass" ? ReplayTheme.accent : ReplayTheme.warning)
+            Text(feedback).fixedSize(horizontal: false, vertical: true)
+            if let reasoning, !reasoning.isEmpty { Text(reasoning).font(.caption).foregroundStyle(ReplayTheme.muted) }
         }
     }
+}
+
+/// Shared toolbar/rail material. Foreground controls and labels remain unfiltered.
+struct PianoDockBackdrop: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    var body: some View {
+        ZStack {
+            if !reduceTransparency { PianoDockBlur() }
+            LinearGradient(colors: [ReplayTheme.surface.opacity(reduceTransparency ? 1 : ReplayTheme.pianoDockTint), ReplayTheme.surface.opacity(reduceTransparency ? 1 : ReplayTheme.pianoDockTint), ReplayTheme.surface], startPoint: .top, endPoint: .bottom)
+        }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+private struct PianoDockBlur: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIVisualEffectView { UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterialDark)) }
+    func updateUIView(_ view: UIVisualEffectView, context: Context) {}
 }

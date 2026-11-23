@@ -7,22 +7,13 @@ import {
   getSamplerBaseUrl
 } from "./usePianoSound";
 
-let sharedAudioContext: AudioContext | null = null;
-
-function getSharedAudioContext() {
-  if (!sharedAudioContext) {
-    sharedAudioContext = new AudioContext({
-      latencyHint: "interactive",
-    });
-  }
-  return sharedAudioContext;
-}
+import { pianoAudioContext as getSharedAudioContext } from "@/lib/highwayAudioClock";
 
 type AudioEngine = {
   type: "classic" | "fm-synth" | "sampler";
   startNote: (noteKey: string) => void;
   stopNote: (noteKey: string) => void;
-  playNote: (noteKey: string, duration: number) => void;
+  playNote: (noteKey: string, duration: number, at?: number) => (() => void);
   dispose: () => void;
 };
 
@@ -76,22 +67,23 @@ function createClassicEngine(): AudioEngine {
         activeOscillators.delete(noteKey);
       }
     },
-    playNote: (noteKey: string, duration: number) => {
+    playNote: (noteKey: string, duration: number, at = Tone.now()) => {
       const frequency = noteToFrequency(noteKey);
       const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
       
       oscillator.type = "triangle";
-      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(frequency, at);
       
-      gain.gain.setValueAtTime(0, audioContext.currentTime);
-      gain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
-      gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(0.3, at + 0.01);
+      gain.gain.linearRampToValueAtTime(0, at + duration);
       
       oscillator.connect(gain);
       gain.connect(audioContext.destination);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + duration + 0.1);
+      oscillator.start(at);
+      oscillator.stop(at + duration + 0.1);
+      return () => { oscillator.stop(); oscillator.disconnect(); gain.disconnect(); };
     },
     dispose: () => {
       activeOscillators.forEach(({ oscillator, gain }) => {
@@ -150,8 +142,9 @@ function createFMSynthEngine(): { engine: AudioEngine; loadPromise: Promise<void
       stopNote: (noteKey: string) => {
         synth.triggerRelease(noteKey, Tone.now());
       },
-      playNote: (noteKey: string, duration: number) => {
-        synth.triggerAttackRelease(noteKey, duration, Tone.now());
+      playNote: (noteKey: string, duration: number, at = Tone.now()) => {
+        synth.triggerAttackRelease(noteKey, duration, at);
+        return () => synth.triggerRelease(noteKey, Tone.immediate());
       },
       dispose: () => {
         synth.dispose();
@@ -249,8 +242,13 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
         }, shallowReleaseHoldMs);
         pendingReleases.set(noteKey, { time: nowMs(), sources, timeoutId: releaseTimeout });
       },
-      playNote: (noteKey: string, duration: number) => {
-        sampler.triggerAttackRelease(noteKey, duration, Tone.now());
+      playNote: (noteKey: string, duration: number, at = Tone.now()) => {
+        const before = new Set(getActiveSources(noteKey));
+        sampler.triggerAttack(noteKey, at);
+        const ownSources = getActiveSources(noteKey).filter(source => !before.has(source));
+        // Sampler removes sources from its registry as soon as release is scheduled.
+        sampler.triggerRelease(noteKey, at + duration);
+        return () => stopSources(ownSources);
       },
       dispose: () => {
         pendingReleases.forEach(({ timeoutId }) => clearTimeout(timeoutId));
@@ -375,9 +373,16 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
     activeNotesRef.current.delete(noteKey);
   }, []);
 
-  const playNote = useCallback(async (noteKey: string, duration: number = 0.3) => {
+  const playbackReleases = useRef(new Set<() => void>());
+  const stopPlayback = useCallback(() => {
+    for (const release of playbackReleases.current) { try { release(); } catch { /* Voice already ended or engine disposed. */ } }
+    playbackReleases.current.clear();
+  }, []);
+  useEffect(() => stopPlayback, [stopPlayback, soundType]);
+  const playNote = useCallback(async (noteKey: string, duration: number = 0.3, at?: number) => {
     const engine = isLoadedRef.current ? engineRef.current : fallbackEngineRef.current;
-    engine?.playNote(noteKey, duration);
+    const release = engine?.playNote(noteKey, duration, at);
+    if (release) playbackReleases.current.add(release);
   }, []);
 
   return {
@@ -387,5 +392,6 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
     startNote,
     stopNote,
     playNote,
+    stopPlayback,
   };
 }

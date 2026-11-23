@@ -666,7 +666,7 @@ export function TuneMode({
     return (
       <>
         <div className="w-full h-full min-h-0 flex flex-col">
-          <TunePractice
+          <TunePractice language={language} notationPreference={notationPreference}
             tuneKey={tuneKey}
             tuneTitle={state.tuneTitle}
             currentNugget={currentNugget}

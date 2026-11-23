@@ -11,7 +11,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Exercise the native graphics backend on macOS; software WebGL has intermittent cold-start stalls.
+    { name: "chromium", use: { ...devices["Desktop Chrome"],
+      launchOptions: process.platform === "darwin" ? { args: ["--use-angle=metal"] } : undefined } },
     { name: "ipad-webkit", use: { ...devices["iPad Pro 11"], browserName: "webkit" } },
   ],
 });

@@ -1,132 +1,125 @@
 import SwiftUI
 
-/// A local component catalog: no API calls, MIDI events or progress writes.
+/// Living catalog: uses the production components, not look-alike examples.
 struct DesignSystemView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var darkAppearance = true
-    @State private var silent = false
-    @State private var tempo = 90.0
-    @State private var title = "Evening practice"
-    @State private var lastAction = "Try a component below. These examples do not affect your practice."
-    private var columns: [GridItem] {
-        [GridItem(dynamicTypeSize.isAccessibilitySize ? .flexible() : .adaptive(minimum: 240), spacing: ReplayTheme.Space.medium)]
-    }
-
+    @State private var held: Set<Int> = []
+    @StateObject private var piano = PianoAudioEngine()
+    @State private var compact = false
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: ReplayTheme.Space.page) {
-                    VStack(alignment: .leading, spacing: ReplayTheme.Space.small) {
-                        Text("Replay Nat").font(.largeTitle.bold())
-                        Text("The native components used in your tune library and practice screens.")
-                            .foregroundStyle(.secondary)
-                        Toggle("Dark appearance", isOn: $darkAppearance)
+                VStack(alignment: .leading, spacing: 32) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Replay / Acid").font(ReplayTheme.display(44))
+                        Text("Native design system").font(.title3)
+                        Text("System owns chrome. Brand owns content.").foregroundStyle(ReplayTheme.muted)
                     }
-                    catalogSection("Colors") {
-                        LazyVGrid(columns: columns) {
-                            swatch("Background", ReplayTheme.background)
-                            swatch("Surface", ReplayTheme.surface)
-                            swatch("Primary action", ReplayTheme.accent)
-                            swatch("Success", ReplayTheme.success)
-                            swatch("Needs practice", ReplayTheme.warning)
-                            swatch("Error", ReplayTheme.destructive)
+                    section("01 / Foundations") {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))], spacing: 16) {
+                            swatch("Background", "060709", ReplayTheme.background)
+                            swatch("Surface", "0F1116", ReplayTheme.surface)
+                            swatch("Raised", "181B22", ReplayTheme.raised)
+                            swatch("Primary", "C6FF1A", ReplayTheme.accent)
+                            swatch("AI", "25B8FF", ReplayTheme.ai)
+                            swatch("Ink", "F3F5F7", ReplayTheme.ink)
+                            swatch("Muted", "8F95A6", ReplayTheme.muted)
+                            swatch("Destructive", "FF4D4D", ReplayTheme.destructive)
                         }
+                        Text("Space Grotesk / Display").font(ReplayTheme.display(30))
+                        Text("SF Pro / Interface, instructions and feedback").font(.body)
+                        Text("JetBrains Mono / TAGS · 90 BPM · C4").font(ReplayTheme.mono(13))
+                        Text("Spacing 4 · 8 · 12 · 16 · 24 · 32. Cards 22 pt. Popovers 26 pt. Controls 10 pt. Minimum control target 44 pt.").font(.subheadline).foregroundStyle(ReplayTheme.muted)
                     }
-                    catalogSection("Typography") {
-                        Text("Page title · Tunes").font(.largeTitle.bold())
-                        Text("Section title · Practice").font(.title2.bold())
-                        Text("Card title · Intro").font(.headline)
-                        Text("Body · Listen once, then play at your own pace.").font(.body)
-                        Text("Caption · MIDI connected").font(.caption).foregroundStyle(.secondary)
-                        Text("All text uses Dynamic Type. Labels and symbols accompany status colors.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                    }
-                    catalogSection("Spacing & shape") {
-                        Text("4, 8, 16, 24 and 32 pt spacing. Cards use a 12 pt radius. Buttons have at least a 44 pt touch target.")
-                        ForEach([4, 8, 16, 24, 32], id: \.self) { value in
-                            HStack {
-                                Text("\(value) pt").font(.caption.monospacedDigit()).frame(width: 44, alignment: .leading)
-                                RoundedRectangle(cornerRadius: 4).fill(ReplayTheme.accent)
-                                    .frame(width: CGFloat(value * 5), height: 12)
-                            }
+                    section("02 / Actions & materials") {
+                        ViewThatFits {
+                            HStack(spacing: 12) { actions }
+                            VStack(alignment: .leading, spacing: 12) { actions }
                         }
+                        HStack { Image(systemName: "sparkle"); Text("Glass is reserved for navigation, coach and transport.") }.padding(20).replayChrome()
+                        ReplayCard { Text("Tune cards, note highway and keyboard use solid surfaces. One filled primary action per screen. No decorative idle glow.") }
                     }
-                    catalogSection("Actions") {
-                        ViewThatFits(in: .horizontal) {
-                            HStack { actionExamples }
-                            VStack(alignment: .leading) { actionExamples }
-                        }
-                        Button("Complete Intro first") {}.buttonStyle(ReplayButtonStyle()).disabled(true)
-                        Text(lastAction).font(.subheadline).foregroundStyle(.secondary)
-                            .accessibilityIdentifier("design-system-action-result")
+                    section("03 / The piano keyboard") {
+                        Text("A shared layout drives the rail, keys and hit testing. White keys render first; black keys win hit tests. Ten-finger input, chords, sliding and cancellation use UIKit touches.").foregroundStyle(ReplayTheme.muted)
+                        Toggle("Narrow range · C3–G4", isOn: $compact)
+                        PianoKeyboardView(range: compact ? 48...67 : 48...72, held: held, demo: [64], onDown: { pitch, velocity in
+                            held.insert(pitch); piano.play(pitch: pitch, velocity: velocity)
+                        }, onUp: { pitch in held.remove(pitch); piano.release(pitch: pitch) })
+                            .frame(height: 300)
+                        Text("Play this keyboard. Lime = your touch. Blue E4 = demo state. Pitch colors identify the notes in the rail; keys have no printed labels.").font(.caption).foregroundStyle(ReplayTheme.muted)
+                        Text("52 pt rail: two 24 pt rows + two 2 pt gaps. Keys: 248 pt. White gap/padding: 2 pt. Black keys: 58% of white width and key height. Wide range: C3–C5; narrow: C3–G4; full range scrolls without shrinking keys.").font(.subheadline)
+                        HStack { ForEach([60,62,64,65,67,69,71], id: \.self) { pitch in
+                            Text(PianoGeometry.label(pitch)).font(ReplayTheme.mono()).frame(maxWidth: .infinity).padding(.vertical, 16)
+                                .background(ReplayTheme.pitch(pitch), in: RoundedRectangle(cornerRadius: 8)).foregroundStyle(ReplayTheme.onAccent)
+                        } }
+                        Text("Sharps inherit the lower natural’s hue. Idle sharp labels use white on C♯, D♯, A♯ and dark ink on F♯, G♯ to preserve contrast.").font(.caption).foregroundStyle(ReplayTheme.muted)
                     }
-                    catalogSection("Controls") {
-                        ReplayCard {
-                            VStack(alignment: .leading, spacing: ReplayTheme.Space.medium) {
-                                TextField("Tune title", text: $title).textFieldStyle(.roundedBorder)
-                                Toggle("Silent while I play", isOn: $silent)
-                                Text("Tempo · \(Int(tempo)) BPM").monospacedDigit()
-                                Slider(value: $tempo, in: 40...180, step: 1) { Text("Tempo") }
-                            }
-                        }
+                    section("04 / Note Highway") { NativeHighwayCatalog() }
+                    section("05 / Content & feedback") {
+                        ReplayFeedbackCard(evaluation: "pass", feedback: "Your timing is steady. Keep the phrase connected.", completed: true)
+                        ReplayFeedbackCard(evaluation: "close", feedback: "Listen once more, then try the opening notes slowly.")
+                        Text("Catalog examples only. Live library thumbnails use published notes; progress uses evaluated attempts and server-confirmed acquisitions.").font(.caption).foregroundStyle(ReplayTheme.muted)
                     }
-                    catalogSection("Tune cards") {
-                        LazyVGrid(columns: columns) {
-                            ReplayTuneCard(title: "Intro", unlocked: true) { lastAction = "Selected Intro — preview only." }
-                            ReplayTuneCard(title: "St Louis Blues", unlocked: false, prerequisites: ["Intro"]) {}
-                            ReplayTuneCard(title: "A longer tune title that wraps on a smaller screen", unlocked: false, prerequisites: ["Intro", "First steps"]) {}
-                        }
+                    section("06 / Accessibility") {
+                        Text("Dark appearance. Dynamic Type for interface and instructions; fixed 11 pt rail labels preserve key alignment. Each key has a VoiceOver pitch label and an activation action. The decorative rail is not a second accessibility element.")
+                        Text("Reduce Transparency substitutes solid chrome. Increase Contrast strengthens component outlines. Input highlights have no animation. Every state has a label or symbol in addition to color.").foregroundStyle(ReplayTheme.muted)
                     }
-                    catalogSection("Feedback") {
-                        ReplayFeedbackCard(evaluation: "pass", feedback: "Well played. Your rhythm stayed steady.", completed: true)
-                        ReplayFeedbackCard(evaluation: "close", feedback: "Almost there. Try the last phrase once more.", reasoning: "Listen for the space between the final two notes.")
-                        ReplayFeedbackCard(evaluation: "retry", feedback: "Take your time. Listen to the demo and try again.")
-                    }
-                    catalogSection("Connection & loading") {
-                        ReplayStatus(title: "MIDI connected", systemImage: "checkmark.circle.fill", color: ReplayTheme.success)
-                        ReplayStatus(title: "No MIDI device — connect your piano", systemImage: "cable.connector")
-                        ProgressView("Preparing practice…")
-                    }
-                }
-                .padding(ReplayTheme.Space.large)
-                .frame(maxWidth: 1000, alignment: .leading)
-                .frame(maxWidth: .infinity)
-            }
-            .background(ReplayTheme.background)
-            .navigationTitle("Design system")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        }
-        .tint(ReplayTheme.accent)
-        .preferredColorScheme(darkAppearance ? .dark : .light)
+                }.padding(32).frame(maxWidth: 1200).frame(maxWidth: .infinity)
+            }.background(ReplayTheme.background).navigationTitle("Design system").navigationBarTitleDisplayMode(.inline)
+        }.foregroundStyle(ReplayTheme.ink).tint(ReplayTheme.accent).preferredColorScheme(.dark)
+            .onAppear { piano.preload() }.onDisappear { piano.stopAll() }
     }
-
-    @ViewBuilder private var actionExamples: some View {
-        Button("Start practice") { lastAction = "Primary action pressed — preview only." }
-            .buttonStyle(ReplayButtonStyle())
-        Button("Play demo") { lastAction = "Secondary action pressed — no audio plays." }
-            .buttonStyle(ReplayButtonStyle(kind: .secondary))
-        Button("Delete example") { lastAction = "Destructive style pressed — nothing was deleted." }
-            .buttonStyle(ReplayButtonStyle(kind: .destructive))
+    @ViewBuilder private var actions: some View {
+        Button("Replay", systemImage: "play.fill") {}.buttonStyle(ReplayButtonStyle())
+        Button("Restart", systemImage: "arrow.counterclockwise") {}.buttonStyle(ReplayButtonStyle(kind: .secondary))
+        Button("Finish", systemImage: "stop.circle") {}.buttonStyle(ReplayButtonStyle(kind: .destructive))
+        Button("Unavailable") {}.buttonStyle(ReplayButtonStyle()).disabled(true)
     }
-
-    private func catalogSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: ReplayTheme.Space.medium) {
-            Text(title).font(.title2.bold()).accessibilityAddTraits(.isHeader)
-            content()
-        }
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 20) { Text(title.uppercased()).font(ReplayTheme.mono(12)).foregroundStyle(ReplayTheme.accent); content() }
     }
-    private func swatch(_ title: String, _ color: Color) -> some View {
-        ReplayCard {
-            VStack(alignment: .leading, spacing: ReplayTheme.Space.small) {
-                RoundedRectangle(cornerRadius: ReplayTheme.radius).fill(color)
-                    .overlay(RoundedRectangle(cornerRadius: ReplayTheme.radius).stroke(ReplayTheme.border, lineWidth: 1))
-                    .frame(height: 56)
-                Text(title).font(.subheadline)
-            }
+    private func swatch(_ title: String, _ hex: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            RoundedRectangle(cornerRadius: 12).fill(color).frame(height: 64).overlay(RoundedRectangle(cornerRadius: 12).stroke(ReplayTheme.strongBorder))
+            Text(title).font(.subheadline); Text(hex).font(ReplayTheme.mono()).foregroundStyle(ReplayTheme.muted)
         }
     }
 }
 
-#Preview { DesignSystemView() }
+
+/// Frozen reference states rendered by the production SpriteKit scene.
+private struct NativeHighwayCatalog: View {
+    @State private var beat = 4.12
+    @State private var midiConnected = false
+    private var keyboardHeight: CGFloat { PianoGeometry.panelHeight(248, midiConnected: midiConnected) }
+    @State private var scene = NoteHighwayScene(clock: HighwayClock())
+    @State private var armed: Set<Int> = []
+    private let fixture: [(Int, Double, Double)] = [(60,0,1),(62,1,1),(64,2,1),(65,3,1),(67,4,2),(48,4,2),(55,4,2),(64,6,1),(67,7,1),(69,8,1),(57,8,2),(67,9,1),(64,10,2),(52,10,2)]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("One geometry aligns falling notes, armed rail cells and keys. Solid = player; outline = bot. Misses stay neutral. The fixed piano toolbar and rail share a blurred surface; notes pass behind them after crossing the lime hit line. Practice scoring remains separate from drawing.").foregroundStyle(ReplayTheme.muted)
+            Picker("Reference state", selection: $beat) {
+                Text("Beat 4.12 · Perfect").tag(4.12)
+                Text("Beat 8.2 · Miss").tag(8.2)
+            }.pickerStyle(.segmented)
+            Toggle("MIDI connected · compact keys", isOn: $midiConnected)
+            HighwayKeyboardSurface(scene: scene,
+                keyboard: PianoKeyboardView(held: beat < 5 ? [67] : [], demo: beat < 5 ? [48,55] : [57], armed: armed, transparentRail: true, tuneRange: 48...69, onDown: { _,_ in }, onUp: { _ in }), keyboardHeight: keyboardHeight, toolbarHeight: 52)
+                .frame(height: 660)
+                .overlay(alignment: .top) {
+                    HStack { Text("PIANO"); Spacer(); Text("120 BPM · MIDI") }.font(ReplayTheme.mono(11)).padding(.horizontal, 12).frame(height: 52)
+                        .overlay(alignment: .top) { Rectangle().fill(ReplayTheme.border).frame(height: 1) }.padding(.top, 660 - keyboardHeight - 52 - ReplayTheme.pianoRailGap)
+                }
+            Text("Playing uses the audio render clock. Paused freezes position. Reduce Motion keeps scrolling but removes sparks and feedback movement. Timing windows remain 80 ms perfect / 180 ms good.").font(.caption).foregroundStyle(ReplayTheme.muted)
+        }.onAppear(perform: configure).onChange(of: beat) { _,_ in configure() }
+    }
+    private func configure() {
+        scene.bpm = 120; scene.previewBeat = beat; scene.previewBotPitches = [48,55,57,52]
+        scene.onArmedChange = { armed = $0 }
+        let notes = fixture.map { Note(pitch: $0.0, startTime: $0.1/2, endTime: ($0.1+$0.2)/2, velocity: 90) }.sorted { $0.startTime < $1.startTime }
+        scene.load(sequence: NoteSequence(notes: notes, totalTime: 6))
+        for (i,note) in notes.enumerated() where note.startTime*2 <= beat && !scene.previewBotPitches.contains(note.pitch) {
+            scene.apply(.init(grade: note.pitch == 69 ? .miss : .perfect, pitch: note.pitch, noteIndex: i), streak: 0)
+        }
+        scene.update(0)
+    }
+}

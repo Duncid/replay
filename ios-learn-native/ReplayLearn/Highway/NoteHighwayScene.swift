@@ -1,307 +1,180 @@
 import SpriteKit
+import SwiftUI
 
-/// The note highway: falling notes, beat/bar guides, hit line, keyboard and
-/// hit effects — all on one SpriteKit surface, positioned every frame from
-/// `HighwayClock`. All nodes are created up-front; nothing is allocated per frame.
+/// Vertical Note Highway. Geometry is shared with the rail and touch keyboard.
+/// All nodes, paths, labels and effects are prepared at load/layout, never in update.
 @MainActor
 final class NoteHighwayScene: SKScene {
+    private(set) var isPresentationReady = false
+    override func didMove(to view: SKView) { isPresentationReady = false }
+    override func willMove(from view: SKView) { isPresentationReady = false }
+    override func didFinishUpdate() {
+        if view?.window != nil && size.width > 1 && size.height > bottomOcclusion + 1 { isPresentationReady = true }
+    }
     enum Mode { case idle, demo, play }
-
-    // MARK: Inputs
     let clock: HighwayClock
-    var lookahead: Double = 2.5           // seconds of notes visible above the hit line
+    /// Covered distance below the musical play point, independent of clock/scoring.
+    var bottomOcclusion: CGFloat = 0 { didSet { if oldValue != bottomOcclusion { relayout() } } }
     var bpm: Double = 90
     var beatsPerBar = 4
+    var lookahead: Double = 6
+    var visibleRange = 48...72 { didSet { if oldValue != visibleRange { relayout() } } }
+    var reduceMotion = false
+    var previewBeat: Double?
+    var previewBotPitches: Set<Int> = []
+    var onSoundingChange: ((Set<Int>) -> Void)?
+    private var soundingFlags: [Bool] = []
+    private var soundingDirty = false
+    var onArmedChange: ((Set<Int>) -> Void)?
     private(set) var mode: Mode = .idle
-
-    // MARK: Layout
-    private var lowPitch = 60, highPitch = 72
-    private var keyboardHeight: CGFloat { max(120, size.height * 0.28) }
-    private var hitY: CGFloat { keyboardHeight + 6 }
-    private var keyFrames: [Int: CGRect] = [:]
-
-    // MARK: Nodes
-    private let laneLayer = SKNode()
-    private let gridLayer = SKNode()
-    private let noteLayer = SKNode()
-    private let keyLayer = SKNode()
-    private let fxLayer = SKNode()
-    private let hitLine = SKSpriteNode(color: .white, size: .zero)
-    private let streakLabel = SKLabelNode(fontNamed: "AvenirNext-Heavy")
-    private var gridPool: [SKSpriteNode] = []
-    private var noteSprites: [SKSpriteNode] = []
-    private var keySprites: [Int: SKSpriteNode] = [:]
-    private var fxPool: [SKEmitterNode] = []
-    private var nextFx = 0
-
-    // MARK: State
     private var notes: [Note] = []
-    private var noteGrades: [Int: HitJudge.Grade] = [:]
-    private var demoFired: Set<Int> = []
-    private var held: Set<Int> = []
-
-    // MARK: Palette
-    private let bg = SKColor(red: 0.05, green: 0.06, blue: 0.10, alpha: 1)
-    private let noteColor = SKColor(red: 0.98, green: 0.55, blue: 0.25, alpha: 1)
-    private let blackNoteColor = SKColor(red: 0.85, green: 0.35, blue: 0.55, alpha: 1)
-    private let perfectColor = SKColor(red: 0.35, green: 0.95, blue: 0.65, alpha: 1)
-    private let goodColor = SKColor(red: 0.45, green: 0.75, blue: 1.0, alpha: 1)
-    private let missColor = SKColor(white: 0.35, alpha: 0.6)
-
+    private var grades: [HitJudge.Grade?] = []
+    private var lanes: [SKSpriteNode] = [], octaveLabels: [SKLabelNode] = [], bars: [SKSpriteNode] = [], measureLabels: [SKLabelNode] = []
+    private var pills: [SKShapeNode] = [], rings: [SKShapeNode] = [], beams: [SKSpriteNode] = [], sparks: [SKShapeNode] = [], labels: [SKLabelNode] = [], tags: [SKLabelNode] = []
+    private var colors: [UIColor] = [], botColors: [UIColor] = []
+    private var tagPlates: [SKShapeNode] = []
+    private var frames: [CGRect] = [], tagTimes: [Double] = []
+    private let crop = SKCropNode(), content = SKNode(), cropMask = SKSpriteNode(color: .white, size: .zero)
+    private let hitLine = SKShapeNode()
+    private let accent = UIColor(ReplayTheme.accent), ink = UIColor(ReplayTheme.ink), background = UIColor(ReplayTheme.background), surface = UIColor(ReplayTheme.surface), muted = UIColor(ReplayTheme.muted), border = UIColor(ReplayTheme.strongBorder)
+    private var lastAnnouncementTime = -Double.infinity
+    private var nextIndex: Int? = nil
+    private var measureNumbers = Array(repeating: Int.min, count: 32)
+    private var lastTime = -Double.infinity
+    private let beamTexture: SKTexture
     init(clock: HighwayClock) {
         self.clock = clock
-        super.init(size: CGSize(width: 1024, height: 400))
-        scaleMode = .resizeFill
-        backgroundColor = bg
-        [laneLayer, gridLayer, noteLayer, keyLayer, fxLayer].enumerated().forEach { i, layer in
-            layer.zPosition = CGFloat(i)
-            addChild(layer)
+        beamTexture = SKTexture(image: UIGraphicsImageRenderer(size: CGSize(width: 1, height: 64)).image { context in
+            let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [UIColor.clear.cgColor, UIColor.white.withAlphaComponent(0.26).cgColor] as CFArray, locations: [0, 1])!
+            context.cgContext.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: 64), options: [])
+        })
+        super.init(size: CGSize(width: 1000, height: 520))
+        scaleMode = .resizeFill; backgroundColor = background
+        cropMask.anchorPoint = .zero; crop.maskNode = cropMask; crop.addChild(content); addChild(crop)
+        for _ in 0..<88 {
+            let lane = SKSpriteNode(); lane.anchorPoint = .zero; content.addChild(lane); lanes.append(lane)
+            let label = SKLabelNode(fontNamed: "JetBrainsMono-Regular"); label.fontSize = 10; label.fontColor = muted; label.horizontalAlignmentMode = .left; label.zPosition = 1
+            content.addChild(label); octaveLabels.append(label)
         }
-        hitLine.zPosition = 3.5
-        addChild(hitLine)
-        streakLabel.fontSize = 28
-        streakLabel.zPosition = 10
-        streakLabel.alpha = 0
-        addChild(streakLabel)
-        for _ in 0..<48 {
-            let line = SKSpriteNode(color: .white, size: .zero)
-            line.anchorPoint = CGPoint(x: 0, y: 0.5)
-            line.isHidden = true
-            gridLayer.addChild(line)
-            gridPool.append(line)
+        for _ in 0..<32 {
+            let bar = SKSpriteNode(color: border, size: .zero); bar.zPosition = 1; content.addChild(bar); bars.append(bar)
+            let label = SKLabelNode(fontNamed: "JetBrainsMono-Regular"); label.fontSize = 10; label.fontColor = muted; label.horizontalAlignmentMode = .left; label.zPosition = 2
+            content.addChild(label); measureLabels.append(label)
         }
-        buildFxPool()
+        hitLine.strokeColor = accent; hitLine.lineWidth = 2; hitLine.zPosition = 9; addChild(hitLine)
     }
-
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    // MARK: - Public API (called by the view model)
-
     func load(sequence: NoteSequence?) {
+        for nodes in [pills, rings, sparks] { nodes.forEach { $0.removeFromParent() } }
+        tagPlates.forEach { $0.removeFromParent() }; tagPlates = []
+        beams.forEach { $0.removeFromParent() }; labels.forEach { $0.removeFromParent() }; tags.forEach { $0.removeFromParent() }
+        pills = []; rings = []; sparks = []; beams = []; labels = []; tags = []
         notes = (sequence?.notes ?? []).sorted { $0.startTime < $1.startTime }
-        noteGrades = [:]
-        demoFired = []
-        if let lo = notes.map(\.pitch).min(), let hi = notes.map(\.pitch).max() {
-            // Pad to whole octaves, at least two, starting on C.
-            var low = ((lo - 2) / 12) * 12
-            var high = max(((hi + 2) / 12 + 1) * 12, low + 24)
-            low = max(21, low); high = min(108, high)
-            lowPitch = low; highPitch = high
+        soundingFlags = Array(repeating: false, count: notes.count); onSoundingChange?([])
+        grades = Array(repeating: nil, count: notes.count); tagTimes = Array(repeating: -.infinity, count: notes.count)
+        colors = notes.map { UIColor(ReplayTheme.pitch($0.pitch)) }; botColors = colors.map { $0.withAlphaComponent(0.14) }
+        frames = Array(repeating: .zero, count: notes.count)
+        for index in notes.indices {
+            let pill = SKShapeNode(); pill.zPosition = 4; content.addChild(pill); pills.append(pill)
+            let ring = SKShapeNode(); ring.zPosition = 3; ring.lineWidth = 2; ring.strokeColor = ink; ring.fillColor = background; content.addChild(ring); rings.append(ring)
+            let beam = SKSpriteNode(texture: beamTexture); beam.anchorPoint = CGPoint(x: 0.5, y: 0); beam.color = colors[index]; beam.colorBlendFactor = 1; beam.zPosition = 2; content.addChild(beam); beams.append(beam)
+            let spark = SKShapeNode(circleOfRadius: 5); spark.fillColor = colors[index]; spark.strokeColor = colors[index]; spark.glowWidth = 10; spark.zPosition = 7; content.addChild(spark); sparks.append(spark)
+            let label = SKLabelNode(fontNamed: "JetBrainsMono-Regular"); label.text = PianoGeometry.label(notes[index].pitch); label.fontSize = 11; label.zPosition = 5; content.addChild(label); labels.append(label)
+            let plate = SKShapeNode(rect: CGRect(x: -40, y: -5, width: 80, height: 25), cornerRadius: 4); plate.fillColor = background.withAlphaComponent(0.9); plate.strokeColor = border; plate.lineWidth = 1; plate.zPosition = 9; content.addChild(plate); tagPlates.append(plate)
+            let tag = SKLabelNode(fontNamed: "JetBrainsMono-Regular"); tag.fontSize = 11; tag.zPosition = 10; content.addChild(tag); tags.append(tag)
         }
-        noteLayer.removeAllChildren()
-        noteSprites = notes.map { note in
-            let s = SKSpriteNode(color: isBlack(note.pitch) ? blackNoteColor : noteColor, size: .zero)
-            s.anchorPoint = CGPoint(x: 0.5, y: 0)
-            noteLayer.addChild(s)
-            return s
-        }
-        relayout()
+        nextIndex = nil; lastTime = -.infinity; relayout()
     }
-
     func setMode(_ newMode: Mode) {
-        mode = newMode
-        noteGrades = [:]
-        demoFired = []
-        noteSprites.enumerated().forEach { i, s in s.color = baseColor(i); s.alpha = 1 }
+        isPresentationReady = false
+        mode = newMode; soundingFlags = Array(repeating: false, count: notes.count); onSoundingChange?([]); grades = Array(repeating: nil, count: notes.count); tagTimes = Array(repeating: -.infinity, count: notes.count)
+        nextIndex = nil; lastTime = -.infinity; onArmedChange?([]); update(0)
     }
-
-    func setHeld(_ pitches: Set<Int>) {
-        held = pitches
-        for (pitch, sprite) in keySprites {
-            let on = pitches.contains(pitch)
-            sprite.color = on ? noteColor : (isBlack(pitch) ? SKColor(white: 0.08, alpha: 1) : SKColor(white: 0.95, alpha: 1))
+    func apply(_ result: HitJudge.Judgment, streak: Int) {
+        guard let index = result.noteIndex, notes.indices.contains(index) else { return }
+        grades[index] = result.grade; tagTimes[index] = previewBeat == nil ? clock.time : notes[index].startTime
+        tags[index].text = result.grade == .perfect ? "PERFECT" : result.grade == .miss ? "MISS" : (result.timingOffset ?? 0) < 0 ? "EARLY" : "LATE"
+        tags[index].fontColor = result.grade == .perfect ? accent : muted
+        tagPlates[index].strokeColor = result.grade == .perfect ? accent : border
+        if UIAccessibility.isVoiceOverRunning, clock.isRunning, clock.time - lastAnnouncementTime > 1 {
+            lastAnnouncementTime = clock.time
+            UIAccessibility.post(notification: .announcement, argument: "\(PianoGeometry.label(result.pitch)), \(tags[index].text ?? "")")
         }
     }
-
-    func apply(_ judgment: HitJudge.Judgment, streak: Int) {
-        if let i = judgment.noteIndex { noteGrades[i] = judgment.grade }
-        if let i = judgment.noteIndex, i < noteSprites.count {
-            noteSprites[i].color = color(for: judgment.grade)
-            if judgment.grade == .miss { noteSprites[i].alpha = 0.5 }
-        }
-        switch judgment.grade {
-        case .perfect: burst(at: judgment.pitch, color: perfectColor, intensity: 1.0)
-        case .good: burst(at: judgment.pitch, color: goodColor, intensity: 0.6)
-        case .miss, .extra: break
-        }
-        if streak >= 5, streak % 5 == 0 { showStreak(streak) }
-    }
-
-    // MARK: - Frame loop
-
     override func didChangeSize(_ oldSize: CGSize) { relayout() }
-
-    override func update(_ currentTime: TimeInterval) {
-        let t = clock.time
-        let running = clock.isRunning
-        let pxPerSec = (size.height - hitY) / CGFloat(lookahead)
-
-        for (i, note) in notes.enumerated() {
-            let sprite = noteSprites[i]
-            guard running, let frame = keyFrames[note.pitch] else { sprite.isHidden = true; continue }
-            let y = hitY + CGFloat(note.startTime - t) * pxPerSec
-            let h = max(10, CGFloat(note.endTime - note.startTime) * pxPerSec)
-            let visible = y < size.height && y + h > 0
-            sprite.isHidden = !visible
-            guard visible else { continue }
-            sprite.position = CGPoint(x: frame.midX, y: y)
-            sprite.size = CGSize(width: frame.width * (isBlack(note.pitch) ? 0.9 : 0.8), height: h)
-
-            // Demo: notes "play themselves" when they reach the line.
-            if mode == .demo, t >= note.startTime, !demoFired.contains(i) {
-                demoFired.insert(i)
-                sprite.color = perfectColor
-                burst(at: note.pitch, color: perfectColor, intensity: 0.5)
-            }
-        }
-        updateGrid(t: t, running: running, pxPerSec: pxPerSec)
-    }
-
-    private func updateGrid(t: Double, running: Bool, pxPerSec: CGFloat) {
-        gridPool.forEach { $0.isHidden = true }
-        guard running, bpm > 0 else { return }
-        let beat = 60 / bpm
-        var k = Int(floor(t / beat))
-        var idx = 0
-        while idx < gridPool.count {
-            let bt = Double(k) * beat
-            let y = hitY + CGFloat(bt - t) * pxPerSec
-            if y > size.height { break }
-            if y >= hitY {
-                let line = gridPool[idx]
-                let isBar = k % beatsPerBar == 0
-                line.isHidden = false
-                line.position = CGPoint(x: 0, y: y)
-                line.size = CGSize(width: size.width, height: isBar ? 2 : 1)
-                line.color = SKColor(white: 1, alpha: isBar ? 0.22 : 0.07)
-                idx += 1
-            }
-            k += 1
-        }
-    }
-
-    // MARK: - Layout
-
+    private var pixelsPerSecond: CGFloat { min(84, max(1, size.height - bottomOcclusion) / 4) * CGFloat(bpm / 60) }
     private func relayout() {
-        guard size.width > 0 else { return }
-        keyLayer.removeAllChildren()
-        laneLayer.removeAllChildren()
-        keySprites = [:]
-        keyFrames = [:]
-        let whites = (lowPitch...highPitch).filter { !isBlack($0) }
-        let whiteW = size.width / CGFloat(whites.count)
-        var x: CGFloat = 0
-        for pitch in lowPitch...highPitch {
-            if isBlack(pitch) {
-                let w = whiteW * 0.6
-                let rect = CGRect(x: x - w / 2, y: keyboardHeight * 0.38, width: w, height: keyboardHeight * 0.62)
-                keyFrames[pitch] = rect
-                addKey(pitch: pitch, rect: rect, z: 1)
-            } else {
-                let rect = CGRect(x: x + 1, y: 0, width: whiteW - 2, height: keyboardHeight)
-                keyFrames[pitch] = rect
-                addKey(pitch: pitch, rect: rect, z: 0)
-                // Subtle lane per white key, C lanes slightly brighter.
-                let lane = SKSpriteNode(color: SKColor(white: 1, alpha: pitch % 12 == 0 ? 0.06 : 0.025),
-                                        size: CGSize(width: 1, height: size.height - hitY))
-                lane.anchorPoint = .zero
-                lane.position = CGPoint(x: x, y: hitY)
-                laneLayer.addChild(lane)
-                x += whiteW
-            }
+        isPresentationReady = false
+        guard !lanes.isEmpty else { return }
+        content.position.y = bottomOcclusion
+        let geometry = PianoGeometry(range: visibleRange, width: size.width, height: 300)
+        let low = notes.map(\.pitch).min() ?? 48, high = notes.map(\.pitch).max() ?? 72
+        for index in lanes.indices {
+            let pitch = 21 + index, visible = visibleRange.contains(pitch)
+            lanes[index].isHidden = !visible; octaveLabels[index].isHidden = !visible || pitch % 12 != 0
+            guard visible else { continue }
+            let rect = geometry.keyRect(pitch), black = PianoGeometry.isBlack(pitch)
+            lanes[index].position = CGPoint(x: rect.minX, y: -bottomOcclusion); lanes[index].size = CGSize(width: rect.width, height: size.height)
+            lanes[index].color = black ? background : surface; lanes[index].alpha = (pitch < low || pitch > high) ? 0.3 : 0.85; lanes[index].zPosition = black ? 0.5 : 0
+            octaveLabels[index].text = PianoGeometry.label(pitch); octaveLabels[index].position = CGPoint(x: rect.minX + 3, y: 14)
         }
-        hitLine.size = CGSize(width: size.width, height: 3)
-        hitLine.position = CGPoint(x: size.width / 2, y: hitY)
-        hitLine.color = SKColor(white: 1, alpha: 0.8)
-        streakLabel.position = CGPoint(x: size.width / 2, y: size.height * 0.7)
-        setHeld(held)
-    }
-
-    private func addKey(pitch: Int, rect: CGRect, z: CGFloat) {
-        let key = SKSpriteNode(color: .white, size: rect.size)
-        key.anchorPoint = .zero
-        key.position = rect.origin
-        key.zPosition = z
-        keyLayer.addChild(key)
-        keySprites[pitch] = key
-    }
-
-    // MARK: - Effects (pooled)
-
-    private func buildFxPool() {
-        let texture = Self.dotTexture()
-        for _ in 0..<12 {
-            let e = SKEmitterNode()
-            e.particleTexture = texture
-            e.particleBirthRate = 0
-            e.numParticlesToEmit = 0
-            e.particleLifetime = 0.45
-            e.particleLifetimeRange = 0.15
-            e.particleSpeed = 220
-            e.particleSpeedRange = 120
-            e.emissionAngle = .pi / 2
-            e.emissionAngleRange = .pi * 0.8
-            e.yAcceleration = -500
-            e.particleScale = 0.35
-            e.particleScaleRange = 0.2
-            e.particleScaleSpeed = -0.6
-            e.particleAlphaSpeed = -2
-            e.particleColorBlendFactor = 1
-            e.particleBlendMode = .add
-            fxLayer.addChild(e)
-            fxPool.append(e)
+        for (i, note) in notes.enumerated() {
+            let key = geometry.keyRect(note.pitch), inset: CGFloat = PianoGeometry.isBlack(note.pitch) ? 1 : 2
+            let frame = CGRect(x: key.minX + inset, y: 0, width: max(3, key.width - inset*2), height: max(6, (note.endTime-note.startTime)*pixelsPerSecond-2))
+            frames[i] = frame
+            pills[i].path = CGPath(roundedRect: CGRect(origin: .zero, size: frame.size), cornerWidth: 7, cornerHeight: 7, transform: nil)
+            rings[i].path = CGPath(roundedRect: CGRect(origin: .zero, size: frame.size).insetBy(dx: -4, dy: -4), cornerWidth: 10, cornerHeight: 10, transform: nil)
         }
+        cropMask.size = size
+        let path = CGMutablePath(); path.move(to: CGPoint(x: 0, y: bottomOcclusion + 1)); path.addLine(to: CGPoint(x: size.width, y: bottomOcclusion + 1)); hitLine.path = path
+        update(0)
     }
-
-    private func burst(at pitch: Int, color: SKColor, intensity: CGFloat) {
-        guard let frame = keyFrames[pitch], !fxPool.isEmpty else { return }
-        let e = fxPool[nextFx]
-        nextFx = (nextFx + 1) % fxPool.count
-        e.resetSimulation()
-        e.position = CGPoint(x: frame.midX, y: hitY)
-        e.particleColor = color
-        e.numParticlesToEmit = Int(30 * intensity)
-        e.particleBirthRate = 600
-        // Brief key glow.
-        if let key = keySprites[pitch] {
-            key.removeAction(forKey: "glow")
-            key.color = color
-            key.run(.sequence([.wait(forDuration: 0.12), .run { [weak self] in
-                guard let self else { return }
-                self.setHeld(self.held)
-            }]), withKey: "glow")
+    override func update(_ currentTime: TimeInterval) {
+        let time = previewBeat.map { $0 * 60 / bpm } ?? (clock.isRunning ? clock.time : 0)
+        let beatDuration = 60 / max(1, bpm), firstBeat = floor(time / beatDuration)
+        hitLine.glowWidth = reduceMotion ? 0 : 5
+        for i in bars.indices {
+            let beat = firstBeat + Double(i), y = CGFloat(beat*beatDuration-time)*pixelsPerSecond
+            bars[i].position = CGPoint(x: size.width/2, y: y); bars[i].size = CGSize(width: size.width, height: Int(beat).isMultiple(of: beatsPerBar) ? 1.5 : 0.5)
+            bars[i].isHidden = y < 0 || y > size.height - bottomOcclusion
+            measureLabels[i].isHidden = bars[i].isHidden || !Int(beat).isMultiple(of: beatsPerBar)
+            if !measureLabels[i].isHidden { let number = Int(beat)/beatsPerBar+1; if measureNumbers[i] != number { measureNumbers[i] = number; measureLabels[i].text = String(number) }; measureLabels[i].position = CGPoint(x: 6, y: y-14) }
         }
-    }
-
-    private func showStreak(_ n: Int) {
-        streakLabel.text = "\(n) streak!"
-        streakLabel.fontColor = perfectColor
-        streakLabel.removeAllActions()
-        streakLabel.setScale(0.6)
-        streakLabel.alpha = 1
-        streakLabel.run(.group([.scale(to: 1.1, duration: 0.25), .sequence([.wait(forDuration: 0.5), .fadeOut(withDuration: 0.3)])]))
-    }
-
-    private static func dotTexture() -> SKTexture {
-        let size = CGSize(width: 32, height: 32)
-        let image = UIGraphicsImageRenderer(size: size).image { ctx in
-            let colors = [UIColor.white.cgColor, UIColor.white.withAlphaComponent(0).cgColor] as CFArray
-            let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])!
-            ctx.cgContext.drawRadialGradient(gradient, startCenter: CGPoint(x: 16, y: 16), startRadius: 0,
-                                             endCenter: CGPoint(x: 16, y: 16), endRadius: 16, options: [])
+        let next = mode == .demo ? nil : notes.indices.first { grades[$0] == nil && !previewBotPitches.contains(notes[$0].pitch) && notes[$0].startTime >= time - 0.02 }
+        if next != nextIndex || lastTime == -.infinity {
+            nextIndex = next
+            var pitches: Set<Int> = []
+            if let next { for i in next..<notes.count { if notes[i].startTime > notes[next].startTime + 0.001 { break }; if grades[i] == nil && !previewBotPitches.contains(notes[i].pitch) { pitches.insert(notes[i].pitch) } } }
+            onArmedChange?(pitches)
         }
-        return SKTexture(image: image)
-    }
-
-    // MARK: - Helpers
-
-    private func isBlack(_ pitch: Int) -> Bool { [1, 3, 6, 8, 10].contains(pitch % 12) }
-    private func baseColor(_ i: Int) -> SKColor { isBlack(notes[i].pitch) ? blackNoteColor : noteColor }
-    private func color(for grade: HitJudge.Grade) -> SKColor {
-        switch grade {
-        case .perfect: return perfectColor
-        case .good: return goodColor
-        case .miss, .extra: return missColor
+        lastTime = time
+        soundingDirty = false
+        for (i, note) in notes.enumerated() {
+            let judgedActive = note.startTime <= time && note.endTime > time && (grades[i] == .perfect || grades[i] == .good)
+            if soundingFlags[i] != judgedActive { soundingFlags[i] = judgedActive; soundingDirty = true }
+            let frame = frames[i], y = CGFloat(note.startTime-time)*pixelsPerSecond
+            let visible = visibleRange.contains(note.pitch) && y + frame.height >= -bottomOcclusion && y <= size.height - bottomOcclusion
+            pills[i].isHidden = !visible; labels[i].isHidden = true; rings[i].isHidden = true; beams[i].isHidden = true; sparks[i].isHidden = true
+            let age = time-tagTimes[i]
+            tags[i].isHidden = age < 0 || age > 0.75
+            tagPlates[i].isHidden = tags[i].isHidden
+            if !tags[i].isHidden { tags[i].position = CGPoint(x: frame.midX, y: 14 + (reduceMotion ? 0 : age/0.75*28)); tags[i].alpha = reduceMotion ? 1 : 1-age/0.75; tagPlates[i].position = tags[i].position; tagPlates[i].alpha = tags[i].alpha }
+            guard visible else { continue }
+            let isBot = mode == .demo || previewBotPitches.contains(note.pitch)
+            let missed = grades[i] == .miss
+            let active = note.startTime <= time && note.endTime > time && (isBot || grades[i] == .perfect || grades[i] == .good)
+            let armed = next.map { !missed && grades[i] == nil && abs(notes[$0].startTime-note.startTime) < 0.001 } ?? false
+            let point = CGPoint(x: frame.minX, y: y)
+            pills[i].position = point; pills[i].fillColor = missed ? surface : isBot ? botColors[i] : colors[i]
+            pills[i].strokeColor = missed ? border : colors[i]; pills[i].lineWidth = missed ? 1 : isBot ? 2 : 0
+            pills[i].glowWidth = active && !reduceMotion ? 4 : 0
+            labels[i].isHidden = missed || frame.height < 24 || y + frame.height < 18
+            labels[i].fontColor = isBot ? colors[i] : background
+            labels[i].position = CGPoint(x: frame.midX, y: max(0,y)+7)
+            rings[i].position = point; rings[i].isHidden = !armed
+            beams[i].isHidden = !armed || y <= 0; beams[i].position = CGPoint(x: frame.midX, y: 0); beams[i].size = CGSize(width: frame.width, height: max(0,y))
+            sparks[i].isHidden = !active || reduceMotion; sparks[i].position = CGPoint(x: frame.midX, y: 3)
         }
+        if soundingDirty { onSoundingChange?(Set(notes.indices.filter { soundingFlags[$0] }.map { notes[$0].pitch })) }
     }
 }

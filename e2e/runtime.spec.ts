@@ -202,7 +202,11 @@ test("keyboard sound preference mutes MIDI audio while keeping input and screen 
     };
   });
   await page.goto("/");
+  const whiteKey = page.locator('.piano-key[data-note="C4"]');
+  const fullHeight = (await whiteKey.boundingBox())!.height;
   await page.getByRole("button", { name: "Connect MIDI" }).click();
+  await expect(page.locator(".piano-dock")).toHaveAttribute("data-midi-connected", "true");
+  await expect.poll(async () => (await whiteKey.boundingBox())!.height).toBeCloseTo(fullHeight / 2, 0);
   await page.getByRole("button", { name: "MIDI settings" }).click();
   const preference = page.getByRole("switch", { name: "Silent while I play" });
   await expect(preference).not.toBeChecked();
@@ -224,6 +228,9 @@ test("keyboard sound preference mutes MIDI audio while keeping input and screen 
   await page.getByRole("button", { name: "Connect MIDI" }).click();
   await page.getByRole("button", { name: "MIDI settings" }).click();
   await expect(preference).toBeChecked();
+  await page.getByRole("button", { name: "Disconnect", exact: true }).click();
+  await expect(page.locator(".piano-dock")).toHaveAttribute("data-midi-connected", "false");
+  await expect.poll(async () => (await whiteKey.boundingBox())!.height).toBeCloseTo(fullHeight, 0);
 });
 
 test("MIDI model recognition distinguishes controllers, variants, and unknown names", async ({ page }) => {
@@ -392,3 +399,46 @@ for (const sampleState of ["loading", "failed"] as const) {
     } finally { finish!(); }
   });
 }
+
+
+test("tune demo waits for the cold highway scene and a one-second preparation delay", async ({ page }) => {
+  const sequence = { notes: [{ pitch: 60, startTime: 0, endTime: 2, velocity: 90 }], totalTime: 2 };
+  await page.route("**/rest/v1/**", route => {
+    const url = new URL(route.request().url());
+    const table = url.pathname.split("/").pop();
+    const body = table === "tune_assets" ? [{ tune_key: "intro", briefing: null }] : [];
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.route("**/functions/v1/tune-coach", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    tuneTitle: "Intro", practicePlan: [{ itemId: "ready-test", itemType: "nugget", instruction: "Listen", nugget: { noteSequence: sequence } }],
+  }) }));
+  // Make lazy rendering substantially slower than the old fixed 50 ms delay.
+  await page.route("**/assets/NoteHighway-*.js", async route => {
+    await new Promise(resolve => setTimeout(resolve, 900)); await route.continue();
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem("replay-instrument", JSON.stringify("classic"));
+    window["demoStarts"] = [];
+    const start = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (...args) {
+      if (this.type === "triangle") window["demoStarts"].push({ at: performance.now(), ready: document.querySelector(".note-highway")?.getAttribute("data-render-ready") });
+      return start.apply(this, args);
+    };
+    new MutationObserver(() => {
+      if (document.querySelector('.note-highway[data-render-ready="true"]') && window["sceneReadyAt"] == null) window["sceneReadyAt"] = performance.now();
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ["data-render-ready"] });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Practice: intro", exact: true }).click();
+  await expect(page.locator('.note-highway[data-render-ready="true"]')).toBeVisible({ timeout: 30000 });
+  await expect.poll(() => page.evaluate(() => window["demoStarts"].length), { timeout: 10000 }).toBeGreaterThan(0);
+  const timing = await page.evaluate(() => ({ first: window["demoStarts"][0], readyAt: window["sceneReadyAt"] }));
+  expect(timing.first.ready).toBe("true");
+  expect(timing.first.at - timing.readyAt).toBeGreaterThanOrEqual(950);
+  await page.getByRole("button", { name: "Restart", exact: true }).click();
+  await page.getByRole("button", { name: "Replay", exact: true }).click();
+  await page.getByRole("button", { name: "Restart", exact: true }).click();
+  const count = await page.evaluate(() => window["demoStarts"].length);
+  await page.waitForTimeout(1300); // Assert that the cancelled one-second start never fires.
+  expect(await page.evaluate(() => window["demoStarts"].length)).toBe(count);
+});

@@ -84,7 +84,7 @@ actor APIClient {
     func fetchTuneLibrary() async throws -> [TuneLibraryItem] {
         try await ensureLocalUser()
         async let tunes: [PublishedTune] = read("tune_assets", query: [
-            URLQueryItem(name: "select", value: "tune_key,curriculum_versions!inner(status,published_at)"),
+            URLQueryItem(name: "select", value: "tune_key,note_sequence,curriculum_versions!inner(status,published_at)"),
             URLQueryItem(name: "curriculum_versions.status", value: "eq.published"),
             URLQueryItem(name: "order", value: "curriculum_versions(published_at).desc")
         ])
@@ -101,7 +101,9 @@ actor APIClient {
         var seen = Set<String>()
         let acquired = Set(progress.map { $0.tune_key })
         return published.filter { seen.insert($0.tune_key).inserted }.map {
-            TuneAvailability.resolve($0.tune_key, snapshot: curriculum.first?.snapshot, acquired: acquired)
+            var item = TuneAvailability.resolve($0.tune_key, snapshot: curriculum.first?.snapshot, acquired: acquired)
+            item.sequence = $0.note_sequence
+            return item
         }
     }
 

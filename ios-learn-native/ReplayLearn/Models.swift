@@ -1,3 +1,5 @@
+import Foundation
+
 // MARK: - Note sequences (mirrors src/types/noteSequence.ts)
 
 struct Note: Codable, Equatable {
@@ -12,94 +14,6 @@ struct NoteSequence: Codable, Equatable {
     var totalTime: Double
 }
 
-// MARK: - Lesson setup / metronome (mirrors src/types/learningSession.ts)
-
-struct LessonRunSetup: Codable, Equatable {
-    var bpm: Double?
-    var meter: String?
-    var feel: String?
-    var bars: Int?
-    var countInBars: Int?
-    var difficulty: Int?
-}
-
-struct LessonMetronomeSettings: Codable, Equatable {
-    var bpm: Double?
-    var timeSignature: String?
-    var isActive: Bool?
-    var feel: String?
-    var soundType: String?
-    var accentPreset: String?
-}
-
-struct LessonBrief: Codable, Equatable {
-    var lessonKey: String
-    var title: String
-    var goal: String
-    var level: String?
-    var requiredSkills: [String]?
-    var awardedSkills: [String]?
-    var nextLessonKey: String?
-    var trackKey: String?
-    var trackTitle: String?
-}
-
-struct LessonStartResponse: Codable, Equatable {
-    var lessonRunId: String
-    var instruction: String
-    var demoSequence: NoteSequence?
-    var setup: LessonRunSetup
-    var metronome: LessonMetronomeSettings?
-    var lessonBrief: LessonBrief
-    var difficulty: Int?
-}
-
-// MARK: - Evaluation
-
-enum CoachNextAction: String, Codable {
-    case retrySame = "RETRY_SAME"
-    case makeEasier = "MAKE_EASIER"
-    case makeHarder = "MAKE_HARDER"
-    case exitToMainTeacher = "EXIT_TO_MAIN_TEACHER"
-}
-
-struct EvaluationOutput: Codable, Equatable {
-    var evaluation: String // "pass" | "close" | "fail"
-    var diagnosis: [String]?
-    var feedbackText: String
-    var nextAction: CoachNextAction?
-    var setupDelta: LessonRunSetup?
-    var awardedSkills: [String]?
-    var exitHint: String?
-    var markLessonAcquired: Bool?
-    var reasoning: String?
-}
-
-struct MetronomeContext: Codable {
-    var bpm: Double
-    var meter: String
-}
-
-// MARK: - Teacher greeting
-
-struct TeacherSuggestion: Codable, Equatable, Identifiable {
-    var activityKey: String
-    var activityType: String // "lesson" | "tune"
-    var label: String
-    var why: String
-    var trackTitle: String
-    var level: String?
-    var musicRef: String?
-
-    var id: String { activityKey }
-}
-
-struct TeacherGreetingResponse: Codable, Equatable {
-    var greeting: String
-    var suggestions: [TeacherSuggestion]
-    var notes: String?
-}
-
 // MARK: - Generic error payload from edge functions
 
 struct EdgeErrorPayload: Codable {
@@ -110,6 +24,7 @@ struct EdgeErrorPayload: Codable {
 
 struct PublishedTune: Decodable, Identifiable {
     let tune_key: String
+    let note_sequence: NoteSequence?
     var id: String { tune_key }
 }
 
@@ -117,6 +32,10 @@ struct TuneLibraryItem: Identifiable {
     let tuneKey: String
     let unlocked: Bool
     let prerequisites: [String]
+    var acquired = false
+    var sequence: NoteSequence? = nil
+    var title: String { Self.displayTitle(tuneKey) }
+    static func displayTitle(_ key: String) -> String { key.replacingOccurrences(of: "-", with: " ").replacingOccurrences(of: "_", with: " ").capitalized }
     var id: String { tuneKey }
 }
 
@@ -153,7 +72,7 @@ enum TuneAvailability {
             return acquired.contains(node.musicRef)
         }
         if acquired.contains(musicRef) || matches.contains(where: { completed($0.tuneKey) }) {
-            return TuneLibraryItem(tuneKey: musicRef, unlocked: true, prerequisites: [])
+            return TuneLibraryItem(tuneKey: musicRef, unlocked: true, prerequisites: [], acquired: true)
         }
         let paths = matches.map { node in
             (snapshot?.edges ?? []).filter { $0.edge_type == "tune_next" && $0.target_key == node.tuneKey }
@@ -171,11 +90,11 @@ enum TuneAvailability {
 
 // MARK: - Tune coach and evaluation
 
-struct TunePlanSequence: Decodable {
+struct TunePlanSequence: Codable {
     let noteSequence: NoteSequence?
 }
 
-struct TunePracticeItem: Decodable, Identifiable {
+struct TunePracticeItem: Codable, Identifiable {
     let itemId: String
     let itemType: String
     let instruction: String
@@ -198,4 +117,20 @@ struct TuneEvaluationResponse: Decodable {
     let reasoning: String?
     let suggestNewNugget: Bool
     let tuneAcquired: Bool?
+}
+
+/// Local resume state is device-scoped, distinct from server-confirmed acquisition.
+struct PracticeResume: Codable {
+    var tuneKey: String
+    var title: String
+    var plan: [TunePracticeItem]
+    var index: Int
+    var updatedAt: Date
+}
+struct PracticeAttempt: Codable, Identifiable {
+    var id = UUID()
+    var tuneKey: String
+    var date: Date
+    var result: String
+    var score: Int
 }

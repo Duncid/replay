@@ -13,11 +13,18 @@ final class PianoAudioEngine: ObservableObject {
     private let engine = AVAudioEngine()
     private var voices: [AVAudioPlayerNode] = []
     private var nextVoice = 0
+    private var voicePitches: [Int: Int] = [:]
+    private var demoVoices: Set<Int> = []
     private let voiceCount = 16
     private var bufferCache: [Int: AVAudioPCMBuffer] = [:]
     // Player outputs must match the scheduled buffers. The mixer converts this
     // mono format to the device's channel count and sample rate.
     private let playbackFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
+
+    var renderHostTime: Double? {
+        guard engine.isRunning, let time = engine.outputNode.lastRenderTime, time.isHostTimeValid else { return nil }
+        return AVAudioTime.seconds(forHostTime: time.hostTime)
+    }
 
     @Published private(set) var isReady = false
 
@@ -46,9 +53,11 @@ final class PianoAudioEngine: ObservableObject {
         }
     }
 
-    func play(pitch: Int, velocity: Int = 100) {
+    func play(pitch: Int, velocity: Int = 100, demo: Bool = false) {
         guard isReady, let buffer = bufferCache[pitch] else { return }
         let voice = voices[nextVoice]
+        voicePitches[nextVoice] = pitch
+        if demo { demoVoices.insert(nextVoice) } else { demoVoices.remove(nextVoice) }
         nextVoice = (nextVoice + 1) % voiceCount
         voice.stop()
         voice.volume = Float(velocity) / 127.0
@@ -56,23 +65,43 @@ final class PianoAudioEngine: ObservableObject {
         if !voice.isPlaying { voice.play() }
     }
 
-    /// Plays a note sequence (demo playback). Returns a task that can be cancelled.
+    func release(pitch: Int, demo: Bool = false) {
+        let released = voicePitches.filter { $0.value == pitch && demoVoices.contains($0.key) == demo }.map(\.key)
+        for index in released { voices[index].stop(); voicePitches.removeValue(forKey: index); demoVoices.remove(index) }
+    }
+    func stopAll() { voices.forEach { $0.stop() }; voicePitches = [:]; demoVoices = [] }
+
+    /// A single cancellable event timeline owns polyphonic highlights and releases.
+    /// No detached note-off tasks can leak into the next section or replay.
     func play(sequence: NoteSequence, startingAt start: CFTimeInterval = CACurrentMediaTime(),
-              onHighlight: @escaping (Int?) -> Void) -> Task<Void, Never> {
-        Task { @MainActor in
-            for note in sequence.notes.sorted(by: { $0.startTime < $1.startTime }) {
-                let delay = note.startTime - (CACurrentMediaTime() - start)
-                if delay > 0 {
-                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+              onHeld: ((Set<Int>) -> Void)? = nil,
+              onHighlight: @escaping (Int?) -> Void = { _ in }) -> Task<Void, Never> {
+        struct Event { let time: Double; let pitch: Int; let velocity: Double?; let on: Bool }
+        var events: [Event] = []
+        for note in sequence.notes where note.startTime.isFinite && note.endTime.isFinite {
+            events.append(Event(time: max(0, note.startTime), pitch: note.pitch, velocity: note.velocity, on: true))
+            events.append(Event(time: max(note.startTime + 0.05, note.endTime), pitch: note.pitch, velocity: nil, on: false))
+        }
+        events.sort { lhs, rhs in
+            if lhs.time == rhs.time { return !lhs.on && rhs.on }
+            return lhs.time < rhs.time
+        }
+        return Task { @MainActor in
+            var counts: [Int: Int] = [:]
+            for event in events {
+                let delay = event.time - ((renderHostTime ?? start) - start)
+                if delay > 0 { try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+                guard !Task.isCancelled else { return }
+                if event.on {
+                    counts[event.pitch, default: 0] += 1
+                    let v = event.velocity.map { $0 <= 1 ? $0 * 127 : $0 } ?? 100
+                    play(pitch: event.pitch, velocity: Int(max(0, min(127, v))), demo: true)
+                } else {
+                    counts[event.pitch, default: 1] -= 1
+                    if counts[event.pitch] == 0 { counts.removeValue(forKey: event.pitch); release(pitch: event.pitch, demo: true) }
                 }
-                if Task.isCancelled { return }
-                onHighlight(note.pitch)
-                let velocity = note.velocity.map { $0 <= 1 ? $0 * 127 : $0 } ?? 100
-                play(pitch: note.pitch, velocity: Int(max(0, min(127, velocity))))
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: UInt64(max(note.endTime - note.startTime, 0.05) * 1_000_000_000))
-                    onHighlight(nil)
-                }
+                onHeld?(Set(counts.keys))
+                if event.on { onHighlight(event.pitch) } else if counts.isEmpty { onHighlight(nil) }
             }
         }
     }

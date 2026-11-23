@@ -26,12 +26,23 @@ struct AudioSmoke: App {
         let sequence = NoteSequence(notes: notes, totalTime: 1.1)
         var highlighted: [Int] = []
         for _ in 0..<2 {
-            let demo = piano.play(sequence: sequence, startingAt: CACurrentMediaTime() + 0.1) { pitch in
+            let demo = piano.play(sequence: sequence, startingAt: CACurrentMediaTime() + 0.1, onHighlight: { pitch in
                 if let pitch { highlighted.append(pitch) }
-            }
+            })
             await demo.value
         }
         precondition(highlighted == (notes + notes).map(\.pitch), "Demo skipped notes")
+        var chordSeen = false
+        var held: Set<Int> = []
+        let chord = NoteSequence(notes: [60,64,67].map { Note(pitch: $0, startTime: 0, endTime: 0.2, velocity: 100) }, totalTime: 0.2)
+        await piano.play(sequence: chord, onHeld: { pitches in held = pitches; if pitches.count == 3 { chordSeen = true } }).value
+        precondition(chordSeen && held.isEmpty, "Polyphonic highlights or releases failed")
+        var callbacks = 0
+        let cancelled = piano.play(sequence: chord, startingAt: CACurrentMediaTime() + 0.2, onHeld: { _ in callbacks += 1 })
+        cancelled.cancel(); piano.stopAll()
+        await cancelled.value
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        precondition(callbacks == 0, "Cancelled playback leaked callbacks")
         piano.play(pitch: 21)
         piano.play(pitch: 108)
 
@@ -43,7 +54,7 @@ struct AudioSmoke: App {
             metronome.stop()
             precondition(!metronome.isPlaying)
         }
-        print("PASS: demo playback, voice reuse, repeated playback, piano range and metronome")
+        print("PASS: demo playback, voice reuse, repeated playback, piano range, polyphonic highlights, cancellation and metronome")
         fflush(stdout)
         exit(0)
     }

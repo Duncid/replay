@@ -1,3 +1,4 @@
+import { audioNow, demoTime, pianoAudioContext } from "@/lib/highwayAudioClock";
 import { releaseMidiOutputNotes } from "@/lib/midiOutput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
@@ -33,6 +34,7 @@ type UseSheetPlaybackEngineOptions = {
   chordWindowMs?: number;
   onTick?: (timeSec: number) => void;
   onReachedEnd?: () => void;
+  followDemoClock?: boolean;
 };
 
 const DEFAULT_SPEED = 1;
@@ -101,6 +103,7 @@ export function useSheetPlaybackEngine({
   chordWindowMs = DEFAULT_CHORD_WINDOW_MS,
   onTick,
   onReachedEnd,
+  followDemoClock = false,
 }: UseSheetPlaybackEngineOptions) {
   const gates = useMemo(() => buildGates(notes), [notes]);
   const endTime = useMemo(() => {
@@ -135,8 +138,7 @@ export function useSheetPlaybackEngine({
   // the engine advances through silence gaps until the next gate).
   const playerAdvancingRef = useRef(false);
 
-  // Wall-clock anchors for autoplay — time is computed as a pure function
-  // of performance.now() so it's deterministic and sync-free.
+  // Audio render-clock anchors. Suspension freezes playback without wall-clock drift.
   const autoplayStartMsRef = useRef(0);
   const autoplayStartOffsetRef = useRef(0);
 
@@ -373,7 +375,7 @@ export function useSheetPlaybackEngine({
             tRef.current = gate.t;
             setPlayheadTime(gate.t);
             recomputeActiveNotes(gate.t);
-            enterWaiting(nowMs);
+            enterWaiting(performance.now());
           }
         }
         onTickRef.current?.(tRef.current);
@@ -383,12 +385,12 @@ export function useSheetPlaybackEngine({
       let nextTime = tRef.current;
 
       if (autoplay) {
-        // Autoplay: compute time from wall clock — deterministic, no drift
+        // Autoplay follows the audible demo timeline when supplied.
         const elapsed =
           ((nowMs - autoplayStartMsRef.current) / 1000) * speed;
         nextTime = Math.min(
           endTime,
-          autoplayStartOffsetRef.current + elapsed
+          (followDemoClock ? demoTime() : null) ?? (autoplayStartOffsetRef.current + elapsed)
         );
       } else {
         const lastMs = lastFrameMsRef.current ?? nowMs;
@@ -404,7 +406,7 @@ export function useSheetPlaybackEngine({
               tRef.current = nextTime;
               setPlayheadTime(nextTime);
               recomputeActiveNotes(nextTime);
-              enterWaiting(nowMs);
+              enterWaiting(performance.now());
               onTickRef.current?.(tRef.current);
               return;
             }
@@ -461,7 +463,7 @@ export function useSheetPlaybackEngine({
 
       onTickRef.current?.(tRef.current);
     },
-    [endTime, enterWaiting, gates, recomputeActiveNotes, speed, updateFocus]
+    [endTime, enterWaiting, gates, recomputeActiveNotes, speed, updateFocus, followDemoClock]
   );
 
   // RAF loop runs always when enabled — needed for both autoplay and
@@ -469,9 +471,9 @@ export function useSheetPlaybackEngine({
   useEffect(() => {
     if (!enabled) return;
     let isMounted = true;
-    const loop = (now: number) => {
+    const loop = () => {
       if (!isMounted) return;
-      tick(now);
+      tick(audioNow() * 1000);
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -485,12 +487,14 @@ export function useSheetPlaybackEngine({
 
   const play = useCallback(() => {
     if (!enabled) return;
+    // MIDI-only output still needs the shared render clock running. Resume in the Play gesture.
+    void pianoAudioContext().resume().catch(() => {});
     isAutoplayRef.current = true;
     setIsAutoplay(true);
     playerAdvancingRef.current = false;
     lastFrameMsRef.current = null;
-    // Record wall-clock anchor for deterministic autoplay time
-    autoplayStartMsRef.current = performance.now();
+    // Anchor to the same render clock used by piano voices.
+    autoplayStartMsRef.current = audioNow() * 1000;
     autoplayStartOffsetRef.current = tRef.current;
     // Clear gate waiting state so autoplay runs freely
     phaseRef.current = "running";

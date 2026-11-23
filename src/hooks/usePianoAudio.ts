@@ -39,7 +39,7 @@ export function usePianoAudio(soundType: PianoSoundType | null = "acoustic-piano
     if (tonePianoRef.current) await tonePianoRef.current.preload();
   }, []);
 
-  const playNote = useCallback(async (frequency: number, duration: number = 0.3) => {
+  const playNote = useCallback(async (frequency: number, duration: number = 0.3, at?: number) => {
     if (soundType === null) return;
     const release = startKeyboardNote(Math.round(69 + 12 * Math.log2(frequency / 440)));
     if (release) {
@@ -49,7 +49,7 @@ export function usePianoAudio(soundType: PianoSoundType | null = "acoustic-piano
     }
     if (!tonePianoRef.current) return;
     const noteKey = frequencyToNote(frequency);
-    await tonePianoRef.current.playNote(noteKey, duration);
+    await tonePianoRef.current.playNote(noteKey, duration, at);
   }, [soundType]);
 
   const startNote = useCallback((noteKey: string, frequency: number, options?: { localOnly?: boolean }) => {
@@ -73,7 +73,13 @@ export function usePianoAudio(soundType: PianoSoundType | null = "acoustic-piano
     heldNotes.current.delete(noteKey);
   }, []);
 
+  const stopPlayback = useCallback(() => {
+    for (const release of playingNotes.current) release();
+    playingNotes.current.clear();
+    tonePianoRef.current.stopPlayback();
+  }, []);
   return {
+    stopPlayback,
     isLoaded: tonePiano?.isLoaded ?? false,
     ensureAudioReady,
     preload,

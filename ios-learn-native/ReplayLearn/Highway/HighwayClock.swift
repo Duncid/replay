@@ -8,6 +8,12 @@ import QuartzCore
 /// *hear* — not with when the sound was scheduled.
 @MainActor
 final class HighwayClock {
+    var renderTime: (() -> Double?)?
+    private var lastRenderTime: Double?
+    private var now: Double {
+        if let time = renderTime?() { lastRenderTime = time; return time }
+        return lastRenderTime ?? CACurrentMediaTime()
+    }
     private(set) var anchor: CFTimeInterval?
 
     var isRunning: Bool { anchor != nil }
@@ -16,7 +22,7 @@ final class HighwayClock {
     /// Returns the host time at which t = 0 happens (used to schedule audio).
     @discardableResult
     func start(leadIn: Double = 0) -> CFTimeInterval {
-        let a = CACurrentMediaTime() + leadIn
+        let a = now + leadIn
         anchor = a
         return a
     }
@@ -26,13 +32,13 @@ final class HighwayClock {
     /// Musical time in seconds (negative during lead-in). Visual-safe.
     var time: Double {
         guard let anchor else { return -.infinity }
-        return CACurrentMediaTime() - anchor - AVAudioSession.sharedInstance().outputLatency
+        return now - anchor - AVAudioSession.sharedInstance().outputLatency
     }
 
     /// Musical time for an input event (MIDI is heard locally with no output
     /// delay to compensate, so we use raw host time).
     var inputTime: Double {
         guard let anchor else { return -.infinity }
-        return CACurrentMediaTime() - anchor
+        return now - anchor
     }
 }

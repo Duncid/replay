@@ -1,8 +1,7 @@
+import { practiceSceneReadiness, type SceneReadiness } from "@/lib/practiceSceneReadiness";
+import { useHighway } from "@/components/highway/HighwayContext";
+import type { HighwayNote } from "@/components/highway/model";
 
-import {
-  DEFAULT_BASE_UNIT,
-  getRecommendedBaseUnit,
-} from "@/components/PianoSheetPixiLayout";
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
 import { TuneEvaluationNotesTable } from "@/components/TuneEvaluationNotesTable";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,7 @@ import type {
   TuneEvaluationDebugData,
   TuneEvaluationResponse,
 } from "@/types/tunePractice";
-import { midiToNoteName, noteNameToMidi } from "@/utils/noteSequenceUtils";
+import { midiToNoteName, noteNameToMidi, noteNameToSolfege } from "@/utils/noteSequenceUtils";
 import {
   getAssemblyXml,
   getNuggetXml,
@@ -45,18 +44,22 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 
+const NoteHighway = lazy(() => import("@/components/highway/NoteHighway").then(module => ({ default: module.NoteHighway })));
 const OpenSheetMusicDisplayView = lazy(() => import("@/components/OpenSheetMusicDisplayView").then(module => ({ default: module.OpenSheetMusicDisplayView })));
-const PianoSheetPixi = lazy(() => import("@/components/PianoSheetPixi").then(module => ({ default: module.PianoSheetPixi })));
+
 import { useTranslation } from "react-i18next";
 
 interface TunePracticeProps {
   tuneKey: string;
   tuneTitle: string;
+  language?: string;
+  notationPreference?: "auto" | "abc" | "solfege";
   currentNugget: PracticePlanItem;
   currentIndex: number;
   totalNuggets: number;
@@ -241,6 +244,8 @@ export function TunePractice({
   currentStreak,
   totalWins,
   lastEvaluation,
+  language = "en",
+  notationPreference = "auto",
   onPlaySample,
   onStopSample,
   onSwitchNugget,
@@ -411,85 +416,6 @@ export function TunePractice({
     }));
   }, [sampleSequence]);
 
-  // ── PianoSheetPixi: ResizeObserver sizing ─────────────────────────
-  const pixiContainerRef = useRef<HTMLDivElement>(null);
-  const [pixiSize, setPixiSize] = useState({ width: 0, height: 0 });
-
-  const updatePixiSizeFromRef = useCallback(() => {
-    const el = pixiContainerRef.current;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    setPixiSize({ width, height });
-  }, []);
-
-  // Suspense can mount this element after the parent effects have already run.
-  // Observe the actual element lifetime, including remounts after suspension.
-  const attachPixiContainer = useCallback((el: HTMLDivElement | null) => {
-    pixiContainerRef.current = el;
-    if (!el) return;
-    const measure = () => {
-      const { width, height } = el.getBoundingClientRect();
-      setPixiSize((prev) =>
-        prev.width === width && prev.height === height
-          ? prev
-          : { width, height },
-      );
-    };
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    measure();
-    const raf = requestAnimationFrame(measure);
-    return () => {
-      cancelAnimationFrame(raf);
-      observer.disconnect();
-      pixiContainerRef.current = null;
-    };
-  }, []);
-
-  // Re-measure when notes appear so we get correct size after layout settles
-  useEffect(() => {
-    if (notes.length === 0) return;
-    const raf = requestAnimationFrame(() => updatePixiSizeFromRef());
-    return () => cancelAnimationFrame(raf);
-  }, [notes.length, updatePixiSizeFromRef]);
-
-  // Fallback: window resize — read container size after reflow so canvas gets correct dimensions.
-  // ResizeObserver may not fire when only the window changes; read after rAF so layout is applied.
-  const resizeDebounceMs = 80;
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let rafId: number | null = null;
-    const onResize = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        timeoutId = null;
-        // Read after the next frame so flex layout has been recalculated
-        rafId = requestAnimationFrame(() => {
-          rafId = null;
-          updatePixiSizeFromRef();
-        });
-      }, resizeDebounceMs);
-    };
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      if (timeoutId) clearTimeout(timeoutId);
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [updatePixiSizeFromRef]);
-
-  // Adaptive size: pick largest preset that fits available height
-  const trackCount = useMemo(() => {
-    if (notes.length === 0) return 0;
-    const minMidi = Math.min(...notes.map((n) => n.midi));
-    const maxMidi = Math.max(...notes.map((n) => n.midi));
-    return maxMidi - minMidi + 1;
-  }, [notes]);
-  const pianoSheetSize = useMemo((): number => {
-    if (pixiSize.height <= 0) return DEFAULT_BASE_UNIT;
-    return getRecommendedBaseUnit(pixiSize.height, trackCount);
-  }, [pixiSize.height, trackCount]);
-
   // ── PianoSheetPixi: playback engine ───────────────────────────────
   const bpm = useMemo(() => {
     const seq = sampleSequence ?? { notes: [], totalTime: 0 };
@@ -507,10 +433,29 @@ export function TunePractice({
 
   const playback = useSheetPlaybackEngine({
     notes,
+    followDemoClock: true,
     enabled: notes.length > 0,
     onTick,
     onReachedEnd: onPlayheadReachedEnd,
   });
+
+  const { fullKeyboard, setGuidance, registerScroll, syncScroll, bottomOcclusion } = useHighway();
+  const [highwayReset, setHighwayReset] = useState(0);
+  const sceneLease = useRef<ReturnType<typeof practiceSceneReadiness.attach> | null>(null);
+  useLayoutEffect(() => {
+    const lease = practiceSceneReadiness.attach(); sceneLease.current = lease;
+    return () => { lease.dispose(); if (sceneLease.current === lease) sceneLease.current = null; };
+  }, [currentNugget.itemId]);
+  const onSceneReadiness = useCallback((status: SceneReadiness) => sceneLease.current?.setStatus(status), []);
+  const heldPitches = useRef(new Set<number>());
+  const highwayNotes = useMemo<HighwayNote[]>(() => notes.map(n => ({ id: n.id, midi: n.midi,
+    start: n.start * bpm / 60, duration: n.dur * bpm / 60, who: isPlaying ? "ai" : "user",
+    label: notationPreference === "solfege" || (notationPreference === "auto" && language === "fr")
+      ? noteNameToSolfege(midiToNoteName(n.midi).replace(/\d+$/, "")) + (Math.floor(n.midi/12)-1)
+      : midiToNoteName(n.midi) })), [notes, bpm, isPlaying, language, notationPreference]);
+  const highwayRange = useMemo<[number, number] | undefined>(() => notes.length ? [Math.min(...notes.map(n => n.midi)), Math.max(...notes.map(n => n.midi))] : undefined, [notes]);
+  const onArmedChange = useCallback((armed: number[]) => setGuidance({ armed, range: highwayRange }), [setGuidance, highwayRange]);
+  useEffect(() => () => { setGuidance({ armed: [] }); heldPitches.current.clear(); }, [setGuidance, currentNugget.itemId]);
 
   // ── OSMD sheet sync (vertical scroll) ─────────────────────────────
   const osmdScrollRef = useRef<HTMLDivElement>(null);
@@ -558,6 +503,7 @@ export function TunePractice({
     if (!onRegisterNoteHandler) return;
     const handler = (noteKey: string) => {
       const midi = noteNameToMidi(noteKey);
+      heldPitches.current.add(midi);
       playback.handleInputEvent({
         type: "noteon",
         midi,
@@ -572,6 +518,7 @@ export function TunePractice({
     if (!onRegisterNoteOffHandler) return;
     const handler = (noteKey: string) => {
       const midi = noteNameToMidi(noteKey);
+      heldPitches.current.delete(midi);
       playback.handleInputEvent({
         type: "noteoff",
         midi,
@@ -606,11 +553,11 @@ export function TunePractice({
 
   return (
     <Suspense fallback={<p className="p-4 text-muted-foreground">Loading notation...</p>}>
-    <div className="relative flex h-full w-full flex-col gap-2 py-2">
+    <div className="relative flex h-full min-h-0 w-full flex-col">
       {/* Feedback card: bottom-right, max 1/3 width */}
       <div
         className={cn(
-          "absolute bottom-16 right-[22%] translate-x-[220px] max-w-[50%] p-6 rounded-3xl border border-gray-500/60 bg-gray-700/60 shadow-lg backdrop-blur-sm z-10 transition-all duration-300 ease-out",
+          "self-end max-w-full shrink-0 px-4 py-2 border border-border bg-card/80 backdrop-blur-sm z-10",
           showSending ? "w-[320px]" : "w-[440px]",
         )}
       >
@@ -642,35 +589,20 @@ export function TunePractice({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col items-center gap-2">
-        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2">
+      <div className="flex flex-1 min-h-0 flex-col items-center">
+        <div className="flex w-full flex-1 min-h-0 flex-col items-center justify-center">
           {/* Shared container: Pixi (hidden when sheet) + Sheet (hidden when Pixi) */}
-          <div className="relative w-full flex-1 min-h-0 overflow-hidden">
-            {/* Pixi view: stays mounted, invisible when sheet view is shown */}
-            <div
-              ref={attachPixiContainer}
-              className={cn(
-                "absolute inset-0 w-full h-full overflow-hidden",
-                showSheetView && "invisible",
-              )}
-            >
-              {pixiSize.width > 0 &&
-                pixiSize.height > 0 &&
-                notes.length > 0 && (
-                  <PianoSheetPixi
-                    notes={notes}
-                    width={pixiSize.width}
-                    height={pixiSize.height}
-                    size={pianoSheetSize}
-                    timeSignatures={sampleSequence?.timeSignatures}
-                    qpm={bpm}
-                    onTickRef={onTickRef}
-                    focusedNoteIds={playback.focusedNoteIds}
-                    activeNoteIds={playback.activeNoteIds}
-                    followPlayhead
-                    isAutoplay={playback.isAutoplay}
-                  />
-                )}
+          <div className="relative w-full flex-1 min-h-0 highway-stage">
+            <div ref={node => registerScroll(node, "highway")} onScroll={event => syncScroll(event.currentTarget)}
+              style={{ bottom: -bottomOcclusion }} className={cn("absolute inset-0 note-highway-viewport", showSheetView && "invisible")}>
+              <div className={cn("h-full", fullKeyboard && "min-w-[1040px]")}>
+                <NoteHighway onReadinessChange={onSceneReadiness} bottomOcclusion={bottomOcclusion} beatsPerSecond={bpm / 60} notes={highwayNotes} fullKeyboard={fullKeyboard} range={highwayRange} onArmedChange={onArmedChange}
+                  transport={{ getBeat: () => playback.playheadTimeRef.current * bpm / 60,
+                    getState: () => playback.isAutoplay ? "playing" : playback.phase === "waiting" ? "waiting" : "paused",
+                    getArmed: playback.isAutoplay ? () => new Set() : playback.phase === "waiting" ? () => playback.focusedNoteIds : undefined,
+                    getActive: () => new Set(notes.filter(n => heldPitches.current.has(n.midi)).map(n => n.id)),
+                    resetId: `${currentNugget.itemId}-${highwayReset}-${isPlaying}` }} />
+              </div>
             </div>
             {/* Sheet view: multi-line, vertical scroll, max-w-4xl.
                 Use invisible (not hidden) when collapsed so OSMD gets valid dimensions on mount. */}
@@ -830,7 +762,7 @@ export function TunePractice({
         </SheetContent>
       </Sheet>
 
-      <div className="grid grid-cols-3 shrink-0 items-center gap-2 mx-auto w-full max-w-5xl">
+      <div className="order-first grid grid-cols-3 shrink-0 items-center gap-2 mx-auto w-full max-w-5xl">
         <div className="flex items-center justify-start gap-1">
           <Button
             variant="ghost"
@@ -873,6 +805,8 @@ export function TunePractice({
               onClick={() => {
                 if (isPlaying) onStopSample?.();
                 playback.stop();
+                heldPitches.current.clear();
+                setHighwayReset(v => v + 1);
                 resetCursorToStart();
               }}
               size="sm"
