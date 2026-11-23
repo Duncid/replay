@@ -1649,7 +1649,7 @@ export const TuneManagement = ({
   );
 };
 
-export function TuneManagementActionBar() {
+export function TuneManagerMenu() {
   const {
     selectedSource,
     selectedTune,
@@ -1662,6 +1662,102 @@ export function TuneManagementActionBar() {
     filteredPublishedKeys,
     filteredUnpublishedKeys,
     selectTune,
+  } = useTuneManagementContext();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 max-w-[min(55vw,24rem)]"
+          disabled={selectedSource === "published" && isLoadingAssets}
+        >
+          <span className="text-muted-foreground shrink-0">Tune Manager</span>
+          <span className="truncate font-medium">
+            {selectedSource === "published" && isLoadingAssets
+              ? "Loading..."
+              : selectionLabel}
+          </span>
+          <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56 bg-popover">
+        {/* Published Section */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Published</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
+            <div className="px-2 py-1.5 sticky top-0 bg-popover">
+              <Input
+                placeholder="Filter..."
+                value={publishedFilter}
+                onChange={(e) => setPublishedFilter(e.target.value)}
+                className="h-8"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <DropdownMenuSeparator />
+            {filteredPublishedKeys.length > 0 ? (
+              filteredPublishedKeys.map((tune) => (
+                <DropdownMenuItem
+                  key={tune}
+                  onClick={() => selectTune("published", tune)}
+                >
+                  <span className="flex-1">{tune}</span>
+                  {selectedTune === tune && selectedSource === "published" && (
+                    <Check className="h-4 w-4 ml-2" />
+                  )}
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+            )}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {/* Un-Published Section */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Un-Published</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
+            <div className="px-2 py-1.5 sticky top-0 bg-popover">
+              <Input
+                placeholder="Filter..."
+                value={unpublishedFilter}
+                onChange={(e) => setUnpublishedFilter(e.target.value)}
+                className="h-8"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <DropdownMenuSeparator />
+            {filteredUnpublishedKeys.length > 0 ? (
+              filteredUnpublishedKeys.map((tune) => (
+                <DropdownMenuItem
+                  key={tune}
+                  onClick={() => selectTune("local", tune)}
+                >
+                  <span className="flex-1">{tune}</span>
+                  {selectedTune === tune && selectedSource === "local" && (
+                    <Check className="h-4 w-4 ml-2" />
+                  )}
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+            )}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function TuneManagementActionBar() {
+  const {
+    selectedSource,
+    selectedTune,
+    isLoadingAssets,
     openRenameDialog,
     openDeleteDialog,
     setShowPublishDialog,
@@ -1786,90 +1882,6 @@ export function TuneManagementActionBar() {
           Restart
         </Button>
       )}
-
-      {/* Tune Select */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={selectedSource === "published" && isLoadingAssets}
-          >
-            {selectedSource === "published" && isLoadingAssets
-              ? "Loading..."
-              : selectionLabel}
-            <ChevronDown className="h-4 w-4 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64 bg-popover">
-          {/* Published Section */}
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Published</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-              <div className="px-2 py-1.5 sticky top-0 bg-popover">
-                <Input
-                  placeholder="Filter..."
-                  value={publishedFilter}
-                  onChange={(e) => setPublishedFilter(e.target.value)}
-                  className="h-8"
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                />
-              </div>
-              <DropdownMenuSeparator />
-              {filteredPublishedKeys.length > 0 ? (
-                filteredPublishedKeys.map((tune) => (
-                  <DropdownMenuItem
-                    key={tune}
-                    onClick={() => selectTune("published", tune)}
-                  >
-                    <span className="flex-1">{tune}</span>
-                    {selectedTune === tune &&
-                      selectedSource === "published" && (
-                        <Check className="h-4 w-4 ml-2" />
-                      )}
-                  </DropdownMenuItem>
-                ))
-              ) : (
-                <DropdownMenuItem disabled>No matches</DropdownMenuItem>
-              )}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          {/* Un-Published Section */}
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Un-Published</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-              <div className="px-2 py-1.5 sticky top-0 bg-popover">
-                <Input
-                  placeholder="Filter..."
-                  value={unpublishedFilter}
-                  onChange={(e) => setUnpublishedFilter(e.target.value)}
-                  className="h-8"
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                />
-              </div>
-              <DropdownMenuSeparator />
-              {filteredUnpublishedKeys.length > 0 ? (
-                filteredUnpublishedKeys.map((tune) => (
-                  <DropdownMenuItem
-                    key={tune}
-                    onClick={() => selectTune("local", tune)}
-                  >
-                    <span className="flex-1">{tune}</span>
-                    {selectedTune === tune && selectedSource === "local" && (
-                      <Check className="h-4 w-4 ml-2" />
-                    )}
-                  </DropdownMenuItem>
-                ))
-              ) : (
-                <DropdownMenuItem disabled>No matches</DropdownMenuItem>
-              )}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        </DropdownMenuContent>
-      </DropdownMenu>
 
       {/* Part / Target Selector */}
       <DropdownMenu>
