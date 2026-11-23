@@ -64,3 +64,39 @@ test("Admin navigation opens Quest and returns to student tunes", async ({ page 
   await page.getByRole("tab", { name: "Tunes", exact: true }).click();
   await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeVisible();
 });
+
+const publishedTuneRoute = async (route: any) => {
+  const url = new URL(route.request().url());
+  const table = url.pathname.split("/").pop();
+  const requested = url.searchParams.get("tune_key")?.replace(/^eq\./, "");
+  const body = table === "tune_assets"
+    ? requested
+      ? [{ tune_key: requested, briefing: null }]
+      : [{ tune_key: "intro", briefing: null }, { tune_key: "st-louis-blues", briefing: null }]
+    : table === "curriculum_exports" ? { snapshot } : [];
+  await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+};
+
+test("Tune Management in the menu loads the published tune that was picked", async ({ page }) => {
+  await page.route("**/rest/v1/**", publishedTuneRoute);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Published", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "st-louis-blues", exact: true }).click();
+  await expect(page.locator("div.sticky").first().getByText("st-louis-blues", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+});
+
+test("picking an unpublished tune from the menu offers Publish", async ({ page }) => {
+  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Admin", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "gymnopdie", exact: true }).click();
+  await expect(page.locator("div.sticky").first().getByText("gymnopdie", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
+});

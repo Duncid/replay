@@ -37,7 +37,7 @@ import {
   TuneManagementActionBar,
   TuneManagementProvider,
   TuneManagementTabContent,
-  TuneManagerMenu,
+  TuneSelectionLabel,
 } from "@/components/modes/TuneManagement";
 import {
   AlertDialog,
@@ -2150,7 +2150,7 @@ const Index = () => {
                   <TabsTrigger value="learn">Tunes</TabsTrigger>
                   <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
                 </TabsList>
-                {activeMode === "lab" && <TuneManagerMenu />}
+                {activeMode === "lab" && <TuneSelectionLabel />}
                 {activeMode === "quest" && questHeaderTitle && (
                   <span className="text-sm text-muted-foreground ml-2">
                     {questHeaderTitle}

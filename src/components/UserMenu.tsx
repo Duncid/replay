@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
+import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
 import { Check, Globe, Menu, UserPlus, Settings2, GitBranch, Music2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -104,10 +105,17 @@ export function UserMenu({
                   <GitBranch className="h-4 w-4" />
                   Quest
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onOpenManagement("lab")}>
-                  <Music2 className="h-4 w-4" />
-                  Tune Manager
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Music2 className="h-4 w-4" />
+                    Tune Management
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-popover">
+                    <TuneSelectionSubmenus
+                      onSelected={() => onOpenManagement?.("lab")}
+                    />
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           )}
