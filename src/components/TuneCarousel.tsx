@@ -4,6 +4,8 @@ import { tuneDisplayTitle, type TunePreview } from "@/utils/tunePreview";
 
 export interface TuneCarouselItem {
   tune_key: string;
+  title?: string | null;
+  composer?: string | null;
   unlocked: boolean;
   prerequisites: string[];
   preview?: TunePreview;
@@ -22,7 +24,7 @@ export function TuneCarousel({ tunes, onSelectTune, onAddTune }: TuneCarouselPro
     className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 px-[calc(50%-8rem)] sm:px-[calc(50%-9rem)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-1 focus-visible:outline-ring focus-visible:outline-offset-[-1px]">
     {tunes.map(tune => (
       <li key={tune.tune_key} className="snap-center shrink-0 w-64 sm:w-72">
-        <TuneCard title={tuneDisplayTitle(tune.tune_key)} unlocked={tune.unlocked}
+        <TuneCard title={tune.title?.trim() || tuneDisplayTitle(tune.tune_key)} composer={tune.composer} unlocked={tune.unlocked}
           preview={tune.preview} prerequisites={tune.prerequisites.map(tuneDisplayTitle)}
           onSelect={() => onSelectTune(tune.tune_key)} />
       </li>

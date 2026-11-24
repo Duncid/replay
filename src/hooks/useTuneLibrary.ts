@@ -9,7 +9,7 @@ export function useTuneLibrary(localUserId?: string | null) {
     queryFn: async () => {
       // Fetch previews together; keep the admin's lightweight key query separate.
       const { data, error } = await supabase.from("tune_assets")
-        .select("tune_key, note_sequence, is_global, owner_user_id, curriculum_versions!inner(status, published_at)")
+        .select("tune_key, briefing, composer, note_sequence, is_global, owner_user_id, curriculum_versions!inner(status, published_at)")
         .eq("curriculum_versions.status", "published")
         // Oldest published tune first: a newly uploaded tune joins the end of the list.
         .order("curriculum_versions(published_at)", { ascending: true });
@@ -17,7 +17,10 @@ export function useTuneLibrary(localUserId?: string | null) {
       // Admins can read every tune; the list only shows global tunes and this account's own.
       const { data: { user } } = await supabase.auth.getUser();
       const mine = (data ?? []).filter(tune => tune.is_global || tune.owner_user_id === user?.id);
-      return publishedTunesInListOrder(mine).map(tune => ({ tune_key: tune.tune_key, preview: getTunePreview(tune.note_sequence) }));
+      return publishedTunesInListOrder(mine).map(tune => ({ tune_key: tune.tune_key,
+        title: (tune.briefing as { title?: string } | null)?.title,
+        composer: tune.composer,
+        preview: getTunePreview(tune.note_sequence) }));
     },
   });
   const progress = useQuery({

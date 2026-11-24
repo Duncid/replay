@@ -5,6 +5,7 @@ import type { TunePreview } from "@/utils/tunePreview";
 
 export interface TuneCardProps {
   title: string;
+  composer?: string | null;
   unlocked: boolean;
   preview?: TunePreview;
   prerequisites?: string[];
@@ -12,7 +13,7 @@ export interface TuneCardProps {
 }
 
 /** The same visual hierarchy as Replay Nat, using the web theme's tokens. */
-export function TuneCard({ title, unlocked, preview, prerequisites = [], onSelect }: TuneCardProps) {
+export function TuneCard({ title, composer, unlocked, preview, prerequisites = [], onSelect }: TuneCardProps) {
   const StatusIcon = unlocked ? ArrowUpRight : LockKeyhole;
   return <button type="button" disabled={!unlocked} onClick={onSelect}
     aria-label={`${unlocked ? "Practice" : "Locked"}: ${title}`}
@@ -24,7 +25,10 @@ export function TuneCard({ title, unlocked, preview, prerequisites = [], onSelec
         <span>{unlocked ? "Ready to play" : "Locked"}</span>
         <StatusIcon aria-hidden="true" className="size-4 shrink-0" />
       </span>
-      <span className="block font-display text-[21px] font-semibold leading-7 break-words">{title}</span>
+      <span className="block space-y-1">
+        <span className="block font-display text-[21px] font-semibold leading-7 break-words">{title}</span>
+        {composer?.trim() && <span className="block text-[13px] leading-[18px] text-muted-foreground break-words">{composer}</span>}
+      </span>
       {!unlocked && prerequisites.length > 0 && <span className="block text-[13px] leading-[18px] text-muted-foreground break-words">Complete {prerequisites.join(", ")} first</span>}
       {preview && <span className="mt-auto block text-[13px] leading-[18px] text-muted-foreground">{preview.noteCount} {preview.noteCount === 1 ? "note" : "notes"} · {Math.round(preview.duration)} sec</span>}
     </span>
