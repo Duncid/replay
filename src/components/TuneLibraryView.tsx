@@ -7,7 +7,7 @@ export interface TuneLibraryViewProps extends TuneCarouselProps {
   error?: Error | null;
   refetch: () => unknown;
 }
-export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune }: TuneLibraryViewProps) {
+export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune, onAddTune }: TuneLibraryViewProps) {
   if (isLoading) return <LoadingSpinner message="Loading tunes…" />;
   return (
     <section className="w-full flex-1 self-stretch flex flex-col justify-center py-8">
@@ -20,7 +20,7 @@ export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune
       ) : tunes.length === 0 ? (
         <p className="text-center text-muted-foreground">No published tunes yet.</p>
       ) : (
-        <TuneCarousel tunes={tunes} onSelectTune={onSelectTune} />
+        <TuneCarousel tunes={tunes} onSelectTune={onSelectTune} onAddTune={onAddTune} />
       )}
     </section>
   );
