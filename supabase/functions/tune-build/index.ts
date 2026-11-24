@@ -54,7 +54,7 @@ async function planWithTuneMaster(analysis: Analysis, title: string) {
   let completion;
   try {
     completion = await generateChatCompletion({
-      model: "google/gemini-3.8-flash",
+      model: "openai/gpt-6.2-sol",
       messages: [{ role: "system", content: TUNE_MASTER_PROMPT }, { role: "user", content: input }],
       response_format: { type: "json_object" },
     });
@@ -122,12 +122,14 @@ Deno.serve(async (req) => {
     }
 
     await admin.from("tune_build_jobs").update({ status: "running", error: null }).eq("id", job.id);
-    const { data: signed, error: signErr } = await admin.storage.from("tune-sources").createSignedUrl(job.source_path, 300);
+    const { data: signed, error: signErr } = await admin.storage.from("tune-sources").createSignedUrl(job.source_path, 900);
     if (signErr || !signed) {
       await admin.from("tune_build_jobs").update({ status: "failed", error: "Uploaded file not found" }).eq("id", job.id);
       return json({ jobId: job.id, status: "failed", error: "Uploaded file not found" });
     }
 
+    // The AI plan can take minutes: answer now, finish in the background; the UI polls tune_build_jobs.
+    const run = async () => {
     const base = { fileUrl: signed.signedUrl, filename: job.filename, title: job.title };
     let status = "failed", errorMsg: string | null = null, result: Record<string, unknown> | null = null;
     try {
@@ -160,7 +162,10 @@ Deno.serve(async (req) => {
       errorMsg = e instanceof Error ? e.message : "Builder unreachable";
     }
     await admin.from("tune_build_jobs").update({ status, error: errorMsg, result }).eq("id", job.id);
-    return json({ jobId: job.id, status, error: errorMsg });
+    };
+    // @ts-ignore EdgeRuntime is provided by the edge runtime
+    if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(run()); else await run();
+    return json({ jobId: job.id, status: "running" });
   } catch (err) {
     return authErrorResponse(err, corsHeaders) ?? json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
   }

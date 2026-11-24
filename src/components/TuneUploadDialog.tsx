@@ -37,6 +37,8 @@ export function TuneUploadDialog({ open, onOpenChange }: { open: boolean; onOpen
       if (error) throw error;
       return (data ?? []) as Job[];
     },
+    // Builds finish in the background; poll while one is running.
+    refetchInterval: (q) => ((q.state.data as Job[] | undefined)?.some((j) => j.status === "running") ? 3000 : false),
   });
 
   const runBuild = async (body: Record<string, unknown>) => {
@@ -46,7 +48,7 @@ export function TuneUploadDialog({ open, onOpenChange }: { open: boolean; onOpen
     await qc.invalidateQueries({ queryKey: ["tune-build-jobs"] });
     if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Build failed"); return; }
     setActiveJob(data.jobId);
-    toast.success("Nuggets built — review and publish");
+    toast.message("Building nuggets — this can take a few minutes");
   };
 
   const handleBuild = async () => {
