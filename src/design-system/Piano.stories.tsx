@@ -90,5 +90,9 @@ export const SharpHighlights: Story = { args: { activeKeys: new Set(["C#4", "F#4
 export const Solfege: Story = { args: { language: "fr", notationPreference: "auto" } };
 export const InputDisabled: Story = { args: { allowInput: false } };
 export const Full88Keys: Story = { args: { fullKeyboard: true } };
+export const RangeChange: Story = { render: function RangeChange(args) {
+  const [full, setFull] = useState(false);
+  return <><button onClick={() => setFull(value => !value)}>Change range</button><KeyboardExample {...args} fullKeyboard={full} /></>;
+} };
 
 export const PlayerOverPlayback: Story = { args: { activeKeys: new Set(["C4", "E4", "G4"]) }, parameters: { docs: { description: { story: "Hold E or C4 to replace its blue playback highlight with lime; release to reveal blue again." } } } };

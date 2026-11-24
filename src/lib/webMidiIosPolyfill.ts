@@ -34,6 +34,12 @@ interface WindowWithIosBridge extends Window {
 const NOTE_DATA_LENGTH = 3;
 const IOS_MIDI_EVENT_NAME = "ios-midi-message";
 
+export const hasNativeMidiBridge = () => {
+  if (typeof window === "undefined") return false;
+  const bridgeWindow = window as WindowWithIosBridge;
+  return !!bridgeWindow.Capacitor?.isNativePlatform?.() || !!bridgeWindow.webkit?.messageHandlers?.midiBridge;
+};
+
 const normalizePacket = (packet: MidiPacket): Uint8Array | null => {
   if (!Array.isArray(packet)) return null;
   if (packet.length < NOTE_DATA_LENGTH) return null;
@@ -126,7 +132,7 @@ const installIosWebMidiPolyfill = () => {
   };
 
   const startNativeIfNeeded = () => {
-    if (nativeStarted) return;
+    if (nativeStarted || !midiHandler || !isCapacitor) return;
 
     const doRequestAccess = (plugin: CapacitorMidiBridge) => {
       nativeStarted = true;
@@ -162,7 +168,7 @@ const installIosWebMidiPolyfill = () => {
 
     if (capacitorPlugin) {
       setTimeout(() => {
-        if (nativeStarted) return;
+        if (nativeStarted || !midiHandler) return;
         doRequestAccess(capacitorPlugin!);
       }, 50);
       return;
@@ -170,6 +176,7 @@ const installIosWebMidiPolyfill = () => {
 
     getCapacitorPlugin()
       .then((plugin) => {
+        if (!midiHandler || nativeStarted) return;
         if (!plugin) {
           nativeStarted = false;
           inputDisplayName = "No devices";
@@ -276,9 +283,6 @@ const installIosWebMidiPolyfill = () => {
           console.log("[MIDI Polyfill] [DEBUG] onmidimessage: setTimeout fired, calling startNativeIfNeeded");
           startNativeIfNeeded();
         }, 150);
-      } else {
-        console.log("[MIDI Polyfill] [DEBUG] onmidimessage: cleared, nativeStarted=false");
-        nativeStarted = false;
       }
     },
     configurable: true,
@@ -406,6 +410,8 @@ const installIosWebMidiPolyfill = () => {
       return midiAccess;
     },
   });
+
+  scopedWindow.dispatchEvent(new Event("midi-bridge-ready"));
 
   scopedWindow.addEventListener("beforeunload", () => {
     if (isCapacitor && capacitorPlugin) {

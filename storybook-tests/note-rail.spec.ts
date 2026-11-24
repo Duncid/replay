@@ -49,13 +49,13 @@ test("changing keyboard range releases held audio and highlights", async ({ page
       return stop.apply(this, args);
     };
   });
-  await page.goto("iframe.html?id=patterns-tunes-screen--library&viewMode=story");
+  await page.goto("iframe.html?id=instruments-piano-keyboard--range-change&viewMode=story");
   const key = page.getByRole("button", { name: "C4", exact: true });
   await expect(key).toBeEnabled();
   await page.keyboard.down("e");
   await expect(key).toHaveAttribute("data-activity", "user");
   await expect.poll(() => page.evaluate(() => window["pianoVoices"])).toBe(1);
-  await page.getByRole("switch", { name: "Full keyboard" }).click();
+  await page.getByRole("button", { name: "Change range" }).click();
   await expect(page.locator(".piano-key")).toHaveCount(88);
   await expect(key).not.toHaveAttribute("data-activity");
   await expect.poll(() => page.evaluate(() => window["pianoVoices"])).toBe(0);

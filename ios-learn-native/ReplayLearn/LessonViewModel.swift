@@ -84,7 +84,10 @@ final class LessonViewModel: ObservableObject {
         }
         midi.onNoteOn = { [weak self] pitch, velocity in self?.noteDown(pitch, velocity, source: "midi") }
         midi.onNoteOff = { [weak self] pitch in self?.noteUp(pitch, source: "midi") }
-        if !preview { Task { await loadLibrary() } }
+        if !preview {
+            midi.start()
+            Task { await loadLibrary() }
+        }
         else { loadPreview() }
     }
 

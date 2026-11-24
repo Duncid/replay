@@ -36,6 +36,14 @@ npm i
 npm run dev
 ```
 
+For local Google/Lovable sign-in, open `http://127.0.0.1:8080`. Vite forwards
+`/~oauth/initiate` to this project's published Lovable app; the hosted OAuth
+service then returns to the local app. Vite preview uses the same proxy.
+In Lovable, **More → Users → Settings → Advanced → Redirect URLs** must include
+`http://127.0.0.1:8080/**` (Lovable rejects `localhost` entries). If the published
+app's domain changes, update the proxy target in `vite.config.ts` too.
+The local app uses the same backend accounts and data as the published app.
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).

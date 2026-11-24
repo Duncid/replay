@@ -11,7 +11,8 @@ import {
   Metronome,
   MetronomeSoundType,
 } from "@/components/Metronome";
-import { MidiConnector } from "@/components/MidiConnector";
+import { PianoInput } from "@/components/PianoInput";
+import { KeyboardSettings, type DisplayNotesPreference } from "@/components/KeyboardSettings";
 import { useMidiSoundPreference } from "@/hooks/useMidiSoundPreference";
 import Piano, { PianoHandle } from "@/components/Piano";
 import { SaveCompositionModal } from "@/components/SaveCompositionModal";
@@ -50,22 +51,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
@@ -74,9 +59,7 @@ import { useLocalUsers } from "@/hooks/useLocalUsers";
 import { MagentaModelType, useMagenta } from "@/hooks/useMagenta";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import {
-  PIANO_SOUND_LABELS,
   PianoSoundType,
-  SAMPLED_INSTRUMENTS,
 } from "@/hooks/usePianoSound";
 import {
   RecordingResult,
@@ -99,7 +82,6 @@ import {
   noteSequenceToAbc,
 } from "@/utils/noteSequenceUtils";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
-import { ChevronDown, Mic } from "lucide-react";
 import {
   type ReactNode,
   useCallback,
@@ -213,6 +195,7 @@ const Index = () => {
     STORAGE_KEYS.INSTRUMENT,
     "acoustic-piano",
   );
+  const [displayNotes, setDisplayNotes] = useLocalStorage<DisplayNotesPreference>(STORAGE_KEYS.DISPLAY_NOTES, "auto");
   const [metronomeBpm, setMetronomeBpm] = useLocalStorage(
     STORAGE_KEYS.BPM,
     120,
@@ -222,7 +205,6 @@ const Index = () => {
     "4/4",
   );
   const [metronomeIsPlaying, setMetronomeIsPlaying] = useState(false);
-  const [fullKeyboard, setFullKeyboard] = useState(false);
   const [metronomeStartTime, setMetronomeStartTime] = useState<number | null>(
     null,
   );
@@ -1501,6 +1483,7 @@ const Index = () => {
   });
 
   const { debugMenuState } = learnMode;
+  const showNoteRail = displayNotes === "always" || (displayNotes === "auto" && activeMode === "learn" && learnMode.isInTuneMode);
 
   const { resetToStart: resetLearnToStart } = learnMode;
 
@@ -1965,7 +1948,6 @@ const Index = () => {
       : undefined,
     onNoteOn: handleMicNoteOn,
     onNoteOff: handleMicNoteOff,
-    pitchDebug: isMicEnabled,
   });
 
   useEffect(() => {
@@ -2129,7 +2111,7 @@ const Index = () => {
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
-    <HighwayProvider fullKeyboard={fullKeyboard}><TuneManagementProvider active={activeMode === "lab"}>
+    <HighwayProvider fullKeyboard={false}><TuneManagementProvider active={activeMode === "lab"}>
       <div data-highway-surface className="replay-workspace relative isolate h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
         <Tabs
           value={activeMode}
@@ -2222,46 +2204,12 @@ const Index = () => {
         </Tabs>
 
         {activeMode !== "quest" && (
-          <PianoDock midiConnected={!!connectedDevice} toolbar={<>
-            {/* Piano Sound Selector & Metronome (left) | MIDI Connector (right) */}
+          <PianoDock showNoteRail={showNoteRail} midiConnected={!!connectedDevice} toolbar={<>
+            {/* Piano sound and metronome (left), input settings (right). */}
             <div className="keyboard-toolbar w-full flex flex-wrap items-center justify-between gap-2 p-1.5 shrink-0">
               <div className="flex items-center gap-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <span>{PIANO_SOUND_LABELS[pianoSoundType]}</span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-56 bg-popover"
-                  >
-                    <DropdownMenuLabel>{t("piano.sound")}</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup
-                      value={pianoSoundType}
-                      onValueChange={(v) =>
-                        setPianoSoundType(v as PianoSoundType)
-                      }
-                    >
-                      <DropdownMenuRadioItem value="classic">
-                        {PIANO_SOUND_LABELS["classic"]}
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="text-xs text-muted-foreground">
-                        {t("piano.sampledInstruments")}
-                      </DropdownMenuLabel>
-                      {SAMPLED_INSTRUMENTS.map((instrument) => (
-                        <DropdownMenuRadioItem
-                          key={instrument}
-                          value={instrument}
-                        >
-                          {PIANO_SOUND_LABELS[instrument]}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <KeyboardSettings instrument={pianoSoundType} onInstrumentChange={setPianoSoundType}
+                  displayNotes={displayNotes} onDisplayNotesChange={setDisplayNotes} />
 
                 <Metronome
                   bpm={metronomeBpm}
@@ -2284,134 +2232,25 @@ const Index = () => {
                     activeMode === "learn" ? setMetronomeSoundType : undefined
                   }
                 />
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="full-keyboard"
-                    checked={fullKeyboard}
-                    onCheckedChange={setFullKeyboard}
-                  />
-                  <Label
-                    htmlFor="full-keyboard"
-                    className="cursor-pointer text-sm whitespace-nowrap"
-                  >
-                    {t("piano.fullKeyboard")}
-                  </Label>
-                </div>
               </div>
 
-              <div className="flex items-center gap-1">
-                {isMicEnabled && (
-                  <div className="text-xs text-muted-foreground shrink min-w-0">
-                    {micInput.pitchDebug ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex cursor-pointer border-0 bg-transparent p-0 text-left text-inherit underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            <span className="whitespace-nowrap">
-                              {micInput.status === "running"
-                                ? "Listening"
-                                : micInput.status}
-                              {` ${Math.round(micInput.level * 100)}%`}
-                            </span>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          align="start"
-                          side="bottom"
-                          className="w-auto max-w-[min(320px,90vw)] p-2"
-                        >
-                          <div className="font-mono text-[10px] leading-tight wrap-break-word whitespace-normal text-popover-foreground">
-                            <div>
-                              <span className="opacity-80">Live: </span>
-                              {micInput.pitchDebug.liveHz != null ? (
-                                <>
-                                  {micInput.pitchDebug.liveNote}{" "}
-                                  {micInput.pitchDebug.liveHz.toFixed(1)}Hz
-                                  <span className="opacity-70">
-                                    {" "}
-                                    c
-                                    {micInput.pitchDebug.liveConfidence.toFixed(
-                                      2,
-                                    )}{" "}
-                                    rms
-                                    {micInput.pitchDebug.liveRms.toFixed(3)}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="opacity-70">
-                                  — c
-                                  {micInput.pitchDebug.liveConfidence.toFixed(
-                                    2,
-                                  )}{" "}
-                                  rms
-                                  {micInput.pitchDebug.liveRms.toFixed(3)}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="opacity-80">Accepted: </span>
-                              {micInput.pitchDebug.lastAcceptedNote ? (
-                                <>
-                                  {micInput.pitchDebug.lastAcceptedNote}
-                                  {micInput.pitchDebug.lastAcceptedMidi != null
-                                    ? ` (midi ${micInput.pitchDebug.lastAcceptedMidi})`
-                                    : ""}
-                                  <span className="opacity-70">
-                                    {" "}
-                                    ·{" "}
-                                    {micInput.pitchDebug.lastAcceptedSource ??
-                                      "—"}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="opacity-70">—</span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="opacity-80">Expected: </span>
-                              <span className="opacity-70">
-                                {micInput.pitchDebug.expectedNotes}
-                              </span>
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <div className="whitespace-nowrap">
-                        {micInput.status === "running"
-                          ? "Listening"
-                          : micInput.status}
-                        {` ${Math.round(micInput.level * 100)}%`}
-                      </div>
-                    )}
-                  </div>
-                )}
-                <Button
-                  variant={isMicEnabled ? "live" : "outline"}
-                  size="sm"
-                  onClick={() => setIsMicEnabled((prev) => !prev)}
-                  className="gap-2"
-                >
-                  <Mic className="h-4 w-4" />
-                  {isMicEnabled && <span aria-hidden className="size-[7px] rounded-full bg-ai" />}
-                  {isMicEnabled ? "Mic On" : "Mic Off"}
-                </Button>
-                <MidiConnector
-                  isConnected={!!connectedDevice}
-                  deviceName={connectedDevice?.name || null}
-                  attemptedNoDevice={attemptedNoDevice}
-                  isSupported={isMidiSupported}
-                  onConnect={requestAccess}
-                  onDisconnect={disconnect}
-                  silentWhilePlaying={midiSilentWhilePlaying}
-                  onSilentWhilePlayingChange={setMidiSilentWhilePlaying}
-                  playOnKeyboard={playOnKeyboard}
-                  onPlayOnKeyboardChange={setPlayOnKeyboard}
-                  canPlayOnKeyboard={canPlayOnKeyboard}
-                />
-              </div>
+              <PianoInput
+                micEnabled={isMicEnabled}
+                onMicEnabledChange={setIsMicEnabled}
+                micStatus={micInput.status}
+                micLevel={micInput.level}
+                isConnected={!!connectedDevice}
+                deviceName={connectedDevice?.name || null}
+                attemptedNoDevice={attemptedNoDevice}
+                isSupported={isMidiSupported}
+                onConnect={requestAccess}
+                onDisconnect={disconnect}
+                silentWhilePlaying={midiSilentWhilePlaying}
+                onSilentWhilePlayingChange={setMidiSilentWhilePlaying}
+                playOnKeyboard={playOnKeyboard}
+                onPlayOnKeyboardChange={setPlayOnKeyboard}
+                canPlayOnKeyboard={canPlayOnKeyboard}
+              />
             </div>
 
 </>}>
@@ -2426,7 +2265,7 @@ const Index = () => {
               soundType={pianoSoundType}
               language={language}
               notationPreference={musicNotation}
-              fullKeyboard={fullKeyboard}
+              showNoteRail={showNoteRail}
               onNoteStart={handleNoteStart}
               onNoteEnd={handleNoteEnd}
             />

@@ -16,7 +16,8 @@ Minimum **iPadOS 26.0**, built with Xcode 26 or later.
 - Free Play supports chords, glissando, an adjustable metronome and 88-key range.
 - Progress shows server-confirmed acquired tunes and the latest 200 evaluated
   attempts saved on this device. It does not invent weekly activity or streaks.
-- MIDI opens on demand. USB sources connect through CoreMIDI; Bluetooth discovery
+- USB MIDI detection starts automatically when the practice profile opens and tracks
+  devices being plugged in or removed through CoreMIDI. Bluetooth discovery
   uses Apple's MIDI browser. Bluetooth permission is requested when needed.
 - Compose and microphone transcription are not included. There are no placeholder
   instrument selectors or nonfunctional feature tabs.

@@ -32,6 +32,7 @@ interface PianoProps {
   className?: string;
   /** When true, render 88 keys (A0–C8) with horizontal scroll on narrow viewports */
   fullKeyboard?: boolean;
+  showNoteRail?: boolean;
 }
 
 export interface PianoHandle {
@@ -65,6 +66,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       notationPreference,
       className,
       fullKeyboard = false,
+      showNoteRail = true,
     },
     ref,
   ) => {
@@ -349,7 +351,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     return <div className={cn("piano-surface relative w-full h-full select-none flex flex-col px-1 mb-1 overflow-hidden bg-card", className)}>
       <div ref={node => highway.registerScroll(node, "keys")} onScroll={event => highway.syncScroll(event.currentTarget)} className={cn("relative h-full", fullKeyboard ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden")}>
         <div className={cn("relative h-full flex flex-col", fullKeyboard && "min-w-[1040px]")}>
-          <NoteRail layout={layout} states={states} fullKeyboard={fullKeyboard} />
+          {showNoteRail && <NoteRail layout={layout} states={states} fullKeyboard={fullKeyboard} />}
           <div className="relative flex-1 min-h-0">
             <div className="absolute inset-0 z-0">{whiteKeys.map(renderKey)}</div>
             <div className="absolute inset-0 pointer-events-none z-10">{blackKeys.map(renderKey)}</div>

@@ -1,6 +1,12 @@
 import { expect, test, accountRows } from "./fixtures";
 import { readFileSync, readdirSync } from "node:fs";
 import ts from "typescript";
+import type { Page } from "@playwright/test";
+
+async function openInput(page: Page) {
+  const trigger = page.getByRole("button", { name: "Input", exact: true });
+  if (await trigger.getAttribute("aria-expanded") !== "true") await trigger.click();
+}
 
 test.beforeEach(async ({ page }) => {
   // Keep browser checks independent of the user's live database.
@@ -98,6 +104,62 @@ test("native MIDI connects, tracks hotplug, forwards notes, and closes", async (
   expect(await page.evaluate(() => window["nativeCalls"])).toEqual(["requestAccess", "send", "disconnect"]);
 });
 
+for (const pluggedInAtLaunch of [true, false]) {
+  test(`native MIDI auto-detects USB piano (${pluggedInAtLaunch ? "at launch" : "plugged in later"})`, async ({ page }) => {
+    await page.addInitScript(pluggedIn => {
+      delete Object.getPrototypeOf(navigator).requestMIDIAccess;
+      window["webkit"] = { messageHandlers: { bridge: {} } };
+      window["nativeCalls"] = [];
+      window["Capacitor"] = {
+        isNativePlatform: () => true,
+        PluginHeaders: [
+          { name: "MidiBridge", methods: ["ping", "requestAccess", "disconnect", "send"].map(name => ({ name, rtype: "promise" })) },
+          { name: "ReplayAuth", methods: ["getSession", "saveSession", "removeSession"].map(name => ({ name, rtype: "promise" })) },
+        ],
+        nativePromise: async (plugin: string, method: string, options: { key: string; value?: string }) => {
+          if (plugin === "ReplayAuth") {
+            if (method === "getSession") return { value: localStorage.getItem(options.key) };
+            if (method === "saveSession") localStorage.setItem(options.key, options.value!);
+            if (method === "removeSession") localStorage.removeItem(options.key);
+            return {};
+          }
+          window["nativeCalls"].push(method);
+          return method === "requestAccess" ? { sources: pluggedIn ? ["Roland Digital Piano"] : [] } : {};
+        },
+      };
+    }, pluggedInAtLaunch);
+    await page.goto("/");
+    await expect.poll(() => page.evaluate(() => window["nativeCalls"].filter(call => call === "requestAccess").length)).toBe(1);
+    await openInput(page);
+    if (!pluggedInAtLaunch) {
+      await expect(page.getByRole("button", { name: "Connect MIDI" })).toBeVisible();
+      await expect(page.getByText("No MIDI devices found")).toHaveCount(0);
+      await expect(page.getByText("No MIDI device", { exact: true })).toHaveCount(0);
+      await page.evaluate(() => window["__dispatchIOSMidiSources"](["Roland Digital Piano"]));
+    }
+    await expect(page.getByText("Roland Digital Piano", { exact: true })).toBeVisible();
+    const key = page.getByRole("button", { name: "C4", exact: true });
+    await page.evaluate(() => window["__dispatchIOSMidiMessageBatch"]([[144, 60, 100]]));
+    await expect(key).toHaveAttribute("data-activity", "user");
+    await page.evaluate(() => window["__dispatchIOSMidiMessageBatch"]([[128, 60, 0]]));
+    await expect(key).not.toHaveAttribute("data-activity");
+    await page.evaluate(() => window["__dispatchIOSMidiMessageBatch"]([[144, 60, 100]]));
+    await expect(key).toHaveAttribute("data-activity", "user");
+    await page.evaluate(() => window["__dispatchIOSMidiSources"]([]));
+    await expect(page.locator(".piano-dock")).toHaveAttribute("data-midi-connected", "false");
+    await expect(key).not.toHaveAttribute("data-activity");
+    await expect(page.getByText("No MIDI devices found")).toHaveCount(0);
+    await page.evaluate(() => window["__dispatchIOSMidiSources"](["Roland Digital Piano"]));
+    await expect(page.getByText("Roland Digital Piano", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window["nativeCalls"].includes("disconnect"))).toBe(true);
+    // Late source notifications must not undo an explicit Disconnect.
+    await page.evaluate(() => window["__dispatchIOSMidiSources"](["Roland Digital Piano"]));
+    await expect(page.getByRole("button", { name: "Connect MIDI" })).toBeVisible();
+    expect(await page.evaluate(() => window["nativeCalls"].filter(call => call === "requestAccess").length)).toBe(1);
+  });
+}
+
 test("on-demand AI loader retries failures and shares concurrent requests", async ({ page }) => {
   await page.route("**/__test__/blank", route => route.fulfill({ contentType: "text/html", body: "AI loader test" }));
   let requests = 0;
@@ -126,11 +188,14 @@ test("app starts without loading AI scripts and fits a resized viewport", async 
     if (request.url().includes("magentamusic.min.js")) aiRequests.push(request.url());
   });
   await page.goto("/");
+  await openInput(page);
+  await expect(page.getByText("Full keyboard", { exact: true })).toHaveCount(0);
   if (browserName === "webkit") {
     await expect(page.getByText("MIDI not supported in this browser")).toBeVisible();
   } else {
     await expect(page.getByRole("button", { name: "Connect MIDI" })).toBeVisible();
   }
+  await page.keyboard.press("Escape");
   expect(aiRequests).toEqual([]);
   expect(errors).toEqual([]);
   await page.setViewportSize({ width: 820, height: 700 });
@@ -207,10 +272,11 @@ test("keyboard sound preference mutes MIDI audio while keeping input and screen 
   const fullHeight = (await whiteKey.boundingBox())!.height;
   // The available key area halves; fixed gaps around the keys do not scale.
   const keyAreaHeight = await page.locator('.piano-dock').evaluate(el => parseFloat(getComputedStyle(el).getPropertyValue('--piano-key-height')));
+  await openInput(page);
   await page.getByRole("button", { name: "Connect MIDI" }).click();
   await expect(page.locator(".piano-dock")).toHaveAttribute("data-midi-connected", "true");
   await expect.poll(async () => (await whiteKey.boundingBox())!.height).toBeCloseTo(fullHeight - keyAreaHeight / 2, 0);
-  await page.getByRole("button", { name: "MIDI settings" }).click();
+  await openInput(page);
   const preference = page.getByRole("switch", { name: "Silent while I play" });
   await expect(preference).not.toBeChecked();
   await preference.click();
@@ -228,8 +294,9 @@ test("keyboard sound preference mutes MIDI audio while keeping input and screen 
   await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [128, 60, 0] }));
   await preference.click();
   await page.reload();
+  await openInput(page);
   await page.getByRole("button", { name: "Connect MIDI" }).click();
-  await page.getByRole("button", { name: "MIDI settings" }).click();
+  await openInput(page);
   await expect(preference).toBeChecked();
   await page.getByRole("button", { name: "Disconnect", exact: true }).click();
   await expect(page.locator(".piano-dock")).toHaveAttribute("data-midi-connected", "false");
@@ -264,7 +331,7 @@ test("MIDI model recognition distinguishes controllers, variants, and unknown na
     play3: "MPK mini Play mk3", unknown: null, ambiguous: null, otherVariant: null, stableKey: true });
 });
 
-test("MIDI popover settings are manual and remembered per keyboard", async ({ page }) => {
+test("Input dropdown MIDI settings are manual and remembered per keyboard", async ({ page }) => {
   await page.addInitScript(() => {
     const input = { id: "native-source", name: "FP-10", manufacturer: "CoreMIDI", onmidimessage: null, close: async () => {} };
     window["testMidiInput"] = input;
@@ -275,31 +342,35 @@ test("MIDI popover settings are manual and remembered per keyboard", async ({ pa
   await page.goto("/");
   const connect = page.getByRole("button", { name: "Connect MIDI" });
   const disconnect = page.getByRole("button", { name: "Disconnect", exact: true });
-  const menu = page.getByRole("button", { name: "MIDI settings" });
   const silent = page.getByRole("switch", { name: "Silent while I play" });
+  await openInput(page);
   await connect.click();
-  await expect(silent).toBeHidden();
-  await menu.click();
+  await expect(page.getByRole("switch", { name: "Microphone", exact: true })).not.toBeChecked();
   await expect(silent).not.toBeChecked();
   await expect(page.getByRole("switch", { name: "Play on keyboard" })).toBeDisabled();
   await expect(page.getByRole("dialog")).toHaveCSS("opacity", "1");
   await page.screenshot({ path: `/tmp/replay-midi-menu-${test.info().project.name}.png` });
   await silent.click();
   await page.keyboard.press("Escape");
+  await openInput(page);
   await disconnect.click();
   await page.evaluate(() => { window["testMidiInput"].name = "MPK mini 3"; });
+  await openInput(page);
   await connect.click();
-  await menu.click();
+  await openInput(page);
   await expect(silent).not.toBeChecked();
   await page.keyboard.press("Escape");
+  await openInput(page);
   await disconnect.click();
   await page.evaluate(() => { window["testMidiInput"].name = "Roland FP10 MIDI 1"; });
+  await openInput(page);
   await connect.click();
-  await menu.click();
+  await openInput(page);
   await expect(silent).toBeChecked();
   await page.reload();
+  await openInput(page);
   await connect.click();
-  await menu.click();
+  await openInput(page);
   await expect(silent).toBeChecked();
 });
 
@@ -321,8 +392,9 @@ test("keyboard output sends notes without echoing physical keys and releases on 
     };
   });
   await page.goto("/");
+  await openInput(page);
   await page.getByRole("button", { name: "Connect MIDI" }).click();
-  await page.getByRole("button", { name: "MIDI settings" }).click();
+  await openInput(page);
   const output = page.getByRole("switch", { name: "Play on keyboard" });
   await output.click();
   await page.getByRole("switch", { name: "Silent while I play" }).click();

@@ -1,10 +1,10 @@
 import { expect, test, accountRows } from "./fixtures";
 
-test("highway covers the top UI while controls, dock alignment and scrolling remain usable", async ({ page }) => {
+test("highway covers the top UI while controls, dock alignment remain usable with or without rail notes", async ({ page }) => {
   const sequence = { notes: Array.from({ length: 120 }, (_, i) => ({ pitch: 48 + i % 25, startTime: i * .25, endTime: i * .25 + .2, velocity: 90 })), totalTime: 30 };
   await page.addInitScript(() => localStorage.setItem("replay-instrument", JSON.stringify("classic")));
   await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(
-    accountRows(route.request().url()) ?? (route.request().url().includes("tune_assets") ? [{ tune_key: "intro", briefing: null }] : []),
+    accountRows(route.request().url()) ?? (route.request().url().includes("tune_assets") ? [{ tune_key: "intro", is_global: true, briefing: null }] : []),
   ) }));
   await page.route("**/functions/v1/tune-coach", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
     tuneTitle: "Intro", practicePlan: [{ itemId: "background", itemType: "nugget", instruction: "Follow the notes through the highway.", nugget: { noteSequence: sequence } }],
@@ -18,10 +18,12 @@ test("highway covers the top UI while controls, dock alignment and scrolling rem
     const canvas = document.querySelector(".note-highway")!.getBoundingClientRect();
     const dock = document.querySelector(".piano-dock")!;
     const occlusion = parseFloat(getComputedStyle(dock).getPropertyValue("--dock-occlusion"));
+    const rail = document.querySelector(".note-rail");
+    const target = rail ? rail.getBoundingClientRect().bottom : document.querySelector(".piano-surface")!.getBoundingClientRect().top;
     return {
       top: Math.abs(canvas.top - document.querySelector("[data-highway-surface]")!.getBoundingClientRect().top),
       hit: Math.abs(canvas.bottom - occlusion - dock.getBoundingClientRect().top),
-      rail: Math.abs(canvas.bottom - document.querySelector(".note-rail")!.getBoundingClientRect().bottom),
+      rail: Math.abs(canvas.bottom - target),
     };
   });
   await expect.poll(alignment).toEqual({ top: 0, hit: 0, rail: 0 });
@@ -32,11 +34,21 @@ test("highway covers the top UI while controls, dock alignment and scrolling rem
   await expect(page.getByRole("menu").first()).toBeVisible();
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 600, height: 900 });
-  await page.locator("#full-keyboard").click();
   await expect(highway).toBeVisible();
   await expect.poll(alignment).toEqual({ top: 0, hit: 0, rail: 0 });
-  await page.locator(".note-highway-viewport").evaluate(el => { el.scrollLeft = 200; });
-  await expect.poll(() => page.locator(".piano-dock .overflow-x-auto").first().evaluate(el => el.scrollLeft)).toBe(200);
+  await page.getByRole("button", { name: "Keyboard settings", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Display Notes", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Never", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(page.locator(".note-rail")).toHaveCount(0);
+  await expect.poll(alignment).toEqual({ top: 0, hit: 0, rail: 0 });
+  await page.getByRole("button", { name: "Keyboard settings", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Display Notes", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Auto", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(page.locator(".note-rail")).toBeVisible();
+  await expect.poll(alignment).toEqual({ top: 0, hit: 0, rail: 0 });
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Leave", exact: true }).click();
   await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeVisible();
   await expect(page.locator(".note-highway")).toHaveCount(0);

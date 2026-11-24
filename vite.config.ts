@@ -9,6 +9,13 @@ export default defineConfig({
   server: {
     host: "::",
     port: 8080,
+    // Lovable serves this OAuth endpoint; Vite must not send it to the SPA's 404.
+    proxy: {
+      "^/~oauth/initiate(?:\\?|$)": {
+        target: "https://improv-jam-bot.lovable.app",
+        changeOrigin: true,
+      },
+    },
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",

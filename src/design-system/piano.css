@@ -44,7 +44,7 @@
 }
 /* Solfège can be longer than the fixed full-keyboard cells; keep the complete accessible name on the key. */
 .note-rail[data-full="true"] .note-rail__cell > span { letter-spacing: -.07em; }
-.keyboard-panel { height: calc(54px + var(--piano-key-height, 266px) * var(--piano-key-scale, 1)); }
+.keyboard-panel { height: calc(var(--note-rail-height, 52px) + 2px + var(--piano-key-height, 266px) * var(--piano-key-scale, 1)); }
 .piano-dock[data-midi-connected="true"] { --piano-key-scale: .5; }
 .keyboard-toolbar {
   background: hsl(var(--card)); border-top: 1px solid hsl(var(--border));
