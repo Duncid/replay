@@ -45,10 +45,10 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       app.canvas.setAttribute("aria-hidden", "true");
       const reduced = matchMedia("(prefers-reduced-motion: reduce)");
       const layout = createPianoLayout(fullKeyboard);
-      const columns = new Graphics(), lines = new Graphics(), line = new Graphics();
+      const columns = new Graphics(), lines = new Graphics(), line = new Graphics(), veil = new Graphics();
       const layer = new Container(), mask = new Graphics();
       layer.mask = mask;
-      app.stage.addChild(columns, lines, line, layer, mask);
+      app.stage.addChild(columns, lines, line, layer, veil, mask);
       const color = (token: string) => {
         const probe = document.createElement("span");
         probe.style.color = `hsl(var(--${token}))`; element.append(probe);
@@ -98,6 +98,8 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
         mask.clear().rect(0, 0, width, height).fill(0xffffff);
         line.clear().rect(0, hitY - 2, width, 2).fill(accent);
         if (!reduced.matches) for (let i = 1; i <= 6; i++) line.rect(0, hitY - 2 - i * 2, width, 2).fill({ color: accent, alpha: .12 * (1 - i / 7) });
+        // Notes dim behind this band on their last approach into the piano top bar.
+        veil.clear().rect(0, hitY, width, Math.max(0, height - bottomOcclusion - hitY)).fill({ color: 0x000000, alpha: .5 });
         items.forEach(item => { item.state = ""; });
       }
       observer = new ResizeObserver(resize); observer.observe(element); resize();
