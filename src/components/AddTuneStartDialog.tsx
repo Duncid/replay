@@ -22,22 +22,28 @@ export function AddTuneStartDialog({ open, onOpenChange, onPickFile }: AddTuneSt
           <DialogDescription>Bring a piano score and we&rsquo;ll turn it into a practice tune.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          <p className="rounded-lg border border-border p-3 text-sm">
-            Upload a <span className="font-medium">.mxl</span> file — compressed MusicXML, the sheet-music format
-            that keeps every note readable. Piano solos work best.
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Upload a .mxl file
+            </h3>
+            <p className="text-sm">
+              Compressed MusicXML, the sheet-music format that keeps every note readable. Piano solos work best.
+            </p>
+          </div>
 
-          <p className="rounded-lg border border-border p-3 text-sm">
-            No file yet?{" "}
-            <a href={MUSESCORE_URL} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-medium underline underline-offset-4 hover:text-primary">
-              MuseScore
-              <ExternalLink className="size-3" aria-hidden="true" />
-            </a>{" "}
-            is one of the world&rsquo;s largest free sheet-music libraries — millions of scores you can listen to,
-            then download as .mxl.
-          </p>
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">No file yet?</h3>
+            <p className="text-sm">
+              <a href={MUSESCORE_URL} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium underline underline-offset-4 hover:text-primary">
+                MuseScore
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>{" "}
+              is one of the world&rsquo;s largest free sheet-music libraries — millions of scores, including hundreds
+              of thousands free to download as .mxl.
+            </p>
+          </div>
         </div>
 
         <DialogFooter>
