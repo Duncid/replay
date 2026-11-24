@@ -67,7 +67,7 @@ C is red, D orange, E yellow, F green, G cyan, A blue and B violet. Rail cells c
 Local mouse, touch, MIDI and microphone input takes priority over external playback for a shared note. Releasing local input reveals any remaining playback highlight. Both the key and its rail cell update together within 70 ms, with transitions removed for reduced motion. Input-disabled and instrument-range-disabled states are distinct; out-of-range keys and rail cells use muted surfaces.
 
 ### Full keyboard labels
-The full keyboard preserves the original 1040 px minimum width and scrolls keys and rail together. Its rail omits octaves, with 10 px labels on narrow sharp cells. Key accessible names and tooltips retain the complete localized note and octave.
+Both layouts show note names only in rail cells, with octave numbers above each B–C (Si–Do) junction. The full keyboard preserves the original 1040 px minimum width and scrolls keys and rail together, with 10 px labels on narrow sharp cells. Key accessible names and tooltips retain the complete localized note and octave.
 
 ### Input
 Mouse press/release and touch start/end/cancel play and release notes; leaving a key with the mouse releases it. Computer-key shortcuts follow the existing AZERTY mapping: E → C4, R → D4, T → E4, Y → F4, U → G4; 4 → C♯4 and 5 → D♯4. Focus the story canvas before trying shortcuts. Typing in text fields does not play notes. Playback highlights alone are silent.

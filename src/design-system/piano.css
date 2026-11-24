@@ -14,6 +14,11 @@
 .piano-key[data-activity="user"] { background: hsl(var(--primary)); box-shadow: var(--glow-user); }
 .piano-key[data-activity="ai"] { background: hsl(var(--ai)); box-shadow: var(--glow-ai); }
 .note-rail { position: relative; height: 52px; flex: 0 0 52px; container-type: inline-size; background: hsl(var(--card)); }
+.note-rail__octave {
+  position: absolute; top: 0; height: 24px; display: flex; align-items: center;
+  transform: translateX(-50%); font: 10px/12px var(--font-mono);
+  color: hsl(var(--muted-foreground)); pointer-events: none;
+}
 .note-rail__cell {
   position: relative; display: flex; align-items: center; justify-content: center;
   min-width: 0; height: 24px; border-radius: 4px;

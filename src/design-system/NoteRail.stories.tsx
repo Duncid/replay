@@ -5,7 +5,7 @@ const layout = createPianoLayout(false);
 const states = Object.fromEntries(layout.notes.map(n => [`${n.note}${n.octave}`, { label: `${n.note}${n.octave}`, playable: true, activity: undefined }])) as Record<string, RailNoteState>;
 const meta = {
   title: "Instruments/Note rail", component: NoteRail, args: { layout, states },
-  parameters: { docs: { description: { component: "A decorative 50 px pitch rail: two 24 px rows separated by 2 px. It uses exactly the piano’s tracks, gaps and black-key columns. Pitch colors identify notes; a lime/blue bottom bar identifies player/playback. The key buttons carry accessible names. Full keyboard and solfège examples live in Piano keyboard." } } },
+  parameters: { docs: { description: { component: "A decorative 52 px pitch rail: two 24 px rows separated by 2 px, with a 2 px bottom gap. Cells show note names only; octave numbers sit above each B–C (Si–Do) junction. It uses exactly the piano’s tracks, gaps and black-key columns. Pitch colors identify notes; a lime/blue bottom bar identifies player/playback. The key buttons carry accessible names. Full keyboard and solfège examples live in Piano keyboard." } } },
 } satisfies Meta<typeof NoteRail>;
 export default meta;
 type Story = StoryObj<typeof meta>;
