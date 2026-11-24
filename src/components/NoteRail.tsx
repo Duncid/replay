@@ -29,9 +29,10 @@ export function NoteRail({ layout, states, fullKeyboard = false }: NoteRailProps
     </div>;
   };
   return <div className="note-rail" data-full={fullKeyboard} aria-hidden="true">
-    {layout.whiteKeys.filter(note => note.note === "C" && note.whiteIndex > 0).map(note =>
+    {layout.whiteKeys.filter(note => note.note === "C" && (note.whiteIndex > 0 || layout.ranges[0][0] !== 48 || layout.ranges.length > 1)).map(note =>
       <span key={note.midi} className="note-rail__octave" style={{
         left: `calc(${pianoKeyStyle(layout, note).left} - .5px)`,
+        transform: note.whiteIndex === 0 || note.midi === layout.ranges[note.segment][0] ? "none" : undefined,
       }}>{note.octave}</span>
     )}
     <div className="absolute inset-x-0 top-0 h-6">{layout.blackKeys.map(cell)}</div>

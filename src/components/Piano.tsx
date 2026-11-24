@@ -17,7 +17,7 @@ import {
 } from "react";
 import { PianoKey } from "./PianoKey";
 import { NoteRail, type RailNoteState } from "./NoteRail";
-import { createPianoLayout, pianoKeyStyle, type PianoNote } from "./pianoLayout";
+import { createPianoLayout, pianoKeyStyle, pianoBreaks, pianoBreakStyle, pianoLayoutKey, pianoCanvasMinWidth, type PianoNote } from "./pianoLayout";
 
 interface PianoProps {
   activeKeys: Set<string>;
@@ -201,7 +201,10 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     }), []);
 
     const highway = useHighway();
-    const layout = useMemo(() => createPianoLayout(fullKeyboard), [fullKeyboard]);
+    const fallbackLayout = useMemo(() => createPianoLayout(fullKeyboard), [fullKeyboard]);
+    const layout = highway.practiceLayout ?? fallbackLayout;
+    const layoutKey = pianoLayoutKey(layout);
+    const scrollable = fullKeyboard || layout.widthScale > 1;
     const { notes, whiteKeys, blackKeys } = layout;
 
     const handleKeyPress = useCallback(
@@ -251,7 +254,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
       releaseHeldNotes();
       pressedKeysRef.current.clear();
       setUserPressedKeys(new Set());
-    }, [soundType, fullKeyboard, allowInput, releaseHeldNotes]);
+    }, [soundType, layoutKey, allowInput, releaseHeldNotes]);
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -349,8 +352,9 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
     };
 
     return <div className={cn("piano-surface relative w-full h-full select-none flex flex-col px-1 mb-1 overflow-hidden bg-card", className)}>
-      <div ref={node => highway.registerScroll(node, "keys")} onScroll={event => highway.syncScroll(event.currentTarget)} className={cn("relative h-full", fullKeyboard ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden")}>
-        <div className={cn("relative h-full flex flex-col", fullKeyboard && "min-w-[1040px]")}>
+      <div ref={node => highway.registerScroll(node, "keys")} onScroll={event => highway.syncScroll(event.currentTarget)} className={cn("relative h-full", scrollable ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden")}>
+        <div data-piano-ranges={layoutKey} className="relative h-full flex flex-col" style={{ minWidth: fullKeyboard ? "1040px" : pianoCanvasMinWidth(layout) }}>
+          {pianoBreaks(layout).map(start => <div key={start.midi} className="piano-range-break" aria-hidden="true" style={pianoBreakStyle(layout, start)}><span>⋯</span></div>)}
           {showNoteRail && <NoteRail layout={layout} states={states} fullKeyboard={fullKeyboard} />}
           <div className="relative flex-1 min-h-0">
             <div className="absolute inset-0 z-0">{whiteKeys.map(renderKey)}</div>

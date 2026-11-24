@@ -1,7 +1,7 @@
 import type { SceneReadiness } from "@/lib/practiceSceneReadiness";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Application, Container, Graphics, Text } from "pixi.js";
-import { createPianoLayout, pianoKeyGeometry } from "../pianoLayout";
+import { createPianoLayout, pianoKeyGeometry, pianoBreaks, pianoBreakGeometry, pianoLayoutKey, type PianoLayout } from "../pianoLayout";
 import { highwayState, nextHighwayNotes, type HighwayNote, type HighwayTransport } from "./model";
 
 /** Raise the hit line above the keyboard so notes visibly cross it. */
@@ -13,6 +13,7 @@ export interface NoteHighwayProps {
   notes: HighwayNote[];
   transport: HighwayTransport;
   fullKeyboard?: boolean;
+  layout?: PianoLayout;
   range?: [number, number];
   pixelsPerBeat?: number;
   beatsPerSecond?: number;
@@ -20,7 +21,9 @@ export interface NoteHighwayProps {
   onArmedChange?: (pitches: number[]) => void;
 }
 /** Musical state is supplied by the engine. Pixi owns the animation, never React. */
-export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboard = false, range, pixelsPerBeat = 72, beatsPerSecond = 2, onArmedChange, onReadinessChange }: NoteHighwayProps) {
+export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboard = false, layout: suppliedLayout, range, pixelsPerBeat = 72, beatsPerSecond = 2, onArmedChange, onReadinessChange }: NoteHighwayProps) {
+  const fallbackLayout = useMemo(() => createPianoLayout(fullKeyboard), [fullKeyboard]);
+  const layout = suppliedLayout ?? fallbackLayout;
   const rangeLow = range?.[0], rangeHigh = range?.[1];
   const host = useRef<HTMLDivElement>(null);
   const announcement = useRef<HTMLSpanElement>(null);
@@ -30,7 +33,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
     if (host.current) host.current.dataset.renderReady = "false";
     live.current.onReadinessChange?.("loading");
     return () => live.current.onReadinessChange?.("loading");
-  }, [notes, fullKeyboard, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
+  }, [notes, layout, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
   useEffect(() => {
     const element = host.current;
     if (!element) return;
@@ -44,11 +47,10 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       element.prepend(app.canvas);
       app.canvas.setAttribute("aria-hidden", "true");
       const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-      const layout = createPianoLayout(fullKeyboard);
       const columns = new Graphics(), lines = new Graphics(), line = new Graphics(), veil = new Graphics();
-      const layer = new Container(), mask = new Graphics();
+      const layer = new Container(), mask = new Graphics(), breaks = new Graphics();
       layer.mask = mask;
-      app.stage.addChild(columns, lines, line, layer, veil, mask);
+      app.stage.addChild(columns, lines, line, layer, veil, mask, breaks);
       const color = (token: string) => {
         const probe = document.createElement("span");
         probe.style.color = `hsl(var(--${token}))`; element.append(probe);
@@ -99,6 +101,12 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
           const dim = rangeLow !== undefined && rangeHigh !== undefined && (g.midi < rangeLow || g.midi > rangeHigh);
           columns.rect(g.x, 0, g.width, height).fill({ color: n.isBlack ? background : surface, alpha: (n.isBlack ? .85 : .6) * (dim ? .3 : 1) });
           if (n.note === "C") columns.moveTo(g.x, 0).lineTo(g.x, height).stroke({ color: border, width: 1 });
+        }
+        breaks.clear();
+        for (const start of pianoBreaks(layout)) {
+          const gap = pianoBreakGeometry(layout, width, start);
+          breaks.rect(gap.x, 0, gap.width, height).fill({ color: background });
+          for (let y = 0; y < height; y += 16) breaks.moveTo(gap.x + gap.width / 2, y).lineTo(gap.x + gap.width / 2, y + 7).stroke({ color: border, width: 1 });
         }
         octaveLabels.forEach(({ n, label }) => label.position.set(pianoKeyGeometry(layout, width, n).x + 4, hitY - 24));
         mask.clear().rect(0, 0, width, height).fill(0xffffff);
@@ -211,6 +219,6 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       if (!disposed) { console.error("Note Highway renderer failed", error); live.current.onReadinessChange?.("error"); if (announcement.current) announcement.current.textContent = "Note Highway could not load. The piano remains available."; }
     });
     return () => { disposed = true; cancelAnimationFrame(frameId); cancelAnimationFrame(readyFrameId); observer?.disconnect(); motionCleanup?.(); themeObserver?.disconnect(); if (app.renderer) app.destroy(true, { children: true }); };
-  }, [notes, fullKeyboard, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
-  return <div ref={host} className="note-highway" role="group" aria-label="Note Highway"><span ref={announcement} className="sr-only" aria-live="polite" aria-atomic="true" /></div>;
+  }, [notes, layout, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
+  return <div ref={host} className="note-highway" data-piano-ranges={pianoLayoutKey(layout)} role="group" aria-label="Note Highway"><span ref={announcement} className="sr-only" aria-live="polite" aria-atomic="true" /></div>;
 }

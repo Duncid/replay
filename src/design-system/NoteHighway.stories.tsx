@@ -1,3 +1,4 @@
+import { createAdaptivePianoLayout, pianoCanvasMinWidth } from "@/components/pianoLayout";
 import { useHighwayTopBleed } from "@/components/highway/useHighwayTopBleed";
 import { PianoDock } from "@/components/highway/PianoDock";
 import { useSheetPlaybackEngine } from "@/hooks/useSheetPlaybackEngine";
@@ -16,10 +17,13 @@ const TUNE: Array<[number, number, number, "user" | "ai"]> = [
   [67,9,1,"user"],[64,10,2,"user"],[57,8,2,"ai"],[52,10,2,"ai"],[66,12,1,"user"],
   [67,13,1,"user"],[62,14,2,"user"],[50,12,2,"ai"],[55,14,2,"ai"],
 ];
-type Props = { playing: boolean; beat: number; fullKeyboard: boolean; waiting: boolean; width: number; height: number; gated?: boolean; midiConnected?: boolean; behindTopUI?: boolean };
-function Instrument({ playing, beat, fullKeyboard, waiting, height, gated = false, midiConnected = false, behindTopUI = false }: Props) {
+type Props = { adaptivePitches?: number[]; playing: boolean; beat: number; fullKeyboard: boolean; waiting: boolean; width: number; height: number; gated?: boolean; midiConnected?: boolean; behindTopUI?: boolean };
+function Instrument({ adaptivePitches, playing, beat, fullKeyboard, waiting, height, gated = false, midiConnected = false, behindTopUI = false }: Props) {
   const { stageRef, topBleed } = useHighwayTopBleed(behindTopUI);
-  const { setGuidance, registerScroll, syncScroll, bottomOcclusion } = useHighway();
+  const { setPracticeLayout, setGuidance, registerScroll, syncScroll, bottomOcclusion } = useHighway();
+  const layout = useMemo(() => adaptivePitches ? createAdaptivePianoLayout(adaptivePitches) : undefined, [adaptivePitches]);
+  const range = useMemo<[number, number]>(() => adaptivePitches ? [Math.min(...adaptivePitches), Math.max(...adaptivePitches)] : [48, 69], [adaptivePitches]);
+  useEffect(() => { setPracticeLayout(layout ?? null); return () => setPracticeLayout(null); }, [layout, setPracticeLayout]);
   const clock = useRef(beat);
   const originRef = useRef(performance.now());
   const getBeat = () => gated ? playback.playheadTimeRef.current * 2 : playing ? (beat + (performance.now() - originRef.current) / 500) % 16 : beat;
@@ -27,11 +31,12 @@ function Instrument({ playing, beat, fullKeyboard, waiting, height, gated = fals
   const [userKeys, setUserKeys] = useState(new Set<string>());
   const [nowLabel, setNowLabel] = useState(beat);
   const notes = useMemo<HighwayNote[]>(() => {
+    if (adaptivePitches) return adaptivePitches.map((midi, i) => ({ id: String(i), midi, start: i * .75, duration: 1, who: "user" }));
     const result = TUNE.map(([midi,start,duration,who], i): HighwayNote => ({ id: String(i), midi,start,duration,who,
       judgment: !playing && !waiting && who === "user" && start <= beat ? (start === 8 ? "miss" : start === 2 ? "late" : "perfect") : undefined }));
     if (waiting) result.push({ id: "chord", midi: 64, start: 4, duration: 2, who: "user" });
     return result;
-  }, [playing, beat, waiting]);
+  }, [adaptivePitches, playing, beat, waiting]);
   const gateNotes = useMemo(() => notes.filter(n => n.who === "user").map(n => ({ id: n.id, midi: n.midi, start: n.start / 2, dur: n.duration / 2 })), [notes]);
   const playback = useSheetPlaybackEngine({ notes: gateNotes, enabled: gated });
   useEffect(() => {
@@ -48,19 +53,19 @@ function Instrument({ playing, beat, fullKeyboard, waiting, height, gated = fals
     };
     tick(); const timer = setInterval(tick, 100); return () => clearInterval(timer);
   }, [playing, beat, notes]);
-  const onArmedChange = useCallback((armed: number[]) => setGuidance({ armed, range: [48,69] }), [setGuidance]);
+  const onArmedChange = useCallback((armed: number[]) => setGuidance({ armed, range }), [setGuidance, range]);
   return <>
     <div className={`relative z-20 flex justify-between gap-3 p-3 font-mono text-xs ${behindTopUI ? "highway-top-header" : ""}`}><span>NOTE HIGHWAY · 120 BPM</span><span>{waiting ? "WAITING FOR CHORD" : playing ? "PLAYING" : "PAUSED"} · BEAT {nowLabel}</span></div>
     <div ref={stageRef} className="relative" style={{ height: height + (midiConnected ? 103 : 0) }}>
     {behindTopUI && <div className="highway-top-chrome absolute right-3 top-3 z-10 max-w-[240px] rounded-xl border border-border p-3 text-sm">Follow the falling notes. The highway continues behind these controls.</div>}
     <div className="note-highway-viewport absolute inset-0" style={{ top: -topBleed, bottom: -bottomOcclusion }} ref={node => registerScroll(node, "highway")} onScroll={e => syncScroll(e.currentTarget)}>
-      <div className={fullKeyboard ? "h-full min-w-[1040px]" : "h-full"}>
-        <NoteHighway bottomOcclusion={bottomOcclusion} notes={notes} fullKeyboard={fullKeyboard} range={[48,69]} onArmedChange={onArmedChange}
+      <div className="h-full" style={{ minWidth: fullKeyboard ? "1040px" : layout ? pianoCanvasMinWidth(layout) : "100%" }}>
+        <NoteHighway layout={layout} bottomOcclusion={bottomOcclusion} notes={notes} fullKeyboard={fullKeyboard} range={range} onArmedChange={onArmedChange}
           transport={{ getBeat, getArmed: gated && playback.phase === "waiting" ? () => playback.focusedNoteIds : undefined, getActive: () => new Set(playing ? notes.filter(n => n.who === "user" && n.start <= getBeat() && n.start+n.duration > getBeat()).map(n => n.id) : []), getState: () => (gated && playback.phase === "waiting") || waiting ? "waiting" : playing ? "playing" : "paused", resetId: `${beat}-${playing}-${waiting}` }} />
       </div>
     </div>
     </div>
-    <PianoDock midiConnected={midiConnected} keyboardHeight={260} toolbar={<div className="keyboard-toolbar flex items-center justify-between gap-2 p-3 font-mono text-xs"><span>CLASSIC PIANO</span><span>120 BPM · {fullKeyboard ? "88 KEYS" : "COMPACT"}</span></div>}><div className="keyboard-panel"><Piano userActiveKeys={userKeys} activeKeys={activeKeys} allowInput language="en" notationPreference="abc" fullKeyboard={fullKeyboard}
+    <PianoDock midiConnected={midiConnected} keyboardHeight={260} toolbar={<div className="keyboard-toolbar flex items-center justify-between gap-2 p-3 font-mono text-xs"><span>CLASSIC PIANO</span><span>120 BPM · {layout?.ranges.length === 2 ? "SPLIT RANGE" : fullKeyboard ? "88 KEYS" : "PIANO"}</span></div>}><div className="keyboard-panel"><Piano userActiveKeys={userKeys} activeKeys={activeKeys} allowInput language="en" notationPreference="abc" fullKeyboard={fullKeyboard}
       onNoteStart={gated ? key => playback.handleInputEvent({ type: "noteon", midi: noteNameToMidi(key), timeMs: performance.now() }) : undefined}
       onNoteEnd={gated ? key => playback.handleInputEvent({ type: "noteoff", midi: noteNameToMidi(key), timeMs: performance.now() }) : undefined} /></div></PianoDock>
   </>;
@@ -88,3 +93,7 @@ export const GatedPractice: Story = { args: { playing: false, beat: 0, gated: tr
 export const MidiConnected: Story = { args: { playing: false, beat: 4.12, midiConnected: true } };
 
 export const BehindTopUI: Story = { args: { playing: false, beat: 4.12, behindTopUI: true } };
+
+export const AdaptiveShifted: Story = { args: { playing: false, beat: 1, adaptivePitches: [64, 67, 72, 83, 88, 95] } };
+export const AdaptiveSplit: Story = { args: { playing: false, beat: 1, adaptivePitches: [36, 84, 40, 88, 43, 91, 47, 95] } };
+export const AdaptiveWide: Story = { args: { playing: false, beat: 4, adaptivePitches: Array.from({ length: 88 }, (_, i) => 21 + i) } };

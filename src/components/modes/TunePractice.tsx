@@ -2,6 +2,7 @@ import { PracticeFeedbackToast } from "@/components/PracticeFeedbackToast";
 import { practiceSceneReadiness, type SceneReadiness } from "@/lib/practiceSceneReadiness";
 import { useHighwayTopBleed } from "@/components/highway/useHighwayTopBleed";
 import { useHighway } from "@/components/highway/HighwayContext";
+import { createAdaptivePianoLayout, pianoCanvasMinWidth } from "@/components/pianoLayout";
 import type { HighwayNote } from "@/components/highway/model";
 
 import type { NoteEvent } from "@/components/PianoSheetPixiLayout";
@@ -384,7 +385,12 @@ export function TunePractice({
     onReachedEnd: onPlayheadReachedEnd,
   });
 
-  const { fullKeyboard, setGuidance, registerScroll, syncScroll, bottomOcclusion } = useHighway();
+  const { fullKeyboard, setPracticeLayout, setGuidance, registerScroll, syncScroll, bottomOcclusion } = useHighway();
+  const pianoLayout = useMemo(() => createAdaptivePianoLayout(notes.map(n => n.midi)), [notes]);
+  useLayoutEffect(() => {
+    setPracticeLayout(pianoLayout);
+    return () => setPracticeLayout(null);
+  }, [pianoLayout, setPracticeLayout]);
   const [highwayReset, setHighwayReset] = useState(0);
   const sceneLease = useRef<ReturnType<typeof practiceSceneReadiness.attach> | null>(null);
   useLayoutEffect(() => {
@@ -526,8 +532,8 @@ export function TunePractice({
           <div ref={stageRef} className="relative w-full flex-1 min-h-0 highway-stage" data-highway-visible={!showSheetView}>
             <div ref={node => registerScroll(node, "highway")} onScroll={event => syncScroll(event.currentTarget)}
               style={{ top: -topBleed, bottom: -bottomOcclusion }} className={cn("absolute inset-0 note-highway-viewport", showSheetView && "invisible")}>
-              <div className={cn("h-full", fullKeyboard && "min-w-[1040px]")}>
-                <NoteHighway onReadinessChange={onSceneReadiness} bottomOcclusion={bottomOcclusion} beatsPerSecond={bpm / 60} notes={highwayNotes} fullKeyboard={fullKeyboard} range={highwayRange} onArmedChange={onArmedChange}
+              <div className="h-full" style={{ minWidth: fullKeyboard ? "1040px" : pianoCanvasMinWidth(pianoLayout) }}>
+                <NoteHighway layout={pianoLayout} onReadinessChange={onSceneReadiness} bottomOcclusion={bottomOcclusion} beatsPerSecond={bpm / 60} notes={highwayNotes} fullKeyboard={fullKeyboard} range={highwayRange} onArmedChange={onArmedChange}
                   transport={{ getBeat: () => playback.playheadTimeRef.current * bpm / 60,
                     getState: () => playback.isAutoplay ? "playing" : playback.phase === "waiting" ? "waiting" : "paused",
                     getArmed: playback.isAutoplay ? () => new Set() : playback.phase === "waiting" ? () => playback.focusedNoteIds : undefined,
