@@ -416,6 +416,48 @@ export type Database = {
           },
         ]
       }
+      tune_build_jobs: {
+        Row: {
+          created_at: string
+          created_by: string
+          error: string | null
+          filename: string
+          id: string
+          result: Json | null
+          source_path: string
+          status: string
+          title: string | null
+          tune_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          filename: string
+          id?: string
+          result?: Json | null
+          source_path: string
+          status?: string
+          title?: string | null
+          tune_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          filename?: string
+          id?: string
+          result?: Json | null
+          source_path?: string
+          status?: string
+          title?: string | null
+          tune_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tune_nugget_state: {
         Row: {
           attempt_count: number | null

@@ -22,6 +22,13 @@
       "when": 1795523680388,
       "tag": "0002_add_accounts_and_owner_access",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795536435532,
+      "tag": "0003_tune_build_jobs",
+      "breakpoints": true
     }
   ]
 }

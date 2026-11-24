@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
 import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
-import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut } from "lucide-react";
+import { TuneUploadDialog } from "@/components/TuneUploadDialog";
+import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -58,6 +59,7 @@ export function UserMenu({
     useLocalUsers();
   const { user, isAdmin, signOut } = useAuth();
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const handleCreateUser = async (name: string) => {
     await createUser(name);
@@ -65,6 +67,7 @@ export function UserMenu({
 
   return (
     <>
+      {isAdmin && <TuneUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -122,6 +125,11 @@ export function UserMenu({
                     <TuneSelectionSubmenus
                       onSelected={() => onOpenManagement?.("lab")}
                     />
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setUploadOpen(true)}>
+                      <Upload className="h-4 w-4" />
+                      Upload new tune…
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuCheckboxItem checked={debugMode} onCheckedChange={onDebugModeChange}>
