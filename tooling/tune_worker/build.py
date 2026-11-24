@@ -8,10 +8,12 @@ the app's ``tune-publish`` function expects.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional
+from xml.etree import ElementTree
 
 from music21 import converter
 
@@ -35,6 +37,26 @@ def _read_json(path: Path) -> Optional[Any]:
 
 def _read_text(path: Path) -> Optional[str]:
     return path.read_text() if path.exists() else None
+
+
+def extract_composer(score: Optional[str]) -> Optional[str]:
+    if not score:
+        return None
+    try:
+        root = ElementTree.fromstring(score)
+    except ElementTree.ParseError:
+        return None
+    names = set()
+    for identification in root:
+        if identification.tag.split("}")[-1] != "identification":
+            continue
+        for creator in identification:
+            if creator.tag.split("}")[-1] != "creator" or creator.get("type", "").lower() != "composer":
+                continue
+            name = re.sub(r"\s*\([0-9]{4}[^)]*\)\s*$", "", "".join(creator.itertext())).strip()
+            if name and name.lower() not in {"music21", "musescore", "unknown", "composer"}:
+                names.add(name)
+    return "; ".join(sorted(names)) or None
 
 
 def prepare_folder(source: Path, folder: Path) -> None:
@@ -115,6 +137,8 @@ def collect_bundle(folder: Path, title: Optional[str] = None) -> Dict[str, Any]:
         "assemblies", teacher.get("assemblies") or [], ["tier", "label", "nuggetIds", "difficulty", "modes"]
     )
     bundle: Dict[str, Any] = {
+        # Source metadata can be lost or replaced with Music21 during export.
+        "composer": extract_composer(_read_text(folder / "tune.xml")) or extract_composer(_read_text(out / "tune.xml")),
         "briefing": {k: teacher.get(k) for k in (
             "schemaVersion", "title", "pipelineSettings", "motifs", "motifOccurrences",
             "tuneHints", "teachingOrder", "assemblyOrder") if teacher.get(k) is not None},

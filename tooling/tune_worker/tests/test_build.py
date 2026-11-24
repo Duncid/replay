@@ -2,9 +2,23 @@ from pathlib import Path
 
 import pytest
 
-from tune_worker.build import BuildError, build_bundle_from_file, collect_bundle, _ns
+from tune_worker.build import BuildError, build_bundle_from_file, collect_bundle, _ns, extract_composer
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_extracts_chopin_as_composer_not_arranger():
+    score = '<score-partwise><identification><creator type="composer">Frédéric Chopin</creator><creator type="arranger">Someone Else</creator></identification></score-partwise>'
+    assert extract_composer(score) == "Frédéric Chopin"
+
+
+def test_extracts_satie_without_lifespan():
+    assert extract_composer((ROOT / "src/music/gymnopdie/tune.xml").read_text()) == "Erik Satie"
+
+
+@pytest.mark.parametrize("score", [None, "bad xml", '<score-partwise/>', '<score-partwise><identification><creator type="composer">Music21</creator></identification></score-partwise>'])
+def test_missing_or_placeholder_composer_stays_unknown(score):
+    assert extract_composer(score) is None
 
 
 def test_gymnopdie_bundle_preserves_both_tracks_in_every_section():
@@ -34,6 +48,7 @@ def test_grouped_sequence_remains_authoritative(tmp_path):
 def test_uploaded_mxl_builds_nuggets_and_assemblies():
     bundle = build_bundle_from_file(ROOT / "src/music/gymnopdie/tune.mxl", "Gymnopedie")
     assert bundle["briefing"]["title"] == "Gymnopedie"
+    assert bundle["composer"] == "Erik Satie"
     assert bundle["noteSequence"]["notes"]
     assert len(bundle["nuggets"]) > 0 and any((n.get("noteSequence") or {}).get("notes") for n in bundle["nuggets"])
     assert len(bundle["assemblies"]) > 0

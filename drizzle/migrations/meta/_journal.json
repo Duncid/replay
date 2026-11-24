@@ -43,6 +43,20 @@
       "when": 1795550135886,
       "tag": "0005_user_tune_uploads",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795558564205,
+      "tag": "0006_add_tune_composer",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795558654908,
+      "tag": "0007_decode_musicxml_composer_names",
+      "breakpoints": true
     }
   ]
 }

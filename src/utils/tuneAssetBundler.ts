@@ -492,6 +492,7 @@ export const getLocalAssemblyMenuItems = (
 
 // Type for bundled tune assets matching the edge function interface
 export interface TuneAssetBundle {
+  composer?: string | null;
   briefing?: {
     schemaVersion?: string;
     title?: string;

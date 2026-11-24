@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
         return {
           version_id: existing.version_id,
           tune_key: existing.tune_key,
+          composer: existing.composer,
           briefing: updatedBriefing,
           note_sequence: existing.note_sequence,
           left_hand_sequence: existing.left_hand_sequence,

@@ -357,6 +357,7 @@ export type Database = {
           assembly_dsp_xmls: Json | null
           assembly_xmls: Json | null
           briefing: Json | null
+          composer: string | null
           created_at: string | null
           id: string
           is_global: boolean
@@ -377,6 +378,7 @@ export type Database = {
           assembly_dsp_xmls?: Json | null
           assembly_xmls?: Json | null
           briefing?: Json | null
+          composer?: string | null
           created_at?: string | null
           id?: string
           is_global?: boolean
@@ -397,6 +399,7 @@ export type Database = {
           assembly_dsp_xmls?: Json | null
           assembly_xmls?: Json | null
           briefing?: Json | null
+          composer?: string | null
           created_at?: string | null
           id?: string
           is_global?: boolean
@@ -683,6 +686,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      musicxml_composer: { Args: { score: string }; Returns: string }
       owns_local_user: { Args: { _local_user_id: string }; Returns: boolean }
     }
     Enums: {

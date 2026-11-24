@@ -35,6 +35,7 @@ export interface TuneBriefing {
 export interface TuneAssetData {
   id: string;
   tune_key: string;
+  composer?: string | null;
   version_id: string;
   note_sequence: NoteSequence;
   left_hand_sequence?: NoteSequence | null;

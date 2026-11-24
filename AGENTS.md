@@ -1,5 +1,7 @@
 # Project Rules
 
+- Composer lives on tune_assets; a database trigger extracts credited MusicXML creators for every insert, publishers preserve existing credits when metadata is missing, and the worker reads original XML before exported XML because conversion can replace credits with software placeholders.
+
 - Local tune publishing awaits asset loading and combines instrument-only exports for tunes, nuggets, and assemblies while preserving track IDs; grouped exports remain authoritative so publishing matches local playback.
 
 - `ios-learn-native/` is a standalone Swift/SwiftUI iPad app (Learn mode only), separate from the Capacitor wrapper in `ios/` — keep the two native projects independent; the native app talks to the same Lovable Cloud edge functions and shares no code with the web app.

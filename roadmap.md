@@ -1,5 +1,8 @@
 # Tune-first Replay
 
+- [x] Add a composer field and automatic MusicXML extraction; populate Chopin/Satie and verify published credits.
+- [ ] Deploy original-source composer extraction in the uploaded-tune worker (requires Modal deployment access, unavailable in this sandbox).
+
 - [x] Fix instrument-only tune publishing for local tunes and uploaded tune bundles; preserve all practice-section notes.
 - [ ] Deploy the uploaded-tune worker track-combination fix (requires Modal deployment access, unavailable in this sandbox).
 

@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 interface TuneAssetBundle {
+  composer?: string | null;
   briefing?: {
     schemaVersion?: string;
     title?: string;
@@ -192,7 +193,7 @@ serve(async (req) => {
     // Check if tune already exists in this version
     const { data: existingTune } = await supabase
       .from("tune_assets")
-      .select("id, owner_user_id, is_global")
+      .select("id, owner_user_id, is_global, composer")
       .eq("version_id", versionId)
       .eq("tune_key", finalTuneKey)
       .maybeSingle();
@@ -202,10 +203,16 @@ serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const { data: scoreComposer, error: composerError } = await supabase.rpc("musicxml_composer", {
+      score: tuneAssets.tuneXml ?? "",
+    });
+    if (composerError) throw new Error(`Could not read composer: ${composerError.message}`);
+
     // Prepare the tune_assets record
     const tuneAssetsRecord = {
       version_id: versionId,
       tune_key: finalTuneKey,
+      composer: tuneAssets.composer?.trim() || scoreComposer || existingTune?.composer || null,
       briefing: tuneAssets.briefing
         ? {
             ...tuneAssets.briefing,
