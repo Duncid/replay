@@ -4,6 +4,9 @@ import { Application, Container, Graphics, Text } from "pixi.js";
 import { createPianoLayout, pianoKeyGeometry } from "../pianoLayout";
 import { highwayState, nextHighwayNotes, type HighwayNote, type HighwayTransport } from "./model";
 
+/** Raise the hit line above the keyboard so notes visibly cross it. */
+const HIT_LINE_INSET = 40;
+
 export interface NoteHighwayProps {
   /** Covered pixels below the musical hit line; never part of approach timing. */
   bottomOcclusion?: number;
@@ -45,7 +48,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       const columns = new Graphics(), lines = new Graphics(), line = new Graphics();
       const layer = new Container(), mask = new Graphics();
       layer.mask = mask;
-      app.stage.addChild(columns, lines, layer, mask, line);
+      app.stage.addChild(columns, lines, line, layer, mask);
       const color = (token: string) => {
         const probe = document.createElement("span");
         probe.style.color = `hsl(var(--${token}))`; element.append(probe);
@@ -81,7 +84,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       function resize() {
         dirty = true;
         width = Math.max(1, element.clientWidth); height = Math.max(1, element.clientHeight);
-        hitY = Math.max(1, height - bottomOcclusion);
+        hitY = Math.max(1, height - bottomOcclusion - HIT_LINE_INSET);
         app.renderer.resize(width, height);
         geometry = new Map(layout.notes.map(n => { const g = pianoKeyGeometry(layout, width, n); return [g.midi, g]; }));
         columns.clear();
