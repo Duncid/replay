@@ -2,6 +2,8 @@
 
 Use this when working on the local `tooling/` pipeline. The recommended tool in this repo is **uv** (see `tooling/pyproject.toml`).
 
+For the hosted worker used by in-app uploads, see the [Modal runbook](../tooling/tune_worker/README.md). Changes to the shared pipeline require a separate Modal redeployment to reach the app's builder.
+
 ### With uv (recommended)
 
 ```bash

@@ -71,6 +71,8 @@ For full iMac→iPad packaging/testing steps, see `docs/ipad-rm.md`.
 
 Simply open [Lovable](https://lovable.dev/projects/4523c14a-d949-4525-aba0-140756208667) and click on Share -> Publish.
 
+The Python builder used by in-app tune uploads is deployed separately to **Modal**. Publishing the web app or pulling/pushing Git changes does not update it. See the [hosted tune builder runbook](tooling/tune_worker/README.md) for login, redeployment, backend configuration, retries, and troubleshooting.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
