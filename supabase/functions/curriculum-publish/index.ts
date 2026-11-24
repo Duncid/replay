@@ -1,3 +1,4 @@
+import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -558,6 +559,7 @@ serve(async (req) => {
   }
 
   try {
+    await requireAdmin(req);
     const requestBody: PublishRequest = await req.json();
     const { questGraphId, publishTitle, mode } = requestBody;
 
@@ -888,6 +890,8 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    const __authRes = authErrorResponse(error, corsHeaders);
+    if (__authRes) return __authRes;
     console.error("Error in curriculum-publish:", error);
     return new Response(
       JSON.stringify({

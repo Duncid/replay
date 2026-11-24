@@ -1,3 +1,4 @@
+import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -57,12 +58,14 @@ serve(async (req) => {
       tuneKey,
       nuggetId,
       userSequence,
-      localUserId = null,
+      localUserId: requestedProfileId = null,
       language = "en",
       notationPreference: rawNotation = "auto",
       debug = false,
       evalIndex = null,
     } = await req.json();
+    const __auth = await requireUser(req);
+    const localUserId = await resolveProfile(__auth.admin, __auth.userId, requestedProfileId);
 
     // Resolve effective notation (same as Piano: auto -> by language)
     const effectiveNotation =
@@ -595,6 +598,8 @@ Your final evaluation MUST be consistent with this analysis.`,
     );
 
   } catch (error) {
+    const __authRes = authErrorResponse(error, corsHeaders);
+    if (__authRes) return __authRes;
     console.error("[tune-evaluate] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

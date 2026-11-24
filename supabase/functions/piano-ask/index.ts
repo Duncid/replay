@@ -1,3 +1,4 @@
+import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -26,6 +27,7 @@ serve(async (req) => {
   }
 
   try {
+    await requireUser(req);
     const { prompt, model = "google/gemini-3.8-flash" } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
@@ -184,6 +186,8 @@ EXAMPLE OUTPUT WITH CHORDS:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    const __authRes = authErrorResponse(error, corsHeaders);
+    if (__authRes) return __authRes;
     console.error("Error in piano-ask function:", error);
     return new Response(
       JSON.stringify({

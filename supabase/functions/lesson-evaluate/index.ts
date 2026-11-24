@@ -1,3 +1,4 @@
+import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -95,6 +96,7 @@ serve(async (req) => {
       debug = false,
       localUserId: requestedUserId,
     } = await req.json();
+    const __auth = await requireUser(req);
 
     if (!lessonRunId) {
       return new Response(
@@ -138,9 +140,8 @@ serve(async (req) => {
 
     // Security check
     if (
-      requestedUserId &&
-      lessonRun.local_user_id &&
-      lessonRun.local_user_id !== requestedUserId
+      !lessonRun.local_user_id ||
+      (await resolveProfile(__auth.admin, __auth.userId, lessonRun.local_user_id).catch(() => null)) !== lessonRun.local_user_id
     ) {
       console.error(
         `Security violation: Requested user ${requestedUserId} does not match lesson run user ${lessonRun.local_user_id}`
@@ -746,6 +747,8 @@ COACHING STYLE:
       }
     );
   } catch (error) {
+    const __authRes = authErrorResponse(error, corsHeaders);
+    if (__authRes) return __authRes;
     console.error("Error in lesson-evaluate:", error);
     return new Response(
       JSON.stringify({

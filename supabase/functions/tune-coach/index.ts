@@ -1,3 +1,4 @@
+import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -98,12 +99,14 @@ serve(async (req) => {
   try {
     const {
       tuneKey,
-      localUserId = null,
+      localUserId: requestedProfileId = null,
       userName = null,
       language = "en",
       notationPreference: rawNotation = "auto",
       debug = false,
     } = await req.json();
+    const __auth = await requireUser(req);
+    const localUserId = await resolveProfile(__auth.admin, __auth.userId, requestedProfileId);
 
     // Resolve effective notation (same as Piano / tune-evaluate: auto -> by language)
     const effectiveNotation =
@@ -586,6 +589,8 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
+    const __authRes = authErrorResponse(error, corsHeaders);
+    if (__authRes) return __authRes;
     console.error("[tune-coach] Error:", error);
     return new Response(
       JSON.stringify({

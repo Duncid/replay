@@ -24,6 +24,7 @@ export type Database = {
           time_signature: string | null
           title: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           bpm?: number | null
@@ -34,6 +35,7 @@ export type Database = {
           time_signature?: string | null
           title: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           bpm?: number | null
@@ -44,6 +46,7 @@ export type Database = {
           time_signature?: string | null
           title?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -264,18 +267,21 @@ export type Database = {
       }
       local_users: {
         Row: {
+          auth_user_id: string | null
           created_at: string | null
           id: string
           name: string
           updated_at: string | null
         }
         Insert: {
+          auth_user_id?: string | null
           created_at?: string | null
           id?: string
           name: string
           updated_at?: string | null
         }
         Update: {
+          auth_user_id?: string | null
           created_at?: string | null
           id?: string
           name?: string
@@ -325,6 +331,7 @@ export type Database = {
           id: string
           title: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -332,6 +339,7 @@ export type Database = {
           id?: string
           title: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -339,6 +347,7 @@ export type Database = {
           id?: string
           title?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -520,6 +529,24 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_skill_state: {
         Row: {
           created_at: string
@@ -598,10 +625,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      owns_local_user: { Args: { _local_user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -728,6 +762,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

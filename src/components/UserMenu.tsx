@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
 import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
-import { Check, Globe, Menu, UserPlus, GitBranch, Music2 } from "lucide-react";
+import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -54,6 +55,7 @@ export function UserMenu({
   const { t } = useTranslation();
   const { users, currentUser, switchUser, createUser, isLoading } =
     useLocalUsers();
+  const { user, isAdmin, signOut } = useAuth();
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
 
   const handleCreateUser = async (name: string) => {
@@ -100,7 +102,7 @@ export function UserMenu({
 
           <DropdownMenuSeparator />
 
-          {onOpenManagement && (
+          {onOpenManagement && isAdmin && (
             <>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
                 Admin
@@ -172,6 +174,19 @@ export function UserMenu({
               ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+
+          {user && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground truncate">
+                {user.email}
+              </DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => signOut()}>
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
