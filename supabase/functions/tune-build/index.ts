@@ -37,7 +37,7 @@ async function callWorker(url: string, secret: string, body: unknown, timeoutMs:
     signal: AbortSignal.timeout(timeoutMs),
   });
   const payload = await res.json().catch(() => ({}));
-  if (!res.ok || payload.error) throw new Error(payload.error ?? `Builder error (${res.status})`);
+  if (!res.ok || payload.error) throw new Error(payload.error ?? `Builder error (${res.status})${payload.detail ? ": " + JSON.stringify(payload.detail).slice(0, 200) : ""}`);
   return payload;
 }
 
