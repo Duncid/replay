@@ -8,7 +8,8 @@ const corsHeaders = {
 };
 
 interface TuneManageRequest {
-  action: "rename" | "delete";
+  action: "rename" | "delete" | "set-global";
+  isGlobal?: boolean;
   tuneKey: string;
   newTitle?: string; // For rename action
 }
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { action, tuneKey, newTitle } = (await req.json()) as TuneManageRequest;
+    const { action, tuneKey, newTitle, isGlobal } = (await req.json()) as TuneManageRequest;
 
     console.log(`[tune-manage] Action: ${action}, tuneKey: ${tuneKey}`);
 
@@ -59,6 +60,12 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    if (action === "set-global") {
+      const { error } = await supabase.from("tune_assets").update({ is_global: !!isGlobal }).eq("tune_key", tuneKey);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "rename") {
@@ -122,6 +129,8 @@ Deno.serve(async (req) => {
           nugget_dsp_xmls: existing.nugget_dsp_xmls,
           assembly_xmls: existing.assembly_xmls,
           assembly_dsp_xmls: existing.assembly_dsp_xmls,
+          owner_user_id: existing.owner_user_id,
+          is_global: existing.is_global,
         };
       });
 

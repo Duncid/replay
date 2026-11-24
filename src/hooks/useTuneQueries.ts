@@ -107,6 +107,8 @@ export function useTuneAssets(tuneKey: string | null) {
 interface PublishedTuneInfo {
   tune_key: string;
   briefing: TuneBriefing | null;
+  is_global: boolean;
+  owner_user_id: string | null;
 }
 
 export function usePublishedTuneKeys() {
@@ -118,6 +120,8 @@ export function usePublishedTuneKeys() {
         .select(`
           tune_key,
           briefing,
+          is_global,
+          owner_user_id,
           curriculum_versions!inner (
             status,
             published_at
@@ -137,6 +141,8 @@ export function usePublishedTuneKeys() {
       }).map(item => ({
         tune_key: item.tune_key,
         briefing: item.briefing as TuneBriefing | null,
+        is_global: item.is_global,
+        owner_user_id: item.owner_user_id,
       }));
     },
   });

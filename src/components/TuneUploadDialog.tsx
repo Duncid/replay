@@ -24,6 +24,7 @@ const PLANNED = [
   { key: "read", label: "Reading the score" },
   { key: "plan", label: "TuneMaster is planning nuggets & assemblies" },
   { key: "cut", label: "Cutting notes, sheets and hand parts" },
+  { key: "publish", label: "Adding to your tunes" },
 ];
 
 const elapsed = (s: Step, now: number) => Math.max(0, Math.round(((s.endedAt ? Date.parse(s.endedAt) : now) - Date.parse(s.startedAt)) / 1000));
@@ -33,7 +34,6 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [uploading, setUploading] = useState<Step | null>(null);
-  const [publishing, setPublishing] = useState(false);
   const [activeJob, setActiveJob] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const { data: published = [] } = usePublishedTuneKeys();
@@ -45,17 +45,22 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
   }, [open, file]);
 
   const jobs = useQuery({
-    queryKey: ["tune-build-jobs"],
+    queryKey: ["tune-build-jobs", activeJob],
     enabled: open,
     queryFn: async () => {
       const { data, error } = await supabase.from("tune_build_jobs")
-        .select("id, filename, tune_key, title, status, error, created_at, progress, result").order("created_at", { ascending: false }).limit(8);
+        .select("id, filename, tune_key, title, status, error, created_at, progress, result").or(activeJob ? `status.neq.failed,id.eq.${activeJob}` : "status.neq.failed").order("created_at", { ascending: false }).limit(8);
       if (error) throw error;
       return (data ?? []) as unknown as Job[];
     },
-    refetchInterval: (q) => ((q.state.data as Job[] | undefined)?.some((j) => j.status === "running") ? 2000 : false),
+    refetchInterval: (q) => ((q.state.data as Job[] | undefined)?.some((j) => j.status === "running") || (activeJob && !(q.state.data as Job[] | undefined)?.some((j) => j.id === activeJob)) ? 2000 : false),
   });
   const current = jobs.data?.find((j) => j.id === activeJob);
+  useEffect(() => {
+    if (current?.status !== "succeeded") return;
+    qc.invalidateQueries({ queryKey: ["published-tune-keys"] });
+    qc.invalidateQueries({ queryKey: ["tune-assets"] });
+  }, [current?.status, qc]);
   const running = !!uploading || current?.status === "running";
 
   useEffect(() => {
@@ -85,20 +90,6 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
     else setUploading({ ...done, state: "failed", detail: "Could not start the build" });
   };
 
-  const publish = async (job: Job) => {
-    setPublishing(true);
-    const isUpdate = published.some((t) => t.tune_key === job.tune_key);
-    const { data: full } = await supabase.from("tune_build_jobs").select("result").eq("id", job.id).single();
-    const { data, error } = await supabase.functions.invoke("tune-publish", {
-      body: { tuneKey: job.tune_key, title: job.title ?? job.tune_key, tuneAssets: full?.result, mode: isUpdate ? "update" : "create", existingTuneKey: isUpdate ? job.tune_key : undefined },
-    });
-    setPublishing(false);
-    if (error || !data?.success) { toast.error(data?.error ?? error?.message ?? "Publish failed"); return; }
-    toast.success(`"${job.title ?? job.tune_key}" published`);
-    qc.invalidateQueries({ queryKey: ["published-tune-keys"] });
-    qc.invalidateQueries({ queryKey: ["tune-assets"] });
-    onOpenChange(false);
-  };
 
   const showProgress = !!uploading || !!current;
   const serverSteps = current?.progress ?? [];
@@ -124,7 +115,7 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
             <Label htmlFor="tune-title">Name</Label>
             <Input id="tune-title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && key) handleBuild(); }} />
-            {exists && <p className="text-xs text-muted-foreground">A published tune already uses this name — publishing will update it.</p>}
+            {exists && <p className="text-xs text-muted-foreground">A published tune already uses this name — it will be updated.</p>}
           </div>
         ) : (
           <ol className="space-y-3" aria-label="Build progress">
@@ -151,7 +142,7 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
             )}
             {current?.status === "succeeded" && (
               <li className="rounded-md border border-border p-3 text-sm">
-                Ready: {current.result?.nuggets?.length ?? 0} nuggets, {current.result?.assemblies?.length ?? 0} assemblies.
+                Added to your tunes: {current.result?.nuggets?.length ?? 0} nuggets, {current.result?.assemblies?.length ?? 0} assemblies.
               </li>
             )}
           </ol>
@@ -162,11 +153,7 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
           {current?.status === "failed" && (
             <Button variant="outline" onClick={() => startBuild({ action: "retry", jobId: current.id })}><RotateCw className="h-4 w-4" />Retry</Button>
           )}
-          {current?.status === "succeeded" && (
-            <Button disabled={publishing} onClick={() => publish(current)}>
-              {publishing && <Loader2 className="h-4 w-4 animate-spin" />}Publish
-            </Button>
-          )}
+          {current?.status === "succeeded" && <Button onClick={() => onOpenChange(false)}>Done</Button>}
         </DialogFooter>
 
         {!showProgress && !!jobs.data?.length && (

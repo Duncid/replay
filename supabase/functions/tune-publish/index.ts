@@ -78,7 +78,7 @@ serve(async (req) => {
   }
 
   try {
-    await requireAdmin(req);
+    const { userId } = await requireAdmin(req);
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -86,6 +86,7 @@ serve(async (req) => {
 
     const body: TunePublishRequest = await req.json();
     const { tuneKey, title, tuneAssets, mode, existingTuneKey } = body;
+    const isGlobal = (body as { isGlobal?: boolean }).isGlobal;
 
     console.log(`[tune-publish] Request received:`, {
       tuneKey,
@@ -188,7 +189,7 @@ serve(async (req) => {
     // Check if tune already exists in this version
     const { data: existingTune } = await supabase
       .from("tune_assets")
-      .select("id")
+      .select("id, owner_user_id, is_global")
       .eq("version_id", versionId)
       .eq("tune_key", finalTuneKey)
       .maybeSingle();
@@ -214,6 +215,9 @@ serve(async (req) => {
       tune_dsp_xml: tuneAssets.tuneDspXml || null,
       nugget_dsp_xmls: tuneAssets.nuggetDspXmls || null,
       assembly_dsp_xmls: tuneAssets.assemblyDspXmls || null,
+      // Updates keep the tune's owner/visibility; new tunes belong to the publisher's account.
+      owner_user_id: existingTune ? existingTune.owner_user_id : userId,
+      is_global: isGlobal ?? (existingTune ? existingTune.is_global : true),
     };
 
     if (existingTune) {

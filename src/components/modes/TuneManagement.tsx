@@ -1,3 +1,5 @@
+import { toast as sonnerToast } from "sonner";
+import { Globe, Lock } from "lucide-react";
 import { getRecommendedBaseUnit } from "@/components/PianoSheetPixiLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -2113,6 +2115,7 @@ export function TuneManagementActionBar() {
                 <Pencil />
                 Rename
               </DropdownMenuItem>
+              <GlobalToggleItem tuneKey={selectedTune} />
               <DropdownMenuItem
                 onClick={() => openDeleteDialog(selectedTune)}
                 className="text-destructive"
@@ -2177,5 +2180,24 @@ export function TuneManagementTabContent({
       />
       </Suspense>}
     </TabsContent>
+  );
+}
+
+/** Admin choice: a global tune is listed for every account; otherwise only for its owner. */
+function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
+  const queryClient = useQueryClient();
+  const { data: tunes = [] } = usePublishedTuneKeys();
+  const isGlobal = tunes.find((t) => t.tune_key === tuneKey)?.is_global ?? true;
+  const toggle = async () => {
+    const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "set-global", tuneKey, isGlobal: !isGlobal } });
+    if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? "Update failed"); return; }
+    sonnerToast.success(isGlobal ? `"${tuneKey}" is now only in its owner's tunes` : `"${tuneKey}" is now global`);
+    queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+  };
+  return (
+    <DropdownMenuItem onClick={toggle}>
+      {isGlobal ? <Lock /> : <Globe />}
+      {isGlobal ? "Make account-only" : "Make global"}
+    </DropdownMenuItem>
   );
 }

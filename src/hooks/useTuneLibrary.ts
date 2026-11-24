@@ -9,12 +9,14 @@ export function useTuneLibrary(localUserId?: string | null) {
     queryFn: async () => {
       // Fetch previews together; keep the admin's lightweight key query separate.
       const { data, error } = await supabase.from("tune_assets")
-        .select("tune_key, note_sequence, curriculum_versions!inner(status, published_at)")
+        .select("tune_key, note_sequence, is_global, owner_user_id, curriculum_versions!inner(status, published_at)")
         .eq("curriculum_versions.status", "published")
         .order("curriculum_versions(published_at)", { ascending: false });
       if (error) throw new Error(error.message);
+      // Admins can read every tune; the list only shows global tunes and this account's own.
+      const { data: { user } } = await supabase.auth.getUser();
       const seen = new Set<string>();
-      return (data ?? []).filter(tune => {
+      return (data ?? []).filter(tune => tune.is_global || tune.owner_user_id === user?.id).filter(tune => {
         if (seen.has(tune.tune_key)) return false;
         seen.add(tune.tune_key);
         return true;

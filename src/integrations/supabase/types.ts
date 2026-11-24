@@ -359,11 +359,13 @@ export type Database = {
           briefing: Json | null
           created_at: string | null
           id: string
+          is_global: boolean
           left_hand_sequence: Json | null
           note_sequence: Json
           nugget_dsp_xmls: Json | null
           nugget_xmls: Json | null
           nuggets: Json | null
+          owner_user_id: string | null
           right_hand_sequence: Json | null
           tune_dsp_xml: string | null
           tune_key: string
@@ -377,11 +379,13 @@ export type Database = {
           briefing?: Json | null
           created_at?: string | null
           id?: string
+          is_global?: boolean
           left_hand_sequence?: Json | null
           note_sequence: Json
           nugget_dsp_xmls?: Json | null
           nugget_xmls?: Json | null
           nuggets?: Json | null
+          owner_user_id?: string | null
           right_hand_sequence?: Json | null
           tune_dsp_xml?: string | null
           tune_key: string
@@ -395,11 +399,13 @@ export type Database = {
           briefing?: Json | null
           created_at?: string | null
           id?: string
+          is_global?: boolean
           left_hand_sequence?: Json | null
           note_sequence?: Json
           nugget_dsp_xmls?: Json | null
           nugget_xmls?: Json | null
           nuggets?: Json | null
+          owner_user_id?: string | null
           right_hand_sequence?: Json | null
           tune_dsp_xml?: string | null
           tune_key?: string

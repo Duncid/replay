@@ -111,16 +111,18 @@ Deno.serve(async (req) => {
     const workerSecret = Deno.env.get("TUNE_WORKER_SECRET");
     if (!workerUrl || !workerSecret) return json({ error: "Tune builder is not connected yet" }, 503);
 
-    let job: { id: string; source_path: string; filename: string; title: string | null };
+    let job: { id: string; source_path: string; filename: string; title: string | null; tune_key: string };
     if (parsed.data.action === "start") {
       const d = parsed.data;
       const { data, error } = await admin.from("tune_build_jobs").insert({
         created_by: userId, source_path: d.sourcePath, filename: d.filename, tune_key: d.tuneKey, title: d.title ?? null,
-      }).select("id, source_path, filename, title").single();
+      }).select("id, source_path, filename, title, tune_key").single();
       if (error) throw error;
       job = data;
+      // Only successful uploads are kept in the history.
+      await admin.from("tune_build_jobs").delete().eq("created_by", userId).eq("status", "failed");
     } else {
-      const { data, error } = await admin.from("tune_build_jobs").select("id, source_path, filename, title").eq("id", parsed.data.jobId).single();
+      const { data, error } = await admin.from("tune_build_jobs").select("id, source_path, filename, title, tune_key").eq("id", parsed.data.jobId).single();
       if (error || !data) return json({ error: "Job not found" }, 404);
       job = data;
     }
@@ -184,6 +186,17 @@ Deno.serve(async (req) => {
       const result = built.bundle as Record<string, any>;
       result.briefing.planner = teacher ? "tunemaster" : "heuristic";
       await end("done", `${result.nuggets?.length ?? 0} nuggets · ${result.assemblies?.length ?? 0} assemblies`);
+      await begin("publish", "Adding to your tunes");
+      const { data: existing } = await admin.from("tune_assets").select("tune_key").eq("tune_key", job.tune_key).limit(1);
+      const isUpdate = !!existing?.length;
+      const pub = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/tune-publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: req.headers.get("Authorization") ?? "", apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" },
+        body: JSON.stringify({ tuneKey: job.tune_key, title: job.title ?? job.tune_key, tuneAssets: result, mode: isUpdate ? "update" : "create",
+          existingTuneKey: isUpdate ? job.tune_key : undefined, isGlobal: isUpdate ? undefined : false }),
+      }).then((r) => r.json()).catch((e) => ({ success: false, error: String(e) }));
+      if (!pub?.success) throw new Error(`Could not add the tune: ${pub?.error ?? "publish failed"}`);
+      await end("done", isUpdate ? "Updated the existing tune" : "Added to your account's tunes");
       await save({ status: "succeeded", error: note, result });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Builder unreachable";
