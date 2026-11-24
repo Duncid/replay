@@ -1,4 +1,5 @@
-import { getNoteColorsForNoteName } from "@/constants/noteColors";
+import { getNoteColorsForNoteName, getReplayTheme } from "@/constants/noteColors";
+import palettes from "@/design-system/palettes.json";
 import type { TimeSignature } from "@/types/noteSequence";
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import { Container, Graphics } from "pixi.js";
@@ -42,14 +43,24 @@ function hexToInt(hex: string) {
   return parseInt(hex.replace("#", ""), 16);
 }
 
+/** Matches the rail's `color-mix(in srgb, var(--nc) 60%, hsl(var(--key-black)))` for black keys. */
+function mixWithKeyBlack(hex: string) {
+  const keyBlack = palettes[getReplayTheme()]["key-black"];
+  const a = hexToInt(hex), b = hexToInt(keyBlack);
+  const ch = (shift: number) =>
+    Math.round(((a >> shift) & 0xff) * 0.6 + ((b >> shift) & 0xff) * 0.4);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
 function getNoteColorsFromMidi(midi: number) {
   const noteName = midiToNoteName(midi);
   const colors = getNoteColorsForNoteName(noteName);
   if (!colors) return DEFAULT_NOTE_COLORS;
+  const isSharp = noteName.includes("#");
   return {
-    idle: hexToInt(colors.idle),
-    active: hexToInt(colors.active),
-    focused: hexToInt(colors.focused),
+    idle: isSharp ? mixWithKeyBlack(colors.idle) : hexToInt(colors.idle),
+    active: isSharp ? mixWithKeyBlack(colors.active) : hexToInt(colors.active),
+    focused: isSharp ? mixWithKeyBlack(colors.focused) : hexToInt(colors.focused),
   };
 }
 
