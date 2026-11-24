@@ -92,10 +92,12 @@ test("the student tune list puts a newly uploaded tune at the end", async ({ pag
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(url.href) ?? body) });
   });
   await page.goto("/");
-  const cards = page.locator('ul[aria-label="Tunes"] li');
+  const items = page.locator('ul[aria-label="Tunes"] li');
+  const cards = items.filter({ hasNot: page.getByRole("button", { name: "Add a tune", exact: true }) });
   await expect(cards).toHaveCount(3);
   await expect(cards.first()).toContainText("Intro");
   await expect(cards.last()).toContainText("Waltz In A Minor Chopin");
+  await expect(items.last()).toContainText("Add a tune");
   expect(orders).toContain("curriculum_versions(published_at).asc");
 });
 
@@ -182,4 +184,30 @@ test("Admin Debug activation persists and controls header tools", async ({ page 
   await toggle.click();
   await expect(tools).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("replay-debug-mode:account:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"))).toBe("false");
+});
+
+test("the add-a-tune start screen explains .mxl, links to MuseScore and opens the picker", async ({ page }) => {
+  await page.route("**/rest/v1/**", async route => {
+    const url = new URL(route.request().url());
+    const table = url.pathname.split("/").pop();
+    const body = table === "tune_assets"
+      ? [{ tune_key: "intro", is_global: true, owner_user_id: null, note_sequence: { notes: [{ pitch: 60, startTime: 0, endTime: 2 }], totalTime: 3 } }]
+      : table === "curriculum_exports" ? { snapshot } : [];
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(url.href) ?? body) });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add a tune", exact: true }).click();
+  const screen = page.getByRole("dialog");
+  await expect(screen.getByRole("heading", { name: "Add a tune", exact: true })).toBeVisible();
+  await expect(screen.getByText(/compressed MusicXML/i)).toBeVisible();
+  const link = screen.getByRole("link", { name: /MuseScore/i });
+  await expect(link).toHaveAttribute("href", "https://musescore.com/");
+  await expect(link).toHaveAttribute("target", "_blank");
+  const chooser = page.waitForEvent("filechooser");
+  await screen.getByRole("button", { name: "Choose a .mxl file", exact: true }).click();
+  const picked = await chooser;
+  expect(picked.isMultiple()).toBe(false);
+  await picked.setFiles("/tmp/browser/add-tune-start/moonlight-sonata.mxl");
+  await expect(page.getByRole("heading", { name: "Name your tune", exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("moonlight sonata");
 });

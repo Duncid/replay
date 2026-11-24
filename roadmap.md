@@ -10,5 +10,6 @@
 - [x] Keep Quest for tune progression management and place web management screens under the burger menu’s Admin submenu.
 - [x] Restore Compose beside Tunes without changing its existing controls or behavior.
 - [ ] Compile and verify native playback on iPad (requires a Mac with Xcode; unavailable in this sandbox).- [x] Add sign-in (email, Google, Lovable); owner-only data; admin-only management
+- [x] Add an add-a-tune start screen: .mxl explanation, MuseScore link, then the file picker.
 - [x] Make edouardwautier@gmail.com admin and attach existing data to it
 - [x] Order the student tune list oldest published first so new uploads join the end.
