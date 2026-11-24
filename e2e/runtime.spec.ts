@@ -1,11 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, accountRows } from "./fixtures";
 import { readFileSync, readdirSync } from "node:fs";
 import ts from "typescript";
 
 test.beforeEach(async ({ page }) => {
   // Keep browser checks independent of the user's live database.
   await page.route("**/*.supabase.co/**", route => route.request().method() === "GET"
-    ? route.fulfill({ contentType: "application/json", body: "[]" })
+    ? route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? []) })
     : route.abort());
 });
 
@@ -159,7 +159,7 @@ test("notation loads on demand in tune management", async ({ page }) => {
   expect(await key.evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThan(10);
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
-  await page.getByRole("menuitem", { name: "Published", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
   await page.getByRole("menuitem", { name: "intro", exact: true }).click();
   await expect.poll(() => requests.some(url => /OpenSheetMusicDisplayView-.*\.js/.test(url))).toBe(true);
   await expect(page.getByText("Loading notation...", { exact: true })).toBeHidden();
@@ -205,9 +205,11 @@ test("keyboard sound preference mutes MIDI audio while keeping input and screen 
   await page.goto("/");
   const whiteKey = page.locator('.piano-key[data-note="C4"]');
   const fullHeight = (await whiteKey.boundingBox())!.height;
+  // The available key area halves; fixed gaps around the keys do not scale.
+  const keyAreaHeight = await page.locator('.piano-dock').evaluate(el => parseFloat(getComputedStyle(el).getPropertyValue('--piano-key-height')));
   await page.getByRole("button", { name: "Connect MIDI" }).click();
   await expect(page.locator(".piano-dock")).toHaveAttribute("data-midi-connected", "true");
-  await expect.poll(async () => (await whiteKey.boundingBox())!.height).toBeCloseTo(fullHeight / 2, 0);
+  await expect.poll(async () => (await whiteKey.boundingBox())!.height).toBeCloseTo(fullHeight - keyAreaHeight / 2, 0);
   await page.getByRole("button", { name: "MIDI settings" }).click();
   const preference = page.getByRole("switch", { name: "Silent while I play" });
   await expect(preference).not.toBeChecked();
@@ -342,7 +344,7 @@ test("keyboard output sends notes without echoing physical keys and releases on 
   await page.evaluate(() => { window["sentMidi"] = []; });
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
-  await page.getByRole("menuitem", { name: "Published", exact: true }).hover();
+  await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
   await page.getByRole("menuitem", { name: "intro", exact: true }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window["sentMidi"].some(message => message[0] === 144))).toBe(true);
@@ -409,7 +411,7 @@ test("tune demo waits for the cold highway scene and a one-second preparation de
     const url = new URL(route.request().url());
     const table = url.pathname.split("/").pop();
     const body = table === "tune_assets" ? [{ tune_key: "intro", briefing: null }] : [];
-    return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? body) });
   });
   await page.route("**/functions/v1/tune-coach", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
     tuneTitle: "Intro", practicePlan: [{ itemId: "ready-test", itemType: "nugget", instruction: "Listen", nugget: { noteSequence: sequence } }],

@@ -41,6 +41,7 @@ export interface LearnModeProps {
   model: string;
   debugMode: boolean;
   localUserId?: string | null;
+  profileLoading?: boolean;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
   onRegisterNoteOffHandler?: (
     handler: ((noteKey: string) => void) | null,
@@ -122,7 +123,7 @@ export function LearnMode(props: LearnModeProps) {
       onPlayheadReachedEnd={props.onCompleteRecordingNow}
       onTuneDebugMenuChange={handleTuneDebugMenuChange}
     />
-  ) : <TuneLibrary localUserId={props.localUserId} onSelectTune={key => {
+  ) : <TuneLibrary profileLoading={props.profileLoading} localUserId={props.localUserId} onSelectTune={key => {
     onClearRecording();
     setActiveTuneKey(key);
   }} />;

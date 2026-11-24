@@ -80,3 +80,38 @@ Build and install each app first. The runner does not build or install; it saves
 The launch storyboard uses a centered Replay wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
 
 Both targets use the existing opaque blue piano icon at 1024px; Xcode derives the device icon sizes. Exported icon sizes, portrait/landscape start screens, and a size/source manifest live in `design-assets/ipad-release/`. Run `npx storybook build -o dist/storybook`, serve the build on port 8082, then `node scripts/export-ipad-assets.mjs`. The exporter also refreshes native launch assets, storyboards, and the existing web icon URLs. Start-screen PNGs are review/export assets; the native launch screen does not stretch a full-screen screenshot.
+
+## Account login
+
+The packaged app opens Apple's `ASWebAuthenticationSession` (an ephemeral secure
+browser) at `https://improv-jam-bot.lovable.app/auth/native?client=capacitor&state=…`.
+Google, Lovable, email signup and password recovery run on the published website;
+the OAuth broker is never loaded inside WKWebView. After sign-in, the user confirms
+the account and returns through `com.playbk.app://auth/callback`. The bridge checks
+the scheme, host, path and per-attempt state before Supabase validates the session.
+Supabase persists/refreshes the session through the app's Keychain plugin. Logout
+removes the session from this app; practice profiles belong to the signed-in account.
+
+Before distributing this build:
+
+1. Publish the updated web app, including `/auth/native` and `/reset-password`.
+2. Allow `https://improv-jam-bot.lovable.app/**` in the backend auth redirect list
+   (or equivalent explicit rules covering `/auth/native` with its query parameters,
+   `/reset-password` with its query parameters, and the root confirmation page).
+   The OAuth provider returns to the hosted HTTPS bridge; the final app handoff is
+   performed by that page. If the provider/broker also checks app return schemes,
+   allow `com.playbk.app://auth/callback` and `com.playbk.learn://auth/callback`.
+3. Build/sync and install the app. Verify real Google login, cancel/retry, relaunch,
+   account switching, and email confirmation/recovery on a physical iPad. If email
+   opens in a separate browser, finish there, then reopen Replay and sign in.
+
+The published origin is configured by `ReplayWebURL` in `ios/App/App/Info.plist`.
+For a future custom domain, change that value, the independent native target's
+value, and the backend redirect allowlist, then publish and rebuild both apps.
+Never configure a Lovable preview URL as the production origin.
+
+Local Compose drafts, Quest drafts, debug/mode choices and selected profiles are
+now scoped to the account. Old unscoped drafts remain on disk but are not assigned
+to an arbitrary first account. Device preferences such as instrument and MIDI
+settings remain shared. The Debug performance probe uses an isolated fake session
+and does not read or overwrite the real Keychain session.

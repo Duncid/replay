@@ -24,8 +24,10 @@ final class LessonViewModel: ObservableObject {
     @Published var resume: PracticeResume?
     @Published var attempts: [PracticeAttempt] = []
     private var inputSources: [Int: Set<String>] = [:]
+    private let api: APIClient
     private let defaults: UserDefaults
     private let preview: Bool
+    var usesAccount: Bool { !preview }
     private var lastHighwayAnnouncement: Double = -.infinity
     @Published var judgedPitches: Set<Int> = []
     @Published var armedPitches: Set<Int> = []
@@ -55,9 +57,18 @@ final class LessonViewModel: ObservableObject {
     }
     var targetSequence: NoteSequence? { currentItem?.sequence }
 
-    init(preview: Bool = false) {
+    init(preview: Bool = false, profileId: String = "preview") {
         self.preview = preview
-        defaults = preview ? UserDefaults(suiteName: "ReplayPreview")! : .standard
+        self.api = APIClient(profileId: profileId)
+        defaults = UserDefaults(suiteName: preview ? "ReplayPreview" : "ReplayPractice.\(profileId.lowercased())")!
+        // Migrate only after the server confirms this account owns the old device profile.
+        if !preview, UserDefaults.standard.string(forKey: "replay.localUserId")?.lowercased() == profileId.lowercased(),
+           !defaults.bool(forKey: "migratedDevicePractice") {
+            for key in ["practice.resume", "practice.attempts"] {
+                if defaults.data(forKey: key) == nil, let data = UserDefaults.standard.data(forKey: key) { defaults.set(data, forKey: key) }
+            }
+            defaults.set(true, forKey: "migratedDevicePractice")
+        }
         if let data = defaults.data(forKey: "practice.resume") { resume = try? JSONDecoder().decode(PracticeResume.self, from: data) }
         if let data = defaults.data(forKey: "practice.attempts") { attempts = (try? JSONDecoder().decode([PracticeAttempt].self, from: data)) ?? [] }
         piano.preload()
@@ -110,7 +121,7 @@ final class LessonViewModel: ObservableObject {
         phase = .loadingLibrary
         let token = UUID(); requestToken = token
         do {
-            let library = try await APIClient.shared.fetchTuneLibrary()
+            let library = try await api.fetchTuneLibrary()
             guard requestToken == token else { return }
             tunes = library
             phase = .library
@@ -136,7 +147,7 @@ final class LessonViewModel: ObservableObject {
         let token = UUID(); requestToken = token
         requestTask = Task {
             do {
-                let response = try await APIClient.shared.startTune(tuneKey: tuneKey)
+                let response = try await api.startTune(tuneKey: tuneKey)
                 guard !Task.isCancelled, requestToken == token else { return }
                 guard !response.practicePlan.isEmpty,
                       response.practicePlan.allSatisfy({ $0.sequence?.notes.isEmpty == false }) else {
@@ -250,7 +261,7 @@ final class LessonViewModel: ObservableObject {
         let token = UUID(); requestToken = token
         requestTask = Task {
             do {
-                let result = try await APIClient.shared.evaluateTune(tuneKey: tuneKey, itemId: item.itemId, sequence: sequence)
+                let result = try await api.evaluateTune(tuneKey: tuneKey, itemId: item.itemId, sequence: sequence)
                 guard !Task.isCancelled, requestToken == token else { return }
                 attempts.insert(PracticeAttempt(tuneKey: tuneKey, date: Date(), result: result.evaluation, score: score), at: 0)
                 attempts = Array(attempts.prefix(200))
@@ -319,6 +330,11 @@ final class LessonViewModel: ObservableObject {
     func releaseInputs() {
         for pitch in Array(heldPitches) { handleNoteOff(pitch) }
         inputSources = [:]
+    }
+    func closeAccount() {
+        requestToken = UUID(); requestTask?.cancel(); requestTask = nil
+        suspend(); midi.stop()
+        midi.onNoteOn = nil; midi.onNoteOff = nil
     }
     func suspend() {
         releaseInputs()

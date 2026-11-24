@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { accountStorageKey } from "@/utils/accountStorage";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const CURRENT_USER_EVENT = "replay:current-user-change";
 
@@ -12,39 +14,40 @@ export interface LocalUser {
 }
 
 export function useLocalUsers() {
+  const { user } = useAuth();
+  const storageKey = accountStorageKey(STORAGE_KEYS.CURRENT_USER_ID);
+  const requestVersion = useRef(0);
   const [users, setUsers] = useState<LocalUser[]>([]);
-  const [currentUserId, setCurrentUserIdState] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID);
-    } catch {
-      return null;
-    }
-  });
+  const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const setCurrentUserId = useCallback((id: string | null) => {
     setCurrentUserIdState(id);
     try {
       if (id) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, id);
+        localStorage.setItem(storageKey, id);
       } else {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER_ID);
+        localStorage.removeItem(storageKey);
       }
       window.dispatchEvent(
-        new CustomEvent(CURRENT_USER_EVENT, { detail: id })
+        new CustomEvent(CURRENT_USER_EVENT, { detail: { id, accountId: user?.id } })
       );
     } catch (error) {
       console.warn("Failed to persist current user ID:", error);
     }
-  }, []);
+  }, [storageKey, user?.id]);
 
   const fetchUsers = useCallback(async () => {
+    if (!user) return;
+    const version = ++requestVersion.current;
     setIsLoading(true);
     const { data, error } = await supabase
       .from("local_users")
       .select("*")
+      .eq("auth_user_id", user.id)
       .order("created_at", { ascending: true });
 
+    if (version !== requestVersion.current) return;
     if (error) {
       console.error("Failed to fetch local users:", error);
       setIsLoading(false);
@@ -53,19 +56,19 @@ export function useLocalUsers() {
 
     setUsers(data || []);
 
-    // If no current user is set, or current user doesn't exist, select first user
-    if (data && data.length > 0) {
-      const currentExists = data.some((u) => u.id === currentUserId);
-      if (!currentUserId || !currentExists) {
-        setCurrentUserId(data[0].id);
-      }
-    }
+    let savedId: string | null = null;
+    try { savedId = localStorage.getItem(storageKey); } catch { /* storage unavailable */ }
+    // Never expose a remembered ID until ownership has been verified by RLS.
+    const selected = data?.find(u => u.id === (currentUserId ?? savedId)) ?? data?.[0];
+    if (currentUserId !== (selected?.id ?? null)) setCurrentUserId(selected?.id ?? null);
 
     setIsLoading(false);
-  }, [currentUserId, setCurrentUserId]);
+  }, [currentUserId, setCurrentUserId, storageKey, user]);
 
   useEffect(() => {
-    fetchUsers();
+    const version = requestVersion;
+    void fetchUsers();
+    return () => { version.current++; };
   }, [fetchUsers]);
 
   useEffect(() => {
@@ -74,8 +77,8 @@ export function useLocalUsers() {
 
   useEffect(() => {
     const handleUserChange = (event: Event) => {
-      const detail = (event as CustomEvent<string | null>).detail ?? null;
-      setCurrentUserIdState(detail);
+      const detail = (event as CustomEvent<{ id: string | null; accountId: string }>).detail;
+      if (detail?.accountId === user?.id) setCurrentUserIdState(detail.id);
     };
 
     if (typeof window === "undefined") return undefined;
@@ -83,7 +86,7 @@ export function useLocalUsers() {
     return () => {
       window.removeEventListener(CURRENT_USER_EVENT, handleUserChange);
     };
-  }, []);
+  }, [user?.id]);
 
   const createUser = useCallback(
     async (name: string): Promise<LocalUser | null> => {

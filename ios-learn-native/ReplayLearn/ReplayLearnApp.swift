@@ -10,9 +10,11 @@ struct ReplayLearnApp: App {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--replay-performance") {
                     NativePerformanceView()
-                } else { ReplayMainView() }
+                } else if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--preview-") }) {
+                    ReplayMainView()
+                } else { NavigationStack { AccountGate() } }
                 #else
-                ReplayMainView()
+                NavigationStack { AccountGate() }
                 #endif
             }
         }

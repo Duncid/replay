@@ -1,10 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, accountRows } from "./fixtures";
 
 test("highway covers the top UI while controls, dock alignment and scrolling remain usable", async ({ page }) => {
   const sequence = { notes: Array.from({ length: 120 }, (_, i) => ({ pitch: 48 + i % 25, startTime: i * .25, endTime: i * .25 + .2, velocity: 90 })), totalTime: 30 };
   await page.addInitScript(() => localStorage.setItem("replay-instrument", JSON.stringify("classic")));
   await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(
-    route.request().url().includes("tune_assets") ? [{ tune_key: "intro", briefing: null }] : [],
+    accountRows(route.request().url()) ?? (route.request().url().includes("tune_assets") ? [{ tune_key: "intro", briefing: null }] : []),
   ) }));
   await page.route("**/functions/v1/tune-coach", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
     tuneTitle: "Intro", practicePlan: [{ itemId: "background", itemType: "nugget", instruction: "Follow the notes through the highway.", nugget: { noteSequence: sequence } }],

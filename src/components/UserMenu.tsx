@@ -19,6 +19,7 @@ import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
 import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
 import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -181,7 +182,7 @@ export function UserMenu({
               <DropdownMenuLabel className="text-xs text-muted-foreground truncate">
                 {user.email}
               </DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => signOut()}>
+              <DropdownMenuItem onSelect={() => { void signOut().catch(error => toast.error(error.message)); }}>
                 <LogOut className="h-4 w-4" />
                 Sign out
               </DropdownMenuItem>

@@ -68,10 +68,12 @@ mixer converts to hardware output. This preserves the Play Demo crash fix. The
 sound is synthesized, not a sampled acoustic piano. Practice timing remains
 90 BPM / 4/4 for count-in and guides; source note timing stays in seconds.
 
-Cloud uses a stable device-local user identity, separate from the web student's
-identity. Library/plans/evaluation need a connection. Resume and recent results
-are stored locally; they are not cross-device synchronization. No teacher greeting
-or recommendation endpoint is called.
+Cloud uses the signed-in account's practice profiles, shared with the web app.
+Select a profile or sign out in Settings. Library/plans/evaluation use the account's
+access token; refresh tokens are stored in Keychain and rotated automatically.
+Resume and recent attempts stay local, separately for each profile. Legacy local
+practice is imported only when the server confirms ownership of that device's old
+profile. No teacher greeting or recommendation endpoint is called.
 
 ## Build and install
 
@@ -134,3 +136,29 @@ and the documented workload convention cover both.
 The launch storyboard uses a centered Replay wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
 
 Both targets use the existing opaque blue piano icon at 1024px; Xcode derives the device icon sizes. Exported icon sizes, portrait/landscape start screens, and a size/source manifest live in `design-assets/ipad-release/`. Run `npx storybook build -o dist/storybook`, serve the build on port 8082, then `node scripts/export-ipad-assets.mjs`. The exporter also refreshes native launch assets, storyboards, and the existing web icon URLs. Start-screen PNGs are review/export assets; the native launch screen does not stretch a full-screen screenshot.
+
+
+## Account login and publishing
+
+Sign-in uses Apple's `ASWebAuthenticationSession` at the published Replay site,
+currently `https://improv-jam-bot.lovable.app`. The site supports Google, Lovable,
+and email. After the user confirms their account, the app receives
+`com.playbk.learn://auth/callback` with a per-attempt state and validates the session
+with Cloud. Tokens are kept in this app's Keychain, independent of the Capacitor app.
+Expired refresh credentials return to sign-in; temporary network errors retain the
+session and offer retry. The app never registers a new anonymous device identity.
+
+Set the published origin in `ReplayLearn/Info.plist` under `ReplayWebURL` if the
+site moves. The `/auth/native` page must be published before this login can work.
+See [the shared publishing and allowlist checklist](../ios/README.md#account-login).
+Design-system and Debug preview/performance launches remain available without login.
+
+Authentication regression checks use mocked HTTP and in-memory credentials, with
+no Cloud writes or real Keychain access:
+
+```sh
+swiftc -parse-as-library -swift-version 5 \
+  ios-learn-native/ReplayLearn/{Config,Models,APIClient,AuthSession}.swift \
+  ios-learn-native/Tests/AuthTests.swift -o /tmp/replay-auth-tests
+/tmp/replay-auth-tests
+```

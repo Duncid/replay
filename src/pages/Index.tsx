@@ -155,7 +155,7 @@ const normalizeCreativityToVAE = (creativity: number): number => {
 
 const Index = () => {
   const { t, i18n } = useTranslation();
-  const { currentUserId } = useLocalUsers();
+  const { currentUserId, isLoading: profileLoading } = useLocalUsers();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
   const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(
@@ -1481,6 +1481,7 @@ const Index = () => {
     model: selectedModel,
     debugMode,
     localUserId: currentUserId,
+    profileLoading,
     // Metronome control props
     metronomeBpm,
     setMetronomeBpm,

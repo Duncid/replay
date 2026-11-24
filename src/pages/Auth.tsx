@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, type FormEvent } from "react";
+import { isNativeApp, signInNative } from "@/lib/nativeAuth";
 import { toast } from "sonner";
 
 const GoogleLogo = () => (
@@ -12,7 +13,7 @@ const GoogleLogo = () => (
 
 type Mode = "signin" | "signup" | "forgot";
 
-export default function Auth() {
+export default function Auth({ redirectTo = window.location.origin }: { redirectTo?: string }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,13 +30,13 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: redirectTo },
         });
         if (error) throw error;
         toast.success("Check your email to confirm your account.");
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${window.location.origin}/reset-password${redirectTo.includes("/auth/native?") ? `?next=${encodeURIComponent(new URL(redirectTo).pathname + new URL(redirectTo).search)}` : ""}`,
         });
         if (error) throw error;
         toast.success("Check your email for a reset link.");
@@ -48,11 +49,27 @@ export default function Auth() {
   };
 
   const oauth = async (provider: "google" | "lovable") => {
-    const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) toast.error(result.error.message ?? "Sign-in failed");
+    setBusy(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
+      if (result.error) throw result.error;
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Sign-in failed"); }
+    finally { setBusy(false); }
   };
+
+  if (isNativeApp()) return <main className="min-h-dvh flex items-center justify-center bg-background text-foreground p-6">
+    <div className="w-full max-w-sm space-y-6 text-center">
+      <h1 className="text-3xl font-bold">Replay</h1>
+      <p className="text-muted-foreground">Sign in with Google, Lovable, or email to open your music and practice profiles.</p>
+      <Button className="w-full" disabled={busy} onClick={async () => {
+        setBusy(true);
+        try { await signInNative(); }
+        catch (error) { toast.error(error instanceof Error ? error.message : 'Sign-in failed'); }
+        finally { setBusy(false); }
+      }}>{busy ? 'Signing in…' : 'Sign in to Replay'}</Button>
+      <p className="text-sm text-muted-foreground">Sign-in opens in a secure browser. You can also create an account or reset your password there.</p>
+    </div>
+  </main>;
 
   return (
     <main className="min-h-dvh flex items-center justify-center bg-background text-foreground p-6">
@@ -68,6 +85,7 @@ export default function Auth() {
           <div className="space-y-2">
             <button
               type="button"
+              disabled={busy}
               onClick={() => oauth("google")}
               className="w-full h-10 rounded-md flex items-center justify-center gap-[10px] px-3 text-sm font-medium border"
               style={{ background: "#131314", borderColor: "#8E918F", color: "#E3E3E3" }}
@@ -75,7 +93,7 @@ export default function Auth() {
               <GoogleLogo />
               Continue with Google
             </button>
-            <Button type="button" variant="outline" className="w-full" onClick={() => oauth("lovable")}>
+            <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={() => oauth("lovable")}>
               Continue with Lovable
             </Button>
             <div className="text-center text-xs text-muted-foreground pt-2">or</div>

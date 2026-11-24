@@ -8,6 +8,11 @@ struct NativeSmoke: App {
     @MainActor private func run() async {
         precondition(UIFont(name: "SpaceGrotesk-Light_Regular", size: 20) != nil, "Display font not registered")
         precondition(UIFont(name: "JetBrainsMono-Regular", size: 11) != nil, "Mono font not registered")
+        let callback = URL(string: "com.playbk.learn://auth/callback#state=test-state&access_token=access&refresh_token=refresh")!
+        precondition(BrowserSignIn.tokens(from: callback, state: "test-state")?.0 == "access")
+        precondition(BrowserSignIn.tokens(from: callback, state: "wrong-state") == nil)
+        precondition(BrowserSignIn.tokens(from: URL(string: "com.playbk.app://auth/callback#state=test-state&access_token=access&refresh_token=refresh")!, state: "test-state") == nil)
+        precondition(BrowserSignIn.tokens(from: URL(string: callback.absoluteString + "&state=test-state")!, state: "test-state") == nil)
         let keyboard = PianoSurface(frame: CGRect(x: 0, y: 0, width: 1200, height: 300))
         var accessibleNotes: Set<Int> = []
         keyboard.onDown = { pitch, _ in accessibleNotes.insert(pitch) }

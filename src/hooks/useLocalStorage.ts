@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from "react";
+import { accountStorageKey } from "@/utils/accountStorage";
+import { useState, useCallback } from "react";
 
 export function useLocalStorage<T>(
   key: string,
   defaultValue: T
 ): [T, (value: T | ((prev: T) => T)) => void] {
+  key = accountStorageKey(key);
   // Initialize state from localStorage or default
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
@@ -38,7 +40,7 @@ export function useLocalStorage<T>(
 export function clearAllAppStorage(keys: string[]) {
   keys.forEach((key) => {
     try {
-      window.localStorage.removeItem(key);
+      window.localStorage.removeItem(accountStorageKey(key));
     } catch (error) {
       console.warn(`Error removing localStorage key "${key}":`, error);
     }

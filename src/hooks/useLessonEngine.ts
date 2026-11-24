@@ -1,3 +1,5 @@
+import { accountStorageKey } from "@/utils/accountStorage";
+import { STORAGE_KEYS } from "@/utils/storageKeys";
 import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -108,6 +110,7 @@ export function useLessonEngine(
     localUserId?: string | null;
   }
 ) {
+  const historyKey = accountStorageKey(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY);
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -160,7 +163,7 @@ export function useLessonEngine(
 
         // Store the new sequence in history
         if (newSequence && newSequence.notes.length > 0) {
-          addSequenceToHistory(lesson.lessonNodeKey, newSequence);
+          addSequenceToHistory(lesson.lessonNodeKey, newSequence, historyKey);
         }
 
         // Update skill unlock status if there are awarded skills
@@ -193,6 +196,7 @@ export function useLessonEngine(
       }
     },
     [
+      historyKey,
       state,
       callbacks,
       options,
@@ -215,7 +219,7 @@ export function useLessonEngine(
 
       try {
         // Get sequence history for this lesson
-        const sequenceHistory = getSequenceHistory(lessonNodeKey);
+        const sequenceHistory = getSequenceHistory(lessonNodeKey, historyKey);
 
         // CURRICULUM LESSON: Use lesson-start
         // Call mutateAsync first - it sets isPending immediately, making isLoading true
@@ -263,7 +267,7 @@ export function useLessonEngine(
 
         // Store the new sequence in history
         if (targetSequence && targetSequence.notes.length > 0) {
-          addSequenceToHistory(lessonNodeKey, targetSequence);
+          addSequenceToHistory(lessonNodeKey, targetSequence, historyKey);
         }
 
         // Apply metronome settings from the response
@@ -323,6 +327,7 @@ export function useLessonEngine(
       }
     },
     [
+      historyKey,
       state,
       callbacks,
       options,

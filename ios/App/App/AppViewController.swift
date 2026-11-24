@@ -23,6 +23,7 @@ class AppViewController: CAPBridgeViewController {
         #endif
         // print("[MIDI Bridge] [DEBUG] AppViewController.capacitorDidLoad - registering MidiBridgePlugin")
         bridge?.registerPluginInstance(MidiBridgePlugin())
+        bridge?.registerPluginInstance(ReplayAuthPlugin())
         bridge?.webView?.configuration.userContentController.add(
             SafeAreaHandler(owner: self), name: "replaySafeArea"
         )

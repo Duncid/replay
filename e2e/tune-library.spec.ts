@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, accountRows } from "./fixtures";
+import type { Route } from "@playwright/test";
 import { getTuneAvailability, isTuneAcquired, type TuneLibrarySnapshot } from "../src/utils/tuneLibrary";
 
 import { getTunePreview } from "../src/utils/tunePreview";
@@ -48,7 +49,7 @@ test("student tune list makes no teacher calls and blocks locked selection", asy
     const body = table === "tune_assets"
       ? [{ tune_key: "intro", note_sequence: { notes: [{ pitch: 60, startTime: 0, endTime: 2 }], totalTime: 3 } }, { tune_key: "st-louis-blues", briefing: null }]
       : table === "curriculum_exports" ? { snapshot } : [];
-    await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? body) });
   });
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
@@ -58,7 +59,7 @@ test("student tune list makes no teacher calls and blocks locked selection", asy
 });
 
 test("Admin navigation opens Quest and returns to student tunes", async ({ page }) => {
-  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? []) }));
   await page.goto("/");
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Quest", exact: true }).click();
@@ -67,7 +68,7 @@ test("Admin navigation opens Quest and returns to student tunes", async ({ page 
   await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeVisible();
 });
 
-const publishedTuneRoute = async (route: any) => {
+const publishedTuneRoute = async (route: Route) => {
   const url = new URL(route.request().url());
   const table = url.pathname.split("/").pop();
   const requested = url.searchParams.get("tune_key")?.replace(/^eq\./, "");
@@ -76,7 +77,7 @@ const publishedTuneRoute = async (route: any) => {
       ? [{ tune_key: requested, briefing: null }]
       : [{ tune_key: "intro", briefing: null }, { tune_key: "st-louis-blues", briefing: null }]
     : table === "curriculum_exports" ? { snapshot } : [];
-  await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+  await route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? body) });
 };
 
 test("Tune Management in the menu loads the published tune that was picked", async ({ page }) => {
@@ -91,7 +92,7 @@ test("Tune Management in the menu loads the published tune that was picked", asy
 });
 
 test("picking an unpublished tune from the menu offers Publish", async ({ page }) => {
-  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? []) }));
   await page.goto("/");
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
@@ -119,7 +120,7 @@ test("previews bound drawing work while retaining full tune metadata", () => {
 
 
 test("Admin Debug activation persists and controls header tools", async ({ page }) => {
-  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? []) }));
   await page.goto("/");
   await expect(page.locator("#debug-mode")).toHaveCount(0);
   const tools = page.getByRole("button", { name: "Debug menu", exact: true });
@@ -132,12 +133,12 @@ test("Admin Debug activation persists and controls header tools", async ({ page 
   await expect(toggle).not.toBeChecked();
   await toggle.click();
   await expect(tools).toBeVisible();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("replay-debug-mode"))).toBe("true");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("replay-debug-mode:account:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"))).toBe("true");
   await page.reload();
   await expect(tools).toBeVisible();
   await openAdmin();
   await expect(toggle).toBeChecked();
   await toggle.click();
   await expect(tools).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("replay-debug-mode"))).toBe("false");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("replay-debug-mode:account:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"))).toBe("false");
 });

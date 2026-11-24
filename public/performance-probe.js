@@ -11,7 +11,14 @@
   const originalFetch = window.fetch;
   const originalRAF = window.requestAnimationFrame;
   const originalStart = OscillatorNode.prototype.start;
-  const saved = new Map(["replay-active-mode", "replay-instrument"].map(key => [key, localStorage.getItem(key)]));
+  const authKey = "sb-mmlizntmpbriyumsunsh-auth-token";
+  const fixtureAccount = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const fixtureSession = {
+    access_token: "eyJhbGciOiJIUzI1NiJ9." + btoa(JSON.stringify({ sub: fixtureAccount, exp: Math.floor(Date.now() / 1000) + 3600 })).replace(/=/g, "") + ".fixture",
+    refresh_token: "performance-fixture", expires_at: Math.floor(Date.now() / 1000) + 3600,
+    expires_in: 3600, token_type: "bearer", user: { id: fixtureAccount, email: "performance@example.invalid", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {} },
+  };
+  const saved = new Map([authKey, "replay-active-mode:account:" + fixtureAccount, "replay-active-mode", "replay-instrument"].map(key => [key, localStorage.getItem(key)]));
   const restore = () => {
     for (const [key, value] of saved) value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value);
     // Keep fixture network isolation until reload, even after sampling completes.
@@ -43,8 +50,10 @@
   window.fetch = async (input, init) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
     let data;
-    if (url.pathname.includes("/rest/v1/")) {
-      data = url.pathname.endsWith("/tune_assets") ? [{ tune_key: "performance-fixture", note_sequence: sequence, briefing: null }] : [];
+    if (url.pathname.includes("/auth/v1/")) {
+      data = url.pathname.endsWith("/user") ? fixtureSession.user : fixtureSession;
+    } else if (url.pathname.includes("/rest/v1/")) {
+      data = url.pathname.endsWith("/local_users") ? [{ id: "ffffffff-ffff-4fff-8fff-ffffffffffff", name: "Performance fixture", auth_user_id: fixtureAccount }] : url.pathname.endsWith("/tune_assets") ? [{ tune_key: "performance-fixture", note_sequence: sequence, briefing: null }] : [];
     } else if (url.pathname.endsWith("/functions/v1/tune-coach")) {
       data = { tuneTitle: "Performance fixture", practicePlan: [{ itemId: "performance", itemType: "nugget", instruction: "Deterministic performance measurement", nugget: { noteSequence: sequence } }] };
     } else if (url.pathname.includes("/functions/v1/")) {
@@ -52,6 +61,8 @@
     } else return originalFetch.call(window, input, init);
     return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
   };
+  localStorage.setItem(authKey, JSON.stringify(fixtureSession));
+  localStorage.setItem("replay-active-mode:account:" + fixtureAccount, JSON.stringify("learn"));
   localStorage.setItem("replay-active-mode", JSON.stringify("learn"));
   localStorage.setItem("replay-instrument", JSON.stringify("classic"));
   const audio = [], frameWork = new Map(), longTasks = [];

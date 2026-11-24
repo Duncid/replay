@@ -2,19 +2,13 @@ import Foundation
 
 /// Independent native client for the published tune library and tune practice.
 actor APIClient {
-    static let shared = APIClient()
+    private let profileId: String
+    private let auth: AuthSessionStore
 
-    private let session: URLSession
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
 
-    init() {
-        let config = URLSessionConfiguration.default
-        // LLM-backed calls can take tens of seconds; no artificial short timeouts.
-        config.timeoutIntervalForRequest = 300
-        config.timeoutIntervalForResource = 600
-        self.session = URLSession(configuration: config)
-    }
+    init(profileId: String, auth: AuthSessionStore = .shared) { self.profileId = profileId; self.auth = auth }
 
     private func invoke<Response: Decodable, Body: Encodable>(
         _ function: String, body: Body
@@ -26,10 +20,9 @@ actor APIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Config.anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(Config.anonKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try encoder.encode(body)
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await auth.perform(request)
         guard let http = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
@@ -55,34 +48,13 @@ actor APIClient {
         guard let url = components?.url else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.setValue(Config.anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(Config.anonKey)", forHTTPHeaderField: "Authorization")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await auth.perform(request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
         return try decoder.decode(Response.self, from: data)
     }
 
-    /// Register the stable device identity before writing progress with a foreign key.
-    private func ensureLocalUser() async throws {
-        struct LocalUser: Decodable { let id: String }
-        let users: [LocalUser] = try await read("local_users", query: [
-            URLQueryItem(name: "select", value: "id"),
-            URLQueryItem(name: "id", value: "eq.\(Config.localUserId)")
-        ])
-        guard users.isEmpty else { return }
-        var request = URLRequest(url: Config.supabaseURL.appendingPathComponent("rest/v1/local_users"))
-        request.httpMethod = "POST"
-        request.setValue(Config.anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(Config.anonKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["id": Config.localUserId, "name": "iPad"])
-        let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
-    }
-
     func fetchTuneLibrary() async throws -> [TuneLibraryItem] {
-        try await ensureLocalUser()
         async let tunes: [PublishedTune] = read("tune_assets", query: [
             URLQueryItem(name: "select", value: "tune_key,note_sequence,curriculum_versions!inner(status,published_at)"),
             URLQueryItem(name: "curriculum_versions.status", value: "eq.published"),
@@ -95,7 +67,7 @@ actor APIClient {
         ])
         async let acquisitions: [TuneAcquisition] = read("user_tune_acquisition", query: [
             URLQueryItem(name: "select", value: "tune_key"),
-            URLQueryItem(name: "local_user_id", value: "eq.\(Config.localUserId)")
+            URLQueryItem(name: "local_user_id", value: "eq.\(profileId)")
         ])
         let (published, curriculum, progress) = try await (tunes, exports, acquisitions)
         var seen = Set<String>()
@@ -115,7 +87,7 @@ actor APIClient {
     }
 
     func startTune(tuneKey: String) async throws -> TuneCoachResponse {
-        try await invoke("tune-coach", body: TuneCoachBody(tuneKey: tuneKey, localUserId: Config.localUserId, language: Config.language))
+        try await invoke("tune-coach", body: TuneCoachBody(tuneKey: tuneKey, localUserId: profileId, language: Config.language))
     }
 
     struct TuneEvaluateBody: Encodable {
@@ -129,7 +101,7 @@ actor APIClient {
 
     func evaluateTune(tuneKey: String, itemId: String, sequence: NoteSequence) async throws -> TuneEvaluationResponse {
         try await invoke("tune-evaluate", body: TuneEvaluateBody(tuneKey: tuneKey, nuggetId: itemId,
-            userSequence: sequence, localUserId: Config.localUserId, language: Config.language))
+            userSequence: sequence, localUserId: profileId, language: Config.language))
     }
 
 

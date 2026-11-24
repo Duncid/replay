@@ -1,6 +1,8 @@
 import { NoteSequence } from "@/types/noteSequence";
 import { STORAGE_KEYS } from "./storageKeys";
 
+import { accountStorageKey } from "./accountStorage";
+
 const MAX_HISTORY_PER_LESSON = 10;
 
 interface SequenceHistory {
@@ -10,9 +12,9 @@ interface SequenceHistory {
 /**
  * Get sequence history for a specific lesson key
  */
-export function getSequenceHistory(lessonKey: string): NoteSequence[] {
+export function getSequenceHistory(lessonKey: string, storageKey = accountStorageKey(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY)): NoteSequence[] {
   try {
-    const item = window.localStorage.getItem(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY);
+    const item = window.localStorage.getItem(storageKey);
     if (!item) return [];
     
     const history: SequenceHistory = JSON.parse(item);
@@ -27,9 +29,9 @@ export function getSequenceHistory(lessonKey: string): NoteSequence[] {
  * Add a sequence to the history for a lesson key
  * Limits history to MAX_HISTORY_PER_LESSON to prevent localStorage overflow
  */
-export function addSequenceToHistory(lessonKey: string, sequence: NoteSequence): void {
+export function addSequenceToHistory(lessonKey: string, sequence: NoteSequence, storageKey = accountStorageKey(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY)): void {
   try {
-    const item = window.localStorage.getItem(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY);
+    const item = window.localStorage.getItem(storageKey);
     const history: SequenceHistory = item ? JSON.parse(item) : {};
     
     if (!history[lessonKey]) {
@@ -44,7 +46,7 @@ export function addSequenceToHistory(lessonKey: string, sequence: NoteSequence):
       history[lessonKey] = history[lessonKey].slice(0, MAX_HISTORY_PER_LESSON);
     }
     
-    window.localStorage.setItem(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY, JSON.stringify(history));
+    window.localStorage.setItem(storageKey, JSON.stringify(history));
   } catch (error) {
     console.warn(`Error adding sequence to history for lesson "${lessonKey}":`, error);
   }
@@ -57,16 +59,16 @@ export function clearSequenceHistory(lessonKey?: string): void {
   try {
     if (lessonKey) {
       // Clear history for specific lesson
-      const item = window.localStorage.getItem(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY);
+      const item = window.localStorage.getItem(accountStorageKey(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY));
       if (!item) return;
       
       const history: SequenceHistory = JSON.parse(item);
       delete history[lessonKey];
       
-      window.localStorage.setItem(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY, JSON.stringify(history));
+      window.localStorage.setItem(accountStorageKey(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY), JSON.stringify(history));
     } else {
       // Clear all history
-      window.localStorage.removeItem(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY);
+      window.localStorage.removeItem(accountStorageKey(STORAGE_KEYS.LESSON_SEQUENCE_HISTORY));
     }
   } catch (error) {
     console.warn(`Error clearing sequence history${lessonKey ? ` for lesson "${lessonKey}"` : ""}:`, error);

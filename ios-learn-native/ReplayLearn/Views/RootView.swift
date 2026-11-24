@@ -48,7 +48,7 @@ struct RootView: View {
         }
         .background(ReplayTheme.background)
         .tint(ReplayTheme.accent).foregroundStyle(ReplayTheme.ink).preferredColorScheme(.dark)
-        .sheet(isPresented: $settings) { SettingsView() }
+        .sheet(isPresented: $settings) { SettingsView(showAccount: model.usesAccount) }
         .onChange(of: tab) { _, _ in model.suspend() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.suspend() } }
     }
@@ -124,13 +124,17 @@ struct BluetoothMIDIView: UIViewControllerRepresentable {
 }
 
 struct SettingsView: View {
+    var showAccount = true
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {
             List {
+                if showAccount {
+                    AccountSettingsView()
+                }
                 Section("Replay Nat") {
                     Label("Native piano practice for iPad", systemImage: "pianokeys")
-                    Text("Progress is saved for this iPad. Published tune access and acquisitions come from Replay Cloud.").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Tune acquisitions belong to your practice profile and sync with Replay Cloud. Recent attempts and resume positions are saved per profile on this iPad.").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Section("Design & accessibility") {
                     NavigationLink { DesignSystemView() } label: { Label("Design system", systemImage: "paintpalette") }

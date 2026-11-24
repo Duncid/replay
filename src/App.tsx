@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense } from "react";
 import Index from "./pages/Index";
+import NativeAuth from "./pages/NativeAuth";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -16,7 +17,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <Loading />;
   if (!user) return <Auth />;
-  return <>{children}</>;
+  return <div key={user.id} className="contents">{children}</div>;
 }
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<RequireAuth><Suspense fallback={<Loading />}><Index /></Suspense></RequireAuth>} />
+          <Route path="/auth/native" element={<NativeAuth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
