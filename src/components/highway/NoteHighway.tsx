@@ -55,7 +55,13 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
         const value = getComputedStyle(probe).color; probe.remove(); return value;
       };
       let ink = color("foreground"), background = color("background"), surface = color("card"), border = color("border"), muted = color("muted-foreground"), accent = color("primary");
-      const pitchColors = ["c", "c", "d", "d", "e", "f", "f", "g", "g", "a", "a", "b"].map(n => color(`note-${n}`));
+      // Plain colors matching the note rail cells: naturals mix 92% with the background, sharps 60% with the black-key color.
+      const rgb = (css: string) => (css.match(/\d+(\.\d+)?/g) ?? ["0", "0", "0"]).slice(0, 3).map(Number);
+      const mixRgb = (a: string, b: string, t: number) => { const x = rgb(a), y = rgb(b); return x.reduce((out, v, i) => out | (Math.round(v * t + y[i] * (1 - t)) << (16 - i * 8)), 0); };
+      const SHARP_PCS = [1, 3, 6, 8, 10];
+      const railPitchColors = () => ["c", "c", "d", "d", "e", "f", "f", "g", "g", "a", "a", "b"].map((n, pc) =>
+        SHARP_PCS.includes(pc) ? mixRgb(color(`note-${n}`), color("key-black"), .6) : mixRgb(color(`note-${n}`), color("background"), .92));
+      const pitchColors = railPitchColors();
       let geometry = new Map(layout.notes.map(n => { const g = pianoKeyGeometry(layout, 1, n); return [g.midi, g]; }));
       const octaveLabels = layout.whiteKeys.filter(n => n.note === "C").map(n => {
         const label = new Text({ text: `${n.note}${n.octave}`, style: { fontFamily: "JetBrains Mono, monospace", fontSize: 10, fill: muted } });
@@ -106,7 +112,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       reduced.addEventListener("change", resize); motionCleanup = () => reduced.removeEventListener("change", resize);
       themeObserver = new MutationObserver(() => {
         ink = color("foreground"); background = color("background"); surface = color("card"); border = color("border"); muted = color("muted-foreground"); accent = color("primary");
-        pitchColors.splice(0, 12, ...["c", "c", "d", "d", "e", "f", "f", "g", "g", "a", "a", "b"].map(n => color(`note-${n}`)));
+        pitchColors.splice(0, 12, ...railPitchColors());
         resize();
       });
       themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "style"] });
