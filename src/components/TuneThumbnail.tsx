@@ -11,7 +11,7 @@ const noteFill = (pitch: number) => {
   return sharpIndices.has(index) ? `color-mix(in srgb, ${base} 60%, hsl(var(--key-black)))` : `color-mix(in srgb, ${base} 92%, hsl(var(--background)))`;
 };
 
-/** Static, decorative equivalent of Replay Nat's six-lane tune preview. */
+/** Static horizontal highway notes; time runs left to right and pitch runs bottom to top. */
 export function TuneThumbnail({ preview }: { preview?: TunePreview }) {
   const notes = preview?.notes ?? [];
   const low = Math.min(...notes.map(note => note.pitch));
@@ -20,13 +20,11 @@ export function TuneThumbnail({ preview }: { preview?: TunePreview }) {
   const duration = Math.max(1, ...notes.map(note => note.endTime - start));
   return <span aria-hidden="true" className="relative block h-[120px] w-full overflow-hidden">
     <svg viewBox="0 0 288 120" preserveAspectRatio="none" className="block size-full">
-      {Array.from({ length: 6 }, (_, row) => <rect key={row} x={0} y={row * 20} width={288} height={19}
-        fill={`hsl(var(--${row % 2 === 0 ? "surface-raised" : "card"}))`} />)}
       {notes.map((note, index) => <rect key={index}
         x={12 + (note.startTime - start) / duration * 264}
-        y={12 + (high - note.pitch) / Math.max(1, high - low) * 88}
-        width={Math.max(8, (note.endTime - note.startTime) / duration * 264 - 2)}
-        height={8} rx={4} fill={noteFill(note.pitch)} />)}
+        y={12 + (high - note.pitch) / Math.max(1, high - low) * 84}
+        width={Math.min(276 - (12 + (note.startTime - start) / duration * 264), Math.max(12, (note.endTime - note.startTime) / duration * 264 - 2))}
+        height={12} rx={3} fill={noteFill(note.pitch)} />)}
     </svg>
     {!notes.length && <Music2 className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />}
   </span>;

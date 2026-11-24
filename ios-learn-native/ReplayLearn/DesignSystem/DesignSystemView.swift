@@ -57,7 +57,7 @@ struct DesignSystemView: View {
                     section("05 / Content & feedback") {
                         ReplayFeedbackCard(evaluation: "pass", feedback: "Your timing is steady. Keep the phrase connected.", completed: true)
                         ReplayFeedbackCard(evaluation: "close", feedback: "Listen once more, then try the opening notes slowly.")
-                        Text("Catalog examples only. Live library thumbnails use published notes; progress uses evaluated attempts and server-confirmed acquisitions.").font(.caption).foregroundStyle(ReplayTheme.muted)
+                        Text("Catalog examples only. Tune illustrations use horizontal pitch-colored highway blocks on plain surfaces, without lane lines or acquired badges. Live library thumbnails use published notes; progress uses evaluated attempts and server-confirmed acquisitions.").font(.caption).foregroundStyle(ReplayTheme.muted)
                     }
                     section("06 / Accessibility") {
                         Text("Dark appearance. Dynamic Type for interface and instructions; fixed 11 pt rail labels preserve key alignment. Each key has a VoiceOver pitch label and an activation action. The decorative rail is not a second accessibility element.")

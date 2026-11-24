@@ -94,19 +94,15 @@ struct TuneThumbnail: View {
     var sequence: NoteSequence?
     var body: some View {
         Canvas { context, size in
-            for row in 0..<6 {
-                let rect = CGRect(x: 0, y: CGFloat(row)*size.height/6, width: size.width, height: size.height/6-1)
-                context.fill(Path(rect), with: .color(row.isMultiple(of: 2) ? ReplayTheme.raised : ReplayTheme.surface))
-            }
             let notes = Array((sequence?.notes ?? []).prefix(14))
             let low = notes.map(\.pitch).min() ?? 60, high = notes.map(\.pitch).max() ?? 72
             let start = notes.map(\.startTime).min() ?? 0
             let duration = max(1, (notes.map(\.endTime).max() ?? 1)-start)
             for note in notes {
                 let x = 12 + (note.startTime-start)/duration * (size.width-24)
-                let y = 12 + CGFloat(high-note.pitch)/CGFloat(max(1, high-low)) * (size.height-32)
-                let width = max(8, (note.endTime-note.startTime)/duration * (size.width-24)-2)
-                context.fill(Path(roundedRect: CGRect(x: x, y: y, width: width, height: 8), cornerRadius: 4), with: .color(ReplayTheme.pitch(note.pitch)))
+                let y = 12 + CGFloat(high-note.pitch)/CGFloat(max(1, high-low)) * (size.height-36)
+                let width = min(size.width-12-x, max(12, (note.endTime-note.startTime)/duration * (size.width-24)-2))
+                context.fill(Path(roundedRect: CGRect(x: x, y: y, width: width, height: 12), cornerRadius: 3), with: .color(ReplayTheme.pitch(note.pitch)))
             }
         }.overlay { if sequence == nil { Image(systemName: "music.note").font(.largeTitle).foregroundStyle(ReplayTheme.muted) } }
         .accessibilityHidden(true)
@@ -122,10 +118,10 @@ struct ReplayTuneCard: View {
                 TuneThumbnail(sequence: tune.sequence).frame(height: 120).opacity(tune.unlocked ? 1 : 0.45)
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text(tune.acquired ? "ACQUIRED" : tune.unlocked ? "READY TO PLAY" : "LOCKED").font(ReplayTheme.mono())
-                            .foregroundStyle(tune.acquired ? ReplayTheme.accent : ReplayTheme.muted)
+                        Text(tune.unlocked ? "READY TO PLAY" : "LOCKED").font(ReplayTheme.mono())
+                            .foregroundStyle(ReplayTheme.muted)
                         Spacer()
-                        Image(systemName: tune.acquired ? "checkmark.seal" : tune.unlocked ? "arrow.up.right" : "lock")
+                        Image(systemName: tune.unlocked ? "arrow.up.right" : "lock")
                     }
                     Text(tune.title).font(ReplayTheme.display(21)).foregroundStyle(ReplayTheme.ink).lineLimit(2)
                     if !tune.unlocked { Text("Complete \(tune.prerequisites.map(TuneLibraryItem.displayTitle).joined(separator: ", ")) first").font(.caption).foregroundStyle(ReplayTheme.muted) }
@@ -136,7 +132,7 @@ struct ReplayTuneCard: View {
             }.background(ReplayTheme.surface).clipShape(RoundedRectangle(cornerRadius: 22))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(ReplayTheme.border))
         }.buttonStyle(.plain).disabled(!tune.unlocked)
-        .accessibilityLabel("\(tune.title), \(tune.acquired ? "acquired" : tune.unlocked ? "ready to play" : "locked")")
+        .accessibilityLabel("\(tune.title), \(tune.unlocked ? "ready to play" : "locked")")
     }
 }
 

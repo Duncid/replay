@@ -15,7 +15,7 @@ Swipe, use a horizontal trackpad gesture, or focus the list and use arrow keys t
 
 Cards are 256 px wide below the 640 px viewport breakpoint and 288 px above it, with a 16 px gap. Side padding centers the first and last cards; CSS scroll snapping centers each item. Cards stretch to the tallest item, with 16 px vertical space for focus and glow. The compact example constrains the container; use Storybook's viewport control to exercise the small-screen breakpoint.
 
-Available cards have a restrained neon border at rest and the shared player glow on hover/focus; locked cards keep neutral borders. Pitch previews and surfaces follow the selected theme. Loading, errors and empty-library messaging belong to TuneLibraryView, outside this list.` } },
+Available cards have a restrained neon border at rest and the shared player glow on hover/focus; locked cards keep neutral borders. Horizontal highway-note illustrations use plain backgrounds without lane lines. Playable cards share the Ready to play label, including acquired tunes. Pitch colors and surfaces follow the selected theme. Loading, errors and empty-library messaging belong to TuneLibraryView, outside this list.` } },
   },
 } satisfies Meta<typeof TuneCarousel>;
 export default meta;
