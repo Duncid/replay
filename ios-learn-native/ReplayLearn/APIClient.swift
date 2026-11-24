@@ -58,7 +58,7 @@ actor APIClient {
         async let tunes: [PublishedTune] = read("tune_assets", query: [
             URLQueryItem(name: "select", value: "tune_key,note_sequence,curriculum_versions!inner(status,published_at)"),
             URLQueryItem(name: "curriculum_versions.status", value: "eq.published"),
-            URLQueryItem(name: "order", value: "curriculum_versions(published_at).desc")
+            URLQueryItem(name: "order", value: "curriculum_versions(published_at).asc")
         ])
         async let exports: [TuneCurriculumExport] = read("curriculum_exports", query: [
             URLQueryItem(name: "select", value: "snapshot,curriculum_versions!inner(status)"),
@@ -72,7 +72,9 @@ actor APIClient {
         let (published, curriculum, progress) = try await (tunes, exports, acquisitions)
         var seen = Set<String>()
         let acquired = Set(progress.map { $0.tune_key })
-        return published.filter { seen.insert($0.tune_key).inserted }.map {
+        // Rows arrive oldest-published-first, so the newest version of a tune is
+        // the last one seen; reversing keeps that version and the oldest-first order.
+        return published.reversed().filter { seen.insert($0.tune_key).inserted }.reversed().map {
             var item = TuneAvailability.resolve($0.tune_key, snapshot: curriculum.first?.snapshot, acquired: acquired)
             item.sequence = $0.note_sequence
             return item

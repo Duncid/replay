@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getTunePreview } from "@/utils/tunePreview";
-import { getTuneAvailability, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
+import { getTuneAvailability, publishedTunesInListOrder, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
 
 export function useTuneLibrary(localUserId?: string | null) {
   const tunes = useQuery({
@@ -11,16 +11,13 @@ export function useTuneLibrary(localUserId?: string | null) {
       const { data, error } = await supabase.from("tune_assets")
         .select("tune_key, note_sequence, is_global, owner_user_id, curriculum_versions!inner(status, published_at)")
         .eq("curriculum_versions.status", "published")
-        .order("curriculum_versions(published_at)", { ascending: false });
+        // Oldest published tune first: a newly uploaded tune joins the end of the list.
+        .order("curriculum_versions(published_at)", { ascending: true });
       if (error) throw new Error(error.message);
       // Admins can read every tune; the list only shows global tunes and this account's own.
       const { data: { user } } = await supabase.auth.getUser();
-      const seen = new Set<string>();
-      return (data ?? []).filter(tune => tune.is_global || tune.owner_user_id === user?.id).filter(tune => {
-        if (seen.has(tune.tune_key)) return false;
-        seen.add(tune.tune_key);
-        return true;
-      }).map(tune => ({ tune_key: tune.tune_key, preview: getTunePreview(tune.note_sequence) }));
+      const mine = (data ?? []).filter(tune => tune.is_global || tune.owner_user_id === user?.id);
+      return publishedTunesInListOrder(mine).map(tune => ({ tune_key: tune.tune_key, preview: getTunePreview(tune.note_sequence) }));
     },
   });
   const progress = useQuery({

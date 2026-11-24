@@ -3,6 +3,17 @@ export interface TuneLibrarySnapshot {
   edges?: Array<{ source_key: string; target_key: string; edge_type: string }>;
 }
 
+/**
+ * One entry per tune, the newest published version winning, listed with the
+ * oldest publication first so a newly uploaded tune joins the end of the list.
+ * Rows must arrive ordered by published_at ascending.
+ */
+export function publishedTunesInListOrder<T extends { tune_key: string }>(rows: T[]): T[] {
+  const newest = new Map<string, T>();
+  for (const row of rows) newest.set(row.tune_key, row);
+  return [...newest.values()];
+}
+
 export function isTuneAcquired(musicRef: string, snapshot: TuneLibrarySnapshot | null, acquiredTuneKeys: Set<string>): boolean {
   return acquiredTuneKeys.has(musicRef) || (snapshot?.tunes ?? []).some(node =>
     node.musicRef === musicRef && acquiredTuneKeys.has(node.tuneKey));

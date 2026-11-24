@@ -1,6 +1,6 @@
 import { expect, test, accountRows } from "./fixtures";
 import type { Route } from "@playwright/test";
-import { getTuneAvailability, isTuneAcquired, type TuneLibrarySnapshot } from "../src/utils/tuneLibrary";
+import { getTuneAvailability, isTuneAcquired, publishedTunesInListOrder, type TuneLibrarySnapshot } from "../src/utils/tuneLibrary";
 
 import { getTunePreview } from "../src/utils/tunePreview";
 
@@ -38,6 +38,20 @@ test("published tunes outside the curriculum remain available", () => {
   expect(getTuneAvailability("new-tune", snapshot, new Set()).unlocked).toBe(true);
 });
 
+test("a newly published tune joins the end while its newest version plays", () => {
+  const rows = [
+    { tune_key: "intro", version: 1 },
+    { tune_key: "st-louis-blues", version: 1 },
+    { tune_key: "intro", version: 2 },
+    { tune_key: "waltz-in-a-minor-chopin", version: 1 },
+  ];
+  expect(publishedTunesInListOrder(rows)).toEqual([
+    { tune_key: "intro", version: 2 },
+    { tune_key: "st-louis-blues", version: 1 },
+    { tune_key: "waltz-in-a-minor-chopin", version: 1 },
+  ]);
+});
+
 test("student tune list makes no teacher calls and blocks locked selection", async ({ page }) => {
   const teacherCalls: string[] = [];
   page.on("request", request => {
@@ -47,7 +61,7 @@ test("student tune list makes no teacher calls and blocks locked selection", asy
     const url = new URL(route.request().url());
     const table = url.pathname.split("/").pop();
     const body = table === "tune_assets"
-      ? [{ tune_key: "intro", note_sequence: { notes: [{ pitch: 60, startTime: 0, endTime: 2 }], totalTime: 3 } }, { tune_key: "st-louis-blues", briefing: null }]
+      ? [{ tune_key: "intro", is_global: true, note_sequence: { notes: [{ pitch: 60, startTime: 0, endTime: 2 }], totalTime: 3 } }, { tune_key: "st-louis-blues", is_global: true, briefing: null }]
       : table === "curriculum_exports" ? { snapshot } : [];
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? body) });
   });
@@ -56,6 +70,33 @@ test("student tune list makes no teacher calls and blocks locked selection", asy
   await expect(page.getByRole("button", { name: "Locked: St Louis Blues", exact: true })).toBeDisabled();
   await expect(page.getByText("1 note · 3 sec", { exact: true })).toBeVisible();
   expect(teacherCalls).toEqual([]);
+});
+
+test("the student tune list puts a newly uploaded tune at the end", async ({ page }) => {
+  const orders: string[] = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith("/tune_assets")) orders.push(url.searchParams.get("order") ?? "");
+  });
+  const sequence = (pitch: number) => ({ notes: [{ pitch, startTime: 0, endTime: 2 }], totalTime: 3 });
+  await page.route("**/rest/v1/**", async route => {
+    const url = new URL(route.request().url());
+    const table = url.pathname.split("/").pop();
+    const body = table === "tune_assets"
+      ? [
+          { tune_key: "intro", is_global: true, owner_user_id: null, note_sequence: sequence(60) },
+          { tune_key: "st-louis-blues", is_global: true, owner_user_id: null, note_sequence: sequence(62) },
+          { tune_key: "waltz-in-a-minor-chopin", is_global: true, owner_user_id: null, note_sequence: sequence(64) },
+        ]
+      : table === "curriculum_exports" ? { snapshot } : [];
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(url.href) ?? body) });
+  });
+  await page.goto("/");
+  const cards = page.locator('ul[aria-label="Tunes"] li');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.first()).toContainText("Intro");
+  await expect(cards.last()).toContainText("Waltz In A Minor Chopin");
+  expect(orders).toContain("curriculum_versions(published_at).asc");
 });
 
 test("Admin navigation opens Quest and returns to student tunes", async ({ page }) => {
