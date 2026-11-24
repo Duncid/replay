@@ -8,6 +8,13 @@
       "when": 1795371638284,
       "tag": "0000_lock_down_public_writes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795523297043,
+      "tag": "0001_remove_public_tune_asset_delete",
+      "breakpoints": true
     }
   ]
 }
