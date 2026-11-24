@@ -71,14 +71,14 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       });
       const ordered = [...notes].sort((a, b) => a.start - b.start);
       const items = ordered.map(note => {
-        const node = new Container(), beam = new Graphics(), ring = new Graphics(), body = new Graphics(), spark = new Graphics(), tagBackground = new Graphics();
+        const node = new Container(), beam = new Graphics(), ring = new Graphics(), body = new Graphics(), tagBackground = new Graphics();
         const label = new Text({ text: note.label ?? ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"][note.midi % 12] + (Math.floor(note.midi / 12) - 1), style: { fontFamily: "JetBrains Mono, monospace", fontSize: 11, fontWeight: "600", fill: background } });
         label.anchor.set(.5, 1);
         const tag = new Text({ text: note.judgment?.toUpperCase() ?? "", style: { fontFamily: "JetBrains Mono, monospace", fontSize: 11, fontWeight: "600", fill: note.judgment === "perfect" ? accent : muted } });
         tag.anchor.set(.5, 1);
-        node.addChild(beam, ring, body, label, spark, tagBackground, tag); layer.addChild(node); node.visible = false;
+        node.addChild(beam, ring, body, label, tagBackground, tag); layer.addChild(node); node.visible = false;
         tagBackground.roundRect(-tag.width/2-6, -tag.height-4, tag.width+12, tag.height+8, 4).fill({ color: background, alpha: .9 }).stroke({ color: note.judgment === "perfect" ? accent : border, width: 1 });
-        return { note, node, beam, ring, body, label, spark, tag, tagBackground, state: "", w: 0, h: 0, tagBeat: Number.NaN, tagged: false };
+        return { note, node, beam, ring, body, label, tag, tagBackground, state: "", w: 0, h: 0, tagBeat: Number.NaN, tagged: false };
       });
       const measures = Array.from({ length: 32 }, () => {
         const label = new Text({ text: "", style: { fontFamily: "JetBrains Mono, monospace", fontSize: 10, fill: muted } });
@@ -181,15 +181,9 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
             item.label.visible = h >= 24 && state !== "miss";
             item.label.style.fill = n.who === "ai" ? pitch : background;
             item.label.position.set(w / 2, h - 7);
-            item.spark.clear();
-            if (state === "sounding" && !reduced.matches) {
-              for (let r = 20; r >= 4; r -= 4) item.spark.circle(w / 2, 0, r).fill({ color: pitch, alpha: .08 });
-              for (let ray = 0; ray < 8; ray++) { const a = ray * Math.PI / 4; item.spark.moveTo(w/2 + Math.cos(a)*5, Math.sin(a)*5).lineTo(w/2 + Math.cos(a)*13, Math.sin(a)*13).stroke({ color: pitch, width: 1 }); }
-            }
           }
           item.label.visible = h >= 24 && state !== "miss" && hitY - item.node.y >= 18;
           item.label.position.y = Math.min(h, hitY - item.node.y) - 7;
-          item.spark.position.y = hitY - item.node.y - 3;
           item.beam.clear();
           if (state === "next" && bottom < hitY) for (let step = 0; step < 8; step++) item.beam.rect(0, h + (hitY-bottom)*step/8, w, (hitY-bottom)/8).fill({ color: pitchColors[n.midi % 12], alpha: .26*(step+1)/8 });
           if (n.judgment && !item.tagged && beat >= n.start) { item.tagged = true; item.tagBeat = n.judgmentBeat ?? n.start;
