@@ -81,7 +81,10 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
     if (!file || !key) return;
     const step: Step = { key: "upload", label: "Uploading the score", state: "running", startedAt: new Date().toISOString() };
     setUploading(step);
-    const path = `${crypto.randomUUID()}/${file.name.replace(/[^\w.-]/g, "_")}`;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setUploading({ ...step, state: "failed", detail: "Please sign in again", endedAt: new Date().toISOString() }); return; }
+    // Sources live in the uploader's own folder (storage policies check it).
+    const path = `${user.id}/${crypto.randomUUID()}/${file.name.replace(/[^\w.-]/g, "_")}`;
     const { error } = await supabase.storage.from("tune-sources").upload(path, file);
     if (error) { setUploading({ ...step, state: "failed", detail: error.message, endedAt: new Date().toISOString() }); return; }
     const done: Step = { ...step, state: "done", detail: `${Math.round(file.size / 1024)} KB`, endedAt: new Date().toISOString() };

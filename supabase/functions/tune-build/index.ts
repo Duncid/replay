@@ -1,4 +1,4 @@
-import { requireAdmin, authErrorResponse } from "../_shared/auth.ts";
+import { requireUser, authErrorResponse } from "../_shared/auth.ts";
 import { z } from "npm:zod@3";
 import { generateChatCompletion, GatewayError } from "npm:@lovable.dev/ai-gateway@0.1.13";
 import { TUNE_MASTER_PROMPT } from "./tuneMaster.ts";
@@ -103,7 +103,9 @@ function checkPlan(plan: Record<string, any>, analysis: Analysis) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const { userId, admin } = await requireAdmin(req);
+    const { userId, admin } = await requireUser(req);
+    const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+    const isAdmin = !!roleRow;
     const parsed = Body.safeParse(await req.json());
     if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, 400);
 
@@ -114,6 +116,10 @@ Deno.serve(async (req) => {
     let job: { id: string; source_path: string; filename: string; title: string | null; tune_key: string };
     if (parsed.data.action === "start") {
       const d = parsed.data;
+      if (!isAdmin && !d.sourcePath.startsWith(`${userId}/`)) return json({ error: "Not your upload" }, 403);
+      // Non-admins may only update their own tunes; a name used by someone else is refused.
+      const { data: clash } = await admin.from("tune_assets").select("owner_user_id").eq("tune_key", d.tuneKey).limit(1);
+      if (!isAdmin && clash?.length && clash[0].owner_user_id !== userId) return json({ error: "A tune with this name already exists. Please pick another name." }, 409);
       const { data, error } = await admin.from("tune_build_jobs").insert({
         created_by: userId, source_path: d.sourcePath, filename: d.filename, tune_key: d.tuneKey, title: d.title ?? null,
       }).select("id, source_path, filename, title, tune_key").single();
@@ -122,7 +128,8 @@ Deno.serve(async (req) => {
       // Only successful uploads are kept in the history.
       await admin.from("tune_build_jobs").delete().eq("created_by", userId).eq("status", "failed");
     } else {
-      const { data, error } = await admin.from("tune_build_jobs").select("id, source_path, filename, title, tune_key").eq("id", parsed.data.jobId).single();
+      const { data, error } = await admin.from("tune_build_jobs").select("id, source_path, filename, title, tune_key, created_by").eq("id", parsed.data.jobId).single();
+      if (data && !isAdmin && data.created_by !== userId) return json({ error: "Job not found" }, 404);
       if (error || !data) return json({ error: "Job not found" }, 404);
       job = data;
     }

@@ -78,7 +78,9 @@ serve(async (req) => {
   }
 
   try {
-    const { userId } = await requireAdmin(req);
+    const { userId, admin: authDb } = await requireUser(req);
+    const { data: roleRow } = await authDb.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+    const callerIsAdmin = !!roleRow;
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -86,7 +88,8 @@ serve(async (req) => {
 
     const body: TunePublishRequest = await req.json();
     const { tuneKey, title, tuneAssets, mode, existingTuneKey } = body;
-    const isGlobal = (body as { isGlobal?: boolean }).isGlobal;
+    // Only admins decide global visibility; everyone else publishes account-only tunes.
+    const isGlobal = callerIsAdmin ? (body as { isGlobal?: boolean }).isGlobal : false;
 
     console.log(`[tune-publish] Request received:`, {
       tuneKey,
@@ -193,6 +196,11 @@ serve(async (req) => {
       .eq("version_id", versionId)
       .eq("tune_key", finalTuneKey)
       .maybeSingle();
+
+    if (!callerIsAdmin && existingTune && existingTune.owner_user_id !== userId) {
+      return new Response(JSON.stringify({ success: false, error: "This tune belongs to another account" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Prepare the tune_assets record
     const tuneAssetsRecord = {

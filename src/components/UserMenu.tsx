@@ -69,7 +69,7 @@ export function UserMenu({
 
   return (
     <>
-      {isAdmin && (
+      {user && (
         <>
           {/* Upload goes straight to the file picker; naming and progress follow in the dialog. */}
           <input ref={uploadInputRef} type="file" accept=".mxl,.xml,.musicxml" className="hidden" data-testid="tune-upload-input"
@@ -116,6 +116,13 @@ export function UserMenu({
             <UserPlus className="h-4 w-4" />
             {t("userMenu.newUser")}
           </DropdownMenuItem>
+
+          {user && !isAdmin && (
+            <DropdownMenuItem onSelect={() => uploadInputRef.current?.click()}>
+              <Upload className="h-4 w-4" />
+              Upload new tune…
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuSeparator />
 

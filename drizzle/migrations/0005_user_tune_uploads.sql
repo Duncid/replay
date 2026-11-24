@@ -1,0 +1,3 @@
+CREATE POLICY "Users read own build jobs" ON public.tune_build_jobs FOR SELECT TO authenticated USING (created_by = auth.uid());
+CREATE POLICY "Users upload own tune sources" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'tune-sources' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "Users read own tune sources" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'tune-sources' AND (storage.foldername(name))[1] = auth.uid()::text);
