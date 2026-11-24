@@ -99,7 +99,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
         line.clear().rect(0, hitY - 2, width, 2).fill(accent);
         if (!reduced.matches) for (let i = 1; i <= 6; i++) line.rect(0, hitY - 2 - i * 2, width, 2).fill({ color: accent, alpha: .12 * (1 - i / 7) });
         // Notes dim behind this band on their last approach into the piano top bar.
-        veil.clear().rect(0, hitY, width, Math.max(0, height - bottomOcclusion - hitY)).fill({ color: 0x000000, alpha: .5 });
+        veil.clear().rect(0, hitY, width, Math.max(0, height - bottomOcclusion - hitY)).fill({ color: 0x000000, alpha: .6 });
         items.forEach(item => { item.state = ""; });
       }
       observer = new ResizeObserver(resize); observer.observe(element); resize();
