@@ -10,7 +10,7 @@ export const tuneCardPreview = getTunePreview({
 });
 
 export const tuneCarouselItems: TuneCarouselItem[] = [
-  { tune_key: "intro", unlocked: true, acquired: true, preview: tuneCardPreview, prerequisites: [] },
+  { tune_key: "intro", unlocked: true, preview: tuneCardPreview, prerequisites: [] },
   { tune_key: "st-louis-blues", unlocked: true, preview: tuneCardPreview, prerequisites: [] },
   { tune_key: "autumn-leaves", unlocked: false, preview: tuneCardPreview, prerequisites: ["st-louis-blues"] },
 ];

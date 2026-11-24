@@ -5,7 +5,6 @@ export interface TuneCarouselItem {
   tune_key: string;
   unlocked: boolean;
   prerequisites: string[];
-  acquired?: boolean;
   preview?: TunePreview;
 }
 
@@ -21,7 +20,7 @@ export function TuneCarousel({ tunes, onSelectTune }: TuneCarouselProps) {
     {tunes.map(tune => (
       <li key={tune.tune_key} className="snap-center shrink-0 w-64 sm:w-72">
         <TuneCard title={tuneDisplayTitle(tune.tune_key)} unlocked={tune.unlocked}
-          acquired={tune.acquired} preview={tune.preview} prerequisites={tune.prerequisites.map(tuneDisplayTitle)}
+          preview={tune.preview} prerequisites={tune.prerequisites.map(tuneDisplayTitle)}
           onSelect={() => onSelectTune(tune.tune_key)} />
       </li>
     ))}

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getTunePreview } from "@/utils/tunePreview";
-import { getTuneAvailability, isTuneAcquired, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
+import { getTuneAvailability, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
 
 export function useTuneLibrary(localUserId?: string | null) {
   const tunes = useQuery({
@@ -46,7 +46,6 @@ export function useTuneLibrary(localUserId?: string | null) {
   return {
     tunes: (tunes.data ?? []).map(tune => ({
       ...tune,
-      acquired: isTuneAcquired(tune.tune_key, progress.data?.snapshot ?? null, progress.data?.acquired ?? new Set()),
       ...getTuneAvailability(tune.tune_key, progress.data?.snapshot ?? null, progress.data?.acquired ?? new Set()),
     })),
     isLoading: tunes.isPending || progress.isPending,
