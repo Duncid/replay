@@ -14,10 +14,14 @@ import urllib.request
 from pathlib import Path
 
 import modal
+try:  # resolved inside the container; optional for local deploys
+    from fastapi import Request
+except ImportError:  # pragma: no cover
+    Request = object  # type: ignore[misc,assignment]
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install("music21>=9.1.0", "networkx>=3.2", "pretty_midi>=0.2.10", "pydantic>=2.6.0", "fastapi[standard]")
+    .pip_install("music21==9.9.1", "networkx>=3.2", "pretty_midi>=0.2.10", "pydantic>=2.6.0", "fastapi[standard]")
     .add_local_python_source("tune_pipeline", "tune_worker")
 )
 app = modal.App("replay-tune-worker", image=image)
@@ -26,9 +30,9 @@ MAX_BYTES = 5 * 1024 * 1024
 
 @app.function(secrets=[modal.Secret.from_name("tune-worker")], timeout=120)
 @modal.fastapi_endpoint(method="POST")
-async def build(request: "fastapi.Request"):  # type: ignore[name-defined]  # noqa: F821
+async def build(request: Request):
     from fastapi.responses import JSONResponse
-    from tune_worker.build import BuildError, build_bundle_from_file
+    from tune_worker.build import BuildError, analysis_input, build_bundle_from_file
 
     raw = await request.body()
     ts = request.headers.get("x-timestamp", "")
@@ -49,7 +53,11 @@ async def build(request: "fastapi.Request"):  # type: ignore[name-defined]  # no
             return JSONResponse({"error": "File too large (max 5 MB)"}, status_code=400)
         path.write_bytes(data)
         try:
-            bundle = build_bundle_from_file(path, title)
+            if body.get("action") == "prepare":
+                return {"analysis": analysis_input(path)}
+            bundle = build_bundle_from_file(path, title, body.get("teacher"))
         except BuildError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
+        except Exception as exc:  # invalid plan from the LLM, etc.
+            return JSONResponse({"error": f"Build failed: {exc}"}, status_code=422)
     return {"bundle": bundle}

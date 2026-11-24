@@ -118,12 +118,53 @@ def collect_bundle(folder: Path, title: Optional[str] = None) -> Dict[str, Any]:
     return {k: v for k, v in bundle.items() if v is not None}
 
 
-def build_bundle_from_file(source: Path, title: Optional[str] = None) -> Dict[str, Any]:
+def analysis_input(source: Path) -> Dict[str, Any]:
+    """Compact view of the score for the TuneMaster LLM step.
+
+    Notes are [pitch, start, end] per instrument (seconds, rounded) plus each
+    measure's start time and beat count, so the model can answer in measure/beat
+    locations that the unchanged pipeline understands.
+    """
+    from tune_pipeline.cli import _combine_parts, _get_piano_parts
+    from tune_pipeline.nuggets_extract import _measure_offset, _offset_to_seconds, _tempo_boundaries
+
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp) / "tune"
         prepare_folder(source, folder)
+        score = converter.parse(str(folder / "tune.xml"))
+        parts = _get_piano_parts(score) or [score.parts[0]]
+        part = _combine_parts(parts)
+        bounds = _tempo_boundaries(score)
+        measures = []
+        for m in part.getElementsByClass("Measure"):
+            ts = m.timeSignature or part.recurse().getElementsByClass("TimeSignature").first()
+            measures.append({
+                "measure": m.number,
+                "startTime": round(_offset_to_seconds(_measure_offset(part, m.number, 1.0), bounds), 3),
+                "beats": int(ts.numerator) if ts else 4,
+            })
+        instruments = []
+        for path in sorted(folder.glob("tune.inst*.ns.json")):
+            ns = json.loads(path.read_text())
+            instruments.append({
+                "id": path.name.split(".")[1],
+                "notes": [[n["pitch"], round(n["startTime"], 3), round(n["endTime"], 3)] for n in ns["notes"]],
+            })
+        return {"measures": measures, "instruments": instruments}
+
+
+def build_bundle_from_file(
+    source: Path, title: Optional[str] = None, teacher: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Build the bundle. With ``teacher`` (e.g. a TuneMaster plan) the
+    heuristic generator is skipped; otherwise the pipeline generates its own."""
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = Path(tmp) / "tune"
+        prepare_folder(source, folder)
+        if teacher is not None:
+            (folder / "teacher.json").write_text(json.dumps(teacher))
         try:
-            build_tune(folder)
+            build_tune(folder, no_generate=teacher is not None)
         except Exception as exc:
             raise BuildError(str(exc)) from exc
         return collect_bundle(folder, title)
