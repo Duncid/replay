@@ -1,6 +1,7 @@
 # Project Rules
 
 - Composer lives on tune_assets; a database trigger extracts credited MusicXML creators for every insert, publishers preserve existing credits when metadata is missing, and the worker reads original XML before exported XML because conversion can replace credits with software placeholders.
+- The upload form reads original XML or the MXL container's score in the browser; confirmed metadata is stored with build jobs and overrides worker credits, so edits survive conversion and retries without waiting for a worker deployment.
 
 - Local tune publishing awaits asset loading and combines instrument-only exports for tunes, nuggets, and assemblies while preserving track IDs; grouped exports remain authoritative so publishing matches local playback.
 

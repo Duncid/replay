@@ -1,0 +1,2 @@
+ALTER TABLE public.tune_build_jobs ADD COLUMN composer text;
+COMMENT ON COLUMN public.tune_build_jobs.composer IS 'Composer entered or confirmed in the upload form, retained across retries; null for older jobs.';

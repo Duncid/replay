@@ -427,6 +427,7 @@ export type Database = {
       }
       tune_build_jobs: {
         Row: {
+          composer: string | null
           created_at: string
           created_by: string
           error: string | null
@@ -441,6 +442,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          composer?: string | null
           created_at?: string
           created_by?: string
           error?: string | null
@@ -455,6 +457,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          composer?: string | null
           created_at?: string
           created_by?: string
           error?: string | null

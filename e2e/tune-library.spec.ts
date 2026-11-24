@@ -209,5 +209,5 @@ test("the add-a-tune start screen explains .mxl, links to MuseScore and opens th
   expect(picked.isMultiple()).toBe(false);
   await picked.setFiles("/tmp/browser/add-tune-start/moonlight-sonata.mxl");
   await expect(page.getByRole("heading", { name: "Name your tune", exact: true })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("moonlight sonata");
+  await expect(page.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("moonlight sonata");
 });

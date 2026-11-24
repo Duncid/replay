@@ -57,6 +57,13 @@
       "when": 1795558654908,
       "tag": "0007_decode_musicxml_composer_names",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795558835447,
+      "tag": "0008_add_upload_job_composer",
+      "breakpoints": true
     }
   ]
 }

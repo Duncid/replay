@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Circle, Loader2, RotateCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { readMusicXmlMetadata } from "@/utils/musicXmlMetadata";
 
 type Step = { key: string; label: string; state: "running" | "done" | "failed"; detail?: string; startedAt: string; endedAt?: string };
 type Job = {
@@ -33,6 +34,8 @@ const elapsed = (s: Step, now: number) => Math.max(0, Math.round(((s.endedAt ? D
 export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; onOpenChange: (o: boolean) => void; file: File | null }) {
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
+  const [composer, setComposer] = useState("");
+  const [readingMetadata, setReadingMetadata] = useState(false);
   const [uploading, setUploading] = useState<Step | null>(null);
   const [activeJob, setActiveJob] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -41,7 +44,18 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
   const exists = published.some((t) => t.tune_key === key);
 
   useEffect(() => {
-    if (open && file) { setTitle(file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ")); setActiveJob(null); setUploading(null); }
+    if (!open || !file) return;
+    let cancelled = false;
+    const fallback = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 120);
+    setTitle(fallback); setComposer(""); setActiveJob(null); setUploading(null); setReadingMetadata(true);
+    readMusicXmlMetadata(file).then(metadata => {
+      if (cancelled) return;
+      setTitle((metadata.title || fallback).slice(0, 120));
+      setComposer((metadata.composer || "").slice(0, 300));
+    }).catch(() => {
+      // A missing or malformed credit should not block the normal upload flow.
+    }).finally(() => { if (!cancelled) setReadingMetadata(false); });
+    return () => { cancelled = true; };
   }, [open, file]);
 
   const jobs = useQuery({
@@ -78,7 +92,7 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
   };
 
   const handleBuild = async () => {
-    if (!file || !key) return;
+    if (!file || !key || readingMetadata) return;
     const step: Step = { key: "upload", label: "Uploading the score", state: "running", startedAt: new Date().toISOString() };
     setUploading(step);
     const { data: { user } } = await supabase.auth.getUser();
@@ -89,7 +103,7 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
     if (error) { setUploading({ ...step, state: "failed", detail: error.message, endedAt: new Date().toISOString() }); return; }
     const done: Step = { ...step, state: "done", detail: `${Math.round(file.size / 1024)} KB`, endedAt: new Date().toISOString() };
     setUploading(done);
-    if (await startBuild({ action: "start", sourcePath: path, filename: file.name, tuneKey: key, title })) setUploading(null);
+    if (await startBuild({ action: "start", sourcePath: path, filename: file.name, tuneKey: key, title, composer: composer.trim() })) setUploading(null);
     else setUploading({ ...done, state: "failed", detail: "Could not start the build" });
   };
 
@@ -114,11 +128,18 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
         </DialogHeader>
 
         {!showProgress ? (
-          <div className="space-y-1">
-            <Label htmlFor="tune-title">Name</Label>
-            <Input id="tune-title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && key) handleBuild(); }} />
-            {exists && <p className="text-xs text-muted-foreground">A published tune already uses this name — it will be updated.</p>}
+          <div className="space-y-4" aria-busy={readingMetadata}>
+            <div className="space-y-1">
+              <Label htmlFor="tune-title">Title</Label>
+              <Input id="tune-title" autoFocus value={title} maxLength={120} disabled={readingMetadata} onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && key) handleBuild(); }} />
+              {exists && <p className="text-xs text-muted-foreground">A published tune already uses this name — it will be updated.</p>}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="tune-composer">Composer</Label>
+              <Input id="tune-composer" value={composer} maxLength={300} disabled={readingMetadata} onChange={(e) => setComposer(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && key) handleBuild(); }} />
+            </div>
           </div>
         ) : (
           <ol className="space-y-3" aria-label="Build progress">
@@ -152,7 +173,7 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
         )}
 
         <DialogFooter className="gap-2">
-          {!showProgress && <Button disabled={!file || !key} onClick={handleBuild}>Build</Button>}
+          {!showProgress && <Button disabled={!file || !key || readingMetadata} onClick={handleBuild}>Build</Button>}
           {current?.status === "failed" && (
             <Button variant="outline" onClick={() => startBuild({ action: "retry", jobId: current.id })}><RotateCw className="h-4 w-4" />Retry</Button>
           )}

@@ -17,6 +17,7 @@ const Body = z.union([
     filename: z.string().min(1).max(200).regex(/\.(mxl|xml|musicxml)$/i, "Use a MusicXML file (.mxl or .xml)"),
     tuneKey: z.string().min(1).max(80).regex(/^[a-z0-9][a-z0-9-]*$/, "Key: lowercase letters, numbers and dashes"),
     title: z.string().max(120).optional(),
+    composer: z.string().max(300).optional(),
   }),
   z.object({ action: z.literal("retry"), jobId: z.string().uuid() }),
 ]);
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
     const workerSecret = Deno.env.get("TUNE_WORKER_SECRET");
     if (!workerUrl || !workerSecret) return json({ error: "Tune builder is not connected yet" }, 503);
 
-    let job: { id: string; source_path: string; filename: string; title: string | null; tune_key: string };
+    let job: { id: string; source_path: string; filename: string; title: string | null; composer: string | null; tune_key: string };
     if (parsed.data.action === "start") {
       const d = parsed.data;
       if (!isAdmin && !d.sourcePath.startsWith(`${userId}/`)) return json({ error: "Not your upload" }, 403);
@@ -122,13 +123,14 @@ Deno.serve(async (req) => {
       if (!isAdmin && clash?.length && clash[0].owner_user_id !== userId) return json({ error: "A tune with this name already exists. Please pick another name." }, 409);
       const { data, error } = await admin.from("tune_build_jobs").insert({
         created_by: userId, source_path: d.sourcePath, filename: d.filename, tune_key: d.tuneKey, title: d.title ?? null,
-      }).select("id, source_path, filename, title, tune_key").single();
+        composer: d.composer ?? null,
+      }).select("id, source_path, filename, title, composer, tune_key").single();
       if (error) throw error;
       job = data;
       // Only successful uploads are kept in the history.
       await admin.from("tune_build_jobs").delete().eq("created_by", userId).eq("status", "failed");
     } else {
-      const { data, error } = await admin.from("tune_build_jobs").select("id, source_path, filename, title, tune_key, created_by").eq("id", parsed.data.jobId).single();
+      const { data, error } = await admin.from("tune_build_jobs").select("id, source_path, filename, title, composer, tune_key, created_by").eq("id", parsed.data.jobId).single();
       if (data && !isAdmin && data.created_by !== userId) return json({ error: "Job not found" }, 404);
       if (error || !data) return json({ error: "Job not found" }, 404);
       job = data;
@@ -191,6 +193,7 @@ Deno.serve(async (req) => {
         teacher = null;
       }
       const result = built.bundle as Record<string, any>;
+      if (job.composer !== null) result.composer = job.composer;
       result.briefing.planner = teacher ? "tunemaster" : "heuristic";
       await end("done", `${result.nuggets?.length ?? 0} nuggets · ${result.assemblies?.length ?? 0} assemblies`);
       await begin("publish", "Adding to your tunes");
