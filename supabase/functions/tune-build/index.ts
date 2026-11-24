@@ -70,12 +70,15 @@ function checkPlan(plan: Record<string, any>, analysis: Analysis) {
   const nuggets = plan?.nuggets;
   if (!Array.isArray(nuggets) || !nuggets.length) throw new Error("plan has no nuggets");
   const ids = new Set<string>();
-  const known = new Set(analysis.measures.map((m) => m.measure));
+  // Measure numbers can skip (pickups, repeats); only reject locations outside the score.
+  const nums = analysis.measures.map((m) => m.measure);
+  const first = Math.min(...nums), last = Math.max(...nums);
   for (const n of nuggets) {
     const l = n?.location;
     if (typeof n?.id !== "string" || !l || ![l.startMeasure, l.startBeat, l.endMeasure, l.endBeat].every((v) => typeof v === "number"))
       throw new Error("nugget missing id or location");
-    if (!known.has(l.startMeasure)) throw new Error(`nugget ${n.id} starts at unknown measure ${l.startMeasure}`);
+    if (l.startMeasure < first || l.endMeasure > last + 1 || l.endMeasure < l.startMeasure)
+      throw new Error(`nugget ${n.id} is outside the score (measures ${l.startMeasure}-${l.endMeasure} of ${first}-${last})`);
     ids.add(n.id);
   }
   const assemblies = Array.isArray(plan.assemblies) ? plan.assemblies : [];
