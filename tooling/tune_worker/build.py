@@ -66,7 +66,22 @@ def prepare_folder(source: Path, folder: Path) -> None:
 
 
 def _ns(directory: Path, base: str) -> Optional[Any]:
-    return _read_json(directory / f"{base}.ns.json") or _read_json(directory / f"{base}.inst1.ns.json")
+    grouped = _read_json(directory / f"{base}.ns.json")
+    if grouped is not None:
+        return grouped
+    tracks = [_read_json(path) for path in sorted(directory.glob(f"{base}.inst*.ns.json"))
+              if path.name.removeprefix(f"{base}.inst").removesuffix(".ns.json").isdigit()]
+    tracks = [track for track in tracks if isinstance(track.get("notes"), list)]
+    if not tracks:
+        return None
+    notes = sorted((note for track in tracks for note in track["notes"]),
+                   key=lambda note: (note["startTime"], note["pitch"], note["endTime"]))
+    result = {**tracks[0], "notes": notes,
+              "totalTime": max([0] + [track.get("totalTime", 0) for track in tracks]
+                               + [note["endTime"] for note in notes])}
+    for key in ("partInfos", "controlChanges", "pitchBends"):
+        result[key] = [item for track in tracks for item in track.get(key, [])]
+    return result
 
 
 def collect_bundle(folder: Path, title: Optional[str] = None) -> Dict[str, Any]:

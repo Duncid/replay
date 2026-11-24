@@ -2,9 +2,33 @@ from pathlib import Path
 
 import pytest
 
-from tune_worker.build import BuildError, build_bundle_from_file
+from tune_worker.build import BuildError, build_bundle_from_file, collect_bundle, _ns
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_gymnopdie_bundle_preserves_both_tracks_in_every_section():
+    bundle = collect_bundle(ROOT / "src/music/gymnopdie")
+    notes = bundle["noteSequence"]["notes"]
+    assert len(notes) == 455
+    assert sum(note["instrument"] == 0 for note in notes) == 138
+    assert sum(note["instrument"] == 1 for note in notes) == 317
+    assert len(bundle["nuggets"]) == 127
+    assert len(bundle["assemblies"]) == 45
+    for kind in ("nuggets", "assemblies"):
+        for item in bundle[kind]:
+            import json
+            files = (ROOT / "src/music/gymnopdie/output" / kind).glob(f'{item["id"]}.inst*.ns.json')
+            expected = sum(len(json.loads(path.read_text())["notes"]) for path in files)
+            assert len(item["noteSequence"]["notes"]) == expected > 0
+
+
+def test_grouped_sequence_remains_authoritative(tmp_path):
+    import json
+    grouped = {"notes": [{"pitch": 60, "startTime": 0, "endTime": 1}], "totalTime": 1}
+    (tmp_path / "tune.ns.json").write_text(json.dumps(grouped))
+    (tmp_path / "tune.inst1.ns.json").write_text(json.dumps({"notes": []}))
+    assert _ns(tmp_path, "tune") == grouped
 
 
 def test_uploaded_mxl_builds_nuggets_and_assemblies():

@@ -1,5 +1,8 @@
 # Tune-first Replay
 
+- [x] Fix instrument-only tune publishing for local tunes and uploaded tune bundles; preserve all practice-section notes.
+- [ ] Deploy the uploaded-tune worker track-combination fix (requires Modal deployment access, unavailable in this sandbox).
+
 - [x] Replace teacher-driven entry with a published tune library.
 - [x] Show locked/unlocked tunes using existing tune progression and student completion.
 - [x] Keep the current tune practice flow and return to the library.

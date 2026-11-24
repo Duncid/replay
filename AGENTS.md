@@ -1,5 +1,7 @@
 # Project Rules
 
+- Local tune publishing awaits asset loading and combines instrument-only exports for tunes, nuggets, and assemblies while preserving track IDs; grouped exports remain authoritative so publishing matches local playback.
+
 - `ios-learn-native/` is a standalone Swift/SwiftUI iPad app (Learn mode only), separate from the Capacitor wrapper in `ios/` — keep the two native projects independent; the native app talks to the same Lovable Cloud edge functions and shares no code with the web app.
 - Native note highway (`ios-learn-native/ReplayLearn/Highway/`): drawing (SpriteKit scene), timing (HighwayClock) and scoring (HitJudge) stay separate, and all nodes/effects are pooled up-front — keeps frame rate steady and scoring testable.
 - The web student entry uses `TuneLibrary` and the existing `TuneMode`, without teacher selection calls; progression resolution stays in a pure utility because curriculum node keys can differ from published music references.

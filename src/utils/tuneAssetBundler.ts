@@ -2,6 +2,7 @@
 // Vite packages assets locally; load only the selected tune at runtime.
 
 import type { TuneBriefing } from "@/types/tuneAssets";
+import type { Note } from "@/types/noteSequence";
 
 // Auto-discover all teacher.json files at build time
 const teacherModules = import.meta.glob<{ default: Record<string, unknown> }>(
@@ -145,11 +146,7 @@ const loadedAssets = new Map<string, unknown>();
 const tuneLoads = new Map<string, Promise<void>>();
 const tuneErrors = new Map<string, unknown>();
 
-const readAsset = (path: string): unknown => {
-  if (!assetLoaders[path]) return null;
-  if (loadedAssets.has(path)) return loadedAssets.get(path);
-  const musicRef = path.split("/")[3];
-  if (tuneErrors.has(musicRef)) throw tuneErrors.get(musicRef);
+export const preloadLocalTuneAssets = (musicRef: string): Promise<void> => {
   let pending = tuneLoads.get(musicRef);
   if (!pending) {
     pending = Promise.all(
@@ -165,8 +162,16 @@ const readAsset = (path: string): unknown => {
     });
     tuneLoads.set(musicRef, pending);
   }
+  return pending;
+};
+
+const readAsset = (path: string): unknown => {
+  if (!assetLoaders[path]) return null;
+  if (loadedAssets.has(path)) return loadedAssets.get(path);
+  const musicRef = path.split("/")[3];
+  if (tuneErrors.has(musicRef)) throw tuneErrors.get(musicRef);
   // React Suspense keeps synchronous selection helpers simple while assets load.
-  throw pending;
+  throw preloadLocalTuneAssets(musicRef);
 };
 
 const getGlobModule = (
@@ -202,10 +207,10 @@ export const validateTuneForPublishing = (
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Required: tune.ns.json
-  const tuneNs = getTuneNs(musicRef) as { notes?: unknown[] } | null;
+  // A grouped sequence or separate instrument sequences can supply the tune.
+  const tuneNs = getPublishingSequence(`/src/music/${musicRef}/output/tune`);
   if (!tuneNs) {
-    errors.push("Missing output/tune.ns.json (required)");
+    errors.push("Missing tune note sequence (grouped or instrument tracks required)");
   } else {
     const notes = tuneNs?.notes;
     if (!notes || !Array.isArray(notes) || notes.length === 0) {
@@ -529,15 +534,33 @@ export interface TuneAssetBundle {
   assemblyDspXmls?: Record<string, string>;
 }
 
-// Bundle a single tune's assets for publishing
+// Preserve grouped exports; combine instrument-only exports without changing track IDs.
+const getPublishingSequence = (basePath: string): (Record<string, unknown> & { notes: Note[] }) | null => {
+  const grouped = readAsset(`${basePath}.ns.json`) as (Record<string, unknown> & { notes: Note[] }) | null;
+  if (grouped) return grouped;
+  const tracks = Object.keys(assetLoaders)
+    .filter(path => path.startsWith(`${basePath}.inst`) && /\.inst\d+\.ns\.json$/.test(path))
+    .sort()
+    .map(path => readAsset(path) as Record<string, unknown> & { notes: Note[] })
+    .filter(track => Array.isArray(track.notes));
+  if (!tracks.length) return null;
+  const notes = tracks.flatMap(track => track.notes).sort((a, b) =>
+    a.startTime - b.startTime || a.pitch - b.pitch || a.endTime - b.endTime);
+  const result: Record<string, unknown> & { notes: Note[] } = { ...tracks[0], notes, totalTime: Math.max(0,
+    ...tracks.map(track => Number(track.totalTime) || 0), ...notes.map(note => note.endTime)) };
+  for (const key of ["partInfos", "controlChanges", "pitchBends"]) {
+    result[key] = tracks.flatMap(track => Array.isArray(track[key]) ? track[key] : []);
+  }
+  return result;
+};
+
+// Bundle a single tune's assets for publishing (call preloadLocalTuneAssets first outside React render).
 export const bundleSingleTuneAssets = (
   musicRef: string,
 ): TuneAssetBundle | null => {
   try {
     const teacher = getTeacher(musicRef);
-    const noteSequence = getTuneNs(musicRef) as {
-      notes?: unknown[];
-    } | null;
+    const noteSequence = getPublishingSequence(`/src/music/${musicRef}/output/tune`);
     const leftHand = getTuneLh(musicRef);
     const rightHand = getTuneRh(musicRef);
 
@@ -579,7 +602,7 @@ export const bundleSingleTuneAssets = (
         location: nugget.location,
         dependsOn: nugget.dependsOn,
         modes: nugget.modes,
-        noteSequence: getNuggetNs(musicRef, nugget.id),
+        noteSequence: getPublishingSequence(`/src/music/${musicRef}/output/nuggets/${nugget.id}`) ?? undefined,
         leftHandSequence: getNuggetLh(musicRef, nugget.id),
         rightHandSequence: getNuggetRh(musicRef, nugget.id),
       }));
@@ -605,7 +628,7 @@ export const bundleSingleTuneAssets = (
         nuggetIds: assembly.nuggetIds,
         difficulty: assembly.difficulty,
         modes: assembly.modes,
-        noteSequence: getAssemblyNs(musicRef, assembly.id),
+        noteSequence: getPublishingSequence(`/src/music/${musicRef}/output/assemblies/${assembly.id}`) ?? undefined,
         leftHandSequence: getAssemblyLh(musicRef, assembly.id),
         rightHandSequence: getAssemblyRh(musicRef, assembly.id),
       }));

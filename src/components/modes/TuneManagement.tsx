@@ -46,6 +46,7 @@ import type {
 import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import {
   bundleSingleTuneAssets,
+  preloadLocalTuneAssets,
   getAssemblyDspXml,
   getAssemblyLh,
   getAssemblyInst,
@@ -978,6 +979,7 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
 
     setIsPublishing(true);
     try {
+      await preloadLocalTuneAssets(selectedTune);
       const tuneAssets = bundleSingleTuneAssets(selectedTune);
       if (!tuneAssets) {
         throw new Error("Failed to bundle tune assets");
