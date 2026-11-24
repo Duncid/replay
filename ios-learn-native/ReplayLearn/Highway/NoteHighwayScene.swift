@@ -83,7 +83,11 @@ final class NoteHighwayScene: SKScene {
         notes = (sequence?.notes ?? []).sorted { $0.startTime < $1.startTime }
         soundingFlags = Array(repeating: false, count: notes.count); onSoundingChange?([])
         grades = Array(repeating: nil, count: notes.count); tagTimes = Array(repeating: -.infinity, count: notes.count)
-        colors = notes.map { UIColor(ReplayTheme.pitch($0.pitch)) }; botColors = colors.map { $0.withAlphaComponent(0.14) }
+        // Sharps are darkened like the keyboard rail so a note keeps the same color everywhere.
+        colors = notes.map { note in
+            let base = UIColor(ReplayTheme.pitch(note.pitch))
+            return PianoGeometry.isBlack(note.pitch) ? base.darkened(0.6) : base
+        }; botColors = colors.map { $0.withAlphaComponent(0.14) }
         frames = Array(repeating: .zero, count: notes.count)
         for index in notes.indices {
             let pill = SKShapeNode(); pill.zPosition = 4; content.addChild(pill); pills.append(pill)

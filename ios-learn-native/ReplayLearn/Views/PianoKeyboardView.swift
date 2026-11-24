@@ -122,10 +122,3 @@ private final class PianoAccessibilityKey: UIAccessibilityElement {
     var activate: (() -> Void)?
     override func accessibilityActivate() -> Bool { activate?(); return true }
 }
-private extension UIColor {
-    func darkened(_ factor: CGFloat) -> UIColor {
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        getRed(&r, green: &g, blue: &b, alpha: &a)
-        return UIColor(red: r*factor, green: g*factor, blue: b*factor, alpha: a)
-    }
-}

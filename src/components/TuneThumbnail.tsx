@@ -2,6 +2,14 @@ import { Music2 } from "lucide-react";
 import type { TunePreview } from "@/utils/tunePreview";
 
 const pitchTokens = ["c", "c", "d", "d", "e", "f", "f", "g", "g", "a", "a", "b"];
+const sharpIndices = new Set([1, 3, 6, 8, 10]);
+
+/** Same darkening as the note rail: sharps mix 60% note color with the black-key color. */
+const noteFill = (pitch: number) => {
+  const index = pitch % 12;
+  const base = `hsl(var(--note-${pitchTokens[index]}))`;
+  return sharpIndices.has(index) ? `color-mix(in srgb, ${base} 60%, hsl(var(--key-black)))` : base;
+};
 
 /** Static, decorative equivalent of Replay Nat's six-lane tune preview. */
 export function TuneThumbnail({ preview }: { preview?: TunePreview }) {
@@ -18,7 +26,7 @@ export function TuneThumbnail({ preview }: { preview?: TunePreview }) {
         x={12 + (note.startTime - start) / duration * 264}
         y={12 + (high - note.pitch) / Math.max(1, high - low) * 88}
         width={Math.max(8, (note.endTime - note.startTime) / duration * 264 - 2)}
-        height={8} rx={4} fill={`hsl(var(--note-${pitchTokens[note.pitch % 12]}))`} />)}
+        height={8} rx={4} fill={noteFill(note.pitch)} />)}
     </svg>
     {!notes.length && <Music2 className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />}
   </span>;

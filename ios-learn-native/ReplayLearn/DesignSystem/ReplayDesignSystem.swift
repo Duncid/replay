@@ -32,6 +32,15 @@ extension Color {
     init(hex: UInt32) { self.init(.sRGB, red: Double((hex >> 16) & 255)/255, green: Double((hex >> 8) & 255)/255, blue: Double(hex & 255)/255, opacity: 1) }
 }
 
+extension UIColor {
+    /// Scales RGB toward black; used to darken sharp notes like the web note rail does.
+    func darkened(_ factor: CGFloat) -> UIColor {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return UIColor(red: r*factor, green: g*factor, blue: b*factor, alpha: a)
+    }
+}
+
 struct ReplayChrome: ViewModifier {
     var radius: CGFloat = 22
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
