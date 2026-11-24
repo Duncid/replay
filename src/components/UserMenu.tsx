@@ -21,7 +21,7 @@ import { TuneUploadDialog } from "@/components/TuneUploadDialog";
 import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface UserMenuProps {
@@ -60,6 +60,8 @@ export function UserMenu({
   const { user, isAdmin, signOut } = useAuth();
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const handleCreateUser = async (name: string) => {
     await createUser(name);
@@ -67,7 +69,18 @@ export function UserMenu({
 
   return (
     <>
-      {isAdmin && <TuneUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />}
+      {isAdmin && (
+        <>
+          {/* Upload goes straight to the file picker; naming and progress follow in the dialog. */}
+          <input ref={uploadInputRef} type="file" accept=".mxl,.xml,.musicxml" className="hidden" data-testid="tune-upload-input"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) { setUploadFile(f); setUploadOpen(true); }
+            }} />
+          <TuneUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} file={uploadFile} />
+        </>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -126,7 +139,7 @@ export function UserMenu({
                       onSelected={() => onOpenManagement?.("lab")}
                     />
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => setUploadOpen(true)}>
+                    <DropdownMenuItem onSelect={() => uploadInputRef.current?.click()}>
                       <Upload className="h-4 w-4" />
                       Upload new tune…
                     </DropdownMenuItem>

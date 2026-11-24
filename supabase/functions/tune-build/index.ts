@@ -67,24 +67,28 @@ async function planWithTuneMaster(analysis: Analysis, title: string) {
 }
 
 function checkPlan(plan: Record<string, any>, analysis: Analysis) {
-  const nuggets = plan?.nuggets;
-  if (!Array.isArray(nuggets) || !nuggets.length) throw new Error("plan has no nuggets");
-  const ids = new Set<string>();
-  // Measure numbers can skip (pickups, repeats); only reject locations outside the score.
+  if (!Array.isArray(plan?.nuggets) || !plan.nuggets.length) throw new Error("plan has no nuggets");
+  // Measure numbers can skip (pickups, repeats). Nuggets past the end are dropped and
+  // overhanging ones trimmed to the last measure, rather than discarding the whole plan.
   const nums = analysis.measures.map((m) => m.measure);
   const first = Math.min(...nums), last = Math.max(...nums);
-  for (const n of nuggets) {
+  const beatsOf = (m: number) => analysis.measures.find((x) => x.measure === m)?.beats ?? 4;
+  const nuggets: any[] = [];
+  for (const n of plan.nuggets) {
     const l = n?.location;
     if (typeof n?.id !== "string" || !l || ![l.startMeasure, l.startBeat, l.endMeasure, l.endBeat].every((v) => typeof v === "number"))
       throw new Error("nugget missing id or location");
-    if (l.startMeasure < first || l.endMeasure > last + 1 || l.endMeasure < l.startMeasure)
-      throw new Error(`nugget ${n.id} is outside the score (measures ${l.startMeasure}-${l.endMeasure} of ${first}-${last})`);
-    ids.add(n.id);
+    if (l.startMeasure > last || l.endMeasure < first) continue;
+    if (l.startMeasure < first) Object.assign(l, { startMeasure: first, startBeat: 1 });
+    if (l.endMeasure > last) Object.assign(l, { endMeasure: last, endBeat: beatsOf(last) + 1 });
+    nuggets.push(n);
   }
-  const assemblies = Array.isArray(plan.assemblies) ? plan.assemblies : [];
-  for (const a of assemblies) {
-    if (!Array.isArray(a?.nuggetIds) || !a.nuggetIds.every((id: string) => ids.has(id))) throw new Error(`assembly ${a?.id} references unknown nuggets`);
-  }
+  if (!nuggets.length) throw new Error("no nugget falls inside the score");
+  const ids = new Set(nuggets.map((n) => n.id));
+  const assemblies = (Array.isArray(plan.assemblies) ? plan.assemblies : [])
+    .filter((a: any) => Array.isArray(a?.nuggetIds) && a.nuggetIds.length && a.nuggetIds.every((id: string) => ids.has(id)));
+  const keepIds = (list: unknown) => Array.isArray(list) ? list.filter((id) => ids.has(id as string) || assemblies.some((a: any) => a.id === id)) : list;
+  plan = { ...plan, nuggets, teachingOrder: keepIds(plan.teachingOrder), assemblyOrder: keepIds(plan.assemblyOrder) };
   const instIds = analysis.instruments.map((i) => i.id);
   const map = plan.pipelineSettings?.handAssignmentPolicy?.instrumentToHand ?? {};
   if (!instIds.every((id) => map[id] === "RH" || map[id] === "LH")) {
@@ -121,7 +125,7 @@ Deno.serve(async (req) => {
       job = data;
     }
 
-    await admin.from("tune_build_jobs").update({ status: "running", error: null }).eq("id", job.id);
+    await admin.from("tune_build_jobs").update({ status: "running", error: null, progress: [] }).eq("id", job.id);
     const { data: signed, error: signErr } = await admin.storage.from("tune-sources").createSignedUrl(job.source_path, 900);
     if (signErr || !signed) {
       await admin.from("tune_build_jobs").update({ status: "failed", error: "Uploaded file not found" }).eq("id", job.id);
@@ -131,37 +135,61 @@ Deno.serve(async (req) => {
     // The AI plan can take minutes: answer now, finish in the background; the UI polls tune_build_jobs.
     const run = async () => {
     const base = { fileUrl: signed.signedUrl, filename: job.filename, title: job.title };
-    let status = "failed", errorMsg: string | null = null, result: Record<string, unknown> | null = null;
+    // Progress log read by the upload dialog: each step is running → done | failed | skipped.
+    type Step = { key: string; label: string; state: string; detail?: string; startedAt: string; endedAt?: string };
+    const steps: Step[] = [];
+    const save = (extra: Record<string, unknown> = {}) =>
+      admin.from("tune_build_jobs").update({ progress: steps, ...extra }).eq("id", job.id);
+    const begin = async (key: string, label: string) => {
+      steps.push({ key, label, state: "running", startedAt: new Date().toISOString() });
+      await save();
+    };
+    const end = async (state: string, detail?: string) => {
+      const s = steps[steps.length - 1];
+      Object.assign(s, { state, detail, endedAt: new Date().toISOString() });
+      await save();
+    };
+    const secs = (s: Step) => Math.round((Date.now() - Date.parse(s.startedAt)) / 1000);
     try {
-      // 1. Worker extracts a compact note/measure view of the score.
+      await begin("read", "Reading the score");
       const prep = await callWorker(workerUrl, workerSecret, { ...base, action: "prepare" }, 60_000);
-      // 2. TuneMaster (LLM) plans nuggets + assemblies; fall back to the pipeline heuristic on failure.
-      let teacher: Record<string, unknown> | null = null, planNote: string | null = null;
+      const a = prep.analysis as Analysis;
+      const noteCount = a.instruments.reduce((n, i) => n + i.notes.length, 0);
+      await end("done", `${a.measures.length} measures · ${noteCount} notes · ${a.instruments.length} hand${a.instruments.length > 1 ? "s" : ""}`);
+
+      await begin("plan", "TuneMaster is planning nuggets & assemblies");
+      let teacher: Record<string, any> | null = null, note: string | null = null;
       try {
-        teacher = await planWithTuneMaster(prep.analysis, job.title ?? job.filename);
+        teacher = await planWithTuneMaster(a, job.title ?? job.filename);
+        await end("done", `${teacher.nuggets.length} nuggets · ${teacher.assemblies.length} assemblies · ${secs(steps[steps.length - 1])}s`);
       } catch (e) {
-        planNote = `TuneMaster plan unavailable, used automatic split: ${e instanceof Error ? e.message : e}`;
-        console.error(planNote);
+        note = `TuneMaster plan unavailable, used automatic split: ${e instanceof Error ? e.message : e}`;
+        console.error(note);
+        await end("failed", `${e instanceof Error ? e.message : e} — using automatic split`);
       }
-      // 3. Worker slices the score with that plan.
+
+      await begin("cut", "Cutting notes, sheets and hand parts");
       let built;
       try {
         built = await callWorker(workerUrl, workerSecret, { ...base, action: "build", teacher }, 140_000);
       } catch (e) {
         if (!teacher) throw e;
-        planNote = `TuneMaster plan could not be built, used automatic split: ${e instanceof Error ? e.message : e}`;
-        console.error(planNote);
+        note = `TuneMaster plan could not be built, used automatic split: ${e instanceof Error ? e.message : e}`;
+        console.error(note);
+        await end("failed", `Plan could not be built (${e instanceof Error ? e.message : e})`);
+        await begin("cut", "Cutting with the automatic split");
         built = await callWorker(workerUrl, workerSecret, { ...base, action: "build" }, 140_000);
         teacher = null;
       }
-      result = built.bundle;
-      (result!.briefing as Record<string, unknown>).planner = teacher ? "tunemaster" : "heuristic";
-      status = "succeeded";
-      errorMsg = planNote;
+      const result = built.bundle as Record<string, any>;
+      result.briefing.planner = teacher ? "tunemaster" : "heuristic";
+      await end("done", `${result.nuggets?.length ?? 0} nuggets · ${result.assemblies?.length ?? 0} assemblies`);
+      await save({ status: "succeeded", error: note, result });
     } catch (e) {
-      errorMsg = e instanceof Error ? e.message : "Builder unreachable";
+      const msg = e instanceof Error ? e.message : "Builder unreachable";
+      if (steps.length && steps[steps.length - 1].state === "running") await end("failed", msg);
+      await save({ status: "failed", error: msg });
     }
-    await admin.from("tune_build_jobs").update({ status, error: errorMsg, result }).eq("id", job.id);
     };
     // @ts-ignore EdgeRuntime is provided by the edge runtime
     if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(run()); else await run();

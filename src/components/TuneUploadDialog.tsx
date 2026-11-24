@@ -5,136 +5,178 @@ import { Label } from "@/components/ui/label";
 import { usePublishedTuneKeys } from "@/hooks/useTuneQueries";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, RotateCw } from "lucide-react";
-import { useState } from "react";
+import { Check, Circle, Loader2, RotateCw, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+type Step = { key: string; label: string; state: "running" | "done" | "failed"; detail?: string; startedAt: string; endedAt?: string };
 type Job = {
   id: string; filename: string; tune_key: string; title: string | null; status: string; error: string | null;
-  created_at: string; result: { nuggets?: unknown[]; assemblies?: unknown[] } | null;
+  created_at: string; progress: Step[] | null; result: { nuggets?: unknown[]; assemblies?: unknown[] } | null;
 };
 
 export const toTuneKey = (title: string) =>
   title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
 
-export function TuneUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+/** Steps the builder always goes through, shown greyed out until reached. */
+const PLANNED = [
+  { key: "upload", label: "Uploading the score" },
+  { key: "read", label: "Reading the score" },
+  { key: "plan", label: "TuneMaster is planning nuggets & assemblies" },
+  { key: "cut", label: "Cutting notes, sheets and hand parts" },
+];
+
+const elapsed = (s: Step, now: number) => Math.max(0, Math.round(((s.endedAt ? Date.parse(s.endedAt) : now) - Date.parse(s.startedAt)) / 1000));
+
+/** Opened from the menu after a file was picked: name the tune, then follow the build. */
+export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; onOpenChange: (o: boolean) => void; file: File | null }) {
   const qc = useQueryClient();
-  const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [key, setKey] = useState("");
-  const [keyTouched, setKeyTouched] = useState(false);
-  const [step, setStep] = useState<"idle" | "uploading" | "building" | "publishing">("idle");
+  const [uploading, setUploading] = useState<Step | null>(null);
+  const [publishing, setPublishing] = useState(false);
   const [activeJob, setActiveJob] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
   const { data: published = [] } = usePublishedTuneKeys();
-  const publishedKeys = published.map((t) => t.tune_key);
+  const key = toTuneKey(title);
+  const exists = published.some((t) => t.tune_key === key);
+
+  useEffect(() => {
+    if (open && file) { setTitle(file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ")); setActiveJob(null); setUploading(null); }
+  }, [open, file]);
 
   const jobs = useQuery({
     queryKey: ["tune-build-jobs"],
     enabled: open,
     queryFn: async () => {
       const { data, error } = await supabase.from("tune_build_jobs")
-        .select("id, filename, tune_key, title, status, error, created_at, result").order("created_at", { ascending: false }).limit(10);
+        .select("id, filename, tune_key, title, status, error, created_at, progress, result").order("created_at", { ascending: false }).limit(8);
       if (error) throw error;
-      return (data ?? []) as Job[];
+      return (data ?? []) as unknown as Job[];
     },
-    // Builds finish in the background; poll while one is running.
-    refetchInterval: (q) => ((q.state.data as Job[] | undefined)?.some((j) => j.status === "running") ? 3000 : false),
+    refetchInterval: (q) => ((q.state.data as Job[] | undefined)?.some((j) => j.status === "running") ? 2000 : false),
   });
+  const current = jobs.data?.find((j) => j.id === activeJob);
+  const running = !!uploading || current?.status === "running";
 
-  const runBuild = async (body: Record<string, unknown>) => {
-    setStep("building");
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const startBuild = async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke("tune-build", { body });
-    setStep("idle");
     await qc.invalidateQueries({ queryKey: ["tune-build-jobs"] });
-    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Build failed"); return; }
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Build failed"); return false; }
     setActiveJob(data.jobId);
-    toast.message("Building nuggets — this can take a few minutes");
+    return true;
   };
 
   const handleBuild = async () => {
     if (!file || !key) return;
-    setStep("uploading");
+    const step: Step = { key: "upload", label: "Uploading the score", state: "running", startedAt: new Date().toISOString() };
+    setUploading(step);
     const path = `${crypto.randomUUID()}/${file.name.replace(/[^\w.-]/g, "_")}`;
     const { error } = await supabase.storage.from("tune-sources").upload(path, file);
-    if (error) { setStep("idle"); toast.error(error.message); return; }
-    await runBuild({ action: "start", sourcePath: path, filename: file.name, tuneKey: key, title: title || undefined });
+    if (error) { setUploading({ ...step, state: "failed", detail: error.message, endedAt: new Date().toISOString() }); return; }
+    const done: Step = { ...step, state: "done", detail: `${Math.round(file.size / 1024)} KB`, endedAt: new Date().toISOString() };
+    setUploading(done);
+    if (await startBuild({ action: "start", sourcePath: path, filename: file.name, tuneKey: key, title })) setUploading(null);
+    else setUploading({ ...done, state: "failed", detail: "Could not start the build" });
   };
 
   const publish = async (job: Job) => {
-    setStep("publishing");
-    const exists = publishedKeys.includes(job.tune_key);
+    setPublishing(true);
+    const isUpdate = published.some((t) => t.tune_key === job.tune_key);
     const { data: full } = await supabase.from("tune_build_jobs").select("result").eq("id", job.id).single();
     const { data, error } = await supabase.functions.invoke("tune-publish", {
-      body: { tuneKey: job.tune_key, title: job.title ?? job.tune_key, tuneAssets: full?.result, mode: exists ? "update" : "create", existingTuneKey: exists ? job.tune_key : undefined },
+      body: { tuneKey: job.tune_key, title: job.title ?? job.tune_key, tuneAssets: full?.result, mode: isUpdate ? "update" : "create", existingTuneKey: isUpdate ? job.tune_key : undefined },
     });
-    setStep("idle");
+    setPublishing(false);
     if (error || !data?.success) { toast.error(data?.error ?? error?.message ?? "Publish failed"); return; }
-    toast.success(`"${job.tune_key}" published`);
+    toast.success(`"${job.title ?? job.tune_key}" published`);
     qc.invalidateQueries({ queryKey: ["published-tune-keys"] });
     qc.invalidateQueries({ queryKey: ["tune-assets"] });
+    onOpenChange(false);
   };
 
-  const busy = step !== "idle";
-  const current = jobs.data?.find((j) => j.id === activeJob);
+  const showProgress = !!uploading || !!current;
+  const serverSteps = current?.progress ?? [];
+  const uploadStep: Step | undefined = uploading ?? (current ? { key: "upload", label: "Uploading the score", state: "done", startedAt: current.created_at, endedAt: current.created_at } : undefined);
+  const shown: (Step | { key: string; label: string; state: "pending" })[] = [];
+  if (uploadStep) shown.push(uploadStep);
+  shown.push(...serverSteps);
+  const failed = current?.status === "failed" || uploading?.state === "failed";
+  if (!failed && current?.status !== "succeeded") {
+    for (const p of PLANNED.slice(1)) if (!serverSteps.some((s) => s.key === p.key)) shown.push({ ...p, state: "pending" });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Upload new tune</DialogTitle>
-          <DialogDescription>Upload a MusicXML score (.mxl or .xml). Nuggets and assemblies are built for you.</DialogDescription>
+          <DialogTitle>{showProgress ? `Building “${current?.title ?? title}”` : "Name your tune"}</DialogTitle>
+          <DialogDescription>{showProgress ? current?.filename ?? file?.name : file?.name}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
+
+        {!showProgress ? (
           <div className="space-y-1">
-            <Label htmlFor="tune-file">Score file</Label>
-            <Input id="tune-file" type="file" accept=".mxl,.xml,.musicxml" onChange={(e) => {
-              const f = e.target.files?.[0] ?? null; setFile(f);
-              if (f && !title) { const t = f.name.replace(/\.[^.]+$/, ""); setTitle(t); if (!keyTouched) setKey(toTuneKey(t)); }
-            }} />
+            <Label htmlFor="tune-title">Name</Label>
+            <Input id="tune-title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && key) handleBuild(); }} />
+            {exists && <p className="text-xs text-muted-foreground">A published tune already uses this name — publishing will update it.</p>}
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="tune-title">Title</Label>
-            <Input id="tune-title" value={title} onChange={(e) => { setTitle(e.target.value); if (!keyTouched) setKey(toTuneKey(e.target.value)); }} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="tune-key">Tune key</Label>
-            <Input id="tune-key" value={key} onChange={(e) => { setKeyTouched(true); setKey(toTuneKey(e.target.value)); }} />
-            {publishedKeys.includes(key) && <p className="text-xs text-muted-foreground">Publishing will update the existing tune "{key}".</p>}
-          </div>
-          {current?.status === "succeeded" && (
-            <div className="rounded-md border border-border p-3 text-sm">
-              Ready: {current.result?.nuggets?.length ?? 0} nuggets, {current.result?.assemblies?.length ?? 0} assemblies.
-            </div>
-          )}
-        </div>
+        ) : (
+          <ol className="space-y-3" aria-label="Build progress">
+            {shown.map((s, i) => (
+              <li key={`${s.key}-${i}`} className="flex gap-3">
+                <span className="mt-0.5">
+                  {s.state === "done" ? <Check className="h-4 w-4 text-primary" />
+                    : s.state === "running" ? <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    : s.state === "failed" ? <X className="h-4 w-4 text-destructive" />
+                    : <Circle className="h-4 w-4 text-muted-foreground/40" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className={`flex justify-between gap-2 text-sm ${s.state === "pending" ? "text-muted-foreground" : ""}`}>
+                    <span>{s.label}</span>
+                    {"startedAt" in s && s.key !== "upload" && <span className="tabular-nums text-xs text-muted-foreground">{elapsed(s, now)}s</span>}
+                  </div>
+                  {"detail" in s && s.detail && <p className={`text-xs ${s.state === "failed" ? "text-destructive" : "text-muted-foreground"}`}>{s.detail}</p>}
+                  {s.key === "plan" && s.state === "running" && <p className="text-xs text-muted-foreground">Usually 1–3 minutes</p>}
+                </div>
+              </li>
+            ))}
+            {current?.status === "failed" && !serverSteps.some((s) => s.state === "failed") && current.error && (
+              <li className="text-xs text-destructive">{current.error}</li>
+            )}
+            {current?.status === "succeeded" && (
+              <li className="rounded-md border border-border p-3 text-sm">
+                Ready: {current.result?.nuggets?.length ?? 0} nuggets, {current.result?.assemblies?.length ?? 0} assemblies.
+              </li>
+            )}
+          </ol>
+        )}
+
         <DialogFooter className="gap-2">
+          {!showProgress && <Button disabled={!file || !key} onClick={handleBuild}>Build</Button>}
+          {current?.status === "failed" && (
+            <Button variant="outline" onClick={() => startBuild({ action: "retry", jobId: current.id })}><RotateCw className="h-4 w-4" />Retry</Button>
+          )}
           {current?.status === "succeeded" && (
-            <Button variant="outline" disabled={busy} onClick={() => publish(current)}>
-              {step === "publishing" && <Loader2 className="h-4 w-4 animate-spin" />}Publish
+            <Button disabled={publishing} onClick={() => publish(current)}>
+              {publishing && <Loader2 className="h-4 w-4 animate-spin" />}Publish
             </Button>
           )}
-          <Button disabled={!file || !key || busy} onClick={handleBuild}>
-            {(step === "uploading" || step === "building") && <Loader2 className="h-4 w-4 animate-spin" />}
-            {step === "uploading" ? "Uploading…" : step === "building" ? "Building nuggets…" : "Build"}
-          </Button>
         </DialogFooter>
-        {!!jobs.data?.length && (
+
+        {!showProgress && !!jobs.data?.length && (
           <div className="space-y-1 border-t border-border pt-3">
             <p className="text-xs text-muted-foreground">Recent uploads</p>
             {jobs.data.map((j) => (
-              <div key={j.id} className="flex items-center justify-between gap-2 text-xs">
-                <button className="truncate text-left hover:underline" onClick={() => setActiveJob(j.id)}>
-                  {new Date(j.created_at).toLocaleString()} · {j.filename} → {j.tune_key}
-                </button>
-                <span className={j.status === "failed" ? "text-destructive" : "text-muted-foreground"} title={j.error ?? undefined}>
-                  {j.status}{j.error ? `: ${j.error.slice(0, 40)}` : ""}
-                </span>
-                {j.status === "failed" && (
-                  <Button size="icon" variant="ghost" className="h-6 w-6" disabled={busy} aria-label="Retry" onClick={() => runBuild({ action: "retry", jobId: j.id })}>
-                    <RotateCw className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
+              <button key={j.id} className="flex w-full justify-between gap-2 text-left text-xs hover:underline" onClick={() => setActiveJob(j.id)}>
+                <span className="truncate">{j.title ?? j.tune_key} · {new Date(j.created_at).toLocaleString()}</span>
+                <span className={j.status === "failed" ? "text-destructive" : "text-muted-foreground"}>{j.status}</span>
+              </button>
             ))}
           </div>
         )}
