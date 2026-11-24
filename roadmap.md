@@ -9,5 +9,5 @@
 - [x] Verify native logic where tooling permits and document Mac-only checks.
 - [x] Keep Quest for tune progression management and place web management screens under the burger menu’s Admin submenu.
 - [x] Restore Compose beside Tunes without changing its existing controls or behavior.
-- [ ] Compile and verify native playback on iPad (requires a Mac with Xcode; unavailable in this sandbox).- [ ] Add sign-in (email, Google, Lovable); owner-only data; admin-only management
-- [ ] Make edouardwautier@gmail.com admin and attach existing data to it
+- [ ] Compile and verify native playback on iPad (requires a Mac with Xcode; unavailable in this sandbox).- [x] Add sign-in (email, Google, Lovable); owner-only data; admin-only management
+- [x] Make edouardwautier@gmail.com admin and attach existing data to it
