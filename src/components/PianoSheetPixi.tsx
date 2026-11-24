@@ -44,12 +44,18 @@ function hexToInt(hex: string) {
 }
 
 /** Matches the rail's `color-mix(in srgb, var(--nc) 60%, hsl(var(--key-black)))` for black keys. */
-function mixWithKeyBlack(hex: string) {
-  const keyBlack = palettes[getReplayTheme()]["key-black"];
-  const a = hexToInt(hex), b = hexToInt(keyBlack);
+function mixHex(hex: string, other: string, t: number) {
+  const a = hexToInt(hex), b = hexToInt(other);
   const ch = (shift: number) =>
-    Math.round(((a >> shift) & 0xff) * 0.6 + ((b >> shift) & 0xff) * 0.4);
+    Math.round(((a >> shift) & 0xff) * t + ((b >> shift) & 0xff) * (1 - t));
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+function mixWithKeyBlack(hex: string) {
+  return mixHex(hex, palettes[getReplayTheme()]["key-black"], 0.6);
+}
+/** Matches the rail's `color-mix(in srgb, var(--nc) 92%, hsl(var(--background)))` for white keys. */
+function mixWithBackground(hex: string) {
+  return mixHex(hex, palettes[getReplayTheme()]["background"], 0.92);
 }
 
 function getNoteColorsFromMidi(midi: number) {
@@ -58,7 +64,7 @@ function getNoteColorsFromMidi(midi: number) {
   if (!colors) return DEFAULT_NOTE_COLORS;
   const isSharp = noteName.includes("#");
   return {
-    idle: isSharp ? mixWithKeyBlack(colors.idle) : hexToInt(colors.idle),
+    idle: isSharp ? mixWithKeyBlack(colors.idle) : mixWithBackground(colors.idle),
     active: isSharp ? mixWithKeyBlack(colors.active) : hexToInt(colors.active),
     focused: isSharp ? mixWithKeyBlack(colors.focused) : hexToInt(colors.focused),
   };
