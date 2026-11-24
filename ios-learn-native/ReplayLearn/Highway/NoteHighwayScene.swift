@@ -22,6 +22,10 @@ final class NoteHighwayScene: SKScene {
     let clock: HighwayClock
     /// Covered distance below the musical play point, independent of clock/scoring.
     var bottomOcclusion: CGFloat = 0 { didSet { if oldValue != bottomOcclusion { relayout() } } }
+    /// Raises the play point (and its accent bar) this far above the occluded bottom.
+    var hitLineInset: CGFloat = 40 { didSet { if oldValue != hitLineInset { relayout() } } }
+    /// Screen height of the musical play point: occluded bottom plus the inset.
+    private var playPoint: CGFloat { bottomOcclusion + hitLineInset }
     var bpm: Double = 90
     var beatsPerBar = 4
     var lookahead: Double = 6
@@ -68,7 +72,7 @@ final class NoteHighwayScene: SKScene {
             let label = SKLabelNode(fontNamed: "JetBrainsMono-Regular"); label.fontSize = 10; label.fontColor = muted; label.horizontalAlignmentMode = .left; label.zPosition = 2
             content.addChild(label); measureLabels.append(label)
         }
-        hitLine.strokeColor = accent; hitLine.lineWidth = 2; hitLine.zPosition = 9; addChild(hitLine)
+        hitLine.strokeColor = accent; hitLine.lineWidth = 2; hitLine.zPosition = 1.5; content.addChild(hitLine)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
     func load(sequence: NoteSequence?) {
@@ -109,11 +113,11 @@ final class NoteHighwayScene: SKScene {
         }
     }
     override func didChangeSize(_ oldSize: CGSize) { relayout() }
-    private var pixelsPerSecond: CGFloat { min(84, max(1, size.height - bottomOcclusion) / 4) * CGFloat(bpm / 60) }
+    private var pixelsPerSecond: CGFloat { min(84, max(1, size.height - playPoint) / 4) * CGFloat(bpm / 60) }
     private func relayout() {
         isPresentationReady = false
         guard !lanes.isEmpty else { return }
-        content.position.y = bottomOcclusion
+        content.position.y = playPoint
         let geometry = PianoGeometry(range: visibleRange, width: size.width, height: 300)
         let low = notes.map(\.pitch).min() ?? 48, high = notes.map(\.pitch).max() ?? 72
         for index in lanes.indices {
@@ -121,7 +125,7 @@ final class NoteHighwayScene: SKScene {
             lanes[index].isHidden = !visible; octaveLabels[index].isHidden = !visible || pitch % 12 != 0
             guard visible else { continue }
             let rect = geometry.keyRect(pitch), black = PianoGeometry.isBlack(pitch)
-            lanes[index].position = CGPoint(x: rect.minX, y: -bottomOcclusion); lanes[index].size = CGSize(width: rect.width, height: size.height)
+            lanes[index].position = CGPoint(x: rect.minX, y: -playPoint); lanes[index].size = CGSize(width: rect.width, height: size.height)
             lanes[index].color = black ? background : surface; lanes[index].alpha = (pitch < low || pitch > high) ? 0.3 : 0.85; lanes[index].zPosition = black ? 0.5 : 0
             octaveLabels[index].text = PianoGeometry.label(pitch); octaveLabels[index].position = CGPoint(x: rect.minX + 3, y: 14)
         }
@@ -133,7 +137,7 @@ final class NoteHighwayScene: SKScene {
             rings[i].path = CGPath(roundedRect: CGRect(origin: .zero, size: frame.size).insetBy(dx: -4, dy: -4), cornerWidth: 10, cornerHeight: 10, transform: nil)
         }
         cropMask.size = size
-        let path = CGMutablePath(); path.move(to: CGPoint(x: 0, y: bottomOcclusion + 1)); path.addLine(to: CGPoint(x: size.width, y: bottomOcclusion + 1)); hitLine.path = path
+        let path = CGMutablePath(); path.move(to: CGPoint(x: 0, y: 0)); path.addLine(to: CGPoint(x: size.width, y: 0)); hitLine.path = path
         update(0)
     }
     override func update(_ currentTime: TimeInterval) {
@@ -147,7 +151,7 @@ final class NoteHighwayScene: SKScene {
         for i in bars.indices {
             let beat = firstBeat + Double(i), y = CGFloat(beat*beatDuration-time)*pixelsPerSecond
             bars[i].position = CGPoint(x: size.width/2, y: y); bars[i].size = CGSize(width: size.width, height: Int(beat).isMultiple(of: beatsPerBar) ? 1.5 : 0.5)
-            bars[i].isHidden = y < 0 || y > size.height - bottomOcclusion
+            bars[i].isHidden = y < 0 || y > size.height - playPoint
             measureLabels[i].isHidden = bars[i].isHidden || !Int(beat).isMultiple(of: beatsPerBar)
             if !measureLabels[i].isHidden { let number = Int(beat)/beatsPerBar+1; if measureNumbers[i] != number { measureNumbers[i] = number; measureLabels[i].text = String(number) }; measureLabels[i].position = CGPoint(x: 6, y: y-14) }
         }
@@ -164,7 +168,7 @@ final class NoteHighwayScene: SKScene {
             let judgedActive = note.startTime <= time && note.endTime > time && (grades[i] == .perfect || grades[i] == .good)
             if soundingFlags[i] != judgedActive { soundingFlags[i] = judgedActive; soundingDirty = true }
             let frame = frames[i], y = CGFloat(note.startTime-time)*pixelsPerSecond
-            let visible = visibleRange.contains(note.pitch) && y + frame.height >= -bottomOcclusion && y <= size.height - bottomOcclusion
+            let visible = visibleRange.contains(note.pitch) && y + frame.height >= -playPoint && y <= size.height - playPoint
             pills[i].isHidden = !visible; labels[i].isHidden = true; rings[i].isHidden = true; beams[i].isHidden = true; sparks[i].isHidden = true
             let age = time-tagTimes[i]
             tags[i].isHidden = age < 0 || age > 0.75
