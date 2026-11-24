@@ -423,6 +423,7 @@ export type Database = {
           error: string | null
           filename: string
           id: string
+          progress: Json
           result: Json | null
           source_path: string
           status: string
@@ -436,6 +437,7 @@ export type Database = {
           error?: string | null
           filename: string
           id?: string
+          progress?: Json
           result?: Json | null
           source_path: string
           status?: string
@@ -449,6 +451,7 @@ export type Database = {
           error?: string | null
           filename?: string
           id?: string
+          progress?: Json
           result?: Json | null
           source_path?: string
           status?: string
