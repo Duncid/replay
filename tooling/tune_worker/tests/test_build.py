@@ -95,3 +95,10 @@ def test_grace_notes_do_not_leave_hanging_notes(tmp_path):
     notes = pretty_midi.PrettyMIDI(str(midi_path)).instruments[0].notes
     assert max(n.end - n.start for n in notes) <= 2.0 + 1e-6
     assert len(notes) == 3
+
+
+def test_same_pitch_overlap_is_clipped():
+    from tune_pipeline.midi_to_ns import _clip_overlapping_same_pitch
+    notes = [{"pitch": 84, "startTime": 0.0, "endTime": 77.0}, {"pitch": 84, "startTime": 1.5, "endTime": 2.0}, {"pitch": 60, "startTime": 0.5, "endTime": 3.0}]
+    out = _clip_overlapping_same_pitch(notes)
+    assert out[0]["endTime"] == 1.5 and out[2]["endTime"] == 3.0

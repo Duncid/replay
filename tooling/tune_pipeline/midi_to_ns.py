@@ -29,6 +29,22 @@ def _note_to_payload(note: pretty_midi.Note, instrument_index: int, program: int
     }
 
 
+def _clip_overlapping_same_pitch(notes: List[Note]) -> List[Note]:
+    """A key cannot sound twice at once: end each note at the next onset of the same pitch.
+
+    Guards against unmatched note-offs in MIDI files leaving a note hanging for a long time.
+    """
+    by_pitch: Dict[int, List[Note]] = {}
+    for n in notes:
+        by_pitch.setdefault(int(n["pitch"]), []).append(n)
+    for group in by_pitch.values():
+        group.sort(key=lambda n: n["startTime"])
+        for cur, nxt in zip(group, group[1:]):
+            if nxt["startTime"] > cur["startTime"] and cur["endTime"] > nxt["startTime"]:
+                cur["endTime"] = nxt["startTime"]
+    return notes
+
+
 def _empty_sequence() -> Dict[str, object]:
     return {
         "timeSignatures": [],
@@ -97,7 +113,7 @@ def _instrument_sequences(pm: pretty_midi.PrettyMIDI) -> List[Dict[str, object]]
         sequence = _empty_sequence()
         _add_global_metadata(pm, sequence)
 
-        sequence["notes"] = [
+        sequence["notes"] = _clip_overlapping_same_pitch([
             _note_to_payload(
                 note,
                 instrument_index=instrument_index,
@@ -105,7 +121,7 @@ def _instrument_sequences(pm: pretty_midi.PrettyMIDI) -> List[Dict[str, object]]
                 is_drum=instrument.is_drum,
             )
             for note in instrument.notes
-        ]
+        ])
         sequence["pitchBends"] = [
             {
                 "time": float(bend.time),
