@@ -1,3 +1,4 @@
+import { orderTunesByPosition } from "@/utils/tuneLibrary";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,8 +27,13 @@ export function startTuneUpload(qc: QueryClient, input: { file: File; tuneKey: s
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return fail("Please sign in again");
     // A new tune takes the last place in this account's list; an update keeps its place.
-    const { data: last } = await supabase.from("tune_list_positions").select("position").order("position", { ascending: false }).limit(1).maybeSingle();
-    await supabase.from("tune_list_positions").upsert({ tune_key: input.tuneKey, position: (last?.position ?? 0) + 1 }, { onConflict: "auth_user_id,tune_key", ignoreDuplicates: true });
+    // Save the order currently on screen first, so tunes that never got a saved place cannot jump behind the new one.
+    const { data: saved } = await supabase.from("tune_list_positions").select("tune_key, position");
+    const shown = (qc.getQueryData<{ tune_key: string }[]>(["published-tune-keys", "previews"]) ?? []).filter(t => t.tune_key !== input.tuneKey);
+    const { missing } = orderTunesByPosition(shown, new Map((saved ?? []).map(p => [p.tune_key, p.position])));
+    const last = Math.max(0, ...(saved ?? []).filter(p => p.tune_key !== input.tuneKey).map(p => p.position), ...missing.map(m => m.position));
+    const rows = [...missing, { tune_key: input.tuneKey, position: last + 1 }];
+    await supabase.from("tune_list_positions").upsert(rows, { onConflict: "auth_user_id,tune_key", ignoreDuplicates: true });
     const path = `${user.id}/${crypto.randomUUID()}/${input.file.name.replace(/[^\w.-]/g, "_")}`;
     const up = await supabase.storage.from("tune-sources").upload(path, input.file);
     if (up.error) return fail(up.error.message);
