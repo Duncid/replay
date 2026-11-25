@@ -64,6 +64,13 @@
       "when": 1795558835447,
       "tag": "0008_add_upload_job_composer",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795620539658,
+      "tag": "0009_scope_curriculum_exports_read",
+      "breakpoints": true
     }
   ]
 }
