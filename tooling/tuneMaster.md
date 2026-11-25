@@ -24,6 +24,7 @@ TOP-LEVEL JSON SHAPE (REQUIRED)
 {
 "schemaVersion": "teacher.v2",
 "title": "string",
+"form": { ... },
 "pipelineSettings": { ... },
 "nuggets": [ ... ],
 "assemblies": [ ... ],
@@ -38,6 +39,17 @@ TOP-LEVEL JSON SHAPE (REQUIRED)
 "teachingOrder": [ ... ],
 "assemblyOrder": [ ... ] // optional
 }
+
+FORM ANALYSIS (REQUIRED, DO THIS FIRST)
+Before cutting anything, analyze the musical form and return it as `form`:
+{
+"sections": [ { "id": "A", "label": "Main theme", "startMeasure": 5, "endMeasure": 20, "repeatOf": null } ],
+"phrases": [ { "section": "A", "startMeasure": 4, "startBeat": 4, "endMeasure": 8, "endBeat": 3.5, "pickup": true } ]
+}
+- Name sections (Intro, A, A repeat, B, Trio, Coda...). A repeated section sets `repeatOf` to the earlier section id.
+- List every phrase with its real start (including any pickup/lead-in before the bar line) and end.
+- Use melody shape, cadences, rests, long notes, harmonic arrivals and repeated material to find phrases.
+- Nugget and assembly boundaries MUST come from this analysis.
 
 SHARED CURRICULUM RULES (REQUIRED)
 
@@ -85,17 +97,22 @@ Create ONE chronological nugget timeline for the whole tune (not per instrument)
 - RH or LH may be silent/rest in a valid nugget window.
 - Nuggets should assemble back into the tune in order without ambiguity.
 
-Measure-first boundary principle (IMPORTANT)
+Phrase-first boundary principle (IMPORTANT)
 
-- Prefer measure boundaries as the default:
-  - startMeasure/startBeat should usually be at a measure downbeat (beat 1)
-  - endMeasure/endBeat should usually land at a measure end or clear cadence/rest
-- Allow mid-measure boundaries only when musically necessary (pickup, syncopation, cadential hold, clear sub-phrase).
+- Cut ONLY at phrase or sub-phrase boundaries from `form`. Never cut through the middle of a phrase or a melodic gesture just to keep sizes equal.
+- Do NOT cut mechanically every N bars. Uniform 2-bar slicing is wrong unless the phrases really are 2 bars.
+- Lead-ins / pickups: if a phrase starts before the bar line, the nugget starts on that pickup note (e.g. startMeasure 4, startBeat 4) and the previous nugget ends just before it. A pickup always belongs to the phrase it leads into, never to the previous phrase.
+- End a nugget at the phrase's arrival (cadence note, rest, long note), not at an arbitrary bar line.
 
-Sizing guidance (heuristics)
+Sizing guidance
 
-- Prefer 4–6 seconds per nugget (or closest measure-based equivalent).
-- Avoid 1–2 note nuggets unless the passage is sparse; otherwise merge with adjacent nuggets.
+- Size by musical phrase: usually 2–4 bars, sometimes 1 bar for a dense or tricky gesture, never by a seconds target.
+- Avoid 1–2 note nuggets unless the passage is sparse; otherwise merge with adjacent material of the same phrase.
+
+Repeats (IMPORTANT)
+
+- When a passage is an exact or near-exact repeat of an earlier nugget (repeat signs, written-out repeats, returning themes), still include it in the timeline (no gaps) but set `sameAs` to the earlier nugget id.
+- A nugget with `sameAs` must have the same boundaries relative to its phrase as the original, so the student practices it only once.
 
 nuggets[] MINIMAL schema (top-level):
 
@@ -106,17 +123,20 @@ nuggets[] MINIMAL schema (top-level):
   - startBeat: number
   - endMeasure: int
   - endBeat: number
-- dependsOn: array of nugget ids (can be empty)
+- label: REQUIRED short name, e.g. "Intro – descending octaves", "Main theme, phrase 1"
+- description: REQUIRED one sentence on what to practice (the musical idea or difficulty)
+- dependsOn: array of nugget ids this one builds on (variations, same rhythm or pattern, same figure transposed). Fill it whenever a nugget reuses earlier material; leave empty only for truly new material.
+- sameAs: nugget id of the earlier identical passage, or omit if new material
 
 Optional nugget fields (include ONLY if used by product):
 
-- label: short string
 - modes: array subset of ["RH", "LH", "HandsTogether"]
 
 NUGGET QUALITY RULES (SHARED)
 
 - Nuggets MUST be chronological and cover the whole tune timeline (no gaps).
-- Prefer phrase/measure boundaries (see Measure-first principle).
+- Boundaries follow phrases (see Phrase-first principle).
+- Every nugget has a label and description; labels of repeats say so (e.g. "Main theme, phrase 1 (repeat)").
 - Keep nugget count reasonable and avoid micro-fragments.
 
 ASSEMBLIES (REQUIRED, SHARED) — Growing musical sentences
@@ -173,6 +193,14 @@ CONSISTENCY RULES
 - motifOccurrences must reference valid motif ids in the same instrument plan.
 - assemblies[*].nuggetIds must reference valid shared nugget ids and be consecutive.
 - Shared nugget windows must be musically valid for both mapped hands (notes OR explicit silence are allowed per hand).
+
+FINAL SELF-CHECK (do this silently before answering)
+
+- `form` is present and every nugget boundary matches a phrase boundary in it.
+- No phrase is split in the middle; no nugget is cut mechanically by bar count.
+- Every pickup/lead-in sits at the start of the nugget of the phrase it leads into.
+- Every repeated passage has `sameAs`; `dependsOn` is filled for variations.
+- Every nugget has a label and description.
 
 FINAL OUTPUT RULE
 

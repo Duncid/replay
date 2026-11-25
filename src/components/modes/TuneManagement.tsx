@@ -77,6 +77,7 @@ import {
   type TuneMenuNuggetItem,
 } from "@/utils/tuneAssetBundler";
 import { useQueryClient } from "@tanstack/react-query";
+import { buildTuneOverview, type OverviewItem, type OverviewNote, type OverviewSource } from "@/utils/tuneOverview";
 import {
   Check,
   ChevronDown,
@@ -189,6 +190,10 @@ type TargetType = "full" | "nuggets" | "assemblies";
 type HandType = "full" | "left" | "right";
 
 type TuneManagementContextValue = {
+  showOverview: boolean;
+  setShowOverview: React.Dispatch<React.SetStateAction<boolean>>;
+  overviewItems: OverviewItem[];
+  isGlobalTune: boolean;
   selectedSource: TuneSource;
   setSelectedSource: React.Dispatch<React.SetStateAction<TuneSource>>;
   selectedTune: string;
@@ -293,6 +298,8 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
   const [selectedSource, setSelectedSource] = useState<TuneSource>("published");
   const [selectedTune, setSelectedTune] = useState<string>("");
   const [selectedTarget, setSelectedTarget] = useState<TargetType>("full");
+  // Overview (every nugget, assembly and the full tune, smallest first) is the default view.
+  const [showOverview, setShowOverview] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<HandType>("full");
   const [selectedInstParts, setSelectedInstParts] =
@@ -440,6 +447,45 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     () => assemblyMenuItems.map((item) => item.id),
     [assemblyMenuItems],
   );
+
+  const overviewItems = useMemo((): OverviewItem[] => {
+    if (!selectedTune) return [];
+    const notesOf = (seq: unknown): OverviewNote[] =>
+      ((seq as NoteSequence | null)?.notes ?? []).map((n) => ({
+        pitch: n.pitch, startTime: n.startTime ?? 0, endTime: n.endTime ?? 0,
+      }));
+    const sources: OverviewSource[] = [];
+    if (selectedSource === "published") {
+      if (!tuneAssets) return [];
+      const nuggets = new Map(((tuneAssets.nuggets as TuneNugget[] | null) ?? []).map((n) => [n.id, n]));
+      for (const item of nuggetMenuItems) {
+        const n = nuggets.get(item.id) as (TuneNugget & { sameAs?: string }) | undefined;
+        sources.push({ kind: "nugget", id: item.id, label: item.label, bars: item.subtitle, sameAs: n?.sameAs, notes: notesOf(n?.noteSequence) });
+      }
+      const assemblies = new Map(((tuneAssets.assemblies as TuneAssembly[] | null) ?? []).map((a) => [a.id, a]));
+      for (const item of assemblyMenuItems) {
+        const a = assemblies.get(item.id);
+        sources.push({ kind: "assembly", id: item.id, label: item.label, bars: item.subtitle, notes: notesOf(a?.noteSequence) });
+      }
+      sources.push({ kind: "full", id: "Full", label: "Full tune", notes: notesOf(tuneAssets.note_sequence) });
+    } else {
+      const local = (grouped: unknown, a: unknown, b: unknown) =>
+        isNoteSequence(grouped as NoteSequence | null) ? grouped : mergeNoteSequences(a as NoteSequence | null, b as NoteSequence | null);
+      for (const item of nuggetMenuItems) {
+        sources.push({ kind: "nugget", id: item.id, label: item.label, bars: item.subtitle, notes: notesOf(local(
+          getNuggetNs(selectedTune, item.id), getNuggetInst(selectedTune, item.id, "inst1"), getNuggetInst(selectedTune, item.id, "inst2"))) });
+      }
+      for (const item of assemblyMenuItems) {
+        sources.push({ kind: "assembly", id: item.id, label: item.label, bars: item.subtitle, notes: notesOf(local(
+          getAssemblyNs(selectedTune, item.id), getAssemblyInst(selectedTune, item.id, "inst1"), getAssemblyInst(selectedTune, item.id, "inst2"))) });
+      }
+      sources.push({ kind: "full", id: "Full", label: "Full tune", notes: notesOf(local(
+        getTuneNs(selectedTune), getTuneInst1(selectedTune), getTuneInst2(selectedTune))) });
+    }
+    return buildTuneOverview(sources);
+  }, [assemblyMenuItems, nuggetMenuItems, selectedSource, selectedTune, tuneAssets]);
+
+  const isGlobalTune = tuneList?.find((t) => t.tune_key === selectedTune)?.is_global ?? false;
 
   // Helper functions for dropdown (for published tunes from list)
   const getNuggetIdsForTune = useCallback(
@@ -849,6 +895,7 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
   }, [selectedTune]);
 
   const targetLabel = useMemo(() => {
+    if (showOverview) return "Overview";
     if (!selectedItemId && selectedTarget !== "full") {
       return selectedTarget.charAt(0).toUpperCase() + selectedTarget.slice(1);
     }
@@ -881,6 +928,7 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     selectedInstParts,
     selectedItemId,
     selectedTarget,
+    showOverview,
   ]);
 
   // Selection handler
@@ -1042,6 +1090,10 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
   ]);
 
   return {
+    showOverview,
+    setShowOverview,
+    overviewItems,
+    isGlobalTune,
     selectedSource,
     setSelectedSource,
     selectedTune,
@@ -1105,8 +1157,14 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
   };
 }
 
-export function TuneManagementProvider({ children, active }: { children: ReactNode; active: boolean }) {
+export function TuneManagementProvider({ children, active, focusRequest }: { children: ReactNode; active: boolean; focusRequest?: { tuneKey: string; nonce: number } | null }) {
   const value = useTuneManagementState(active);
+  const { selectTune, setShowOverview } = value;
+  useEffect(() => {
+    if (!focusRequest) return;
+    selectTune("published", focusRequest.tuneKey);
+    setShowOverview(true);
+  }, [focusRequest, selectTune, setShowOverview]);
   return (
     <TuneManagementContext.Provider value={value}>
       {children}
@@ -1122,6 +1180,7 @@ export const TuneManagement = ({
   expectedNotesRegistrationActive = true,
 }: TuneManagementProps) => {
   const {
+    showOverview,
     selectedSource,
     selectedTune,
     selectedTarget,
@@ -1442,8 +1501,9 @@ export const TuneManagement = ({
 
   return (
     <div className="w-full h-full flex flex-col">
+      {showOverview && <TuneOverview />}
       {/* Top section: Full XML */}
-      <div className="w-full shrink-0">
+      <div className={showOverview ? "hidden" : "w-full shrink-0"}>
         {/* Full XML — single horizontal line, scrollable */}
         <div
           ref={osmdScrollRef}
@@ -1474,7 +1534,7 @@ export const TuneManagement = ({
       {/* Bottom section: full width interactive view */}
       <div
         ref={attachPixiContainer}
-        className="w-full flex-1 min-h-0 overflow-hidden"
+        className={showOverview ? "hidden" : "w-full flex-1 min-h-0 overflow-hidden"}
       >
         {pixiSize.width > 0 && pixiSize.height > 0 && (
           <>
@@ -1782,16 +1842,19 @@ export function TuneManagementActionBar() {
     nuggetMenuItems,
     assemblyMenuItems,
     getHandAvailability,
+    showOverview,
+    setShowOverview,
   } = useTuneManagementContext();
 
   const selectTarget = useCallback(
     (target: TargetType, itemId: string, hand: HandType) => {
+      setShowOverview(false);
       setSelectedTarget(target);
       setSelectedItemId(itemId);
       setSelectedHand(hand);
       setSelectedInstParts("both");
     },
-    [setSelectedHand, setSelectedInstParts, setSelectedItemId, setSelectedTarget],
+    [setSelectedHand, setSelectedInstParts, setSelectedItemId, setSelectedTarget, setShowOverview],
   );
 
   const tracksLabel = useMemo(() => {
@@ -1894,9 +1957,14 @@ export function TuneManagementActionBar() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="bg-popover">
+          <DropdownMenuItem onClick={() => setShowOverview(true)}>
+            <span className="flex-1">Overview</span>
+            {showOverview && <Check className="h-4 w-4 ml-2" />}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => selectTarget("full", "", "full")}>
             <span className="flex-1">Full</span>
-            {selectedTarget === "full" && selectedHand === "full" && (
+            {!showOverview && selectedTarget === "full" && selectedHand === "full" && (
               <Check className="h-4 w-4 ml-2" />
             )}
           </DropdownMenuItem>
@@ -2201,5 +2269,94 @@ function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
       {isGlobal ? <Lock /> : <Globe />}
       {isGlobal ? "Make account-only" : "Make global"}
     </DropdownMenuItem>
+  );
+}
+
+function OverviewRoll({ item }: { item: OverviewItem }) {
+  if (!item.notes.length) return <div className="h-12 w-full rounded bg-muted" />;
+  const t0 = Math.min(...item.notes.map((n) => n.startTime));
+  const span = Math.max(item.duration, 0.001);
+  const lo = Math.min(...item.notes.map((n) => n.pitch)) - 1;
+  const hi = Math.max(...item.notes.map((n) => n.pitch)) + 1;
+  return (
+    <svg viewBox="0 0 1000 100" preserveAspectRatio="none" className="h-12 w-full rounded bg-muted" aria-hidden>
+      {item.notes.map((n, i) => (
+        <rect key={i} x={((n.startTime - t0) / span) * 1000} width={Math.max(((n.endTime - n.startTime) / span) * 1000 - 1, 2)}
+          y={((hi - n.pitch) / (hi - lo)) * 100 - 3} height={6} className="fill-primary" />
+      ))}
+    </svg>
+  );
+}
+
+/** Debug review: every nugget, assembly and the full tune in one list, smallest first, with duplicates flagged. */
+function TuneOverview() {
+  const {
+    overviewItems, selectedSource, selectedTune, isLoadingAssets, isGlobalTune,
+    setShowOverview, setSelectedTarget, setSelectedItemId, setSelectedHand, setShowPublishDialog,
+  } = useTuneManagementContext();
+  const queryClient = useQueryClient();
+  const [publishing, setPublishing] = useState(false);
+  const open = (item: OverviewItem) => {
+    setShowOverview(false);
+    setSelectedTarget(item.kind === "full" ? "full" : item.kind === "nugget" ? "nuggets" : "assemblies");
+    setSelectedItemId(item.kind === "full" ? "" : item.id);
+    setSelectedHand("full");
+  };
+  const publish = async () => {
+    if (selectedSource === "local") { setShowPublishDialog(true); return; }
+    setPublishing(true);
+    const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "set-global", tuneKey: selectedTune, isGlobal: true } });
+    setPublishing(false);
+    if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? "Publish failed"); return; }
+    sonnerToast.success(`"${selectedTune}" is now published for everyone`);
+    queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+  };
+  const alreadyPublished = selectedSource === "published" && isGlobalTune;
+  const duplicates = overviewItems.filter((i) => i.duplicateOf).length;
+  return (
+    <div className="w-full h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between gap-4 px-4 py-3 shrink-0">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold truncate">{selectedTune}</h2>
+          <p className="text-sm text-muted-foreground">
+            {overviewItems.length} items, smallest first{duplicates ? ` · ${duplicates} duplicate${duplicates > 1 ? "s" : ""}` : ""}
+          </p>
+        </div>
+        <Button onClick={publish} disabled={publishing || alreadyPublished || !selectedTune}>
+          <Upload className="h-4 w-4 mr-1" />
+          {alreadyPublished ? "Published" : publishing ? "Publishing..." : "Publish"}
+        </Button>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6" data-testid="tune-overview">
+        {selectedSource === "published" && isLoadingAssets ? (
+          <p className="text-muted-foreground">Loading...</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {overviewItems.map((item) => (
+              <li key={`${item.kind}-${item.id}`}>
+                <button type="button" onClick={() => open(item)}
+                  className={`w-full text-left rounded-lg border p-3 flex flex-col gap-2 hover:bg-accent ${item.duplicateOf ? "border-destructive" : "border-border"}`}>
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate">
+                      <span className="font-mono text-xs text-muted-foreground mr-2">{item.id}</span>
+                      <span className="font-medium">{item.label}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {[item.bars, `${item.noteCount} notes`, `${item.duration.toFixed(1)}s`].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                  {(item.duplicateOf || item.sameAs) && (
+                    <span className="text-xs text-destructive">
+                      {item.duplicateOf ? `Duplicate of ${item.duplicateOf}` : `Marked as repeat of ${item.sameAs}`}
+                    </span>
+                  )}
+                  <OverviewRoll item={item} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }

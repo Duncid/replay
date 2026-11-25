@@ -218,6 +218,7 @@ const Index = () => {
     40,
   );
   // Debug mode
+  const [tuneReviewRequest, setTuneReviewRequest] = useState<{ tuneKey: string; nonce: number } | null>(null);
   const [debugMode, setDebugMode] = useLocalStorage<boolean>(
     STORAGE_KEYS.DEBUG_MODE,
     false,
@@ -1462,6 +1463,10 @@ const Index = () => {
     notationPreference: musicNotation,
     model: selectedModel,
     debugMode,
+    onReviewTune: (tuneKey: string) => {
+      setTuneReviewRequest({ tuneKey, nonce: Date.now() });
+      handleModeChange("lab");
+    },
     localUserId: currentUserId,
     profileLoading,
     // Metronome control props
@@ -2111,7 +2116,7 @@ const Index = () => {
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
-    <HighwayProvider fullKeyboard={false}><TuneManagementProvider active={activeMode === "lab"}>
+    <HighwayProvider fullKeyboard={false}><TuneManagementProvider active={activeMode === "lab"} focusRequest={tuneReviewRequest}>
       <div data-highway-surface className="replay-workspace relative isolate h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
         <Tabs
           value={activeMode}

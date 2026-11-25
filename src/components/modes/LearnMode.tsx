@@ -40,6 +40,8 @@ export interface LearnModeProps {
   notationPreference?: "auto" | "abc" | "solfege";
   model: string;
   debugMode: boolean;
+  /** Debug mode: tapping a tune opens its review screen in the tune manager instead of practice. */
+  onReviewTune?: (tuneKey: string) => void;
   localUserId?: string | null;
   profileLoading?: boolean;
   onRegisterNoteHandler?: (handler: ((noteKey: string) => void) | null) => void;
@@ -124,6 +126,7 @@ export function LearnMode(props: LearnModeProps) {
       onTuneDebugMenuChange={handleTuneDebugMenuChange}
     />
   ) : <TuneLibrary profileLoading={props.profileLoading} localUserId={props.localUserId} onSelectTune={key => {
+    if (props.debugMode && props.onReviewTune) { props.onReviewTune(key); return; }
     onClearRecording();
     setActiveTuneKey(key);
   }} />;
