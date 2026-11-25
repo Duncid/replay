@@ -267,6 +267,8 @@ export type Database = {
       }
       local_users: {
         Row: {
+          avatar_seed: string | null
+          avatar_color: string | null
           auth_user_id: string | null
           created_at: string | null
           id: string
@@ -274,6 +276,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          avatar_seed?: string | null
+          avatar_color?: string | null
           auth_user_id?: string | null
           created_at?: string | null
           id?: string
@@ -281,6 +285,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          avatar_seed?: string | null
+          avatar_color?: string | null
           auth_user_id?: string | null
           created_at?: string | null
           id?: string

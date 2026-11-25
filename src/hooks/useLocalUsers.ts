@@ -2,15 +2,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { accountStorageKey } from "@/utils/accountStorage";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
+import type { PlayerAvatarValue } from "@/utils/playerAvatar";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const CURRENT_USER_EVENT = "replay:current-user-change";
+const PLAYERS_CHANGED_EVENT = "replay:players-changed";
 
 export interface LocalUser {
   id: string;
   name: string;
   created_at: string;
   updated_at: string;
+  avatar_seed?: string | null;
+  avatar_color?: string | null;
 }
 
 export function useLocalUsers() {
@@ -88,24 +92,56 @@ export function useLocalUsers() {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    const handlePlayersChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ accountId: string }>).detail;
+      if (detail?.accountId === user?.id) void fetchUsers();
+    };
+    window.addEventListener(PLAYERS_CHANGED_EVENT, handlePlayersChange);
+    return () => window.removeEventListener(PLAYERS_CHANGED_EVENT, handlePlayersChange);
+  }, [fetchUsers, user?.id]);
+
+  const updateUser = useCallback(async (id: string, name: string, avatar: PlayerAvatarValue): Promise<void> => {
+    if (!user || !name.trim()) throw new Error("A player name is required");
+    const { data, error } = await supabase.from("local_users")
+      .update({ name: name.trim(), avatar_seed: avatar.seed, avatar_color: avatar.color }).eq("id", id).eq("auth_user_id", user.id)
+      .select().single();
+    if (error) throw error;
+    ++requestVersion.current;
+    setUsers(previous => previous.map(player => player.id === id ? data : player));
+    window.dispatchEvent(new CustomEvent(PLAYERS_CHANGED_EVENT, { detail: { accountId: user.id } }));
+  }, [user]);
+
+  const deleteUser = useCallback(async (id: string): Promise<void> => {
+    if (!user) throw new Error("Sign in to delete a player");
+    const { error } = await supabase.from("local_users").delete()
+      .eq("id", id).eq("auth_user_id", user.id).select("id").single();
+    if (error) throw error;
+    ++requestVersion.current;
+    setUsers(previous => previous.filter(player => player.id !== id));
+    if (currentUserId === id) setCurrentUserId(users.find(player => player.id !== id)?.id ?? null);
+    window.dispatchEvent(new CustomEvent(PLAYERS_CHANGED_EVENT, { detail: { accountId: user.id } }));
+  }, [currentUserId, setCurrentUserId, user, users]);
+
   const createUser = useCallback(
-    async (name: string): Promise<LocalUser | null> => {
+    async (name: string, avatar: PlayerAvatarValue): Promise<LocalUser> => {
+      if (!user || !name.trim()) throw new Error("A player name and signed-in account are required");
       const { data, error } = await supabase
         .from("local_users")
-        .insert({ name: name.trim() })
+        .insert({ name: name.trim(), auth_user_id: user.id, avatar_seed: avatar.seed, avatar_color: avatar.color })
         .select()
         .single();
 
       if (error) {
         console.error("Failed to create user:", error);
-        return null;
+        throw error;
       }
 
       setUsers((prev) => [...prev, data]);
       setCurrentUserId(data.id);
       return data;
     },
-    [setCurrentUserId]
+    [setCurrentUserId, user]
   );
 
   const switchUser = useCallback(
@@ -127,6 +163,8 @@ export function useLocalUsers() {
     currentUserId,
     isLoading,
     createUser,
+    updateUser,
+    deleteUser,
     switchUser,
     refetch: fetchUsers,
   };
