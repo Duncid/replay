@@ -2317,10 +2317,12 @@ function TuneOverview() {
           <p className="text-muted-foreground">Loading...</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {overviewItems.map((item) => (
+            {(() => {
+              const maxDuration = Math.max(1, ...overviewItems.map((item) => item.duration));
+              return overviewItems.map((item) => (
               <li key={`${item.kind}-${item.id}`}>
                 <button type="button" onClick={() => open(item)}
-                  className={`w-full text-left rounded-lg border p-3 flex flex-col gap-2 hover:bg-accent ${item.duplicateOf ? "border-destructive" : "border-border"}`}>
+                  className={`w-full text-left rounded-lg border p-3 flex flex-col gap-2 ${item.duplicateOf ? "border-destructive" : "border-border"}`}>
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="min-w-0 truncate">
                       <span className="font-mono text-xs text-muted-foreground mr-2">{item.id}</span>
@@ -2335,10 +2337,13 @@ function TuneOverview() {
                       {item.duplicateOf ? `Duplicate of ${item.duplicateOf}` : `Marked as repeat of ${item.sameAs}`}
                     </span>
                   )}
-                  <TuneThumbnail preview={{ notes: item.notes, noteCount: item.noteCount, duration: item.duration }} />
+                  <div style={{ width: `${Math.max(5, (item.duration / maxDuration) * 100)}%` }}>
+                    <TuneThumbnail preview={{ notes: item.notes, noteCount: item.noteCount, duration: item.duration }} />
+                  </div>
                 </button>
               </li>
-            ))}
+              ));
+            })()}
           </ul>
         )}
       </div>
