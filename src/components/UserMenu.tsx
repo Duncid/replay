@@ -21,7 +21,7 @@ import {
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
 import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
 import { TuneUploadDialog } from "@/components/TuneUploadDialog";
-import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut, Upload, Pencil } from "lucide-react";
+import { Check, Globe, UserRound, UserPlus, GitBranch, Music2, LogOut, Upload, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useRef, useState } from "react";
@@ -89,11 +89,13 @@ export function UserMenu({
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            size="sm"
-            className="justify-between"
+            size="icon"
+            className="rounded-full"
             aria-label={t("userMenu.menuLabel")}
           >
-            <Menu className="h-4 w-4" strokeWidth={3} />
+            {currentUser
+              ? <PlayerAvatar avatar={getPlayerAvatar(currentUser)} />
+              : <UserRound className="h-4 w-4" />}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56 bg-popover">
@@ -109,14 +111,14 @@ export function UserMenu({
             }}
           >
             {users.map((user: LocalUser) => (
-              <div key={user.id} className="flex items-center gap-1">
-                <DropdownMenuRadioItem value={user.id} className="min-w-0 flex-1 gap-2">
+              <div key={user.id} className="group/player flex items-center gap-1">
+                <DropdownMenuRadioItem value={user.id} showIndicator={false} className="min-w-0 flex-1 gap-2">
                   <PlayerAvatar avatar={getPlayerAvatar(user)} />
                   <span className="truncate">{user.name}</span>
                 </DropdownMenuRadioItem>
                 <DropdownMenuItem
                   aria-label={t("userMenu.editPlayerName", { name: user.name })}
-                  className="shrink-0 p-2 text-muted-foreground"
+                  className="shrink-0 p-2 text-muted-foreground [@media(hover:hover)]:opacity-0 group-hover/player:opacity-100 group-has-[:focus-visible]/player:opacity-100"
                   onSelect={() => setEditingPlayer(user)}
                 >
                   <Pencil className="h-4 w-4" />
@@ -126,7 +128,7 @@ export function UserMenu({
           </DropdownMenuRadioGroup>
 
           {/* New User */}
-          <DropdownMenuItem className="mt-1 bg-secondary text-secondary-foreground focus:bg-secondary/80" onSelect={() => setNewUserDialogOpen(true)}>
+          <DropdownMenuItem className="mt-1 text-muted-foreground" onSelect={() => setNewUserDialogOpen(true)}>
             <UserPlus className="h-4 w-4" />
             {t("userMenu.newUser")}
           </DropdownMenuItem>

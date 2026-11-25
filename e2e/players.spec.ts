@@ -69,7 +69,7 @@ test('rename is explicit, persisted, and does not select the edited player', asy
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await expect(page.getByRole('menuitemradio', { name: 'Samuel', exact: true })).toBeVisible();
   await expect(page.getByRole('menuitemradio', { name: 'Alex', exact: true })).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('menuitem', { name: 'New player', exact: true })).toHaveClass(/bg-secondary/);
+  await expect(page.getByRole('menuitem', { name: 'New player', exact: true })).toHaveClass(/text-muted-foreground/);
   expect(writes).toEqual([{ method: 'PATCH', id: 'eq.' + secondId, owner: 'eq.' + testAccount, body: expect.objectContaining({ name: 'Samuel', avatar_seed: secondId, avatar_color: expect.any(String) }) }]);
 });
 
@@ -123,9 +123,20 @@ test('failed writes keep the modal open and can be retried', async ({ page }) =>
 test('edit action is keyboard accessible without selecting the player', async ({ page }) => {
   await mockPlayers(page);
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  const editSam = page.getByRole('menuitem', { name: 'Edit Sam', exact: true });
+  if (await page.evaluate(() => matchMedia('(hover: hover)').matches)) {
+    await expect(editSam).toHaveCSS('opacity', '0');
+    await page.getByRole('menuitemradio', { name: 'Sam', exact: true }).hover();
+    await expect(editSam).toHaveCSS('opacity', '1');
+    await page.getByText('Player', { exact: true }).hover();
+    await expect(editSam).toHaveCSS('opacity', '0');
+  } else {
+    await expect(editSam).toHaveCSS('opacity', '1');
+  }
   await page.getByRole('menuitemradio', { name: 'Sam', exact: true }).focus();
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitem', { name: 'Edit Sam', exact: true })).toBeFocused();
+  await expect(editSam).toHaveCSS('opacity', '1');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'Edit player' })).toBeVisible();
   await expect(page.getByLabel('Name', { exact: true })).toBeFocused();
@@ -135,22 +146,25 @@ test('edit action is keyboard accessible without selecting the player', async ({
 test('character and color change independently, omit F, and persist after reload', async ({ page }, testInfo) => {
   const { writes } = await mockPlayers(page);
   const dialog = await edit(page, 'Sam');
-  const preview = dialog.getByRole('img', { name: 'Selected avatar', exact: true });
-  const colors = dialog.getByRole('group', { name: 'Color', exact: true });
-  await expect(colors.getByRole('button')).toHaveCount(6);
-  await expect(colors.getByRole('button', { name: 'Color F', exact: true })).toHaveCount(0);
+  const preview = dialog.getByRole('combobox', { name: 'Character', exact: true }).locator('img');
+  await expect(dialog.getByRole('combobox')).toHaveCount(2);
+  await expect(dialog.getByRole('img', { name: 'Selected avatar', exact: true })).toHaveCount(0);
+  await dialog.getByRole('combobox', { name: 'Color', exact: true }).click();
+  await expect(page.getByRole('option')).toHaveCount(6);
+  await expect(page.getByRole('option', { name: 'F', exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
   const original = await preview.getAttribute('src');
-  await dialog.getByRole('button', { name: 'Character 2', exact: true }).click();
+  await dialog.getByRole('combobox', { name: 'Character', exact: true }).click();
+  await page.getByRole('option', { name: 'Character 2', exact: true }).click();
   const changedCharacter = await preview.getAttribute('src');
   expect(changedCharacter).not.toBe(original);
-  await dialog.getByRole('button', { name: 'Color B', exact: true }).click();
-  await expect(dialog.getByRole('button', { name: 'Character 2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('combobox', { name: 'Color', exact: true }).click();
+  await page.getByRole('option', { name: 'B', exact: true }).click();
+  await expect(dialog.getByRole('combobox', { name: 'Character', exact: true })).toContainText('Character 2');
   await dialog.screenshot({ path: testInfo.outputPath('avatar-picker.png') });
   const chosen = await preview.getAttribute('src');
   expect(decodeURIComponent(chosen!)).toContain('#a66bff');
-  await dialog.getByRole('button', { name: 'Shuffle', exact: true }).click();
-  await expect(preview).toHaveAttribute('src', chosen!);
-  await expect(dialog.getByRole('button', { name: 'Color B', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByRole('combobox', { name: 'Color', exact: true })).toContainText('B');
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog).not.toBeVisible();
   expect(writes[0].body).toMatchObject({ name: 'Sam', avatar_color: 'B', avatar_seed: expect.any(String) });
@@ -165,10 +179,12 @@ test('character and color change independently, omit F, and persist after reload
 test('cancel discards avatar changes', async ({ page }) => {
   const { writes } = await mockPlayers(page);
   const dialog = await edit(page, 'Alex');
-  const preview = dialog.getByRole('img', { name: 'Selected avatar', exact: true });
+  const preview = dialog.getByRole('combobox', { name: 'Character', exact: true }).locator('img');
   const original = await preview.getAttribute('src');
-  await dialog.getByRole('button', { name: 'Character 2', exact: true }).click();
-  await dialog.getByRole('button', { name: 'Color E', exact: true }).click();
+  await dialog.getByRole('combobox', { name: 'Character', exact: true }).click();
+  await page.getByRole('option', { name: 'Character 2', exact: true }).click();
+  await dialog.getByRole('combobox', { name: 'Color', exact: true }).click();
+  await page.getByRole('option', { name: 'E', exact: true }).click();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await edit(page, 'Alex');
   await expect(preview).toHaveAttribute('src', original!);
@@ -181,13 +197,15 @@ test('new player saves the selected avatar and retains choices after a failed re
   await page.getByRole('menuitem', { name: 'New player', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'New player', exact: true });
   await dialog.getByLabel('Name', { exact: true }).fill('Jo');
-  await dialog.getByRole('button', { name: 'Character 3', exact: true }).click();
-  await dialog.getByRole('button', { name: 'Color C', exact: true }).click();
-  const chosen = await dialog.getByRole('img', { name: 'Selected avatar', exact: true }).getAttribute('src');
+  await dialog.getByRole('combobox', { name: 'Character', exact: true }).click();
+  await page.getByRole('option', { name: 'Character 3', exact: true }).click();
+  await dialog.getByRole('combobox', { name: 'Color', exact: true }).click();
+  await page.getByRole('option', { name: 'C', exact: true }).click();
+  const chosen = await dialog.getByRole('combobox', { name: 'Character', exact: true }).locator('img').getAttribute('src');
   failures.create = true;
   await dialog.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('Could not create');
-  await expect(dialog.getByRole('img', { name: 'Selected avatar', exact: true })).toHaveAttribute('src', chosen!);
+  await expect(dialog.getByRole('combobox', { name: 'Character', exact: true }).locator('img')).toHaveAttribute('src', chosen!);
   failures.create = false;
   await dialog.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(dialog).not.toBeVisible();

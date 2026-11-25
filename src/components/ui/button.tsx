@@ -12,7 +12,7 @@ const buttonVariants = cva(
         default:
           "border border-input bg-primary text-primary-foreground hover:shadow-[var(--glow-user)]",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-destructive text-white hover:bg-destructive/90",
         outline:
           "border border-input bg-card hover:border-primary hover:text-primary",
         secondary:
