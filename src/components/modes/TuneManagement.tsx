@@ -78,6 +78,7 @@ import {
 } from "@/utils/tuneAssetBundler";
 import { useQueryClient } from "@tanstack/react-query";
 import { buildTuneOverview, type OverviewItem, type OverviewNote, type OverviewSource } from "@/utils/tuneOverview";
+import { TuneThumbnail } from "@/components/TuneThumbnail";
 import {
   Check,
   ChevronDown,
@@ -2272,22 +2273,6 @@ function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
   );
 }
 
-function OverviewRoll({ item }: { item: OverviewItem }) {
-  if (!item.notes.length) return <div className="h-12 w-full rounded bg-muted" />;
-  const t0 = Math.min(...item.notes.map((n) => n.startTime));
-  const span = Math.max(item.duration, 0.001);
-  const lo = Math.min(...item.notes.map((n) => n.pitch)) - 1;
-  const hi = Math.max(...item.notes.map((n) => n.pitch)) + 1;
-  return (
-    <svg viewBox="0 0 1000 100" preserveAspectRatio="none" className="h-12 w-full rounded bg-muted" aria-hidden>
-      {item.notes.map((n, i) => (
-        <rect key={i} x={((n.startTime - t0) / span) * 1000} width={Math.max(((n.endTime - n.startTime) / span) * 1000 - 1, 2)}
-          y={((hi - n.pitch) / (hi - lo)) * 100 - 3} height={6} className="fill-primary" />
-      ))}
-    </svg>
-  );
-}
-
 /** Debug review: every nugget, assembly and the full tune in one list, smallest first, with duplicates flagged. */
 function TuneOverview() {
   const {
@@ -2350,7 +2335,7 @@ function TuneOverview() {
                       {item.duplicateOf ? `Duplicate of ${item.duplicateOf}` : `Marked as repeat of ${item.sameAs}`}
                     </span>
                   )}
-                  <OverviewRoll item={item} />
+                  <TuneThumbnail preview={{ notes: item.notes, noteCount: item.noteCount, duration: item.duration }} />
                 </button>
               </li>
             ))}
