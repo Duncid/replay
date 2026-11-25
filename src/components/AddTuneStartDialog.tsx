@@ -10,6 +10,7 @@ interface ScoreSourceLink {
 interface ScoreSource {
   name: string;
   home: string;
+  logo: string;
   /** Why this source is worth a look, in one line. */
   role: string;
   links: ScoreSourceLink[];
@@ -21,6 +22,7 @@ export const SCORE_SOURCES: ScoreSource[] = [
   {
     name: "Noctave",
     home: "https://noctavepiano.com/en/",
+    logo: "/logos/noctave.jpg",
     role: "Best for an initial curated catalogue",
     links: [
       { label: "Beginner piano scores", href: "https://noctavepiano.com/en/sheet-music/#band-easy" },
@@ -31,6 +33,7 @@ export const SCORE_SOURCES: ScoreSource[] = [
   {
     name: "MuseScore",
     home: "https://musescore.com/",
+    logo: "/logos/musescore.png",
     role: "Best for musical diversity",
     links: [
       { label: "Beginner piano, free downloads", href: "https://musescore.com/sheetmusic/beginner/piano" },
@@ -41,6 +44,7 @@ export const SCORE_SOURCES: ScoreSource[] = [
   {
     name: "OpenSongs",
     home: "https://be.creativeranges.org/library/sheets",
+    logo: "/logos/opensongs.jpg",
     role: "Interesting for traditional, folk and gospel music",
     links: [
       { label: "Example: When the Saints Go Marching In", href: "https://be.creativeranges.org/library/sheets/when-the-saints-go-marching-in-opensongs" },
@@ -53,7 +57,7 @@ export const SCORE_SOURCES: ScoreSource[] = [
 export function AddTuneStartDialog({ open, onOpenChange, onPickFile }: { open: boolean; onOpenChange: (open: boolean) => void; onPickFile: () => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Add a tune</DialogTitle>
           <DialogDescription>Bring a piano score and we&rsquo;ll turn it into a practice tune.</DialogDescription>
@@ -71,29 +75,28 @@ export function AddTuneStartDialog({ open, onOpenChange, onPickFile }: { open: b
 
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">No file yet?</h3>
-            <div className="divide-y divide-border">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {SCORE_SOURCES.map((source) => (
-                <div key={source.name} className="space-y-1.5 py-3 first:pt-0 last:pb-0">
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <a href={source.home} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm font-semibold underline underline-offset-4 hover:text-primary">
-                      {source.name}
-                      <ExternalLink className="size-3" aria-hidden="true" />
-                    </a>
-                    <span className="text-xs text-muted-foreground">{source.role}</span>
-                  </div>
-                  <ul className="space-y-1">
+                <div key={source.name} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+                  <a href={source.home} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg transition-colors hover:text-primary">
+                    <img src={source.logo} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{source.name}</span>
+                      <span className="block text-xs leading-snug text-muted-foreground">{source.role}</span>
+                    </span>
+                  </a>
+                  <div className="flex flex-col gap-1.5">
                     {source.links.map((link) => (
-                      <li key={link.href}>
-                        <a href={link.href} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm underline underline-offset-4 hover:text-primary">
+                      <Button key={link.href} asChild variant="secondary" size="sm" className="h-auto justify-between whitespace-normal py-1.5 text-left text-xs">
+                        <a href={link.href} target="_blank" rel="noopener noreferrer">
                           {link.label}
-                          <ExternalLink className="size-3" aria-hidden="true" />
+                          <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
                         </a>
-                      </li>
+                      </Button>
                     ))}
-                  </ul>
-                  <p className="text-xs text-muted-foreground">{source.detail}</p>
+                  </div>
+                  <p className="mt-auto text-xs text-muted-foreground">{source.detail}</p>
                 </div>
               ))}
             </div>
