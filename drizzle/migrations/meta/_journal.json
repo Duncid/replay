@@ -71,6 +71,13 @@
       "when": 1795620539658,
       "tag": "0009_scope_curriculum_exports_read",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795621415996,
+      "tag": "0010_scope_curriculum_reads_to_published",
+      "breakpoints": true
     }
   ]
 }
