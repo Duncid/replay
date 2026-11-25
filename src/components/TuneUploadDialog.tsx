@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Circle, Loader2, RotateCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { readMusicXmlMetadata } from "@/utils/musicXmlMetadata";
+import { readMusicXmlMetadata, titleCase } from "@/utils/musicXmlMetadata";
 
 type Step = { key: string; label: string; state: "running" | "done" | "failed"; detail?: string; startedAt: string; endedAt?: string };
 type Job = {
@@ -31,7 +31,7 @@ const PLANNED = [
 const elapsed = (s: Step, now: number) => Math.max(0, Math.round(((s.endedAt ? Date.parse(s.endedAt) : now) - Date.parse(s.startedAt)) / 1000));
 
 /** Opened from the menu after a file was picked: name the tune, then follow the build. */
-export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; onOpenChange: (o: boolean) => void; file: File | null }) {
+export function TuneUploadDialog({ open, onOpenChange, file, onStarted }: { open: boolean; onOpenChange: (o: boolean) => void; file: File | null; onStarted?: () => void }) {
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
@@ -46,7 +46,7 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
   useEffect(() => {
     if (!open || !file) return;
     let cancelled = false;
-    const fallback = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 120);
+    const fallback = titleCase(file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim()).slice(0, 120);
     setTitle(fallback); setComposer(""); setActiveJob(null); setUploading(null); setReadingMetadata(true);
     readMusicXmlMetadata(file).then(metadata => {
       if (cancelled) return;
@@ -60,10 +60,10 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
 
   const jobs = useQuery({
     queryKey: ["tune-build-jobs", activeJob],
-    enabled: open,
+    enabled: open && !!activeJob,
     queryFn: async () => {
       const { data, error } = await supabase.from("tune_build_jobs")
-        .select("id, filename, tune_key, title, status, error, created_at, progress, result").or(activeJob ? `status.neq.failed,id.eq.${activeJob}` : "status.neq.failed").order("created_at", { ascending: false }).limit(8);
+        .select("id, filename, tune_key, title, status, error, created_at, progress, result").eq("id", activeJob!);
       if (error) throw error;
       return (data ?? []) as unknown as Job[];
     },
@@ -103,12 +103,15 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
     if (error) { setUploading({ ...step, state: "failed", detail: error.message, endedAt: new Date().toISOString() }); return; }
     const done: Step = { ...step, state: "done", detail: `${Math.round(file.size / 1024)} KB`, endedAt: new Date().toISOString() };
     setUploading(done);
-    if (await startBuild({ action: "start", sourcePath: path, filename: file.name, tuneKey: key, title, composer: composer.trim() })) setUploading(null);
+    if (await startBuild({ action: "start", sourcePath: path, filename: file.name, tuneKey: key, title: titleCase(title.trim()), composer: composer.trim() })) {
+      // The tune list shows the rest of the build on its own card.
+      onStarted?.(); qc.invalidateQueries({ queryKey: ["tune-build-jobs"] }); onOpenChange(false); setUploading(null);
+    }
     else setUploading({ ...done, state: "failed", detail: "Could not start the build" });
   };
 
 
-  const showProgress = !!uploading || !!current;
+  const showProgress = !!uploading || !!activeJob;
   const serverSteps = current?.progress ?? [];
   const uploadStep: Step | undefined = uploading ?? (current ? { key: "upload", label: "Uploading the score", state: "done", startedAt: current.created_at, endedAt: current.created_at } : undefined);
   const shown: (Step | { key: string; label: string; state: "pending" })[] = [];
@@ -180,17 +183,6 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
           {current?.status === "succeeded" && <Button onClick={() => onOpenChange(false)}>Done</Button>}
         </DialogFooter>
 
-        {!showProgress && !!jobs.data?.length && (
-          <div className="space-y-1 border-t border-border pt-3">
-            <p className="text-xs text-muted-foreground">Recent uploads</p>
-            {jobs.data.map((j) => (
-              <button key={j.id} className="flex w-full justify-between gap-2 text-left text-xs hover:underline" onClick={() => setActiveJob(j.id)}>
-                <span className="truncate">{j.title ?? j.tune_key} · {new Date(j.created_at).toLocaleString()}</span>
-                <span className={j.status === "failed" ? "text-destructive" : "text-muted-foreground"}>{j.status}</span>
-              </button>
-            ))}
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

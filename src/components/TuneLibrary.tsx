@@ -3,6 +3,7 @@ import { AddTuneStartDialog } from "@/components/AddTuneStartDialog";
 import { TuneUploadDialog } from "@/components/TuneUploadDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTuneLibrary } from "@/hooks/useTuneLibrary";
+import { useActiveTuneBuilds } from "@/hooks/useActiveTuneBuilds";
 import { TuneLibraryView } from "./TuneLibraryView";
 
 interface TuneLibraryProps {
@@ -13,6 +14,7 @@ interface TuneLibraryProps {
 export function TuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneLibraryProps) {
   const library = useTuneLibrary(localUserId);
   const { user } = useAuth();
+  const active = useActiveTuneBuilds();
   const [introOpen, setIntroOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -30,11 +32,12 @@ export function TuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneL
               if (f) { setIntroOpen(false); setUploadFile(f); setUploadOpen(true); }
             }} />
           <AddTuneStartDialog open={introOpen} onOpenChange={setIntroOpen} onPickFile={() => uploadInputRef.current?.click()} />
-          <TuneUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} file={uploadFile} />
+          <TuneUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} file={uploadFile} onStarted={() => active.refetch()} />
         </>
       )}
       <TuneLibraryView {...library} isLoading={library.isLoading || profileLoading} onSelectTune={onSelectTune}
-        onAddTune={user ? () => setIntroOpen(true) : undefined} />
+        onAddTune={user ? () => setIntroOpen(true) : undefined}
+        builds={active.builds} onRetryBuild={active.retry} onDismissBuild={active.dismiss} />
     </>
   );
 }
