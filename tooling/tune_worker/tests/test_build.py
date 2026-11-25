@@ -80,3 +80,18 @@ def test_supplied_teacher_plan_replaces_heuristic():
     teacher["assemblies"] = []
     bundle = build_bundle_from_file(ROOT / "src/music/st-louis-blues/tune.xml", teacher=teacher)
     assert [n["id"] for n in bundle["nuggets"]] == [n["id"] for n in teacher["nuggets"]]
+
+
+def test_grace_notes_do_not_leave_hanging_notes(tmp_path):
+    from music21 import converter, note, stream
+    import pretty_midi
+    from tune_pipeline.xml_to_midi import write_midi
+
+    part = stream.Part()
+    grace = note.Note("C6").getGrace()
+    part.append([note.Note("C6", quarterLength=1), grace, note.Note("C6", quarterLength=1), note.Note("D6", quarterLength=4)])
+    score = stream.Score([part])
+    midi_path = write_midi(score, tmp_path / "t.mid")
+    notes = pretty_midi.PrettyMIDI(str(midi_path)).instruments[0].notes
+    assert max(n.end - n.start for n in notes) <= 2.0 + 1e-6
+    assert len(notes) == 3

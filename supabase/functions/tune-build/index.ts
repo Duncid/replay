@@ -87,7 +87,9 @@ function checkPlan(plan: Record<string, any>, analysis: Analysis) {
   if (!nuggets.length) throw new Error("no nugget falls inside the score");
   const ids = new Set(nuggets.map((n) => n.id));
   const assemblies = (Array.isArray(plan.assemblies) ? plan.assemblies : [])
-    .filter((a: any) => Array.isArray(a?.nuggetIds) && a.nuggetIds.length && a.nuggetIds.every((id: string) => ids.has(id)));
+    .filter((a: any) => Array.isArray(a?.nuggetIds) && a.nuggetIds.length >= 2 && a.nuggetIds.every((id: string) => ids.has(id)))
+    // A one-nugget assembly or a repeated span only duplicates practice.
+    .filter((a: any, i: number, all: any[]) => all.findIndex((b: any) => b.nuggetIds.join() === a.nuggetIds.join()) === i);
   const keepIds = (list: unknown) => Array.isArray(list) ? list.filter((id) => ids.has(id as string) || assemblies.some((a: any) => a.id === id)) : list;
   plan = { ...plan, nuggets, teachingOrder: keepIds(plan.teachingOrder), assemblyOrder: keepIds(plan.assemblyOrder) };
   const instIds = analysis.instruments.map((i) => i.id);

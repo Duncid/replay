@@ -144,9 +144,13 @@ Assemblies are consecutive shared nugget spans used to practice larger chunks as
 
 Assembly tiers:
 
-- Tier 1: micro-thought (usually 2–4 bars), e.g., sub-phrase or cadence setup+landing.
-- Tier 2: complete thought (usually 4–8 bars), clear start to arrival/breath point.
-- Tier 3: navigational chunk (section-level, often 16–32 bars), e.g., A/B/verse/chorus.
+- Every assembly joins AT LEAST TWO consecutive nuggets. An assembly with a single nugget duplicates that nugget and is invalid.
+- Tiers are defined by how many nuggets they join, not by bar count:
+  - Tier 1: 2 nuggets — a complete thought, e.g. question + answer phrase.
+  - Tier 2: 3–4 nuggets — a phrase group or half-section.
+  - Tier 3: 5+ nuggets — a navigational chunk (section-level), e.g. A/B/verse/chorus.
+- A tier may be empty if it would only repeat a nugget or another assembly.
+- No two assemblies may cover the same nugget span. Do not build an assembly that only differs from another by nuggets marked `sameAs` an earlier one; practice the original span once.
 
 HARD CONSTRAINT
 
@@ -198,6 +202,7 @@ FINAL SELF-CHECK (do this silently before answering)
 
 - `form` is present and every nugget boundary matches a phrase boundary in it.
 - No phrase is split in the middle; no nugget is cut mechanically by bar count.
+- Every assembly has 2+ nuggetIds; none equals a single nugget or duplicates another assembly's span.
 - Every pickup/lead-in sits at the start of the nugget of the phrase it leads into.
 - Every repeated passage has `sameAs`; `dependsOn` is filled for variations.
 - Every nugget has a label and description.
