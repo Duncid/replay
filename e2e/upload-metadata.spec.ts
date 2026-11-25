@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import { test, expect, accountRows } from "./fixtures";
 
-const xml = '<score-partwise><work><work-title>Waltz in A Minor</work-title></work><movement-title>Different movement</movement-title><identification><creator type="composer">Frédéric Chopin</creator><creator type="arranger">Not the composer</creator></identification></score-partwise>';
+const xml = '<score-partwise><work><work-title>waltz in a minor</work-title></work><movement-title>Different movement</movement-title><identification><creator type="composer">frédéric chopin</creator><creator type="arranger">Not the composer</creator></identification></score-partwise>';
 
 test("MXL prefills title and composer and submits the user's edits", async ({ page }) => {
   const zip = new JSZip();
@@ -14,7 +14,7 @@ test("MXL prefills title and composer and submits the user's edits", async ({ pa
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Choose a .mxl file", exact: true }).click();
   await (await chooser).setFiles({ name: "unhelpful-filename.mxl", mimeType: "application/vnd.recordare.musicxml", buffer: await zip.generateAsync({ type: "nodebuffer" }) });
-  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Waltz in A Minor");
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Waltz In A Minor");
   await expect(page.getByLabel("Composer", { exact: true })).toHaveValue("Frédéric Chopin");
   await page.getByLabel("Title", { exact: true }).fill("My Waltz");
   await page.getByLabel("Composer", { exact: true }).fill("F. Chopin");
@@ -35,12 +35,12 @@ test("plain XML title fallback and missing composer metadata", async ({ page }) 
   const results = await page.evaluate(async () => {
     const { parseMusicXmlMetadata: parse, readMusicXmlMetadata: read } = await import("/src/utils/musicXmlMetadata.ts");
     return {
-      movement: parse('<score-partwise><movement-title>Gymnopédie</movement-title><identification><creator type="composer">Erik Satie(1866 – 1925)</creator></identification></score-partwise>'),
+      movement: parse('<score-partwise><movement-title>gymnopédie no. 1</movement-title><identification><creator type="composer">erik satie(1866 – 1925)</creator></identification></score-partwise>'),
       missing: await read(new File(['<score-partwise/>'], 'fallback.xml')),
       invalid: parse('not xml'),
       placeholder: parse('<score-partwise><identification><creator type="composer">Music21</creator></identification></score-partwise>'),
     };
   });
-  expect(results).toEqual({ movement: { title: "Gymnopédie", composer: "Erik Satie" },
+  expect(results).toEqual({ movement: { title: "Gymnopédie No. 1", composer: "Erik Satie" },
     missing: { title: null, composer: null }, invalid: { title: null, composer: null }, placeholder: { title: null, composer: null } });
 });

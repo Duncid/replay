@@ -2,6 +2,12 @@ import JSZip from "jszip";
 
 export interface ScoreMetadata { title: string | null; composer: string | null }
 
+// Capitalize the first letter of every word, including parts after hyphens and apostrophes
+// ("waltz in a minor" → "Waltz In A Minor", "saint-saëns" → "Saint-Saëns").
+export function titleCase(text: string): string {
+  return text.replace(/[\p{L}\p{M}]+/gu, word => word.charAt(0).toLocaleUpperCase() + word.slice(1));
+}
+
 export function parseMusicXmlMetadata(xml: string): ScoreMetadata {
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   if (doc.getElementsByTagName("parsererror").length) return { title: null, composer: null };
@@ -10,12 +16,13 @@ export function parseMusicXmlMetadata(xml: string): ScoreMetadata {
   const child = (parent: Element, name: string) => Array.from(parent.children).find(el => el.localName === name);
   const work = child(root, "work");
   const title = work ? child(work, "work-title")?.textContent?.trim() : null;
+  const casedTitle = title ? titleCase(title) : null;
   const identification = child(root, "identification");
   const composers = Array.from(identification?.children ?? [])
     .filter(el => el.localName === "creator" && el.getAttribute("type")?.toLowerCase() === "composer")
-    .map(el => (el.textContent ?? "").replace(/\s*\([0-9]{4}[^)]*\)\s*$/, "").trim())
+    .map(el => titleCase((el.textContent ?? "").replace(/\s*\([0-9]{4}[^)]*\)\s*$/, "").trim()))
     .filter(name => name && !["music21", "musescore", "unknown", "composer"].includes(name.toLowerCase()));
-  return { title: title || child(root, "movement-title")?.textContent?.trim() || null,
+  return { title: casedTitle || titleCase(child(root, "movement-title")?.textContent?.trim() ?? "") || null,
     composer: Array.from(new Set(composers)).sort().join("; ") || null };
 }
 
