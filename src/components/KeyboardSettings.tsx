@@ -1,4 +1,4 @@
-import { ChevronDown, Settings } from "lucide-react";
+import { ChevronDown, SlidersVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ export function KeyboardSettings({ instrument, onInstrumentChange, displayNotes,
   return <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="outline" size="sm" aria-label={t("piano.settings")} title={t("piano.settings")}>
-        <Settings aria-hidden="true" />
+        <SlidersVertical aria-hidden="true" />
         <ChevronDown aria-hidden="true" className="size-4 opacity-50" />
       </Button>
     </DropdownMenuTrigger>
