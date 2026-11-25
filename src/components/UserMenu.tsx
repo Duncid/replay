@@ -1,4 +1,7 @@
 import { NewUserDialog } from "@/components/NewUserDialog";
+import { EditPlayerDialog } from "@/components/EditPlayerDialog";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { getPlayerAvatar, type PlayerAvatarValue } from "@/utils/playerAvatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,7 +21,7 @@ import {
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
 import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
 import { TuneUploadDialog } from "@/components/TuneUploadDialog";
-import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut, Upload } from "lucide-react";
+import { Check, Globe, Menu, UserPlus, GitBranch, Music2, LogOut, Upload, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useRef, useState } from "react";
@@ -55,16 +58,17 @@ export function UserMenu({
   onDebugModeChange,
 }: UserMenuProps) {
   const { t } = useTranslation();
-  const { users, currentUser, switchUser, createUser, isLoading } =
+  const { users, currentUser, switchUser, createUser, updateUser, deleteUser } =
     useLocalUsers();
   const { user, isAdmin, signOut } = useAuth();
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<LocalUser | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCreateUser = async (name: string) => {
-    await createUser(name);
+  const handleCreateUser = async (name: string, avatar: PlayerAvatarValue) => {
+    await createUser(name, avatar);
   };
 
   return (
@@ -105,14 +109,24 @@ export function UserMenu({
             }}
           >
             {users.map((user: LocalUser) => (
-              <DropdownMenuRadioItem key={user.id} value={user.id}>
-                {user.name}
-              </DropdownMenuRadioItem>
+              <div key={user.id} className="flex items-center gap-1">
+                <DropdownMenuRadioItem value={user.id} className="min-w-0 flex-1 gap-2">
+                  <PlayerAvatar avatar={getPlayerAvatar(user)} />
+                  <span className="truncate">{user.name}</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuItem
+                  aria-label={t("userMenu.editPlayerName", { name: user.name })}
+                  className="shrink-0 p-2 text-muted-foreground"
+                  onSelect={() => setEditingPlayer(user)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </DropdownMenuItem>
+              </div>
             ))}
           </DropdownMenuRadioGroup>
 
           {/* New User */}
-          <DropdownMenuItem onClick={() => setNewUserDialogOpen(true)}>
+          <DropdownMenuItem className="mt-1 bg-secondary text-secondary-foreground focus:bg-secondary/80" onSelect={() => setNewUserDialogOpen(true)}>
             <UserPlus className="h-4 w-4" />
             {t("userMenu.newUser")}
           </DropdownMenuItem>
@@ -224,6 +238,15 @@ export function UserMenu({
         onOpenChange={setNewUserDialogOpen}
         onCreateUser={handleCreateUser}
       />
+      {editingPlayer && (
+        <EditPlayerDialog
+          key={editingPlayer.id}
+          player={editingPlayer}
+          onClose={() => setEditingPlayer(null)}
+          onSave={updateUser}
+          onDelete={deleteUser}
+        />
+      )}
     </>
   );
 }

@@ -9,13 +9,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PlayerAvatarPicker } from "@/components/PlayerAvatarPicker";
+import { newPlayerAvatar, type PlayerAvatarValue } from "@/utils/playerAvatar";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface NewUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateUser: (name: string) => Promise<void>;
+  onCreateUser: (name: string, avatar: PlayerAvatarValue) => Promise<void>;
 }
 
 export function NewUserDialog({
@@ -25,29 +27,42 @@ export function NewUserDialog({
 }: NewUserDialogProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState(newPlayerAvatar);
+  const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isCreating) return;
 
     setIsCreating(true);
-    await onCreateUser(name.trim());
-    setIsCreating(false);
+    setError(null);
+    try {
+      await onCreateUser(name.trim(), avatar);
+      reset();
+      onOpenChange(false);
+    } catch {
+      setError(t("userMenu.createError"));
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const reset = () => {
     setName("");
-    onOpenChange(false);
+    setAvatar(newPlayerAvatar());
+    setError(null);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setName("");
-    }
+    if (isCreating) return;
+    if (!newOpen) reset();
     onOpenChange(newOpen);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[320px]">
+      <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{t("userMenu.newUser")}</DialogTitle>
@@ -67,6 +82,8 @@ export function NewUserDialog({
               autoFocus
               disabled={isCreating}
             />
+            <div className="pt-4"><PlayerAvatarPicker value={avatar} onChange={setAvatar} disabled={isCreating} /></div>
+            {error && <p role="alert" className="pt-2 text-sm text-destructive">{error}</p>}
           </div>
           <DialogFooter>
             <Button
