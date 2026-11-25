@@ -56,6 +56,7 @@ def _slice_part_by_offset(
                 sliced_part.insert(elem_offset - start_offset, copy.deepcopy(elem))
 
     next_measure_number = 1
+    lead_in = 0.0
     for measure in part.getElementsByClass(stream.Measure):
         measure_offset = _global_offset(measure, part)
         measure_end = measure_offset + measure.duration.quarterLength
@@ -80,7 +81,19 @@ def _slice_part_by_offset(
                     new_elem.lyric = None
                 new_measure.insert(elem.offset, new_elem)
 
-        sliced_part.insert(measure_offset - start_offset, new_measure)
+        # Never place a measure before 0: a slice starting mid-measure keeps its whole
+        # first measure, and music21 cannot export measures at negative offsets.
+        sliced_part.insert(max(0.0, measure_offset - start_offset) if next_measure_number == 2 else measure_offset - start_offset + lead_in, new_measure)
+        if next_measure_number == 2:
+            lead_in = max(0.0, start_offset - measure_offset)
+
+    # A slice starting mid-measure places its first measure before offset 0, so the
+    # part-level time signature is not in its context; music21's export then fails.
+    measures = list(sliced_part.getElementsByClass(stream.Measure))
+    if measures and measures[0].timeSignature is None:
+        ts = _last_element_before(part, meter.TimeSignature, start_offset + 1e-6)
+        if ts is not None:
+            measures[0].insert(0.0, copy.deepcopy(ts))
 
     return sliced_part
 
@@ -215,13 +228,23 @@ def _apply_clef_heuristic_to_xml(path: Path, threshold_midi: int = 60) -> None:
     tree.write(path, encoding="utf-8", xml_declaration=True)
 
 
+def _quarter_bpm(mark: tempo.MetronomeMark) -> float:
+    """Quarter-note tempo, including "playback only" marks (MuseScore hides the
+    number, so ``mark.number`` is None) and non-quarter referents."""
+    try:
+        bpm = mark.getQuarterBPM()
+    except Exception:
+        bpm = None
+    return float(bpm or getattr(mark, "number", None) or 120.0)
+
+
 def _tempo_boundaries(score: stream.Score) -> List[Tuple[float, Optional[float], float]]:
     boundaries = score.metronomeMarkBoundaries()
     if not boundaries:
         return [(0.0, None, 120.0)]
     output: List[Tuple[float, Optional[float], float]] = []
     for start, end, mark in boundaries:
-        tempo = getattr(mark, "number", None) or 120.0
+        tempo = _quarter_bpm(mark)
         output.append((float(start), float(end) if end is not None else None, float(tempo)))
     return output
 
@@ -235,7 +258,7 @@ def _tempos_for_slice(
     marks: List[Tuple[float, float]] = []
     for mark in score.recurse().getElementsByClass(tempo.MetronomeMark):
         offset = _global_offset(mark, score)
-        qpm = getattr(mark, "number", None) or 120.0
+        qpm = _quarter_bpm(mark)
         marks.append((float(offset), float(qpm)))
     if not marks:
         marks = [(0.0, 120.0)]
