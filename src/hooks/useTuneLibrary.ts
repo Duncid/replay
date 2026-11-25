@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getTunePreview } from "@/utils/tunePreview";
+import { getTunePlayback, getTunePreview } from "@/utils/tunePreview";
 import { getTuneAvailability, orderTunesByPosition, publishedTunesInListOrder, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
 
 export function useTuneLibrary(localUserId?: string | null) {
@@ -24,6 +24,7 @@ export function useTuneLibrary(localUserId?: string | null) {
       return ordered.map(tune => ({ tune_key: tune.tune_key,
         title: (tune.briefing as { title?: string } | null)?.title,
         composer: tune.composer,
+        playback: getTunePlayback(tune.note_sequence),
         preview: getTunePreview(tune.note_sequence) }));
     },
   });
