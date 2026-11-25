@@ -35,7 +35,7 @@ export function TuneCarousel({ tunes, onSelectTune, onAddTune, builds = [], onRe
           onSelect={() => onSelectTune(tune.tune_key)} />
       </li>
     ))}
-    {builds.filter(b => !tunes.some(t => t.tune_key === b.tune_key) || b.status !== "succeeded").map(b => (
+    {builds.filter(b => b.status !== "succeeded" || !tunes.some(t => t.tune_key === b.tune_key)).map(b => (
       <li key={b.id} className="snap-center shrink-0 w-64 sm:w-72">
         <BuildingTuneCard title={b.title?.trim() || tuneDisplayTitle(b.tune_key)} composer={b.composer} failed={b.status === "failed"}
           error={b.error} progress={b.progress} onRetry={onRetryBuild && (() => onRetryBuild(b.id))} onDismiss={onDismissBuild && (() => onDismissBuild(b.id))} />

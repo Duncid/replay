@@ -22,7 +22,7 @@ export function BuildingTuneCard({ title, composer, failed, error, progress, onR
   const pct = Math.round((Math.min(index, STEPS.length - 1) + 0.5) / STEPS.length * 100);
   return <div role="status" aria-label={`${failed ? "Build failed" : "Building"}: ${title}`}
     className="flex h-full min-h-[280px] w-full flex-col overflow-hidden rounded-[22px] border border-dashed border-border bg-card text-card-foreground">
-    <div className="flex aspect-[16/9] w-full items-center justify-center bg-muted/30">
+    <div className="flex h-[120px] w-full shrink-0 items-center justify-center bg-muted/30">
       {failed ? <X aria-hidden="true" className="size-6 text-destructive" /> : <Loader2 aria-hidden="true" className="size-6 animate-spin text-primary motion-reduce:animate-none" />}
     </div>
     <div className="flex flex-1 flex-col gap-3 p-5">

@@ -473,6 +473,27 @@ export type Database = {
         }
         Relationships: []
       }
+      tune_list_positions: {
+        Row: {
+          auth_user_id: string
+          created_at: string
+          position: number
+          tune_key: string
+        }
+        Insert: {
+          auth_user_id?: string
+          created_at?: string
+          position: number
+          tune_key: string
+        }
+        Update: {
+          auth_user_id?: string
+          created_at?: string
+          position?: number
+          tune_key?: string
+        }
+        Relationships: []
+      }
       tune_nugget_state: {
         Row: {
           attempt_count: number | null

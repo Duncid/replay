@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getTunePreview } from "@/utils/tunePreview";
-import { getTuneAvailability, publishedTunesInListOrder, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
+import { getTuneAvailability, orderTunesByPosition, publishedTunesInListOrder, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
 
 export function useTuneLibrary(localUserId?: string | null) {
   const tunes = useQuery({
@@ -17,7 +17,11 @@ export function useTuneLibrary(localUserId?: string | null) {
       // Admins can read every tune; the list only shows global tunes and this account's own.
       const { data: { user } } = await supabase.auth.getUser();
       const mine = (data ?? []).filter(tune => tune.is_global || tune.owner_user_id === user?.id);
-      return publishedTunesInListOrder(mine).map(tune => ({ tune_key: tune.tune_key,
+      const { data: saved } = user ? await supabase.from("tune_list_positions").select("tune_key, position") : { data: [] };
+      const { ordered, missing } = orderTunesByPosition(publishedTunesInListOrder(mine), new Map((saved ?? []).map(p => [p.tune_key, p.position])));
+      // Remember where new tunes landed, so rebuilding or republishing never moves them.
+      if (user && missing.length) void supabase.from("tune_list_positions").upsert(missing, { onConflict: "auth_user_id,tune_key", ignoreDuplicates: true });
+      return ordered.map(tune => ({ tune_key: tune.tune_key,
         title: (tune.briefing as { title?: string } | null)?.title,
         composer: tune.composer,
         preview: getTunePreview(tune.note_sequence) }));

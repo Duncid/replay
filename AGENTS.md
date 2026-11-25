@@ -19,3 +19,5 @@
 - Tune visibility: `tune_assets.is_global` (admin-set) or `owner_user_id` decides who sees a tune; uploads publish automatically as account-only via `tune-build` → `tune-publish`, and updates keep existing owner/visibility — avoids a separate publish step for uploads.
 - Debug-mode tune taps open Tune Manager on that tune with the Overview as default view; ordering and duplicate detection live in the pure `src/utils/tuneOverview.ts` so they stay testable.
 - MIDI export drops grace notes and NoteSequence conversion ends each note at the next same-pitch onset — music21 writes zero-length grace notes off-before-on, which otherwise leaves notes hanging for minutes.
+- Student tune list order comes from per-account `tune_list_positions` (web and native read it; web appends missing tunes, uploads reserve the last slot before building) — keeps order stable across rebuilds and allows user reordering later.
+- Upload progress lives on a building card in the tune list (`useActiveTuneBuilds`, with a client-side pending entry until the server job exists); the upload dialog only names the tune.

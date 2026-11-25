@@ -207,7 +207,15 @@ test("the add-a-tune start screen explains .mxl, links to MuseScore and opens th
   await screen.getByRole("button", { name: "Choose a .mxl file", exact: true }).click();
   const picked = await chooser;
   expect(picked.isMultiple()).toBe(false);
-  await picked.setFiles("/tmp/browser/add-tune-start/moonlight-sonata.mxl");
+  await picked.setFiles({ name: "moonlight-sonata.mxl", mimeType: "application/octet-stream", buffer: Buffer.from("not a zip") });
   await expect(page.getByRole("heading", { name: "Name your tune", exact: true })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("moonlight sonata");
+  await expect(page.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Moonlight Sonata");
+});
+
+import { orderTunesByPosition as orderByPosition } from "../src/utils/tuneLibrary";
+test("saved positions keep tunes in place and new tunes join the end", () => {
+  const tunes = [{ tune_key: "a" }, { tune_key: "b" }, { tune_key: "c" }];
+  const { ordered, missing } = orderByPosition(tunes, new Map([["c", 1], ["a", 2]]));
+  expect(ordered.map(t => t.tune_key)).toEqual(["c", "a", "b"]);
+  expect(missing).toEqual([{ tune_key: "b", position: 3 }]);
 });

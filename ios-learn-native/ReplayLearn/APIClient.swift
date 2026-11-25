@@ -54,6 +54,8 @@ actor APIClient {
         return try decoder.decode(Response.self, from: data)
     }
 
+    private struct TunePosition: Decodable { let tune_key: String; let position: Double }
+
     func fetchTuneLibrary() async throws -> [TuneLibraryItem] {
         async let tunes: [PublishedTune] = read("tune_assets", query: [
             URLQueryItem(name: "select", value: "tune_key,note_sequence,curriculum_versions!inner(status,published_at)"),
@@ -69,12 +71,25 @@ actor APIClient {
             URLQueryItem(name: "select", value: "tune_key"),
             URLQueryItem(name: "local_user_id", value: "eq.\(profileId)")
         ])
+        async let positions: [TunePosition] = read("tune_list_positions", query: [
+            URLQueryItem(name: "select", value: "tune_key,position")
+        ])
         let (published, curriculum, progress) = try await (tunes, exports, acquisitions)
-        var seen = Set<String>()
+        let saved = Dictionary((try? await positions)?.map { ($0.tune_key, $0.position) } ?? [], uniquingKeysWith: { a, _ in a })
         let acquired = Set(progress.map { $0.tune_key })
-        // Rows arrive oldest-published-first, so the newest version of a tune is
-        // the last one seen; reversing keeps that version and the oldest-first order.
-        return published.reversed().filter { seen.insert($0.tune_key).inserted }.reversed().map {
+        // A tune keeps the place of its first publication and plays its newest version.
+        var newest: [String: PublishedTune] = [:]
+        var firstSeen: [String] = []
+        for tune in published {
+            if newest[tune.tune_key] == nil { firstSeen.append(tune.tune_key) }
+            newest[tune.tune_key] = tune
+        }
+        // The account's saved order (shared with the web list) wins; unsaved tunes follow.
+        let ordered = firstSeen.enumerated().sorted {
+            let a = saved[$0.element] ?? .greatestFiniteMagnitude, b = saved[$1.element] ?? .greatestFiniteMagnitude
+            return a != b ? a < b : $0.offset < $1.offset
+        }.compactMap { newest[$0.element] }
+        return ordered.map {
             var item = TuneAvailability.resolve($0.tune_key, snapshot: curriculum.first?.snapshot, acquired: acquired)
             item.sequence = $0.note_sequence
             return item

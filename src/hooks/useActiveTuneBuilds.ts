@@ -1,12 +1,43 @@
-import { useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface TuneBuild {
   id: string; title: string | null; composer: string | null; tune_key: string; status: string; error: string | null;
   progress: { key: string; label: string; state: string }[] | null;
+  updated_at?: string;
 }
+/** Uploads still sending the score, before the server has a build job for them. */
+type Pending = TuneBuild & { retryUpload: () => void };
+let pending: Pending[] = [];
+const listeners = new Set<() => void>();
+const setPending = (next: Pending[]) => { pending = next; listeners.forEach(l => l()); };
+const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };
+
+export function startTuneUpload(qc: QueryClient, input: { file: File; tuneKey: string; title: string; composer: string }) {
+  const id = `pending-${crypto.randomUUID()}`;
+  const base: Pending = { id, title: input.title, composer: input.composer, tune_key: input.tuneKey, status: "running", error: null,
+    progress: [{ key: "upload", label: "Uploading the score", state: "running" }], retryUpload: () => { remove(); startTuneUpload(qc, input); } };
+  const remove = () => setPending(pending.filter(p => p.id !== id));
+  const fail = (error: string) => setPending(pending.map(p => p.id === id ? { ...p, status: "failed", error } : p));
+  setPending([...pending, base]);
+  void (async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return fail("Please sign in again");
+    // A new tune takes the last place in this account's list; an update keeps its place.
+    const { data: last } = await supabase.from("tune_list_positions").select("position").order("position", { ascending: false }).limit(1).maybeSingle();
+    await supabase.from("tune_list_positions").upsert({ tune_key: input.tuneKey, position: (last?.position ?? 0) + 1 }, { onConflict: "auth_user_id,tune_key", ignoreDuplicates: true });
+    const path = `${user.id}/${crypto.randomUUID()}/${input.file.name.replace(/[^\w.-]/g, "_")}`;
+    const up = await supabase.storage.from("tune-sources").upload(path, input.file);
+    if (up.error) return fail(up.error.message);
+    const { data, error } = await supabase.functions.invoke("tune-build", { body: { action: "start", sourcePath: path, filename: input.file.name, tuneKey: input.tuneKey, title: input.title, composer: input.composer } });
+    if (error || data?.error) return fail(data?.error ?? error?.message ?? "Could not start the build");
+    await qc.invalidateQueries({ queryKey: ["tune-build-jobs"] });
+    remove();
+  })();
+}
+
 const DISMISSED = "replay.dismissedTuneBuilds";
 const readDismissed = (): string[] => { try { return JSON.parse(localStorage.getItem(DISMISSED) ?? "[]"); } catch { return []; } };
 
@@ -21,7 +52,7 @@ export function useActiveTuneBuilds() {
     queryFn: async () => {
       const since = new Date(Date.now() - 24 * 3600_000).toISOString();
       const { data, error } = await supabase.from("tune_build_jobs")
-        .select("id, title, composer, tune_key, status, error, progress")
+        .select("id, title, composer, tune_key, status, error, progress, updated_at")
         .eq("created_by", user!.id).in("status", ["running", "failed", "succeeded"]).gte("updated_at", since)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -43,11 +74,15 @@ export function useActiveTuneBuilds() {
       qc.invalidateQueries({ queryKey: ["tune-library"] });
     }
   }, [q.data, qc]);
-  const dismiss = (id: string) => { const next = [...dismissed, id]; setDismissed(next); localStorage.setItem(DISMISSED, JSON.stringify(next.slice(-50))); };
+  const dismiss = (id: string) => {
+    if (pending.some(p => p.id === id)) return setPending(pending.filter(p => p.id !== id)); const next = [...dismissed, id]; setDismissed(next); localStorage.setItem(DISMISSED, JSON.stringify(next.slice(-50))); };
   const retry = async (id: string) => {
+    const p = pending.find(x => x.id === id);
+    if (p) return p.retryUpload();
     await supabase.functions.invoke("tune-build", { body: { action: "retry", jobId: id } });
     q.refetch();
   };
-  const builds = (q.data ?? []).filter(j => j.status !== "succeeded" && !dismissed.includes(j.id));
+  const local = useSyncExternalStore(subscribe, () => pending);
+  const builds = [...(q.data ?? []).filter(j => (j.status !== "succeeded" || Date.now() - Date.parse(j.updated_at ?? "") < 120_000) && !dismissed.includes(j.id)), ...local];
   return { builds, dismiss, retry, refetch: q.refetch };
 }

@@ -14,6 +14,22 @@ export function publishedTunesInListOrder<T extends { tune_key: string }>(rows: 
   return [...newest.values()];
 }
 
+/**
+ * Saved positions decide the list order; tunes without one (new global tunes, first visit)
+ * follow, in the order given, and get the next positions so they stay put afterwards.
+ */
+export function orderTunesByPosition<T extends { tune_key: string }>(tunes: T[], positions: Map<string, number>) {
+  let next = Math.max(0, ...positions.values()) + 1;
+  const missing: { tune_key: string; position: number }[] = [];
+  const placed = tunes.map((tune, index) => {
+    let position = positions.get(tune.tune_key);
+    if (position === undefined) { position = next++; missing.push({ tune_key: tune.tune_key, position }); }
+    return { tune, position, index };
+  });
+  placed.sort((a, b) => a.position - b.position || a.index - b.index);
+  return { ordered: placed.map(p => p.tune), missing };
+}
+
 export function isTuneAcquired(musicRef: string, snapshot: TuneLibrarySnapshot | null, acquiredTuneKeys: Set<string>): boolean {
   return acquiredTuneKeys.has(musicRef) || (snapshot?.tunes ?? []).some(node =>
     node.musicRef === musicRef && acquiredTuneKeys.has(node.tuneKey));
