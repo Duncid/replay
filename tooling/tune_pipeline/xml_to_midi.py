@@ -16,10 +16,12 @@ def drop_grace_notes(score: stream.Score) -> stream.Score:
     music21 writes zero-length grace notes with their note-off before their
     note-on, so MIDI readers leave that pitch sounding until a later note-off
     (e.g. a 77-second C6 in Chopin's Waltz in A minor). Grace notes are
-    ornaments the practice highway cannot judge, so they are omitted.
+    ornaments the practice highway cannot judge, so they are omitted. Any other
+    zero-length note (some scores encode ornaments without a grace mark, e.g.
+    St. Louis Blues) has the same effect and is dropped too.
     """
     cleaned = copy.deepcopy(score)
-    graces = [n for n in cleaned.recurse().notes if n.duration.isGrace]
+    graces = [n for n in cleaned.recurse().notes if n.duration.isGrace or n.quarterLength == 0]
     for n in graces:
         site = n.activeSite
         if site is not None:

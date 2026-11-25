@@ -97,6 +97,17 @@ def test_grace_notes_do_not_leave_hanging_notes(tmp_path):
     assert len(notes) == 3
 
 
+def test_st_louis_blues_has_no_hanging_notes(tmp_path):
+    # The score holds zero-length notes without a grace mark; they used to leave
+    # chord tones sounding for up to 104 seconds.
+    from music21 import converter
+    from tune_pipeline.xml_to_midi import write_midi
+    from tune_pipeline.midi_to_ns import midi_to_note_sequence
+    midi_path = write_midi(converter.parse(str(ROOT / "src/music/st-louis-blues/tune.mxl")), tmp_path / "s.mid")
+    notes = midi_to_note_sequence(midi_path)["notes"]
+    assert max(n["endTime"] - n["startTime"] for n in notes) <= 5.0
+
+
 def test_same_pitch_overlap_is_clipped():
     from tune_pipeline.midi_to_ns import _clip_overlapping_same_pitch
     notes = [{"pitch": 84, "startTime": 0.0, "endTime": 77.0}, {"pitch": 84, "startTime": 1.5, "endTime": 2.0}, {"pitch": 60, "startTime": 0.5, "endTime": 3.0}]
