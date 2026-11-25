@@ -29,7 +29,7 @@ export function noteSignature(notes: OverviewNote[]): string {
   return sorted.map((n) => `${n.pitch}@${r(n.startTime - t0)}:${r(n.endTime - n.startTime)}`).join("|");
 }
 
-/** Smallest first (note count, then length); nuggets before assemblies before the full tune on ties. */
+/** Nuggets, then assemblies, then the full tune; each group sorted by number (N1, N2, … N10). */
 export function buildTuneOverview(sources: OverviewSource[]): OverviewItem[] {
   const firstBySig = new Map<string, string>();
   const items = sources.map((s): OverviewItem => {
@@ -40,5 +40,9 @@ export function buildTuneOverview(sources: OverviewSource[]): OverviewItem[] {
     const end = s.notes.length ? Math.max(...s.notes.map((n) => n.endTime)) : 0;
     return { ...s, noteCount: s.notes.length, duration: end - start, duplicateOf: prior };
   });
-  return items.sort((a, b) => a.noteCount - b.noteCount || a.duration - b.duration || KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
+  return items.sort(
+    (a, b) =>
+      KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
+      a.id.localeCompare(b.id, undefined, { numeric: true }),
+  );
 }
