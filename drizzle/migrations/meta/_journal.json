@@ -99,6 +99,13 @@
       "when": 1795637641941,
       "tag": "0013_player_avatars",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795638467658,
+      "tag": "0014_apply_player_deletion_and_avatars",
+      "breakpoints": true
     }
   ]
 }

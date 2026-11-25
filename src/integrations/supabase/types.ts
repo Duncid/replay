@@ -268,6 +268,8 @@ export type Database = {
       local_users: {
         Row: {
           auth_user_id: string | null
+          avatar_color: string | null
+          avatar_seed: string | null
           created_at: string | null
           id: string
           name: string
@@ -275,6 +277,8 @@ export type Database = {
         }
         Insert: {
           auth_user_id?: string | null
+          avatar_color?: string | null
+          avatar_seed?: string | null
           created_at?: string | null
           id?: string
           name: string
@@ -282,6 +286,8 @@ export type Database = {
         }
         Update: {
           auth_user_id?: string | null
+          avatar_color?: string | null
+          avatar_seed?: string | null
           created_at?: string | null
           id?: string
           name?: string
@@ -534,7 +540,15 @@ export type Database = {
           tune_key?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tune_nugget_state_local_user_id_fkey"
+            columns: ["local_user_id"]
+            isOneToOne: false
+            referencedRelation: "local_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tune_practice_runs: {
         Row: {
@@ -573,7 +587,15 @@ export type Database = {
           tune_key?: string
           user_recording?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tune_practice_runs_local_user_id_fkey"
+            columns: ["local_user_id"]
+            isOneToOne: false
+            referencedRelation: "local_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_lesson_acquisition: {
         Row: {

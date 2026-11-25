@@ -1,0 +1,1 @@
+COMMENT ON TABLE public.local_users IS 'Practice players owned by accounts; owners may delete them, progress cascades.';
