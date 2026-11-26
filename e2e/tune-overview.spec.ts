@@ -1,5 +1,7 @@
 import { test, expect } from "./fixtures";
 
+test.use({ baseURL: "http://127.0.0.1:8081" });
+
 test("overview lists nuggets by number, then assemblies and full tune, and flags repeated passages", async ({ page }) => {
   await page.goto("/");
   const items = await page.evaluate(async () => {

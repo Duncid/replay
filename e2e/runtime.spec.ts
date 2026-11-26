@@ -226,6 +226,9 @@ test("notation loads on demand in tune management", async ({ page }) => {
   await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
   await page.getByRole("menuitem", { name: "intro", exact: true }).click();
+  // Tune Manager opens on Overview; select the full score to mount its canvas.
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Full", exact: true }).click();
   await expect.poll(() => requests.some(url => /OpenSheetMusicDisplayView-.*\.js/.test(url))).toBe(true);
   await expect(page.getByText("Loading notation...", { exact: true })).toBeHidden();
   await expect.poll(() => requests.some(url => /teacher-.*\.js/.test(url))).toBe(true);
@@ -522,7 +525,7 @@ test("tune demo waits for the cold highway scene and a one-second preparation de
 
 test("toolbar switches keep pill geometry and generous touch targets", async ({ page }) => {
   await page.goto("/");
-  const toggle = page.locator("#full-keyboard");
+  const toggle = page.locator("#metronome-toggle");
   await expect(toggle).toBeVisible();
   const track = (await toggle.boundingBox())!;
   expect(track.width).toBe(44);
