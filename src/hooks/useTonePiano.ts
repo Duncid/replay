@@ -15,6 +15,7 @@ type AudioEngine = {
   stopNote: (noteKey: string) => void;
   playNote: (noteKey: string, duration: number, at?: number) => (() => void);
   dispose: () => void;
+  setSampleVolume?: (gain: number) => void;
 };
 
 // Classic oscillator-based engine (original sound)
@@ -156,7 +157,7 @@ function createFMSynthEngine(): { engine: AudioEngine; loadPromise: Promise<void
 }
 
 // Sampler engine using Tone.js Sampler with tonejs-instruments
-function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine; loadPromise: Promise<void> } {
+function createSamplerEngine(instrument: PianoSoundType, initialVolume = 1): { engine: AudioEngine; loadPromise: Promise<void> } {
   const urls = getSamplerUrls(instrument);
   const baseUrl = getSamplerBaseUrl(instrument);
   const enableShallowRelease = instrument === "acoustic-piano";
@@ -177,6 +178,7 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
   });
 
   const sampler = new Tone.Sampler({
+    volume: Tone.gainToDb(initialVolume),
     urls,
     baseUrl,
     onload: () => {
@@ -206,6 +208,7 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
   return {
     engine: {
       type: "sampler",
+      setSampleVolume: gain => sampler.volume.rampTo(Tone.gainToDb(gain), .2),
       startNote: (noteKey: string) => {
         if (enableShallowRelease) {
           const pending = pendingReleases.get(noteKey);
@@ -260,7 +263,8 @@ function createSamplerEngine(instrument: PianoSoundType): { engine: AudioEngine;
   };
 }
 
-export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano") {
+export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano", initialSampleVolume = 1) {
+  const sampleVolumeRef = useRef(Math.max(0, Math.min(1, initialSampleVolume)));
   const [isLoaded, setIsLoaded] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
   const fallbackEngineRef = useRef<AudioEngine | null>(null);
@@ -308,7 +312,7 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
       console.log(`[AudioEngine] Creating sampler engine for: ${soundType}`);
       // Keys remain playable during a cold/failed sample download.
       fallbackEngineRef.current = createClassicEngine();
-      const { engine, loadPromise } = createSamplerEngine(soundType);
+      const { engine, loadPromise } = createSamplerEngine(soundType, sampleVolumeRef.current);
       engineRef.current = engine;
       loadPromiseRef.current = loadPromise.then(() => {
         if (soundTypeRef.current === soundType && engineRef.current === engine) {
@@ -385,7 +389,15 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
     if (release) playbackReleases.current.add(release);
   }, []);
 
+  // Per-instance sampler gain: never changes the shared destination or other players.
+  const setSampleVolume = useCallback((gain: number) => {
+    if (!Number.isFinite(gain)) return;
+    sampleVolumeRef.current = Math.max(0, Math.min(1, gain));
+    engineRef.current?.setSampleVolume?.(sampleVolumeRef.current);
+  }, []);
+
   return {
+    setSampleVolume,
     isLoaded,
     ensureAudioReady,
     preload,

@@ -35,6 +35,7 @@ async function mockAccounts(page: Page) {
   return profileRequests;
 }
 async function signIn(page: Page, email: string) {
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill('test-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -61,16 +62,19 @@ test('sign-in, reload and account switching isolate profiles and admin controls'
   const requests = await mockAccounts(page);
   await page.addInitScript(() => localStorage.setItem('replay-current-user-id', 'legacy-unowned-profile'));
   await page.goto('/');
-  await expect(page.getByText('Sign in to play')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
   expect(requests).toEqual([]);
   await signIn(page, 'a@example.test');
   await page.reload();
+  await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeVisible();
+  await page.goto('/login');
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(key => localStorage.getItem(key), 'replay-current-user-id:account:' + accountA)).toBe(profileA);
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: 'Quest', exact: true })).toBeVisible();
   await page.getByRole('menuitem', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByText('Sign in to play')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
   await signIn(page, 'b@example.test');
   await expect.poll(() => page.evaluate(key => localStorage.getItem(key), 'replay-current-user-id:account:' + accountB)).toBe(profileB);
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
@@ -79,7 +83,7 @@ test('sign-in, reload and account switching isolate profiles and admin controls'
 });
 
 for (const provider of ['google', 'apple'] as const) {
-  test(`hosted native sign-in preserves its return context through ${provider} OAuth`, async ({ page }) => {
+  test(`hosted native sign-in preserves its return context through ${provider} OAuth`, async ({ page, baseURL }) => {
     await mockAccounts(page);
     let redirect = '';
     await page.route('**/~oauth/initiate?**', route => { redirect = route.request().url(); return route.fulfill({ body: 'OAuth broker' }); });
@@ -92,23 +96,25 @@ for (const provider of ['google', 'apple'] as const) {
     expect(returnPath).toBeTruthy();
     if (!returnPath) throw new Error('Missing OAuth return URL');
     const returnURL = new URL(returnPath);
-    expect(returnURL.origin).toBe('http://127.0.0.1:8080');
+    expect(returnURL.origin).toBe(new URL(baseURL!).origin);
     expect(returnURL.pathname).toBe('/auth/native');
     expect(returnURL.searchParams.get('client')).toBe('native');
     expect(returnURL.searchParams.get('state')).toBe(state);
   });
 }
 
-test('Apple web sign-in returns to the public app origin', async ({ page }) => {
+test('Apple web sign-in returns to the public app origin', async ({ page, baseURL }) => {
   await mockAccounts(page);
   let redirect = '';
   await page.route('**/~oauth/initiate?**', route => { redirect = route.request().url(); return route.fulfill({ body: 'OAuth broker' }); });
   await page.goto('/');
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
   await page.getByRole('button', { name: 'Continue with Apple', exact: true }).click();
   await expect.poll(() => redirect).not.toBe('');
   const request = new URL(redirect);
   expect(request.searchParams.get('provider')).toBe('apple');
-  expect(request.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:8080');
+  expect(request.searchParams.get('redirect_uri')).toBe(new URL(baseURL!).origin);
 });
 
 test('hosted handoff asks the user to confirm the account and rejects arbitrary return URLs', async ({ page }) => {
@@ -158,7 +164,7 @@ test('expired refresh credentials return to sign-in without reading another prof
   await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: sessionKey, session: expired });
   await page.route('**/auth/v1/token?**', route => route.fulfill({ status: 400, json: { code: 'refresh_token_not_found', msg: 'Refresh token expired' } }));
   await page.goto('/');
-  await expect(page.getByText('Sign in to play')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
   expect(profileRequests).toEqual([]);
 });
 

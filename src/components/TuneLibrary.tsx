@@ -1,10 +1,13 @@
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { AddTuneStartDialog } from "@/components/AddTuneStartDialog";
 import { TuneUploadDialog } from "@/components/TuneUploadDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTuneLibrary } from "@/hooks/useTuneLibrary";
 import { useActiveTuneBuilds } from "@/hooks/useActiveTuneBuilds";
 import { TuneLibraryView } from "./TuneLibraryView";
+import { LoadingSpinner } from "./LoadingSpinner";
+
+const GuestTuneLibrary = lazy(() => import("./GuestTuneLibrary"));
 
 interface TuneLibraryProps {
   localUserId?: string | null;
@@ -12,6 +15,12 @@ interface TuneLibraryProps {
   onSelectTune: (tuneKey: string) => void;
 }
 export function TuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneLibraryProps) {
+  const { user } = useAuth();
+  if (!user) return <Suspense fallback={<LoadingSpinner message="Loading music…" />}><GuestTuneLibrary onSelectTune={onSelectTune} /></Suspense>;
+  return <AccountTuneLibrary localUserId={localUserId} profileLoading={profileLoading} onSelectTune={onSelectTune} />;
+}
+
+function AccountTuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneLibraryProps) {
   const library = useTuneLibrary(localUserId);
   const { user } = useAuth();
   const active = useActiveTuneBuilds();

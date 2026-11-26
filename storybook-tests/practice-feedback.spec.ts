@@ -2,9 +2,12 @@ import { expect, test } from "@playwright/test";
 
 const open = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
   await page.goto("iframe.html?id=feedback-practice-feedback-toast--lifecycle&viewMode=story");
   await expect(page.getByRole("status")).toContainText("Bien joué");
-  await page.clock.install();
+  // Keep the 220ms exit phase stable between browser actions and assertions.
+  // Install before mounting so all component timers belong to this clock.
+  await page.clock.pauseAt(new Date("2026-01-01T01:00:00Z"));
   await page.getByRole("button", { name: "Show feedback again" }).click();
 };
 
@@ -16,11 +19,14 @@ test("feedback leaves, repeats identical results, and cancels obsolete exit time
   await page.getByRole("button", { name: "Show feedback again" }).click();
   await page.clock.runFor(300);
   await expect(toast).toHaveAttribute("data-state", "visible");
-  await page.clock.runFor(6500);
+  await page.clock.runFor(5700);
+  await expect(toast).toHaveAttribute("data-state", "leaving");
+  await page.clock.runFor(250);
   await expect(toast).toBeHidden();
   await page.getByRole("button", { name: "Show feedback again" }).click();
   await expect(toast).toBeVisible();
   await page.getByRole("button", { name: "Dismiss feedback" }).click();
+  await expect(toast).toHaveAttribute("data-state", "leaving");
   await page.clock.runFor(250);
   await expect(toast).toBeHidden();
   await page.getByRole("button", { name: "Next section" }).click();
@@ -40,6 +46,8 @@ test("pending feedback waits for a result and focused feedback stays readable", 
   await expect(toast).toBeVisible();
   await page.getByRole("button", { name: "Show feedback again" }).focus();
   await page.mouse.move(0, 0);
-  await page.clock.runFor(7000);
+  await page.clock.runFor(6000);
+  await expect(toast).toHaveAttribute("data-state", "leaving");
+  await page.clock.runFor(250);
   await expect(toast).toBeHidden();
 });

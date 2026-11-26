@@ -14,8 +14,8 @@ const GoogleLogo = () => (
 
 type Mode = "signin" | "signup" | "forgot";
 
-export default function Auth({ redirectTo = window.location.origin }: { redirectTo?: string }) {
-  const [mode, setMode] = useState<Mode>("signin");
+export default function Auth({ redirectTo = window.location.origin, initialMode = "signin" }: { redirectTo?: string; initialMode?: "signin" | "signup" }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);

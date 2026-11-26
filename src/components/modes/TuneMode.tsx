@@ -9,10 +9,12 @@ import {
 import { useTuneState } from "@/hooks/useTuneState";
 import type { TuneEvaluationDebugData } from "@/types/tunePractice";
 import type { MagentaNoteSequence as INoteSequence } from "@/types/magenta";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { TunePractice } from "./TunePractice";
+import { useAuth } from "@/contexts/AuthContext";
+const GuestTuneMode = lazy(() => import("./GuestTuneMode"));
 
 export interface TuneDebugMenuState {
   evalIndex?: number;
@@ -25,7 +27,7 @@ export interface TuneDebugMenuState {
   openCoachPrompt?: () => void;
 }
 
-interface TuneModeProps {
+export interface TuneModeProps {
   tuneKey: string;
   localUserId?: string | null;
   language?: string;
@@ -52,7 +54,15 @@ interface TuneModeProps {
   onTuneDebugMenuChange?: (menu: TuneDebugMenuState | null) => void;
 }
 
-export function TuneMode({
+export function TuneMode(props: TuneModeProps) {
+  const { user } = useAuth();
+  if (!user) return props.tuneKey === "intro" ? <Suspense fallback={<LoadingSpinner message="Loading music…" />}><GuestTuneMode {...props} /></Suspense>
+    : <div className="p-8 text-center"><p>This tune is locked for guests.</p><button onClick={props.onLeave}>Back to tunes</button></div>;
+  return <AccountTuneMode {...props} />;
+}
+
+
+function AccountTuneMode({
   tuneKey,
   localUserId,
   language = "en",

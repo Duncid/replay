@@ -39,11 +39,18 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
     if (!element) return;
     let disposed = false, frameId = 0, readyFrameId = 0;
     const app = new Application();
+    const destroy = () => {
+      if (!app.renderer) return;
+      // A failed GPU setup can leave a renderer with no context. Its teardown
+      // must not throw from React cleanup and remove the fallback page too.
+      try { app.destroy(true, { children: true }); }
+      catch (error) { console.warn("Note Highway renderer cleanup failed", error); }
+    };
     let observer: ResizeObserver | undefined;
     let motionCleanup: (() => void) | undefined;
     let themeObserver: MutationObserver | undefined;
     void app.init({ autoStart: false, preference: "webgl", backgroundAlpha: 0, antialias: true, resolution: Math.min(devicePixelRatio, 2), autoDensity: true }).then(() => {
-      if (disposed) { app.destroy(true, { children: true }); return; }
+      if (disposed) { destroy(); return; }
       element.prepend(app.canvas);
       app.canvas.setAttribute("aria-hidden", "true");
       const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -212,7 +219,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
     }).catch(error => {
       if (!disposed) { console.error("Note Highway renderer failed", error); live.current.onReadinessChange?.("error"); if (announcement.current) announcement.current.textContent = "Note Highway could not load. The piano remains available."; }
     });
-    return () => { disposed = true; cancelAnimationFrame(frameId); cancelAnimationFrame(readyFrameId); observer?.disconnect(); motionCleanup?.(); themeObserver?.disconnect(); if (app.renderer) app.destroy(true, { children: true }); };
+    return () => { disposed = true; cancelAnimationFrame(frameId); cancelAnimationFrame(readyFrameId); observer?.disconnect(); motionCleanup?.(); themeObserver?.disconnect(); destroy(); };
   }, [notes, layout, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
   return <div ref={host} className="note-highway" data-piano-ranges={pianoLayoutKey(layout)} role="group" aria-label="Note Highway"><span ref={announcement} className="sr-only" aria-live="polite" aria-atomic="true" /></div>;
 }
