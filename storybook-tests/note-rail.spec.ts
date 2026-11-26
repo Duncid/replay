@@ -25,6 +25,8 @@ test("player and playback stay synchronized, including overlapping notes", async
   const rail = page.locator('.note-rail__cell[data-note="C4"]');
   await expect(key).toHaveAttribute("data-activity", "ai");
   await expect(rail).toHaveAttribute("data-activity", "ai");
+  // Activate the story document before sending a hardware-keyboard shortcut.
+  await page.getByRole("heading", { name: "Practice keyboard · C3–C6" }).click();
   await page.keyboard.down("e");
   await expect(key).toHaveAttribute("data-activity", "user");
   await expect(rail).toHaveAttribute("data-activity", "user");
