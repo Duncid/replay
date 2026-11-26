@@ -334,7 +334,7 @@ test("MIDI model recognition distinguishes controllers, variants, and unknown na
     play3: "MPK mini Play mk3", unknown: null, ambiguous: null, otherVariant: null, stableKey: true });
 });
 
-test("Input dropdown MIDI settings are manual and remembered per keyboard", async ({ page }) => {
+test("Input dropdown uses keyboard sound defaults and remembers manual overrides", async ({ page }) => {
   await page.addInitScript(() => {
     const input = { id: "native-source", name: "FP-10", manufacturer: "CoreMIDI", onmidimessage: null, close: async () => {} };
     window["testMidiInput"] = input;
@@ -349,7 +349,7 @@ test("Input dropdown MIDI settings are manual and remembered per keyboard", asyn
   await openInput(page);
   await connect.click();
   await expect(page.getByRole("switch", { name: "Microphone", exact: true })).not.toBeChecked();
-  await expect(silent).not.toBeChecked();
+  await expect(silent).toBeChecked();
   await expect(page.getByRole("switch", { name: "Play on keyboard" })).toBeDisabled();
   await expect(page.getByRole("dialog")).toHaveCSS("opacity", "1");
   await page.screenshot({ path: `/tmp/replay-midi-menu-${test.info().project.name}.png` });
@@ -369,12 +369,12 @@ test("Input dropdown MIDI settings are manual and remembered per keyboard", asyn
   await openInput(page);
   await connect.click();
   await openInput(page);
-  await expect(silent).toBeChecked();
+  await expect(silent).not.toBeChecked();
   await page.reload();
   await openInput(page);
   await connect.click();
   await openInput(page);
-  await expect(silent).toBeChecked();
+  await expect(silent).not.toBeChecked();
 });
 
 test("keyboard output sends notes without echoing physical keys and releases on disable", async ({ page }) => {
@@ -400,7 +400,7 @@ test("keyboard output sends notes without echoing physical keys and releases on 
   await openInput(page);
   const output = page.getByRole("switch", { name: "Play on keyboard" });
   await output.click();
-  await page.getByRole("switch", { name: "Silent while I play" }).click();
+  await expect(page.getByRole("switch", { name: "Silent while I play" })).toBeChecked();
   await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [144, 60, 100] }));
   expect(await page.evaluate(() => window["sentMidi"])).toEqual([]);
   await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [128, 60, 0] }));

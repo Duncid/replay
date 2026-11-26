@@ -52,6 +52,8 @@ test("changing keyboard range releases held audio and highlights", async ({ page
   await page.goto("iframe.html?id=instruments-piano-keyboard--range-change&viewMode=story");
   const key = page.getByRole("button", { name: "C4", exact: true });
   await expect(key).toBeEnabled();
+  // Focus the rendered story before sending a hardware-keyboard shortcut.
+  await page.getByRole("heading", { name: "Practice keyboard · C3–C6" }).click();
   await page.keyboard.down("e");
   await expect(key).toHaveAttribute("data-activity", "user");
   await expect.poll(() => page.evaluate(() => window["pianoVoices"])).toBe(1);
