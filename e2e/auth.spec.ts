@@ -82,15 +82,39 @@ test('sign-in, reload and account switching isolate profiles and admin controls'
   expect(requests).toContain('eq.' + accountA); expect(requests).toContain('eq.' + accountB);
 });
 
-test('hosted native sign-in preserves its return context through Google OAuth', async ({ page }) => {
+for (const provider of ['google', 'apple'] as const) {
+  test(`hosted native sign-in preserves its return context through ${provider} OAuth`, async ({ page }) => {
+    await mockAccounts(page);
+    let redirect = '';
+    await page.route('**/~oauth/initiate?**', route => { redirect = route.request().url(); return route.fulfill({ body: 'OAuth broker' }); });
+    await page.goto('/auth/native?client=native&state=' + state);
+    await page.getByRole('button', { name: `Continue with ${provider === 'apple' ? 'Apple' : 'Google'}`, exact: true }).click();
+    await expect.poll(() => redirect).not.toBe('');
+    const request = new URL(redirect);
+    expect(request.searchParams.get('provider')).toBe(provider);
+    const returnPath = request.searchParams.get('redirect_uri');
+    expect(returnPath).toBeTruthy();
+    if (!returnPath) throw new Error('Missing OAuth return URL');
+    const returnURL = new URL(returnPath);
+    expect(returnURL.origin).toBe('http://127.0.0.1:8080');
+    expect(returnURL.pathname).toBe('/auth/native');
+    expect(returnURL.searchParams.get('client')).toBe('native');
+    expect(returnURL.searchParams.get('state')).toBe(state);
+  });
+}
+
+test('Apple web sign-in returns to the public app origin', async ({ page }) => {
   await mockAccounts(page);
   let redirect = '';
   await page.route('**/~oauth/initiate?**', route => { redirect = route.request().url(); return route.fulfill({ body: 'OAuth broker' }); });
-  await page.goto('/auth/native?client=native&state=' + state);
-  await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole('button', { name: 'Continue with Apple', exact: true }).click();
   await expect.poll(() => redirect).not.toBe('');
-  const returnURL = new URL(new URL(redirect).searchParams.get('redirect_uri')!);
-  expect(returnURL.pathname).toBe('/auth/native'); expect(returnURL.searchParams.get('state')).toBe(state);
+  const request = new URL(redirect);
+  expect(request.searchParams.get('provider')).toBe('apple');
+  expect(request.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:8080');
 });
 
 test('hosted handoff asks the user to confirm the account and rejects arbitrary return URLs', async ({ page }) => {
