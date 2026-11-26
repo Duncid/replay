@@ -35,6 +35,7 @@ async function mockAccounts(page: Page) {
   return profileRequests;
 }
 async function signIn(page: Page, email: string) {
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill('test-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -61,16 +62,19 @@ test('sign-in, reload and account switching isolate profiles and admin controls'
   const requests = await mockAccounts(page);
   await page.addInitScript(() => localStorage.setItem('replay-current-user-id', 'legacy-unowned-profile'));
   await page.goto('/');
-  await expect(page.getByText('Sign in to play')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
   expect(requests).toEqual([]);
   await signIn(page, 'a@example.test');
   await page.reload();
+  await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeVisible();
+  await page.goto('/login');
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(key => localStorage.getItem(key), 'replay-current-user-id:account:' + accountA)).toBe(profileA);
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: 'Quest', exact: true })).toBeVisible();
   await page.getByRole('menuitem', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByText('Sign in to play')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
   await signIn(page, 'b@example.test');
   await expect.poll(() => page.evaluate(key => localStorage.getItem(key), 'replay-current-user-id:account:' + accountB)).toBe(profileB);
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
@@ -136,7 +140,7 @@ test('expired refresh credentials return to sign-in without reading another prof
   await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: sessionKey, session: expired });
   await page.route('**/auth/v1/token?**', route => route.fulfill({ status: 400, json: { code: 'refresh_token_not_found', msg: 'Refresh token expired' } }));
   await page.goto('/');
-  await expect(page.getByText('Sign in to play')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
   expect(profileRequests).toEqual([]);
 });
 

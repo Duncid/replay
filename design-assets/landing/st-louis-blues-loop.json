@@ -1,0 +1,15 @@
+{
+  "title": "St Louis Blues",
+  "composer": "W. C. Handy",
+  "sourceMeasures": [
+    50,
+    61
+  ],
+  "sourceStartSeconds": 96.75,
+  "sourceEndSeconds": 120.75,
+  "durationSeconds": 24.0,
+  "bpm": 120,
+  "bars": 12,
+  "captureMode": "scripted player input in the production practice UI",
+  "caption": "St Louis Blues \u00b7 12-bar practice loop"
+}
