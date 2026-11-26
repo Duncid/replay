@@ -1,10 +1,10 @@
 # Keyboard sound defaults
 
-Replay recognizes named models using the bundled manufacturer-sourced database in
+Noodlyn recognizes named models using the bundled manufacturer-sourced database in
 `src/utils/midiDeviceProfiles.ts`. No network request is needed when connecting a
 keyboard. Each entry retains the official source URL for future verification.
 
-Recognized digital pianos and sound-producing keyboards default to muting Replay's
+Recognized digital pianos and sound-producing keyboards default to muting Noodlyn's
 audio for MIDI note presses. MIDI controllers and unknown devices default to app
 sound. The “Keyboard has its own sound” switch overrides that default without
 changing note feedback, recording, screen/computer keyboard audio, or playback.

@@ -6,7 +6,7 @@ import { themes } from "storybook/theming";
 
 const preview: Preview = {
   tags: ["autodocs"],
-  globalTypes: { theme: { description: "Replay palette", toolbar: { icon: "paintbrush", items: ["acid", "amber", "hotwire"], dynamicTitle: true } } },
+  globalTypes: { theme: { description: "Noodlyn palette", toolbar: { icon: "paintbrush", items: ["acid", "amber", "hotwire"], dynamicTitle: true } } },
   decorators: [(Story, context) => {
     const theme = context.globals.theme ?? "acid";
     document.documentElement.dataset.theme = theme;

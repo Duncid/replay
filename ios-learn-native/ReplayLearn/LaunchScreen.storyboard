@@ -7,7 +7,7 @@
 <rect key="frame" x="0" y="0" width="1194" height="834"/>
 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
 <subviews>
-<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="word-mark-img"><rect key="frame" x="437" y="357" width="320" height="120"/><constraints><constraint firstAttribute="width" constant="320" id="con-066-key"/><constraint firstAttribute="height" constant="120" id="con-067-key"/></constraints></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="word-mark-img"><rect key="frame" x="397" y="357" width="400" height="120"/><constraints><constraint firstAttribute="width" constant="400" id="con-066-key"/><constraint firstAttribute="height" constant="120" id="con-067-key"/></constraints></imageView>
 <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="1" translatesAutoresizingMaskIntoConstraints="NO" id="key-stack-vw"><rect key="frame" x="4" y="564" width="1186" height="266"/><subviews><imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-00-key"><rect key="frame" x="0" y="0" width="52.95454545454545" height="266"/></imageView>
 <imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-01-key"><rect key="frame" x="53.95454545454545" y="0" width="52.95454545454545" height="266"/></imageView>
 <imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" image="LaunchWhiteKey" translatesAutoresizingMaskIntoConstraints="NO" id="wht-02-key"><rect key="frame" x="107.9090909090909" y="0" width="52.95454545454545" height="266"/></imageView>
@@ -115,5 +115,5 @@
 <constraint firstItem="blk-14-key" firstAttribute="height" secondItem="key-stack-vw" secondAttribute="height" multiplier="0.56" constant="8" id="con-065-key"/></constraints>
 </view></viewController><placeholder placeholderIdentifier="IBFirstResponder" id="launch-first-rs" sceneMemberID="firstResponder"/>
 </objects></scene></scenes>
-<resources><image name="LaunchWordmark" width="320" height="120"/><image name="LaunchWhiteKey" width="72" height="266"/><image name="LaunchBlackKey" width="58" height="157"/></resources>
+<resources><image name="LaunchWordmark" width="400" height="120"/><image name="LaunchWhiteKey" width="72" height="266"/><image name="LaunchBlackKey" width="58" height="157"/></resources>
 </document>

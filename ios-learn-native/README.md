@@ -1,4 +1,4 @@
-# Replay Nat — native iPad app
+# Noodlyn Learn — native iPad app
 
 A standalone Swift/SwiftUI app for **Tunes, Free Play and Progress**, independent
 of the Capacitor wrapper in `ios/`. Bundle `com.playbk.learn`, scheme `ReplayLearn`.
@@ -134,15 +134,16 @@ and the documented workload convention cover both.
 
 ### Launch artwork and icons
 
-The launch storyboard uses a centered Replay wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
+The launch storyboard uses a centered Noodlyn wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
 
 Both targets use the existing opaque blue piano icon at 1024px; Xcode derives the device icon sizes. Exported icon sizes, portrait/landscape start screens, and a size/source manifest live in `design-assets/ipad-release/`. Run `npx storybook build -o dist/storybook`, serve the build on port 8082, then `node scripts/export-ipad-assets.mjs`. The exporter also refreshes native launch assets, storyboards, and the existing web icon URLs. Start-screen PNGs are review/export assets; the native launch screen does not stretch a full-screen screenshot.
 
 
 ## Account login and publishing
 
-Sign-in uses Apple's `ASWebAuthenticationSession` at the published Replay site,
-currently `https://improv-jam-bot.lovable.app`. The site supports Google, Lovable,
+The public website is `https://noodlyn.com`. Sign-in uses Apple's
+`ASWebAuthenticationSession` at the retained Lovable auth origin,
+`https://improv-jam-bot.lovable.app`. The site supports Google, Lovable,
 and email. After the user confirms their account, the app receives
 `com.playbk.learn://auth/callback` with a per-attempt state and validates the session
 with Cloud. Tokens are kept in this app's Keychain, independent of the Capacitor app.

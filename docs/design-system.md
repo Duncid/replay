@@ -1,6 +1,6 @@
-# Replay design systems
+# Noodlyn design systems
 
-Replay has two independent implementations: React/Radix/Tailwind for the web and Capacitor app, and SwiftUI for Replay Nat. They share product concepts, not implementation code. SpriteKit drawing, HighwayClock timing and HitJudge scoring remain separate.
+Noodlyn has two independent implementations: React/Radix/Tailwind for the web and Capacitor app, and SwiftUI for Noodlyn Learn. They share product concepts, not implementation code. SpriteKit drawing, HighwayClock timing and HitJudge scoring remain separate.
 
 ## Web component library
 
@@ -32,13 +32,13 @@ Pitch colors live in the rail, with sharps using the natural below. Keys have no
 
 Local input (mouse/touch/computer keyboard/MIDI/microphone) takes visual priority over external playback for a shared note. Keys and rail use the same resolved state; releasing local input restores any remaining playback highlight. Source colors replace the former red/blue attack/sustain animation. Transitions take 70 ms and turn off with reduced motion. Audio scheduling and MIDI routing remain in their existing layers.
 
-`Patterns/Tunes screen` is a production-component fixture with local data; its MIDI and microphone controls are visual examples only. Native Replay Nat retains its independent design system below.
+`Patterns/Tunes screen` is a production-component fixture with local data; its MIDI and microphone controls are visual examples only. Native Noodlyn Learn retains its independent design system below.
 
 Unused shadcn wrappers and their exclusive packages were removed. Add a primitive back only for a real feature, with a story covering its interaction and disabled/error states. npm and `package-lock.json` are the canonical package workflow; the obsolete Bun binary lockfile was retired.
 
 ## Native component library
 
-On iPad, open **Replay Nat → Settings → Design system**. The bundled gallery works offline and remains available if Cloud cannot load. Its keyboard is playable with local audio; catalog examples do not write progress or call Cloud.
+On iPad, open **Noodlyn Learn → Settings → Design system**. The bundled gallery works offline and remains available if Cloud cannot load. Its keyboard is playable with local audio; catalog examples do not write progress or call Cloud.
 
 - `ReplayLearn/DesignSystem/ReplayDesignSystem.swift`: native Acid colors, pitch palette, typography, spacing, radii, solid cards, action styles and accessible glass chrome.
 - `ReplayLearn/DesignSystem/DesignSystemView.swift`: living catalog of foundations, materials, controls, feedback and the production multitouch keyboard.
@@ -47,7 +47,7 @@ On iPad, open **Replay Nat → Settings → Design system**. The bundled gallery
 
 Native uses iPadOS 26+ Liquid Glass for system chrome, coach and transport, with solid dark content and lime primary actions. Body text follows Dynamic Type; bundled Space Grotesk titles and JetBrains Mono metadata remain native assets. Reduce Transparency and Increase Contrast have explicit treatments. The rail is fixed at 11 pt to maintain key alignment; all playable keys have VoiceOver labels.
 
-Launch with `--design-system` to bypass the lesson model and Cloud. The app display name is Replay Nat; scheme ReplayLearn and bundle identifier com.playbk.learn are unchanged. See [the native guide](../ios-learn-native/README.md) for keyboard geometry, scope, data ownership and regression commands.
+Launch with `--design-system` to bypass the lesson model and Cloud. The app display name is Noodlyn Learn; scheme ReplayLearn and bundle identifier com.playbk.learn are unchanged. See [the native guide](../ios-learn-native/README.md) for keyboard geometry, scope, data ownership and regression commands.
 
 ## Adding or changing a component
 
@@ -95,8 +95,8 @@ Practice stacks highway → lime hit line → piano toolbar → note rail → ke
 
 `PianoDock` measures the toolbar and rail with ResizeObserver and supplies `bottomOcclusion` through the highway context. The Pixi surface continues beneath that area, but its musical origin and approach scale use only the exposed highway height. Waiting chords, scoring and audio clocks are unchanged. One backdrop covers both bars: `--piano-dock-blur: 16px`, `--piano-dock-tint: 70%`, fading to opaque at the keyboard edge. Nested rail surfaces are transparent; labels, controls and keys remain sharp. Reduced transparency and unsupported backdrop filters use a solid surface.
 
-Replay Nat independently implements this contract with `HighwayKeyboardSurface`, a dark system blur material and `NoteHighwayScene.bottomOcclusion`. The existing pooled scene shifts its drawing origin without changing `HighwayClock` or `HitJudge`. The UIKit keyboard retains all touch ownership and uses a transparent rail above opaque keys. Both catalogs show the covered continuation at beats 4.12 and 8.2.
+Noodlyn Learn independently implements this contract with `HighwayKeyboardSurface`, a dark system blur material and `NoteHighwayScene.bottomOcclusion`. The existing pooled scene shifts its drawing origin without changing `HighwayClock` or `HitJudge`. The UIKit keyboard retains all touch ownership and uses a transparent rail above opaque keys. Both catalogs show the covered continuation at beats 4.12 and 8.2.
 
 The dock leaves 8 px of shared blurred space between toolbar and rail. Connecting MIDI halves the key bed height (white and black keys), leaving toolbar and rail at their normal sizes; disconnecting restores the full height. Freed space goes to the highway. The web Midi Connected story and native catalog toggle document this layout.
 
-Tune demos wait for the production highway's first rendered frame and audio readiness, then give the player one second to prepare. A view-scoped readiness lease prevents stale scene callbacks from starting another lesson. Pending web visuals hold at the first note on the shared demo clock. Replay Nat waits for SpriteKit presentation, then uses a one-second audio-clock lead-in; recording keeps its four-beat count-in. Stop, restart and lesson changes cancel pending starts.
+Tune demos wait for the production highway's first rendered frame and audio readiness, then give the player one second to prepare. A view-scoped readiness lease prevents stale scene callbacks from starting another lesson. Pending web visuals hold at the first note on the shared demo clock. Noodlyn Learn waits for SpriteKit presentation, then uses a one-second audio-clock lead-in; recording keeps its four-beat count-in. Stop, restart and lesson changes cancel pending starts.

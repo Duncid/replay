@@ -1,4 +1,4 @@
-# Replay for iOS / iPadOS
+# Noodlyn for iOS / iPadOS
 
 The native app uses Capacitor 8.5, a scene lifecycle, and a custom CoreMIDI bridge. The installed bundle identity is `com.playbk.app`. The minimum supported iOS/iPadOS version is **26.2**.
 
@@ -37,11 +37,11 @@ If iPadOS requires developer trust, use Settings → General → VPN & Device Ma
 
 ## iPad screen space
 
-Replay hides the iPad status bar (clock, date, Wi-Fi and battery) through the view controller's `prefersStatusBarHidden`. The existing safe-area bridge follows UIKit's actual insets, so the web layout reclaims that space without hard-coded offsets. Other device types retain Capacitor's default status-bar behavior.
+Noodlyn hides the iPad status bar (clock, date, Wi-Fi and battery) through the view controller's `prefersStatusBarHidden`. The existing safe-area bridge follows UIKit's actual insets, so the web layout reclaims that space without hard-coded offsets. Other device types retain Capacitor's default status-bar behavior.
 
 ## Input verification
 
-- USB MIDI: power on the piano and use its USB COMPUTER port. Tap Connect MIDI. Play notes; unplug/replug and verify the device state updates and notes resume. Replay aggregates native CoreMIDI sources into one virtual input.
+- USB MIDI: power on the piano and use its USB COMPUTER port. Tap Connect MIDI. Play notes; unplug/replug and verify the device state updates and notes resume. Noodlyn aggregates native CoreMIDI sources into one virtual input.
 - MIDI sound: use the “…” menu beside the connected keyboard. “Play on keyboard” routes app playback and screen keys to the available MIDI output; “Silent while I play” mutes iPad audio for incoming keyboard notes. Both are manual and remembered per device. Physical notes are never echoed back to the keyboard. Test note release when switching output off and disconnecting.
 - Microphone: select microphone input, grant permission, and verify levels and recognized notes. Then test denial and background/foreground interruption recovery on the physical device.
 - Test portrait, landscape, and resized iPad windows. Browser WebKit tests cover layout and audio worklet behavior; they do not replace physical-device MIDI or microphone permission testing.
@@ -77,13 +77,14 @@ Build and install each app first. The runner does not build or install; it saves
 
 ### Launch artwork and icons
 
-The launch storyboard uses a centered Replay wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
+The launch storyboard uses a centered Noodlyn wordmark and the plain white/black piano. The wordmark is rasterized from Space Grotesk at 80 points; individual key images use 9-part slicing so their corners stay intact as Auto Layout adapts the keyboard width. Short windows can reduce the key height to avoid covering the wordmark. This target owns its storyboard and image assets independently.
 
 Both targets use the existing opaque blue piano icon at 1024px; Xcode derives the device icon sizes. Exported icon sizes, portrait/landscape start screens, and a size/source manifest live in `design-assets/ipad-release/`. Run `npx storybook build -o dist/storybook`, serve the build on port 8082, then `node scripts/export-ipad-assets.mjs`. The exporter also refreshes native launch assets, storyboards, and the existing web icon URLs. Start-screen PNGs are review/export assets; the native launch screen does not stretch a full-screen screenshot.
 
 ## Account login
 
-The packaged app opens Apple's `ASWebAuthenticationSession` (an ephemeral secure
+The public website is `https://noodlyn.com`. The packaged app retains its Lovable
+auth origin and opens Apple's `ASWebAuthenticationSession` (an ephemeral secure
 browser) at `https://improv-jam-bot.lovable.app/auth/native?client=capacitor&state=…`.
 Google, Lovable, email signup and password recovery run on the published website;
 the OAuth broker is never loaded inside WKWebView. After sign-in, the user confirms
@@ -103,11 +104,12 @@ Before distributing this build:
    allow `com.playbk.app://auth/callback` and `com.playbk.learn://auth/callback`.
 3. Build/sync and install the app. Verify real Google login, cancel/retry, relaunch,
    account switching, and email confirmation/recovery on a physical iPad. If email
-   opens in a separate browser, finish there, then reopen Replay and sign in.
+   opens in a separate browser, finish there, then reopen Noodlyn and sign in.
 
 The published origin is configured by `ReplayWebURL` in `ios/App/App/Info.plist`.
-For a future custom domain, change that value, the independent native target's
-value, and the backend redirect allowlist, then publish and rebuild both apps.
+Moving authentication to `noodlyn.com` requires checking the backend redirect
+allowlist and real Google/Lovable/email flows before changing that value and the
+independent native target's value, then publishing and rebuilding both apps.
 Never configure a Lovable preview URL as the production origin.
 
 Local Compose drafts, Quest drafts, debug/mode choices and selected profiles are

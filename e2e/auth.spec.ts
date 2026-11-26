@@ -27,7 +27,7 @@ async function mockAccounts(page: Page) {
         return route.fulfill({ json: [{ id: current.user.id === accountA ? profileA : profileB, name: current.user.email }] });
       }
       if (url.pathname.endsWith('/user_roles')) return route.fulfill({ json: current.user.id === accountA ? [{ role: 'admin' }] : [] });
-      if (url.pathname.endsWith('/tune_assets')) return route.fulfill({ json: [{ tune_key: 'intro', note_sequence: { notes: [{ pitch: 60, startTime: 0, endTime: 1 }], totalTime: 1 } }] });
+      if (url.pathname.endsWith('/tune_assets')) return route.fulfill({ json: [{ tune_key: 'intro', is_global: true, note_sequence: { notes: [{ pitch: 60, startTime: 0, endTime: 1 }], totalTime: 1 } }] });
       return route.fulfill({ json: [] });
     }
     return route.abort();
@@ -119,13 +119,13 @@ test('packaged app uses the native browser bridge and secure session storage', a
     };
   }, sessionFixture(accountA, 'a@example.test'));
   await page.goto('/');
-  await page.getByRole('button', { name: 'Sign in to Replay', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window['nativeAuthCalls'])).toContain('saveSession');
   expect(await page.evaluate(key => localStorage.getItem(key), sessionKey)).toBeNull();
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Sign in to Replay', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true })).toBeVisible();
   expect(await page.evaluate(() => window['nativeAuthCalls'])).toContain('removeSession');
 });
 

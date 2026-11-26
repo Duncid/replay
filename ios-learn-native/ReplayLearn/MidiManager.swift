@@ -21,7 +21,7 @@ final class MidiManager: ObservableObject {
         guard !started else { return }
         started = true
 
-        let status = MIDIClientCreateWithBlock("ReplayLearn" as CFString, &client) { [weak self] notification in
+        let status = MIDIClientCreateWithBlock("Noodlyn Learn" as CFString, &client) { [weak self] notification in
             guard let self else { return }
             let messageID = notification.pointee.messageID
             Task { @MainActor in
@@ -36,7 +36,7 @@ final class MidiManager: ObservableObject {
         guard status == noErr else { started = false; return }
 
         let portStatus = MIDIInputPortCreateWithBlock(
-            client, "ReplayLearn Input" as CFString, &inputPort
+            client, "Noodlyn Learn Input" as CFString, &inputPort
         ) { [weak self] packetList, _ in
             self?.handlePacketList(packetList)
         }

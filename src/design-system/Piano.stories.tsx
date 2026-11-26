@@ -55,7 +55,7 @@ const meta = {
     // Each example needs its own window: Piano listens for keyboard events.
     docs: {
       story: { inline: false, height: 420 },
-      description: { component: `The piano is Replay's main practice surface. These stories render the production Piano and PianoKey components, with real local audio and no Cloud or MIDI connection.
+      description: { component: `The piano is Noodlyn's main practice surface. These stories render the production Piano and PianoKey components, with real local audio and no Cloud or MIDI connection.
 
 ### Anatomy and sizing
 White keys fill the space remaining below the rail; black keys sit above them at 56% height, in groups of two and three. Labels live in the aligned 52 px rail above the keys, including a 2 px gap below the labels. Give the component an explicit parent height (240 px here); it fills that space. The compact layout has 22 white and 15 black keys. The full layout has 52 white and 36 black keys and scrolls inside its frame on an iPad or narrow window.

@@ -23,7 +23,7 @@ struct RootView: View {
                     TabView(selection: $tab) {
                         Tab("Tunes", systemImage: "music.note.list", value: "tunes") {
                             NavigationStack {
-                                libraryContent.navigationTitle("Replay Nat").navigationBarTitleDisplayMode(.inline).toolbar { navigationTools }
+                                libraryContent.navigationTitle("Noodlyn Learn").navigationBarTitleDisplayMode(.inline).toolbar { navigationTools }
                             }.searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Find a tune")
                         }
                         Tab("Free Play", systemImage: "pianokeys", value: "play") {
@@ -40,7 +40,7 @@ struct RootView: View {
                     .tabViewStyle(.sidebarAdaptable)
                     .defaultAdaptableTabBarPlacement(geometry.size.width >= 900 ? .sidebar : .tabBar)
                     .tabViewSidebarHeader {
-                        HStack { Image(systemName: "pianokeys").foregroundStyle(ReplayTheme.accent); Text("Replay Nat").font(ReplayTheme.display(24)) }.padding(.vertical, 16)
+                        HStack { Image(systemName: "pianokeys").foregroundStyle(ReplayTheme.accent); Text("Noodlyn Learn").font(ReplayTheme.display(24)) }.padding(.vertical, 16)
                     }
                     .tabViewSidebarFooter { Text("A little practice. A little progress.").font(.caption).foregroundStyle(ReplayTheme.muted).padding(.vertical, 12) }
                 }
@@ -132,13 +132,13 @@ struct SettingsView: View {
                 if showAccount {
                     AccountSettingsView()
                 }
-                Section("Replay Nat") {
+                Section("Noodlyn Learn") {
                     Label("Native piano practice for iPad", systemImage: "pianokeys")
-                    Text("Tune acquisitions belong to your practice profile and sync with Replay Cloud. Recent attempts and resume positions are saved per profile on this iPad.").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Tune acquisitions belong to your practice profile and sync with Noodlyn Cloud. Recent attempts and resume positions are saved per profile on this iPad.").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Section("Design & accessibility") {
                     NavigationLink { DesignSystemView() } label: { Label("Design system", systemImage: "paintpalette") }
-                    Text("Replay follows Dynamic Type, Increase Contrast and Reduce Transparency. Pitch labels stay fixed to preserve alignment with piano keys.").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Noodlyn follows Dynamic Type, Increase Contrast and Reduce Transparency. Pitch labels stay fixed to preserve alignment with piano keys.").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Section("Keyboard shortcuts") {
                     LabeledContent("Replay / stop", value: "Space")

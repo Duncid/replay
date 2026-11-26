@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("catalog uses the app theme and musical colors", async ({ page }) => {
-  await page.goto("iframe.html?id=foundations-replay--overview&viewMode=story");
+  await page.goto("iframe.html?id=foundations-noodlyn--overview&viewMode=story");
   await expect(page.getByRole("heading", { name: "Made for practice." })).toBeVisible();
   expect(await page.locator("body").evaluate(el => getComputedStyle(el).getPropertyValue("--primary").trim().split(/\s+/).map(parseFloat))).toEqual([74.934, 100, 55.098]);
   expect(await page.locator("body").evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

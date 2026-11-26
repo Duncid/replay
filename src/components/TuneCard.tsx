@@ -14,7 +14,7 @@ export interface TuneCardProps {
   isPreviewPlaying?: boolean;
 }
 
-/** The same visual hierarchy as Replay Nat, using the web theme's tokens. */
+/** The same visual hierarchy as Noodlyn Learn, using the web theme's tokens. */
 export function TuneCard({ title, composer, unlocked, preview, prerequisites = [], onSelect, onPreview, isPreviewPlaying = false }: TuneCardProps) {
   return <div className={cn("group relative flex h-full min-h-[280px] w-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-border bg-card text-left text-card-foreground transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none",
       unlocked && "border-primary/50 hover:border-primary hover:shadow-[var(--glow-user)] focus-within:border-primary focus-within:shadow-[var(--glow-user)]")}>

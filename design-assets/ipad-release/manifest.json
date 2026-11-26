@@ -1,5 +1,5 @@
 {
-  "design": "Approved simple screen: centered 80px Space Grotesk Replay, production C3–C6 white/black keys, no highway notes.",
+  "design": "Approved simple screen: centered 80px Space Grotesk Noodlyn, production C3–C6 white/black keys, no highway notes.",
   "icon": "Existing blue piano artwork, unchanged; resized from its opaque 1024px original.",
   "regenerate": "npx storybook build -o dist/storybook && node scripts/export-ipad-assets.mjs",
   "launch": "Native applications use independent adaptive storyboards and 1x/2x/3x sliced key assets. Full-screen PNGs are exports, not stretched native launch backgrounds.",
@@ -224,7 +224,7 @@
     {
       "filename": "LaunchWordmark@1x.png",
       "scale": 1,
-      "width": 320,
+      "width": 400,
       "height": 120
     },
     {
@@ -242,7 +242,7 @@
     {
       "filename": "LaunchWordmark@2x.png",
       "scale": 2,
-      "width": 640,
+      "width": 800,
       "height": 240
     },
     {
@@ -260,7 +260,7 @@
     {
       "filename": "LaunchWordmark@3x.png",
       "scale": 3,
-      "width": 960,
+      "width": 1200,
       "height": 360
     },
     {
