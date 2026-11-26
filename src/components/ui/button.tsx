@@ -21,6 +21,7 @@ const buttonVariants = cva(
         connected: "border border-primary bg-transparent text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary))]",
         live: "border border-ai bg-transparent text-ai shadow-[var(--glow-ai)]",
         link: "text-primary underline-offset-4 hover:underline",
+        apple: "bg-auth-apple-background text-auth-apple-foreground hover:bg-auth-apple-background font-[system-ui] text-[17.2px]",
       },
       size: {
         default: "h-10 px-4 py-2",

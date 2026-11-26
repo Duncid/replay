@@ -30,6 +30,8 @@
   --color-ring: hsl(var(--ring));
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
+  --color-auth-apple-background: #ffffff;
+  --color-auth-apple-foreground: #000000;
 
   --color-red-50: #f0f0f0;
   --color-red-100: #ede2e2;
