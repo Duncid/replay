@@ -43,6 +43,25 @@ async function callWorker(url: string, secret: string, body: unknown, timeoutMs:
 }
 
 type Analysis = { measures: { measure: number; startTime: number; beats: number }[]; instruments: { id: string; notes: number[][] }[] };
+type Nugget = Record<string, unknown> & {
+  id: string;
+  location: { startMeasure: number; startBeat: number; endMeasure: number; endBeat: number };
+};
+type Assembly = Record<string, unknown> & { id: string; nuggetIds: string[] };
+type TeacherPlan = Record<string, unknown> & {
+  nuggets: Nugget[];
+  assemblies?: Assembly[];
+  pipelineSettings?: Record<string, unknown> & {
+    handAssignmentPolicy?: Record<string, unknown> & { instrumentToHand?: Record<string, unknown> };
+  };
+};
+type TuneBundle = Record<string, unknown> & {
+  briefing: Record<string, unknown>;
+  nuggets?: unknown[];
+  assemblies?: unknown[];
+};
+
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
 async function planWithTuneMaster(analysis: Analysis, title: string) {
   const input = [
@@ -67,14 +86,14 @@ async function planWithTuneMaster(analysis: Analysis, title: string) {
   return checkPlan(JSON.parse(text), analysis);
 }
 
-function checkPlan(plan: Record<string, any>, analysis: Analysis) {
+function checkPlan(plan: TeacherPlan, analysis: Analysis) {
   if (!Array.isArray(plan?.nuggets) || !plan.nuggets.length) throw new Error("plan has no nuggets");
   // Measure numbers can skip (pickups, repeats). Nuggets past the end are dropped and
   // overhanging ones trimmed to the last measure, rather than discarding the whole plan.
   const nums = analysis.measures.map((m) => m.measure);
   const first = Math.min(...nums), last = Math.max(...nums);
   const beatsOf = (m: number) => analysis.measures.find((x) => x.measure === m)?.beats ?? 4;
-  const nuggets: any[] = [];
+  const nuggets: Nugget[] = [];
   for (const n of plan.nuggets) {
     const l = n?.location;
     if (typeof n?.id !== "string" || !l || ![l.startMeasure, l.startBeat, l.endMeasure, l.endBeat].every((v) => typeof v === "number"))
@@ -87,10 +106,10 @@ function checkPlan(plan: Record<string, any>, analysis: Analysis) {
   if (!nuggets.length) throw new Error("no nugget falls inside the score");
   const ids = new Set(nuggets.map((n) => n.id));
   const assemblies = (Array.isArray(plan.assemblies) ? plan.assemblies : [])
-    .filter((a: any) => Array.isArray(a?.nuggetIds) && a.nuggetIds.length >= 2 && a.nuggetIds.every((id: string) => ids.has(id)))
+    .filter((a) => Array.isArray(a?.nuggetIds) && a.nuggetIds.length >= 2 && a.nuggetIds.every((id: string) => ids.has(id)))
     // A one-nugget assembly or a repeated span only duplicates practice.
-    .filter((a: any, i: number, all: any[]) => all.findIndex((b: any) => b.nuggetIds.join() === a.nuggetIds.join()) === i);
-  const keepIds = (list: unknown) => Array.isArray(list) ? list.filter((id) => ids.has(id as string) || assemblies.some((a: any) => a.id === id)) : list;
+    .filter((a, i, all) => all.findIndex((b) => b.nuggetIds.join() === a.nuggetIds.join()) === i);
+  const keepIds = (list: unknown) => Array.isArray(list) ? list.filter((id) => ids.has(id as string) || assemblies.some((a) => a.id === id)) : list;
   plan = { ...plan, nuggets, teachingOrder: keepIds(plan.teachingOrder), assemblyOrder: keepIds(plan.assemblyOrder) };
   const instIds = analysis.instruments.map((i) => i.id);
   const map = plan.pipelineSettings?.handAssignmentPolicy?.instrumentToHand ?? {};
@@ -171,7 +190,7 @@ Deno.serve(async (req) => {
       await end("done", `${a.measures.length} measures · ${noteCount} notes · ${a.instruments.length} hand${a.instruments.length > 1 ? "s" : ""}`);
 
       await begin("plan", "TuneMaster is planning nuggets & assemblies");
-      let teacher: Record<string, any> | null = null, note: string | null = null;
+      let teacher: ReturnType<typeof checkPlan> | null = null, note: string | null = null;
       try {
         teacher = await planWithTuneMaster(a, job.title ?? job.filename);
         await end("done", `${teacher.nuggets.length} nuggets · ${teacher.assemblies.length} assemblies · ${secs(steps[steps.length - 1])}s`);
@@ -194,7 +213,7 @@ Deno.serve(async (req) => {
         built = await callWorker(workerUrl, workerSecret, { ...base, action: "build" }, 140_000);
         teacher = null;
       }
-      const result = built.bundle as Record<string, any>;
+      const result = built.bundle as TuneBundle;
       if (job.composer !== null) result.composer = job.composer;
       result.briefing.planner = teacher ? "tunemaster" : "heuristic";
       await end("done", `${result.nuggets?.length ?? 0} nuggets · ${result.assemblies?.length ?? 0} assemblies`);
@@ -216,7 +235,6 @@ Deno.serve(async (req) => {
       await save({ status: "failed", error: msg });
     }
     };
-    // @ts-ignore EdgeRuntime is provided by the edge runtime
     if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(run()); else await run();
     return json({ jobId: job.id, status: "running" });
   } catch (err) {
