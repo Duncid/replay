@@ -17,6 +17,9 @@ test("keyboard settings remember instruments and note visibility across library,
       nugget: { noteSequence: { notes: [{ pitch: 60, startTime: 0, endTime: 1, velocity: 90 }], totalTime: 1 } } }],
   } }));
   await page.goto("/");
+  // Wait for the authenticated library to finish loading before checking the
+  // keyboard defaults; cold WebKit startup can exceed the assertion's 5s budget.
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible({ timeout: 15_000 });
   const rail = page.locator(".note-rail");
   const key = page.locator('.piano-key[data-note="C4"]');
   await expect(key).toBeVisible();
