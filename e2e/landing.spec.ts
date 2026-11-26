@@ -3,6 +3,12 @@ import { expect, test } from "@playwright/test";
 test("visitors see the practice preview and can enter the existing sign-in flow", async ({ page }) => {
   const accountRequests: string[] = [];
   await page.route("**/*.supabase.co/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/tune_assets")) {
+      expect(url.searchParams.get("is_global")).toBe("eq.true");
+      expect(url.searchParams.get("curriculum_versions.status")).toBe("eq.published");
+      return route.fulfill({ json: [] });
+    }
     accountRequests.push(route.request().url());
     return route.abort();
   });
@@ -24,7 +30,7 @@ test("visitors see the practice preview and can enter the existing sign-in flow"
 
 test("the muted practice loop plays, can be paused, and gives reduced-motion visitors a still", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto("/");
+  await page.goto("/?preview=video");
   const video = page.locator(".landing-practice-video");
   await expect(page.getByRole("button", { name: "Pause preview" })).toBeVisible();
   expect(await video.evaluate((element: HTMLVideoElement) => ({ muted: element.muted, loop: element.loop, inline: element.playsInline })))

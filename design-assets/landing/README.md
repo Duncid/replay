@@ -56,3 +56,72 @@ duration aligned to whole bars. To refresh only the original still, run
 `node scripts/capture-landing-practice.mjs`; the video capture never overwrites it.
 
 No production deployment or database change is needed to regenerate these files.
+
+## Live full-tune experiment
+
+The video landing is preserved by tag **`noodlyn-landing-video-v1`** at
+`b52c334c` (also on `codex/noodlyn-landing-page`). The experiment lives on
+`codex/noodlyn-live-demo`. No video, capture source, or original image was removed.
+
+- `/`: live full-tune performance, using the production `NoteHighway`, `PianoKey`,
+  `NoteRail`, piano geometry, and acoustic sample engine.
+- `/?preview=video`: the original 24-second video for side-by-side comparison.
+- `src/components/landing/demoScore.ts`: imports the complete bundled St Louis
+  Blues sequence (317 notes, 120 BPM). Includes the complete final note and pads
+  to a bar boundary: 226 seconds. The next repetition approaches before the wrap.
+- `LivePracticePreview.tsx`: a read-only transport feeds player highlights and
+  solid player notes. It has no account, coaching, microphone, MIDI, scoring, or
+  practice progress calls. The separate catalog reads only published global tunes. Its keys are inert and disabled. It does not alter the
+  normal signed-in practice flow.
+- The fixed 1194 × 834 viewport scales inside the existing iPad, sharing the
+  renderer/key geometry instead of duplicating drawing code.
+- Attempts acoustic audio automatically on arrival. If browser autoplay policy blocks it, the first non-control tap/click/key or the Play button unlocks sound. The single Play/Pause control pauses both sound and motion. Only acoustic samples are requested. Until those
+  samples finish loading, the performance stays silent; it never plays the
+  synth fallback. A failed/slow sample load offers retry after 15 seconds.
+- Pause, hidden tabs, and offscreen visibility stop the transport and release
+  active audio. Resume continues at the same position. Reduced motion, loading,
+  and graphics errors use the retained original still.
+
+To compare locally, run `npm run dev` and open the two URLs above. To restore the
+video as the default, switch to the preserved landing branch after saving any
+experiment changes, or change the preview selection in `Landing.tsx`.
+
+Validation: `npx playwright test e2e/landing.spec.ts e2e/landing-live.spec.ts`.
+The sound regression uses a tiny local WAV response to exercise decoding and
+voice scheduling without depending on the external sample CDN. Manually verify
+real sample playback as well when changing audio.
+
+Sound follows mouse proximity to the **viewport centre**, using a smooth radial
+curve: 5% at/outside the edges, at most 30% in the centre, with a 200 ms gain ramp.
+Mobile/iPad and other touch-capable devices keep a steady 5%, even with a mouse attached. This gain belongs only to this preview's
+sampler; it never changes shared/master audio or signed-in practice volume.
+
+
+### Library navigation
+
+The caption contains only previous/next chevrons, the selected tune title, and
+Play/Pause. Playback state survives tune changes; the new tune starts at the
+beginning, with its own duration, tempo, composer, and adaptive keyboard range.
+The acoustic sampler stays mounted, so switching tunes does not reload samples.
+
+`useDemoLibrary.ts` reads `tune_assets` with `is_global = true` and a published
+curriculum version. It does not read account profiles/progress, write positions,
+or alter RLS. Anonymous access remains governed by existing database policies.
+If that request fails, times out, or returns no public tunes, it uses bundled
+local library scores. Grouped note exports win; otherwise all instrument exports
+are combined, preserving their note timing. The original St Louis Blues stays
+the initial hero tune. Cloud-only private uploads are never offered here.
+
+
+### Viewport layout
+
+The page uses the viewport height; the iPad scales to the remaining room after
+the heading, controls, and two feature blocks. The iPad and transport are
+centred together. The compatibility and MXL/coaching blocks stay side by side.
+Short viewports use compact spacing. Reduced motion still uses the retained
+image and disables the CTA border animation.
+
+Audio autoplay respects browser policy. Samples preload, but a suspended
+AudioContext is treated as blocked autoplay rather than a sample-load failure.
+Automated checks cover real permitted Chromium autoplay and a blocked-until-
+interaction path on Chromium/WebKit, plus eight portrait/landscape viewport sizes.

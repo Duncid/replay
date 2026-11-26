@@ -21,7 +21,9 @@ export default defineConfig({
     timeout: 120_000,
   }],
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // The live landing renders WebGL too; use the same native macOS backend as Storybook.
+    { name: "chromium", use: { ...devices["Desktop Chrome"],
+      launchOptions: process.platform === "darwin" ? { args: ["--use-angle=metal"] } : undefined } },
     { name: "ipad-webkit", use: { ...devices["iPad Pro 11"], browserName: "webkit" } },
   ],
 });
