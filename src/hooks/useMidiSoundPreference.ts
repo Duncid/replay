@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
-import { MidiDeviceIdentity, midiSoundPreferenceKey } from "@/utils/midiDeviceProfiles";
+import { MidiDeviceIdentity, midiSoundPreferenceKey, recognizeMidiDevice } from "@/utils/midiDeviceProfiles";
 import { enableKeyboardPlayback, hasMidiOutput, subscribeMidiOutput } from "@/lib/midiOutput";
 
 export function useMidiSoundPreference(device: MidiDeviceIdentity | null) {
@@ -13,7 +13,7 @@ export function useMidiSoundPreference(device: MidiDeviceIdentity | null) {
   );
   const canPlayOnKeyboard = useSyncExternalStore(subscribeMidiOutput, hasMidiOutput, () => false);
   const key = device ? midiSoundPreferenceKey(device) : null;
-  const silentWhilePlaying = key ? silentSettings[key] ?? false : false;
+  const silentWhilePlaying = key ? silentSettings[key] ?? recognizeMidiDevice(device!)?.hasOwnSound ?? false : false;
   const playOnKeyboard = key ? outputSettings[key] ?? false : false;
   useEffect(() => {
     enableKeyboardPlayback(!!key && playOnKeyboard && canPlayOnKeyboard);
