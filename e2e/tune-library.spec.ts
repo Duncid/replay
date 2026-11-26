@@ -142,7 +142,7 @@ test("picking an unpublished tune from the menu offers Publish", async ({ page }
   await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
   await page.getByRole("menuitem", { name: "gymnopdie", exact: true }).click();
   await expect(page.locator("div.sticky").first().getByText("gymnopdie", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
+  await expect(page.locator("div.sticky").first().getByRole("button", { name: "Publish", exact: true })).toBeVisible();
 });
 
 test("card completion recognizes both asset and curriculum identifiers", () => {

@@ -2,7 +2,9 @@ name: Web checks
 on: [push, pull_request]
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Exercise the iPad WebKit project on Apple's native graphics stack. WebKit
+    # crashes on page load with the Ubuntu runner's headless graphics environment.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
