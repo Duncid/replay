@@ -19,7 +19,11 @@ test("visitors see the practice preview and can enter the existing sign-in flow"
   await expect.poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(2388);
   expect(accountRequests).toEqual([]);
   await page.getByRole("link", { name: "Start playing" }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Sign up", exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?mode=signup$/);
+  await expect(page.getByText("Create your account", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with Lovable" })).toBeVisible();
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Back to Noodlyn" }).click();

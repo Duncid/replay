@@ -138,7 +138,7 @@ export default function Landing() {
                 <div className="landing-ipad-glass" aria-hidden="true" />
               </div>
             </div>
-            <Link className="landing-cta" to="/login">Start playing</Link>
+            <Link className="landing-cta" to="/play">Start playing</Link>
           </div>
           </div>
           <figcaption>

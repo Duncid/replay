@@ -59,6 +59,8 @@ const OpenSheetMusicDisplayView = lazy(() => import("@/components/OpenSheetMusic
 import { useTranslation } from "react-i18next";
 
 interface TunePracticeProps {
+  /** Bundled guest sheet; skips the published-assets query entirely. */
+  localSheetXml?: string;
   tuneKey: string;
   tuneTitle: string;
   language?: string;
@@ -240,6 +242,7 @@ function StreakDisplay({
 }
 
 export function TunePractice({
+  localSheetXml,
   tuneKey,
   currentNugget,
   currentIndex,
@@ -295,8 +298,9 @@ export function TunePractice({
   };
 
   // ── XML for sheet view (published or local) ────────────────────────
-  const { data: tuneAssets } = useTuneAssets(tuneKey);
+  const { data: tuneAssets } = useTuneAssets(localSheetXml === undefined ? tuneKey : null);
   const xmlForCurrentNugget = useMemo(() => {
+    if (localSheetXml !== undefined) return localSheetXml;
     const itemId = currentNugget.itemId;
     const itemType = currentNugget.itemType;
     if (tuneAssets) {
@@ -313,7 +317,7 @@ export function TunePractice({
       return getTuneDspXml(tuneKey) ?? getTuneXml(tuneKey);
     if (itemType === "assembly") return getAssemblyXml(tuneKey, itemId);
     return getNuggetXml(tuneKey, itemId);
-  }, [tuneKey, currentNugget.itemId, currentNugget.itemType, tuneAssets]);
+  }, [tuneKey, currentNugget.itemId, currentNugget.itemType, tuneAssets, localSheetXml]);
 
   const hasSheetXml = !!xmlForCurrentNugget;
 

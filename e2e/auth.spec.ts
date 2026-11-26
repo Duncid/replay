@@ -83,7 +83,7 @@ test('sign-in, reload and account switching isolate profiles and admin controls'
 });
 
 for (const provider of ['google', 'apple'] as const) {
-  test(`hosted native sign-in preserves its return context through ${provider} OAuth`, async ({ page }) => {
+  test(`hosted native sign-in preserves its return context through ${provider} OAuth`, async ({ page, baseURL }) => {
     await mockAccounts(page);
     let redirect = '';
     await page.route('**/~oauth/initiate?**', route => { redirect = route.request().url(); return route.fulfill({ body: 'OAuth broker' }); });
@@ -96,14 +96,14 @@ for (const provider of ['google', 'apple'] as const) {
     expect(returnPath).toBeTruthy();
     if (!returnPath) throw new Error('Missing OAuth return URL');
     const returnURL = new URL(returnPath);
-    expect(returnURL.origin).toBe('http://127.0.0.1:8080');
+    expect(returnURL.origin).toBe(new URL(baseURL!).origin);
     expect(returnURL.pathname).toBe('/auth/native');
     expect(returnURL.searchParams.get('client')).toBe('native');
     expect(returnURL.searchParams.get('state')).toBe(state);
   });
 }
 
-test('Apple web sign-in returns to the public app origin', async ({ page }) => {
+test('Apple web sign-in returns to the public app origin', async ({ page, baseURL }) => {
   await mockAccounts(page);
   let redirect = '';
   await page.route('**/~oauth/initiate?**', route => { redirect = route.request().url(); return route.fulfill({ body: 'OAuth broker' }); });
@@ -114,7 +114,7 @@ test('Apple web sign-in returns to the public app origin', async ({ page }) => {
   await expect.poll(() => redirect).not.toBe('');
   const request = new URL(redirect);
   expect(request.searchParams.get('provider')).toBe('apple');
-  expect(request.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:8080');
+  expect(request.searchParams.get('redirect_uri')).toBe(new URL(baseURL!).origin);
 });
 
 test('hosted handoff asks the user to confirm the account and rejects arbitrary return URLs', async ({ page }) => {
