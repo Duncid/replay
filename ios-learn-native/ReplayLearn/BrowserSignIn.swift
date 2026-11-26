@@ -11,13 +11,13 @@ final class BrowserSignIn: NSObject, ASWebAuthenticationPresentationContextProvi
         guard authentication == nil else { throw AuthFailure.message("Sign-in is already open.") }
         guard let origin = Bundle.main.object(forInfoDictionaryKey: "ReplayWebURL") as? String,
               var url = URLComponents(string: origin), url.scheme == "https", url.host != nil else {
-            throw AuthFailure.message("This build is missing the Replay website address.")
+            throw AuthFailure.message("This build is missing the Noodlyn website address.")
         }
         let state = UUID().uuidString
         url.path = "/auth/native"; url.fragment = nil
         url.queryItems = [URLQueryItem(name: "client", value: "native"), URLQueryItem(name: "state", value: state)]
         anchor = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first(where: \.isKeyWindow)
-        guard anchor != nil, let startURL = url.url else { throw AuthFailure.message("Open Replay in the foreground and try again.") }
+        guard anchor != nil, let startURL = url.url else { throw AuthFailure.message("Open Noodlyn in the foreground and try again.") }
         return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(url: startURL, callbackURLScheme: "com.playbk.learn") { [weak self] callback, error in
                 Task { @MainActor in

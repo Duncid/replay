@@ -49,7 +49,8 @@ struct AuthTests {
         try await auth.install(accessToken: "login-token", refreshToken: "first-refresh")
         let api = APIClient(profileId: "profile-a", auth: auth)
         _ = try await api.fetchTuneLibrary()
-        precondition(refreshes == 1 && authenticatedReads == 3, "Concurrent library reads must share one refresh")
+        // Tunes, curriculum, acquisitions and account-owned list positions.
+        precondition(refreshes == 1 && authenticatedReads == 4, "Concurrent library reads must share one refresh")
         precondition(vault.value?.refreshToken == "rotated")
         let restored = AuthSessionStore(transport: transport, persistence: vault)
         _ = try await restored.currentSession()

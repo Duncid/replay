@@ -1,8 +1,10 @@
-# Welcome to your Lovable project
+# Noodlyn
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/4523c14a-d949-4525-aba0-140756208667
+**Website**: https://noodlyn.com
+
+**Lovable project**: https://lovable.dev/projects/4523c14a-d949-4525-aba0-140756208667
 
 ## How can I edit this code?
 
@@ -40,8 +42,8 @@ For local Google/Lovable sign-in, open `http://127.0.0.1:8080`. Vite forwards
 `/~oauth/initiate` to this project's published Lovable app; the hosted OAuth
 service then returns to the local app. Vite preview uses the same proxy.
 In Lovable, **More → Users → Settings → Advanced → Redirect URLs** must include
-`http://127.0.0.1:8080/**` (Lovable rejects `localhost` entries). If the published
-app's domain changes, update the proxy target in `vite.config.ts` too.
+`http://127.0.0.1:8080/**` (Lovable rejects `localhost` entries). The proxy intentionally keeps the original Lovable origin even though the public
+website is now `https://noodlyn.com`.
 The local app uses the same backend accounts and data as the published app.
 
 **Edit a file directly in GitHub**
@@ -92,5 +94,22 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 ## Design systems
 
 Run `npm run storybook` to browse the web component library at http://localhost:6006.
-In **Replay Nat**, tap **Design system** to open the native component gallery.
+In **Noodlyn Learn**, tap **Design system** to open the native component gallery.
 See [the design-system guide](docs/design-system.md) for tokens, components, testing and contribution rules.
+
+## Branding and compatibility
+
+The public product is **Noodlyn** at https://noodlyn.com; the standalone SwiftUI
+app is **Noodlyn Learn**. The Capacitor and SwiftUI apps remain independent.
+
+The rebrand preserves the Lovable project, backend, OAuth provider integration,
+local OAuth proxy and native `ReplayWebURL` auth origins. Both native apps still
+use the published Lovable `/auth/native` bridge. Moving that bridge to the custom
+domain requires verifying Google/Lovable sign-in, email redirects, password reset
+and both native callbacks first.
+
+Bundle IDs, callback schemes, Keychain services, browser/native storage keys,
+plugin names, Xcode schemes and the Modal worker name remain compatibility
+identifiers. Keep these stable so existing installations retain access and data.
+The playback action “Replay” is also unchanged. Historical design explorations
+and performance reports retain their original names.

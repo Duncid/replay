@@ -93,14 +93,14 @@ private final class MidiManager {
         }
         // print("[MIDI Bridge] [DEBUG] MidiManager.start ENTRY, webView is nil:", webView == nil)
 
-        var result = MIDIClientCreateWithBlock("Replay MIDI" as CFString, &client) { [weak self] message in
+        var result = MIDIClientCreateWithBlock("Noodlyn MIDI" as CFString, &client) { [weak self] message in
             self?.handleNotify(message)
         }
         guard result == noErr else {
             throw midiError("Create MIDI client", status: result)
         }
 
-        result = MIDIInputPortCreateWithBlock(client, "Replay Input" as CFString, &inputPort) { [weak self] packetList, _ in
+        result = MIDIInputPortCreateWithBlock(client, "Noodlyn Input" as CFString, &inputPort) { [weak self] packetList, _ in
             self?.handlePacketList(packetList)
         }
         guard result == noErr else {
@@ -109,7 +109,7 @@ private final class MidiManager {
         }
         // print("[MIDI Bridge] [DEBUG] MidiManager.start: CoreMIDI client and port created OK")
 
-        result = MIDIOutputPortCreate(client, "Replay Output" as CFString, &outputPort)
+        result = MIDIOutputPortCreate(client, "Noodlyn Output" as CFString, &outputPort)
         guard result == noErr else {
             stop()
             throw midiError("Create MIDI output", status: result)

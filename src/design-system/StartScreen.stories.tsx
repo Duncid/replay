@@ -7,7 +7,7 @@ const noop = () => {};
 
 function StartScreen() {
   return <main className="relative h-dvh w-full overflow-hidden bg-background text-foreground">
-    <h1 className="absolute inset-0 m-0 grid place-items-center font-display text-[80px] font-semibold tracking-tight">Replay</h1>
+    <h1 className="absolute inset-0 m-0 grid place-items-center font-display text-[80px] font-semibold tracking-tight">Noodlyn</h1>
     <div aria-hidden="true" inert className="pointer-events-none absolute inset-x-1 bottom-1 h-[266px]">
       <div className="absolute inset-0 z-0">
         {layout.whiteKeys.map(note => <PianoKey key={note.midi} note={`${note.note}${note.octave}`} isBlack={false} isPlayable onPress={noop} onRelease={noop} style={pianoKeyStyle(layout, note)} />)}
@@ -24,7 +24,7 @@ const meta = {
   component: StartScreen,
   parameters: {
     edgeToEdge: true,
-    docs: { description: { component: "Source artwork for the adaptive launch screens in Replay and Replay Nat. Regenerate the size pack with scripts/export-ipad-assets.mjs. Replay uses the app's Space Grotesk display font at 80px, centered on the screen. The keys are the production PianoKey components and C3–C6 geometry, with the original white/black surfaces, proportions, shadows and corners. No rail, key highlights or controls. Export in landscape or portrait without changing the design." } },
+    docs: { description: { component: "Source artwork for the adaptive launch screens in Noodlyn and Noodlyn Learn. Regenerate the size pack with scripts/export-ipad-assets.mjs. Noodlyn uses the app's Space Grotesk display font at 80px, centered on the screen. The keys are the production PianoKey components and C3–C6 geometry, with the original white/black surfaces, proportions, shadows and corners. No rail, key highlights or controls. Export in landscape or portrait without changing the design." } },
   },
 } satisfies Meta<typeof StartScreen>;
 export default meta;

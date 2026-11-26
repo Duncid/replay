@@ -40,7 +40,7 @@ const xml=`<?xml version="1.0" encoding="UTF-8"?>
 <rect key="frame" x="0" y="0" width="${w}" height="${h}"/>
 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
 <subviews>
-<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="word-mark-img"><rect key="frame" x="${(w-320)/2}" y="${(h-120)/2}" width="320" height="120"/><constraints>${constraint('firstAttribute="width" constant="320"')}${constraint('firstAttribute="height" constant="120"')}</constraints></imageView>
+<imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="word-mark-img"><rect key="frame" x="${(w-400)/2}" y="${(h-120)/2}" width="400" height="120"/><constraints>${constraint('firstAttribute="width" constant="400"')}${constraint('firstAttribute="height" constant="120"')}</constraints></imageView>
 <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="1" translatesAutoresizingMaskIntoConstraints="NO" id="key-stack-vw"><rect key="frame" x="4" y="${h-keyHeight-4}" width="${w-8}" height="${keyHeight}"/><subviews>${whites}</subviews><constraints>${constraint('firstAttribute="height" priority="750" constant="266"')}</constraints></stackView>
 ${blackViews}
 </subviews>
@@ -48,7 +48,7 @@ ${blackViews}
 <constraints>${constraints.join('\n')}</constraints>
 </view></viewController><placeholder placeholderIdentifier="IBFirstResponder" id="launch-first-rs" sceneMemberID="firstResponder"/>
 </objects></scene></scenes>
-<resources><image name="LaunchWordmark" width="320" height="120"/><image name="LaunchWhiteKey" width="72" height="266"/><image name="LaunchBlackKey" width="58" height="157"/></resources>
+<resources><image name="LaunchWordmark" width="400" height="120"/><image name="LaunchWhiteKey" width="72" height="266"/><image name="LaunchBlackKey" width="58" height="157"/></resources>
 </document>\n`;
 for(const file of ['ios/App/App/Base.lproj/LaunchScreen.storyboard','ios-learn-native/ReplayLearn/LaunchScreen.storyboard']) {
  await mkdir(dirname(resolve(root,file)),{recursive:true});await writeFile(resolve(root,file),xml);

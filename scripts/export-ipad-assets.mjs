@@ -25,7 +25,7 @@ const screens = [
 ];
 const iconSizes = [16,20,29,32,36,40,48,57,58,60,70,72,76,80,87,96,114,120,128,144,150,152,167,180,192,256,310,512,1024];
 const manifest = {
-  design: 'Approved simple screen: centered 80px Space Grotesk Replay, production C3–C6 white/black keys, no highway notes.',
+  design: 'Approved simple screen: centered 80px Space Grotesk Noodlyn, production C3–C6 white/black keys, no highway notes.',
   icon: 'Existing blue piano artwork, unchanged; resized from its opaque 1024px original.',
   regenerate: 'npx storybook build -o dist/storybook && node scripts/export-ipad-assets.mjs',
   launch: 'Native applications use independent adaptive storyboards and 1x/2x/3x sliced key assets. Full-screen PNGs are exports, not stretched native launch backgrounds.',
@@ -55,9 +55,17 @@ try {
     }
   }
   await page.close();
+  // Public share artwork uses the same typography and piano as the launch screen.
+  const social = await browser.newPage({viewport:{width:1200,height:630},deviceScaleFactor:1});
+  await social.goto(story);
+  await social.locator('main h1').waitFor();
+  await social.evaluate(() => document.fonts.ready);
+  await social.locator('main > div').evaluate(el => { el.style.height = '190px'; });
+  await social.screenshot({path:resolve(root,'public/social-preview.png')});
+  await social.close();
   // Export the actual rendered typography and key surfaces, not a redrawing.
   for (const scale of [1,2,3]) {
-    for (const [kind,width,height] of [['Wordmark',320,120],['WhiteKey',72,266],['BlackKey',58,157]]) {
+    for (const [kind,width,height] of [['Wordmark',400,120],['WhiteKey',72,266],['BlackKey',58,157]]) {
       const part = await browser.newPage({viewport:{width:500,height:500},deviceScaleFactor:scale});
       await part.goto(story);
       await part.locator('main h1').waitFor();
@@ -73,6 +81,9 @@ try {
         }
         container.append(source);
         document.body.replaceChildren(container);
+        if(kind==='Wordmark' && source.getBoundingClientRect().width > width) {
+          throw new Error('Launch wordmark exceeds its export canvas');
+        }
         // Storybook applies its canvas background with !important.
         document.documentElement.style.setProperty('background', 'transparent', 'important');
         document.body.style.cssText='margin:0;background:transparent !important';
@@ -117,7 +128,7 @@ await copyFile(iconMaster,resolve(root,'ios-learn-native/ReplayLearn/Resources/A
 
 // Independent copies in each app: no runtime dependency between projects.
 for(const catalog of ['ios/App/App/Assets.xcassets','ios-learn-native/ReplayLearn/Resources/Assets.xcassets']) {
-  for(const [kind,width,height,caps] of [['Wordmark',320,120,null],['WhiteKey',72,266,{top:1,bottom:8,left:8,right:8}],['BlackKey',58,157,{top:2,bottom:14,left:14,right:14}]]) {
+  for(const [kind,width,height,caps] of [['Wordmark',400,120,null],['WhiteKey',72,266,{top:1,bottom:8,left:8,right:8}],['BlackKey',58,157,{top:2,bottom:14,left:14,right:14}]]) {
     const dir=resolve(root,catalog,`Launch${kind}.imageset`);await mkdir(dir,{recursive:true});
     const images=[];
     for(const scale of [1,2,3]) {
@@ -141,3 +152,5 @@ await copyFile(resolve(root, 'ios/App/App/Base.lproj/LaunchScreen.storyboard'), 
 for(const asset of ['Contents.json', 'AppIcon.appiconset', 'LaunchWordmark.imageset', 'LaunchWhiteKey.imageset', 'LaunchBlackKey.imageset']) {
   await cp(resolve(root, 'ios/App/App/Assets.xcassets', asset), resolve(nativePack, 'ReplayAssets.xcassets', asset), {recursive:true});
 }
+// Keep the existing downloadable pack in sync with the current release artwork.
+execFileSync('ditto',['-c','-k','--norsrc','--keepParent',output,resolve(root,'design-assets/replay-ipad-assets.zip')]);

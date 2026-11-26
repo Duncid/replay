@@ -64,11 +64,11 @@ struct AccountGate: View {
                 AccountPracticeView(profile: profile).id(profile.id).environmentObject(account)
             } else {
                 VStack(spacing: 24) {
-                    Text("Replay Nat").font(ReplayTheme.display(40))
+                    Text("Noodlyn Learn").font(ReplayTheme.display(40))
                     Text("Sign in to open your tunes and practice profiles.").foregroundStyle(ReplayTheme.muted)
                     if account.busy { ProgressView("Opening your account…") }
                     if let error = account.error { Text(error).foregroundStyle(ReplayTheme.muted).accessibilityLabel("Sign-in error: \(error)") }
-                    Button("Sign in to Replay") { Task { await account.signIn() } }.buttonStyle(ReplayButtonStyle()).disabled(account.busy)
+                    Button("Sign in to Noodlyn") { Task { await account.signIn() } }.buttonStyle(ReplayButtonStyle()).disabled(account.busy)
                     Text("Use Google, Lovable, or email in the secure sign-in browser.").font(.footnote).foregroundStyle(ReplayTheme.muted)
                     if account.error != nil {
                         Button("Try restoring session again") { Task { await account.restore() } }.disabled(account.busy)

@@ -226,6 +226,9 @@ test("notation loads on demand in tune management", async ({ page }) => {
   await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
   await page.getByRole("menuitem", { name: "intro", exact: true }).click();
+  // Tune Manager opens on Overview; select the full score to mount its canvas.
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Full", exact: true }).click();
   await expect.poll(() => requests.some(url => /OpenSheetMusicDisplayView-.*\.js/.test(url))).toBe(true);
   await expect(page.getByText("Loading notation...", { exact: true })).toBeHidden();
   await expect.poll(() => requests.some(url => /teacher-.*\.js/.test(url))).toBe(true);
@@ -331,7 +334,7 @@ test("MIDI model recognition distinguishes controllers, variants, and unknown na
     play3: "MPK mini Play mk3", unknown: null, ambiguous: null, otherVariant: null, stableKey: true });
 });
 
-test("Input dropdown MIDI settings are manual and remembered per keyboard", async ({ page }) => {
+test("Input dropdown uses keyboard sound defaults and remembers manual overrides", async ({ page }) => {
   await page.addInitScript(() => {
     const input = { id: "native-source", name: "FP-10", manufacturer: "CoreMIDI", onmidimessage: null, close: async () => {} };
     window["testMidiInput"] = input;
@@ -346,7 +349,7 @@ test("Input dropdown MIDI settings are manual and remembered per keyboard", asyn
   await openInput(page);
   await connect.click();
   await expect(page.getByRole("switch", { name: "Microphone", exact: true })).not.toBeChecked();
-  await expect(silent).not.toBeChecked();
+  await expect(silent).toBeChecked();
   await expect(page.getByRole("switch", { name: "Play on keyboard" })).toBeDisabled();
   await expect(page.getByRole("dialog")).toHaveCSS("opacity", "1");
   await page.screenshot({ path: `/tmp/replay-midi-menu-${test.info().project.name}.png` });
@@ -366,12 +369,12 @@ test("Input dropdown MIDI settings are manual and remembered per keyboard", asyn
   await openInput(page);
   await connect.click();
   await openInput(page);
-  await expect(silent).toBeChecked();
+  await expect(silent).not.toBeChecked();
   await page.reload();
   await openInput(page);
   await connect.click();
   await openInput(page);
-  await expect(silent).toBeChecked();
+  await expect(silent).not.toBeChecked();
 });
 
 test("keyboard output sends notes without echoing physical keys and releases on disable", async ({ page }) => {
@@ -397,7 +400,7 @@ test("keyboard output sends notes without echoing physical keys and releases on 
   await openInput(page);
   const output = page.getByRole("switch", { name: "Play on keyboard" });
   await output.click();
-  await page.getByRole("switch", { name: "Silent while I play" }).click();
+  await expect(page.getByRole("switch", { name: "Silent while I play" })).toBeChecked();
   await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [144, 60, 100] }));
   expect(await page.evaluate(() => window["sentMidi"])).toEqual([]);
   await page.evaluate(() => window["testMidiInput"].onmidimessage({ data: [128, 60, 0] }));
@@ -522,7 +525,7 @@ test("tune demo waits for the cold highway scene and a one-second preparation de
 
 test("toolbar switches keep pill geometry and generous touch targets", async ({ page }) => {
   await page.goto("/");
-  const toggle = page.locator("#full-keyboard");
+  const toggle = page.locator("#metronome-toggle");
   await expect(toggle).toBeVisible();
   const track = (await toggle.boundingBox())!;
   expect(track.width).toBe(44);

@@ -30,17 +30,21 @@ test("MXL prefills title and composer and submits the user's edits", async ({ pa
   expect(submitted?.tuneKey).toBe("my-waltz");
 });
 
-test("plain XML title fallback and missing composer metadata", async ({ page }) => {
-  await page.goto("/");
-  const results = await page.evaluate(async () => {
-    const { parseMusicXmlMetadata: parse, readMusicXmlMetadata: read } = await import("/src/utils/musicXmlMetadata.ts");
-    return {
-      movement: parse('<score-partwise><movement-title>gymnopédie no. 1</movement-title><identification><creator type="composer">erik satie(1866 – 1925)</creator></identification></score-partwise>'),
-      missing: await read(new File(['<score-partwise/>'], 'fallback.xml')),
-      invalid: parse('not xml'),
-      placeholder: parse('<score-partwise><identification><creator type="composer">Music21</creator></identification></score-partwise>'),
-    };
+test.describe("XML metadata utility", () => {
+  test.use({ baseURL: "http://127.0.0.1:8081" });
+
+  test("plain XML title fallback and missing composer metadata", async ({ page }) => {
+    await page.goto("/");
+    const results = await page.evaluate(async () => {
+      const { parseMusicXmlMetadata: parse, readMusicXmlMetadata: read } = await import("/src/utils/musicXmlMetadata.ts");
+      return {
+        movement: parse('<score-partwise><movement-title>gymnopédie no. 1</movement-title><identification><creator type="composer">erik satie(1866 – 1925)</creator></identification></score-partwise>'),
+        missing: await read(new File(['<score-partwise/>'], 'fallback.xml')),
+        invalid: parse('not xml'),
+        placeholder: parse('<score-partwise><identification><creator type="composer">Music21</creator></identification></score-partwise>'),
+      };
+    });
+    expect(results).toEqual({ movement: { title: "Gymnopédie No. 1", composer: "Erik Satie" },
+      missing: { title: null, composer: null }, invalid: { title: null, composer: null }, placeholder: { title: null, composer: null } });
   });
-  expect(results).toEqual({ movement: { title: "Gymnopédie No. 1", composer: "Erik Satie" },
-    missing: { title: null, composer: null }, invalid: { title: null, composer: null }, placeholder: { title: null, composer: null } });
 });

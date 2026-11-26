@@ -5,12 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { nativeAuthCallback, nativeAuthRequest } from '@/utils/nativeAuthCallback';
 import Auth from './Auth';
 
-/** Hosted on Replay's HTTPS site so Lovable's OAuth broker remains available. */
+/** Hosted on Noodlyn's HTTPS site so Lovable's OAuth broker remains available. */
 export default function NativeAuth() {
   const { user, loading, signOut } = useAuth();
   const [error, setError] = useState('');
   const request = nativeAuthRequest(window.location.search);
-  if (!request) return <main className="p-8">This sign-in link is invalid. Open Replay on your iPad and try again.</main>;
+  if (!request) return <main className="p-8">This sign-in link is invalid. Open Noodlyn on your iPad and try again.</main>;
   if (loading) return <main className="p-8">Loading sign-in…</main>;
   if (!user) return <Auth redirectTo={`${window.location.origin}${window.location.pathname}${window.location.search}`} />;
 
@@ -23,7 +23,7 @@ export default function NativeAuth() {
   };
   return <main className="min-h-dvh flex items-center justify-center bg-background text-foreground p-6">
     <div className="w-full max-w-sm space-y-6 text-center">
-      <h1 className="text-3xl font-bold">Continue to Replay</h1>
+      <h1 className="text-3xl font-bold">Continue to Noodlyn</h1>
       <p>Signed in as {user.email}</p>
       {error && <p role="alert">{error}</p>}
       <Button className="w-full" onClick={continueToApp}>Continue to the iPad app</Button>

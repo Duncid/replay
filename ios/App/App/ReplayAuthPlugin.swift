@@ -26,13 +26,13 @@ public final class ReplayAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthentic
             guard self.authentication == nil else { call.reject("Sign-in is already open."); return }
             guard let origin = Bundle.main.object(forInfoDictionaryKey: "ReplayWebURL") as? String,
                   var url = URLComponents(string: origin), url.scheme == "https", url.host != nil else {
-                call.reject("This build is missing the Replay website address."); return
+                call.reject("This build is missing the Noodlyn website address."); return
             }
             let state = UUID().uuidString
             url.path = "/auth/native"; url.fragment = nil
             url.queryItems = [URLQueryItem(name: "client", value: "capacitor"), URLQueryItem(name: "state", value: state)]
             self.anchor = self.bridge?.viewController?.view.window
-            guard let startURL = url.url, self.anchor != nil else { call.reject("Open Replay in the foreground and try again."); return }
+            guard let startURL = url.url, self.anchor != nil else { call.reject("Open Noodlyn in the foreground and try again."); return }
             let session = ASWebAuthenticationSession(url: startURL, callbackURLScheme: "com.playbk.app") { [weak self] callback, error in
                 DispatchQueue.main.async {
                     self?.authentication = nil; self?.anchor = nil

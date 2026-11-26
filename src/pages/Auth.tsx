@@ -59,14 +59,14 @@ export default function Auth({ redirectTo = window.location.origin }: { redirect
 
   if (isNativeApp()) return <main className="min-h-dvh flex items-center justify-center bg-background text-foreground p-6">
     <div className="w-full max-w-sm space-y-6 text-center">
-      <h1 className="text-3xl font-bold">Replay</h1>
+      <h1 className="text-3xl font-bold">Noodlyn</h1>
       <p className="text-muted-foreground">Sign in with Google, Lovable, or email to open your music and practice profiles.</p>
       <Button className="w-full" disabled={busy} onClick={async () => {
         setBusy(true);
         try { await signInNative(); }
         catch (error) { toast.error(error instanceof Error ? error.message : 'Sign-in failed'); }
         finally { setBusy(false); }
-      }}>{busy ? 'Signing in…' : 'Sign in to Replay'}</Button>
+      }}>{busy ? 'Signing in…' : 'Sign in to Noodlyn'}</Button>
       <p className="text-sm text-muted-foreground">Sign-in opens in a secure browser. You can also create an account or reset your password there.</p>
     </div>
   </main>;
@@ -75,7 +75,7 @@ export default function Auth({ redirectTo = window.location.origin }: { redirect
     <main className="min-h-dvh flex items-center justify-center bg-background text-foreground p-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-3xl font-bold">Replay</h1>
+          <h1 className="text-3xl font-bold">Noodlyn</h1>
           <p className="text-muted-foreground">
             {mode === "signup" ? "Create your account" : mode === "forgot" ? "Reset your password" : "Sign in to play"}
           </p>

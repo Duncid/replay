@@ -10,7 +10,7 @@ struct DesignSystemView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Replay / Acid").font(ReplayTheme.display(44))
+                        Text("Noodlyn / Acid").font(ReplayTheme.display(44))
                         Text("Native design system").font(.title3)
                         Text("System owns chrome. Brand owns content.").foregroundStyle(ReplayTheme.muted)
                     }
