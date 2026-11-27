@@ -21,12 +21,15 @@ test("visitors see the practice preview and can enter the existing sign-in flow"
   await page.getByRole("link", { name: "Start playing" }).click();
   await expect(page).toHaveURL(/\/play$/);
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Sign up", exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?mode=signup$/);
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await expect(page).toHaveURL(/\/play$/);
+  const signup = page.getByRole("dialog", { name: "Create account", exact: true });
+  await expect(signup).toBeVisible();
   await expect(page.getByText("Create your account", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with Lovable" })).toBeVisible();
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Back to Noodlyn" }).click();
+  await signup.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("link", { name: "Back to home", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Find your rhythm." })).toBeVisible();
   await page.getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
