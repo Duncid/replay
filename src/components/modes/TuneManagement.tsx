@@ -57,7 +57,6 @@ import {
   getLocalAssemblyMenuItems,
   getLocalNuggetIds,
   getLocalNuggetMenuItems,
-  getLocalTuneKeys,
   getNuggetDspXml,
   getNuggetLh,
   getNuggetInst,
@@ -349,9 +348,8 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     [tuneList],
   );
 
-  // Get local tune keys from file system
-  const localTuneKeys = useMemo(() => getLocalTuneKeys(), []);
-  const unpublishedTuneKeys = useMemo(() => localTuneKeys, [localTuneKeys]);
+  // Tune Manager exposes published tunes only; bundled fixtures are not a catalogue.
+  const unpublishedTuneKeys = useMemo<string[]>(() => [], []);
 
   // Filtered tune lists for search
   const filteredPublishedKeys = useMemo(() => {
@@ -1726,10 +1724,7 @@ export function TuneSelectionSubmenus({
     selectedTune,
     publishedFilter,
     setPublishedFilter,
-    unpublishedFilter,
-    setUnpublishedFilter,
     filteredPublishedKeys,
-    filteredUnpublishedKeys,
     selectTune,
   } = useTuneManagementContext();
 
@@ -1770,35 +1765,6 @@ export function TuneSelectionSubmenus({
         </DropdownMenuSubContent>
       </DropdownMenuSub>
 
-      {/* Un-Published Section */}
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>Un-Published</DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-          <div className="px-2 py-1.5 sticky top-0 bg-popover">
-            <Input
-              placeholder="Filter..."
-              value={unpublishedFilter}
-              onChange={(e) => setUnpublishedFilter(e.target.value)}
-              className="h-8"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            />
-          </div>
-          <DropdownMenuSeparator />
-          {filteredUnpublishedKeys.length > 0 ? (
-            filteredUnpublishedKeys.map((tune) => (
-              <DropdownMenuItem key={tune} onClick={() => choose("local", tune)}>
-                <span className="flex-1">{tune}</span>
-                {selectedTune === tune && selectedSource === "local" && (
-                  <Check className="h-4 w-4 ml-2" />
-                )}
-              </DropdownMenuItem>
-            ))
-          ) : (
-            <DropdownMenuItem disabled>No matches</DropdownMenuItem>
-          )}
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
     </>
   );
 }
