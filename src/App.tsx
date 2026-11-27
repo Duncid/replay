@@ -1,27 +1,27 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Link, useSearchParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Link, useSearchParams, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import Landing from "./pages/Landing";
+import GuestEntry from "./components/landing/GuestEntry";
 import NativeAuth from "./pages/NativeAuth";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import type { ReactNode } from "react";
 import { isNativeApp } from "./lib/nativeAuth";
 
 const Index = lazy(() => import("./pages/Index"));
-const GuestApp = lazy(() => import("./pages/GuestApp"));
 
 const Loading = () => <div className="h-dvh flex items-center justify-center bg-background text-foreground">Loading music...</div>;
 
-function RequireAuth({ children }: { children: ReactNode }) {
+function PublicEntry() {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
   if (loading) return <Loading />;
-  if (!user) return isNativeApp() ? <Auth /> : <Landing />;
-  return <div key={user.id} className="contents">{children}</div>;
+  if (pathname === "/play" && (user || isNativeApp())) return <Navigate to="/" replace />;
+  if (!user) return isNativeApp() ? <Auth /> : <GuestEntry />;
+  return <div key={user.id} className="contents"><Suspense fallback={<Loading />}><Index /></Suspense></div>;
 }
 
 function Login() {
@@ -44,9 +44,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<RequireAuth><Suspense fallback={<Loading />}><Index /></Suspense></RequireAuth>} />
+          <Route element={<PublicEntry />}>
+            <Route path="/" element={<></>} />
+            <Route path="/play" element={<></>} />
+          </Route>
           <Route path="/login" element={<Login />} />
-          <Route path="/play" element={<Suspense fallback={<Loading />}><GuestApp /></Suspense>} />
           <Route path="/auth/native" element={<NativeAuth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

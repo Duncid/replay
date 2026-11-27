@@ -13,8 +13,8 @@ const ignoreInput = () => {};
 
 /** Read-only performance: production renderer, keys and samples, without practice/account services. */
 const LivePracticePreview = forwardRef<LivePracticeHandle, {
-  tune: DemoTune; paused: boolean; onReady: () => void; onError: () => void; onSoundChange: (state: DemoSound) => void;
-}>(function LivePracticePreview({ tune, paused, onReady, onError, onSoundChange }, ref) {
+  tune: DemoTune; paused: boolean; departing?: boolean; onReady: () => void; onError: () => void; onSoundChange: (state: DemoSound) => void;
+}>(function LivePracticePreview({ tune, paused, departing = false, onReady, onError, onSoundChange }, ref) {
   const { layout, notes: demoNotes, highwayNotes, duration, beatsPerSecond, bpm, range } = tune;
   const host = useRef<HTMLDivElement>(null);
   const timeLabel = useRef<HTMLSpanElement>(null);
@@ -27,6 +27,10 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
   const [audioFailed, setAudioFailed] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [departureFinished, setDepartureFinished] = useState(false);
+  const departingRef = useRef(departing);
+  departingRef.current = departing;
+  const volume = useRef(.05);
   const audio = useTonePiano(sampleRequested ? "acoustic-piano" : null, .05);
   const audioRef = useRef(audio);
   audioRef.current = audio;
@@ -34,7 +38,7 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
   const seconds = useRef(-2); // Let the first note approach, rather than start on a hit.
   const cycle = useRef(0);
   const activeIds = useRef(new Set<string>());
-  const playing = ready && !paused && visible && foreground;
+  const playing = ready && !paused && !departureFinished && visible && foreground;
   const sounding = sampleRequested && audioUnlocked && audio.isLoaded;
   const transport = useRef<HighwayTransport>({
     getBeat: () => seconds.current * beatsPerSecond,
@@ -48,18 +52,30 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
     return () => { mounted.current = false; };
   }, []);
   const requestSound = useCallback(() => {
+    if (departingRef.current) return;
     // Attempt on arrival, and retry synchronously in a gesture if the browser blocks autoplay.
     setAudioFailed(false);
     setAutoplayBlocked(false);
     setSampleRequested(true);
     void audioRef.current.ensureAudioReady().then(() => {
-      if (mounted.current) { setAudioUnlocked(true); setAutoplayBlocked(false); }
+      if (mounted.current && !departingRef.current) { setAudioUnlocked(true); setAutoplayBlocked(false); }
     }).catch(() => {
       if (mounted.current) setAutoplayBlocked(true);
     });
   }, []);
   useImperativeHandle(ref, () => ({ play: requestSound }), [requestSound]);
   useEffect(() => { requestSound(); }, [requestSound]);
+  useEffect(() => {
+    if (!departing) {
+      setDepartureFinished(false);
+      audioRef.current.setSampleVolume(volume.current);
+      return;
+    }
+    audioRef.current.setSampleVolume(0, .15);
+    if (host.current) host.current.dataset.volume = "0.000";
+    const timeout = setTimeout(() => setDepartureFinished(true), 150);
+    return () => clearTimeout(timeout);
+  }, [departing]);
   useEffect(() => {
     if (audioUnlocked || !sampleRequested) return;
     // A blocked AudioContext.resume() may stay pending instead of rejecting.
@@ -92,8 +108,10 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
   useEffect(() => {
     const pointer = window.matchMedia("(hover: hover) and (pointer: fine)");
     const setVolume = (gain: number) => {
+      if (departingRef.current) return;
       // Keep the cap here, before any sampler exists, as well as on every move.
       const capped = Math.max(0, Math.min(.3, gain));
+      volume.current = capped;
       audioRef.current.setSampleVolume(capped);
       if (host.current) host.current.dataset.volume = capped.toFixed(3);
     };
@@ -193,12 +211,12 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
     <div className="landing-demo-app" aria-hidden="true" inert>
       <div className="landing-demo-highway"><NoteHighway notes={highwayNotes} transport={transport.current}
         layout={layout} range={range} pixelsPerBeat={90} beatsPerSecond={beatsPerSecond} onReadinessChange={readiness} /></div>
-      <header className="landing-demo-header"><span className="landing-demo-brand">Noodlyn<span>.</span></span><span>Practice</span><span className="landing-demo-avatar">N</span></header>
-      <div className="landing-demo-title"><span>FULL TUNE</span><h2>{tune.title}</h2>{tune.composer && <p>{tune.composer}</p>}</div>
+      <header className="landing-demo-header"><span className="landing-demo-brand">Noodlyn<span>.</span></span></header>
+      <div className="landing-demo-title"><h2>{tune.title}</h2>{tune.composer && <p>{tune.composer}</p>}</div>
       <div className="landing-demo-piano">
         <div className="landing-demo-toolbar"><span>Acoustic piano</span><span>{Math.round(bpm)} BPM <span className="landing-demo-time" ref={timeLabel}>0:00 / {formatDemoTime(duration)}</span></span></div>
         <div className="landing-demo-keys piano-surface"><NoteRail layout={layout} states={states} />
-          <div className="relative flex-1 min-h-0">{pianoBreaks(layout).map(note => <div key={note.midi} className="piano-range-break" style={pianoBreakStyle(layout, note)} />)}{[...layout.whiteKeys, ...layout.blackKeys].map(note => {
+          <div data-preview-keys className="relative flex-1 min-h-0">{pianoBreaks(layout).map(note => <div key={note.midi} className="piano-range-break" style={pianoBreakStyle(layout, note)} />)}{[...layout.whiteKeys, ...layout.blackKeys].map(note => {
             const name = `${note.note}${note.octave}`;
             return <PianoKey key={name} note={name} style={pianoKeyStyle(layout, note)} isBlack={note.isBlack}
               activity={states[name].activity} isPlayable disabled onPress={ignoreInput} onRelease={ignoreInput} />;

@@ -1,9 +1,10 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { DemoSound, LivePracticeHandle } from "@/components/landing/LivePracticePreview";
 import { Link, useLocation } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Play, Pause, KeyboardMusic, Mic } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Pause, KeyboardMusic, Mic, Music2 } from "lucide-react";
 import { initialDemoTune } from "@/components/landing/demoScore";
 import { useDemoLibrary } from "@/components/landing/useDemoLibrary";
+import { useGuestEntry } from "@/components/landing/GuestEntryContext";
 import "./Landing.css";
 
 const LivePracticePreview = lazy(() => import("@/components/landing/LivePracticePreview"));
@@ -22,6 +23,10 @@ function subscribeToReducedMotion(onChange: () => void) {
 }
 
 export default function Landing() {
+  const entry = useGuestEntry();
+  const departing = entry.phase !== "idle";
+  const departingRef = useRef(departing);
+  departingRef.current = departing;
   const videoMode = new URLSearchParams(useLocation().search).get("preview") === "video";
   const tunes = useDemoLibrary();
   const [tune, setTune] = useState(initialDemoTune);
@@ -65,12 +70,12 @@ export default function Landing() {
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
     const move = (event: PointerEvent) => {
-      if (!motion.matches || event.pointerType !== "mouse") return;
+      if (departingRef.current || !motion.matches || event.pointerType !== "mouse") return;
       x = (event.clientX / window.innerWidth - 0.5) * 2;
       y = (event.clientY / window.innerHeight - 0.5) * 2;
       schedule();
     };
-    const reset = () => { x = 0; y = 0; schedule(); };
+    const reset = () => { if (!departingRef.current) { x = 0; y = 0; schedule(); } };
     window.addEventListener("pointermove", move, { passive: true });
     document.documentElement.addEventListener("pointerleave", reset);
     window.addEventListener("blur", reset);
@@ -120,7 +125,7 @@ export default function Landing() {
                     draggable={false}
                   />
                   {!videoMode && !reducedMotion && !liveFailed && <PreviewBoundary onError={onLiveError}>
-                    <Suspense fallback={null}><LivePracticePreview ref={liveRef} tune={tune} paused={livePaused}
+                    <Suspense fallback={null}><LivePracticePreview ref={liveRef} tune={tune} paused={livePaused} departing={departing}
                       onReady={onLiveReady} onError={onLiveError} onSoundChange={onSoundChange} /></Suspense>
                   </PreviewBoundary>}
                   {videoMode && !reducedMotion && !videoFailed && <video
@@ -138,7 +143,13 @@ export default function Landing() {
                 <div className="landing-ipad-glass" aria-hidden="true" />
               </div>
             </div>
-            <Link className="landing-cta" to="/play">Start playing</Link>
+            <Link className="landing-cta" to="/play" aria-busy={departing || undefined}
+              onPointerEnter={entry.preload} onFocus={entry.preload} onPointerDown={entry.preload}
+              onClick={event => {
+                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                const source = event.currentTarget.closest<HTMLElement>(".noodlyn-landing");
+                if (source && entry.begin(source)) event.preventDefault();
+              }}>Start playing</Link>
           </div>
           </div>
           <figcaption>
@@ -173,12 +184,12 @@ export default function Landing() {
           <div className="landing-features">
             <div className="landing-compatibility">
               <div className="landing-input-icons" aria-hidden="true">
-                <span><KeyboardMusic /></span><span><Mic /></span>
+                <span className="landing-keyboard-icon"><KeyboardMusic /></span><span className="landing-mic-icon"><Mic /></span>
               </div>
               <p>Play with a MIDI keyboard, or an acoustic piano using your microphone.</p>
             </div>
             <div className="landing-compatibility">
-              <div className="landing-input-icons" aria-hidden="true"><span className="landing-mxl-icon">MXL</span></div>
+              <div className="landing-input-icons" aria-hidden="true"><span className="landing-music-icon"><Music2 /></span></div>
               <p>Load any tune (MXL), and let your coach prepare your practice.</p>
             </div>
           </div>

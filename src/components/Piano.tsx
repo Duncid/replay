@@ -356,7 +356,7 @@ const Piano = forwardRef<PianoHandle, PianoProps>(
         <div data-piano-ranges={layoutKey} className="relative h-full flex flex-col" style={{ minWidth: fullKeyboard ? "1040px" : pianoCanvasMinWidth(layout) }}>
           {pianoBreaks(layout).map(start => <div key={start.midi} className="piano-range-break" aria-hidden="true" style={pianoBreakStyle(layout, start)}><span>⋯</span></div>)}
           {showNoteRail && <NoteRail layout={layout} states={states} fullKeyboard={fullKeyboard} />}
-          <div className="relative flex-1 min-h-0">
+          <div data-piano-keys className="relative flex-1 min-h-0">
             <div className="absolute inset-0 z-0">{whiteKeys.map(renderKey)}</div>
             <div className="absolute inset-0 pointer-events-none z-10">{blackKeys.map(renderKey)}</div>
           </div>
