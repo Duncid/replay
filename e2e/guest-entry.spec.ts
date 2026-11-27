@@ -171,10 +171,23 @@ test("leaving during entry cancels pending navigation and removes the flight", a
   await page.goto("/login");
   await page.getByRole("link", { name: "Back to Noodlyn", exact: true }).click();
   await expect(page.locator('.noodlyn-landing[data-preview-state="ready"]')).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => {
+    // Trigger Back inside the page: a slow driver round trip can outlast the
+    // animation and accidentally test navigation after arrival instead.
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector(".guest-entry-key-flight")) return;
+      observer.disconnect();
+      window["entryCancelledAt"] = {
+        path: location.pathname,
+        phase: document.querySelector<HTMLElement>(".guest-entry")?.dataset.entryPhase,
+      };
+      history.back();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
   await page.getByRole("link", { name: "Start playing", exact: true }).click();
-  await page.locator(".guest-entry-key-flight").waitFor({ state: "attached" });
-  await page.goBack();
   await expect(page).toHaveURL(/\/login$/);
+  expect(await page.evaluate(() => window["entryCancelledAt"])).toEqual({ path: "/", phase: "animating" });
   // Outlast the safety deadline to catch a stale callback navigating to /play.
   await page.waitForTimeout(1300);
   await expect(page).toHaveURL(/\/login$/);
