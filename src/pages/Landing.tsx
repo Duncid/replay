@@ -194,7 +194,7 @@ export default function Landing() {
             </div>
             <div className="landing-compatibility">
               <div className="landing-input-icons" aria-hidden="true"><span className="landing-music-icon"><Music2 /></span></div>
-              <p>Load any tune (MXL), and let your coach prepare your practice.</p>
+              <p>Learn any tune by uploading an MXL file. Your coach prepares your practice.</p>
             </div>
           </div>
         </div>
