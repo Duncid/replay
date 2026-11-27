@@ -175,15 +175,16 @@ test("leaving during entry cancels pending navigation and removes the flight", a
     // Trigger Back inside the page: a slow driver round trip can outlast the
     // animation and accidentally test navigation after arrival instead.
     const observer = new MutationObserver(() => {
-      if (!document.querySelector(".guest-entry-key-flight")) return;
+      const phase = document.querySelector<HTMLElement>(".guest-entry")?.dataset.entryPhase;
+      if (phase !== "animating" || !document.querySelector(".guest-entry-key-flight")) return;
       observer.disconnect();
       window["entryCancelledAt"] = {
         path: location.pathname,
-        phase: document.querySelector<HTMLElement>(".guest-entry")?.dataset.entryPhase,
+        phase,
       };
       history.back();
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-entry-phase"] });
   });
   await page.getByRole("link", { name: "Start playing", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
