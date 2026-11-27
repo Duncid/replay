@@ -21,7 +21,7 @@ export function KeyboardSettings({ instrument, onInstrumentChange, displayNotes,
   const { t } = useTranslation();
   return <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="outline" size="sm" aria-label={t("piano.settings")} title={t("piano.settings")}>
+      <Button variant="ghost" size="sm" aria-label={t("piano.settings")} title={t("piano.settings")}>
         <SlidersVertical aria-hidden="true" />
         <ChevronDown aria-hidden="true" className="size-4 opacity-50" />
       </Button>

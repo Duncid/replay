@@ -31,7 +31,7 @@ export function PianoInput({ micEnabled, onMicEnabledChange, micStatus, micLevel
   const midiConnected = isConnected && !!deviceName && deviceName !== "No devices" && !connecting;
   return <Popover>
     <PopoverTrigger asChild>
-      <Button variant={micEnabled || midiConnected ? "connected" : "outline"} size="sm" aria-label={t("piano.input")}>
+      <Button variant="ghost" size="sm" aria-label={t("piano.input")}>
         <AudioLines aria-hidden="true" />
         {t("piano.input")}
         {(micEnabled || midiConnected) && <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />}
