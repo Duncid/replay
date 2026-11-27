@@ -73,7 +73,10 @@
 .landing-compatibility { max-width: 880px; margin: 24px auto 0; padding: 0 24px; color: #a2aaa2; font-size: 17px; line-height: 1.6; }
 .landing-compatibility > p { margin: 14px 0 0; text-wrap: balance; }
 .landing-input-icons { display: flex; justify-content: center; align-items: center; gap: 12px; }
-.landing-input-icons > span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #c7ff12; color: #131a08; }
+.landing-input-icons > span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: hsl(var(--icon-note)); color: hsl(var(--note-ink)); }
+.landing-keyboard-icon { --icon-note: var(--note-c); }
+.landing-mic-icon { --icon-note: var(--note-g); }
+.landing-music-icon { --icon-note: var(--note-b); }
 .landing-input-icons svg { width: 22px; height: 22px; stroke-width: 1.7; }
 .landing-caption-divider { color: #535951; }
 .landing-video-toggle { min-height: 44px; padding: 8px 12px; border-radius: 100px; border: 1px solid #34373a; color: #d3d8cf; font-size: 12px; cursor: pointer; }
@@ -114,10 +117,8 @@
 .landing-demo-header { position: absolute; inset: 0 0 auto; height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; font-size: 18px; color: hsl(var(--muted-foreground)); }
 .landing-demo-brand { font: 700 30px "Space Grotesk", sans-serif; letter-spacing: -1px; color: hsl(var(--foreground)); }
 .landing-demo-brand > span { color: hsl(var(--primary)); }
-.landing-demo-avatar { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid hsl(var(--border)); border-radius: 50%; color: hsl(var(--primary)); font-size: 14px; }
 .landing-demo-title { position: absolute; top: 104px; left: 40px; padding: 18px 22px; border: 1px solid hsl(var(--border) / .6); border-radius: 16px; background: hsl(var(--background) / .65); backdrop-filter: blur(12px); }
-.landing-demo-title > span { font: 12px "JetBrains Mono", monospace; letter-spacing: 2px; color: hsl(var(--muted-foreground)); }
-.landing-demo-title h2 { margin: 8px 0 5px; font: 500 28px "Space Grotesk", sans-serif; }
+.landing-demo-title h2 { margin: 0 0 5px; font: 500 28px "Space Grotesk", sans-serif; }
 .landing-demo-title p { margin: 0; font-size: 14px; color: hsl(var(--muted-foreground)); }
 .landing-demo-piano { position: absolute; inset: auto 12px 14px; height: 252px; }
 .landing-demo-toolbar { display: flex; justify-content: space-between; align-items: center; height: 44px; padding: 0 16px; background: hsl(var(--background) / .8); backdrop-filter: blur(12px); border-top: 1px solid hsl(var(--border)); font: 13px "JetBrains Mono", monospace; color: hsl(var(--muted-foreground)); }
@@ -170,7 +171,6 @@
 .landing-product figcaption { margin-top: 0; }
 .landing-features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(20px, 5vw, 64px); width: min(880px, 100%); margin: 16px auto 0; padding: 0 24px; }
 .landing-features .landing-compatibility { min-width: 0; margin: 0; padding: 0; }
-.landing-mxl-icon { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600; letter-spacing: -.5px; }
 @media (max-width: 640px) {
   .landing-features { gap: 20px; padding: 0 20px; margin-top: 12px; }
   .landing-features .landing-compatibility { font-size: 16px; }
@@ -178,7 +178,6 @@
 @media (max-height: 650px) {
   .landing-features { margin-top: 6px; gap: 24px; }
   .landing-features .landing-compatibility { font-size: 14px; }
-  .landing-mxl-icon { font-size: 10px; }
   .landing-ipad-stage { margin-bottom: 8px; }
 }
 

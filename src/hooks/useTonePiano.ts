@@ -15,7 +15,7 @@ type AudioEngine = {
   stopNote: (noteKey: string) => void;
   playNote: (noteKey: string, duration: number, at?: number) => (() => void);
   dispose: () => void;
-  setSampleVolume?: (gain: number) => void;
+  setSampleVolume?: (gain: number, rampSeconds?: number) => void;
 };
 
 // Classic oscillator-based engine (original sound)
@@ -208,7 +208,7 @@ function createSamplerEngine(instrument: PianoSoundType, initialVolume = 1): { e
   return {
     engine: {
       type: "sampler",
-      setSampleVolume: gain => sampler.volume.rampTo(Tone.gainToDb(gain), .2),
+      setSampleVolume: (gain, rampSeconds = .2) => sampler.volume.rampTo(Tone.gainToDb(gain), rampSeconds),
       startNote: (noteKey: string) => {
         if (enableShallowRelease) {
           const pending = pendingReleases.get(noteKey);
@@ -390,10 +390,10 @@ export function useTonePiano(soundType: PianoSoundType | null = "acoustic-piano"
   }, []);
 
   // Per-instance sampler gain: never changes the shared destination or other players.
-  const setSampleVolume = useCallback((gain: number) => {
+  const setSampleVolume = useCallback((gain: number, rampSeconds = .2) => {
     if (!Number.isFinite(gain)) return;
     sampleVolumeRef.current = Math.max(0, Math.min(1, gain));
-    engineRef.current?.setSampleVolume?.(sampleVolumeRef.current);
+    engineRef.current?.setSampleVolume?.(sampleVolumeRef.current, rampSeconds);
   }, []);
 
   return {

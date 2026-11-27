@@ -1,0 +1,13 @@
+.guest-entry[data-entry-phase="preparing"] > .guest-entry-source,
+.guest-entry[data-entry-phase="animating"] > .guest-entry-source {
+  position: fixed; inset: 0; z-index: 50; overflow: hidden; pointer-events: none;
+}
+.guest-entry-destination[data-entering] {
+  position: fixed; inset: 0; opacity: 0; pointer-events: none;
+}
+.guest-entry-key-flight {
+  position: fixed; left: 0; top: 0; z-index: 51;
+  transform-origin: 0 0; pointer-events: none; will-change: transform, opacity;
+}
+.guest-entry-key-flight .piano-key--black { z-index: 1; }
+.guest-entry-destination h1:focus { outline: none; }

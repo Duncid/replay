@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { isNativeApp } from "@/lib/nativeAuth";
@@ -24,14 +25,28 @@ import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import type { MagentaNoteSequence } from "@/types/magenta";
 
 // The student UI with local music only. Account/management hooks never mount here.
-export default function GuestApp() {
+interface GuestAppProps { interactive?: boolean; onReady?: () => void }
+export default function GuestApp({ interactive = true, onReady }: GuestAppProps) {
   const { user, loading } = useAuth();
   if (loading) return <p className="p-8 text-center">Loading music…</p>;
   if (user || isNativeApp()) return <Navigate to="/" replace />;
-  return <HighwayProvider fullKeyboard={false}><GuestWorkspace /></HighwayProvider>;
+  return <HighwayProvider fullKeyboard={false}><GuestWorkspace interactive={interactive} onReady={onReady} /></HighwayProvider>;
 }
 
-function GuestWorkspace() {
+function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!onReady || !root.current) return;
+    const check = () => {
+      if (!root.current?.querySelector("h1") || !root.current.querySelector("[data-piano-keys]")) return false;
+      onReady();
+      return true;
+    };
+    if (check()) return;
+    const observer = new MutationObserver(() => { if (check()) observer.disconnect(); });
+    observer.observe(root.current, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [onReady]);
   const [activeTune, setActiveTune] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeKeys, setActiveKeys] = useState(new Set<string>());
@@ -115,11 +130,16 @@ function GuestWorkspace() {
   }, [stop, releaseInputs]);
   const leave = () => { stop(); releaseInputs(); setMicEnabled(false); setMetronomeIsPlaying(false); setActiveTune(null); };
 
-  return <div data-highway-surface data-guest-workspace className="replay-workspace relative isolate h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
+  return <div ref={root} data-highway-surface data-guest-workspace className="replay-workspace relative isolate h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
     <div className="w-full flex-1 min-h-0 flex flex-col">
       <div className="replay-header sticky top-0 z-30 w-full">
         <div className="flex items-center justify-between gap-2 p-2">
-          <Link to="/" className="px-2 font-display text-2xl font-semibold tracking-tight">Noodlyn</Link>
+          <div className="flex items-center gap-1">
+            <Button asChild variant="ghost" size="icon">
+              <Link to="/" aria-label="Back to home"><ArrowLeft className="size-5" aria-hidden="true" /></Link>
+            </Button>
+            <Link to="/" className="px-2 font-display text-2xl font-semibold tracking-tight">Noodlyn</Link>
+          </div>
           <Button asChild size="sm"><Link to="/login?mode=signup">Sign up</Link></Button>
         </div>
       </div>
@@ -152,7 +172,7 @@ function GuestWorkspace() {
           canPlayOnKeyboard={midiSound.canPlayOnKeyboard} />
       </div>}>
       <div className="keyboard-panel w-full flex flex-col"><Piano ref={piano} className="flex-1 min-h-0" activeKeys={activeKeys}
-        allowInput soundType={pianoSoundType} language="en" notationPreference="abc" showNoteRail={showNoteRail}
+        allowInput={interactive} soundType={pianoSoundType} language="en" notationPreference="abc" showNoteRail={showNoteRail}
         onNoteStart={onNoteStart} onNoteEnd={onNoteEnd} /></div>
     </PianoDock>
   </div>;
