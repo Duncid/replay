@@ -35,13 +35,22 @@ test("guests get the app with only Intro playable, without account or coach requ
   await page.reload();
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
   expect(requests).toEqual([]);
-  await page.getByRole("button", { name: "Sign-up for free", exact: true }).click();
+  await page.getByRole("button", { name: "Sign up for free", exact: true }).click();
   await expect(page).toHaveURL(/\/play$/);
   const signup = page.getByRole("dialog", { name: "Create account", exact: true });
   await expect(signup.getByText("Create your account", { exact: true })).toBeVisible();
   await signup.getByRole("button", { name: "Close", exact: true }).click();
   await expect(signup).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const signin = page.getByRole("dialog", { name: "Sign in", exact: true });
+  await expect(signin.getByText("Sign in to play", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/play$/);
+  await signin.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(signin).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await expect(signup.getByText("Create your account", { exact: true })).toBeVisible();
 });
 
 test("sign-up overlays the guest app, stops playback, and preserves Intro when dismissed", async ({ page }) => {

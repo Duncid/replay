@@ -12,7 +12,7 @@ import { Metronome, type FeelPreset, type MetronomeSoundType } from "@/component
 import { TuneLibrary } from "@/components/TuneLibrary";
 import { TuneMode } from "@/components/modes/TuneMode";
 import { Button } from "@/components/ui/button";
-import { GuestSignUpDialog } from "@/components/GuestSignUpDialog";
+import { GuestAuthDialog } from "@/components/GuestAuthDialog";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { useMidiSoundPreference } from "@/hooks/useMidiSoundPreference";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -48,7 +48,8 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
     return () => observer.disconnect();
   }, [onReady]);
   const [activeTune, setActiveTune] = useState<string | null>(null);
-  const [signUpOpen, setSignUpOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeKeys, setActiveKeys] = useState(new Set<string>());
   const [micEnabled, setMicEnabled] = useState(false);
@@ -85,9 +86,9 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
   }, [stop]);
   const onNoteEnd = useCallback((name: string) => { inputKeys.current.delete(name); noteOff.current?.(name); }, []);
   const midiOn = useCallback((name: string, frequency: number, velocity: number) => {
-    if (!interactive || signUpOpen) return;
+    if (!interactive || authOpen) return;
     piano.current?.handleKeyPress(name, frequency, velocity, { muteAudio: silentMidi.current, localOnly: true });
-  }, [interactive, signUpOpen]);
+  }, [interactive, authOpen]);
   const midiOff = useCallback((name: string, frequency: number) => piano.current?.handleKeyRelease(name, frequency, { localOnly: true }), []);
   const midi = useMidiInput(midiOn, midiOff);
   const midiSound = useMidiSoundPreference(midi.connectedDevice);
@@ -131,9 +132,9 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
     } catch { stop(); toast.error("Piano playback couldn’t start. Please try Replay again."); }
   }, [stop, releaseInputs]);
   const leave = () => { stop(); releaseInputs(); setMicEnabled(false); setMetronomeIsPlaying(false); setActiveTune(null); };
-  const openSignUp = () => {
+  const openAuth = (mode: "signin" | "signup") => {
     stop(); releaseInputs(); setMicEnabled(false); setMetronomeIsPlaying(false);
-    setSignUpOpen(true);
+    setAuthMode(mode); setAuthOpen(true);
   };
 
   return <div ref={root} data-highway-surface data-guest-workspace className="replay-workspace relative isolate h-dvh flex flex-col items-center justify-start bg-background overflow-hidden pt-(--safe-area-inset-top) pr-(--safe-area-inset-right) pl-(--safe-area-inset-left)">
@@ -146,7 +147,10 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
             </Button>
             <Link to="/" className="px-2 font-display text-2xl font-semibold tracking-tight">Noodlyn</Link>
           </div>
-          <Button size="sm" onClick={event => { event.currentTarget.focus(); openSignUp(); }}>Sign up</Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={event => { event.currentTarget.focus(); openAuth("signin"); }}>Sign in</Button>
+            <Button size="sm" onClick={event => { event.currentTarget.focus(); openAuth("signup"); }}>Sign up</Button>
+          </div>
         </div>
       </div>
       <div id="topContainer" className="w-full flex flex-col items-stretch justify-start relative flex-1 min-h-0 overflow-hidden">
@@ -154,7 +158,7 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
           {activeTune === "intro" ? <TuneMode tuneKey="intro" onLeave={leave} onPlaySample={play} onStopSample={stop}
             isPlayingSample={isPlaying} language="en" notationPreference="abc"
             onRegisterNoteHandler={registerOn} onRegisterNoteOffHandler={registerOff} onRegisterExpectedNotesProvider={registerExpected} />
-            : <TuneLibrary onSignUp={openSignUp} previewPaused={signUpOpen} onSelectTune={key => { if (key === "intro") { stop(); releaseInputs(); setActiveTune(key); } }} />}
+            : <TuneLibrary onSignUp={() => openAuth("signup")} previewPaused={authOpen} onSelectTune={key => { if (key === "intro") { stop(); releaseInputs(); setActiveTune(key); } }} />}
         </div>
       </div>
     </div>
@@ -178,9 +182,9 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
           canPlayOnKeyboard={midiSound.canPlayOnKeyboard} />
       </div>}>
       <div className="keyboard-panel w-full flex flex-col"><Piano ref={piano} className="flex-1 min-h-0" activeKeys={activeKeys}
-        allowInput={interactive && !signUpOpen} soundType={pianoSoundType} language="en" notationPreference="abc" showNoteRail={showNoteRail}
+        allowInput={interactive && !authOpen} soundType={pianoSoundType} language="en" notationPreference="abc" showNoteRail={showNoteRail}
         onNoteStart={onNoteStart} onNoteEnd={onNoteEnd} /></div>
     </PianoDock>
-    <GuestSignUpDialog open={signUpOpen} onOpenChange={setSignUpOpen} />
+    <GuestAuthDialog open={authOpen} mode={authMode} onOpenChange={setAuthOpen} />
   </div>;
 }
