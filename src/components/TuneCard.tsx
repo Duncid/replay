@@ -44,7 +44,7 @@ export function TuneCard({ title, composer, unlocked, preview, prerequisites = [
       {preview && <span className="mt-auto block text-[13px] leading-[18px] text-muted-foreground">{preview.noteCount} {preview.noteCount === 1 ? "note" : "notes"} · {Math.round(preview.duration)} sec</span>}
     </span>
     {!unlocked && onSignUp && <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-card/60">
-      <Button type="button" onClick={onSignUp} className="pointer-events-auto shadow-lg">Sign-up for free</Button>
+      <Button type="button" onClick={event => { event.currentTarget.focus(); onSignUp(); }} className="pointer-events-auto shadow-lg">Sign-up for free</Button>
     </div>}
   </div>;
 }

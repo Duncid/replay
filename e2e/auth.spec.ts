@@ -173,10 +173,11 @@ test('packaged app uses the native browser bridge and secure session storage', a
   await page.getByRole('button', { name: 'Sign-up for free', exact: true }).click();
   await page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true }).click();
   await expect(page.getByText('Sign-in cancelled', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Back to Noodlyn', exact: true }).click();
-  await expect(page.getByRole('link', { name: 'Start playing', exact: true })).toBeVisible();
+  await page.getByRole('dialog', { name: 'Create account', exact: true }).getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeEnabled();
   expect(profileRequests).toEqual([]);
-  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign up', exact: true }).click();
   await page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window['nativeAuthCalls'])).toContain('saveSession');

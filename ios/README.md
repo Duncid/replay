@@ -86,8 +86,10 @@ Both targets use the existing opaque blue piano icon at 1024px; Xcode derives th
 Signed-out launches show the same 3D iPad homepage as the website. Start playing
 opens the guest library with Intro playable and St Louis Blues locked, using the
 normal keyboard, MIDI, microphone and piano options. Returning home is instant.
-Sign in and Sign up lead to the existing secure browser bridge; cancelling login
-leaves the guest experience available. Signing out returns to the homepage.
+Sign up opens a modal over the guest workspace, preserving the current Intro
+practice when dismissed. Its sign-in action and the homepage Sign in link lead
+to the existing secure browser bridge; cancelling login leaves the guest
+experience available. Signing out returns to the homepage.
 
 The public website is `https://noodlyn.com`. The packaged app retains its Lovable
 auth origin and opens Apple's `ASWebAuthenticationSession` (an ephemeral secure
