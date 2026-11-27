@@ -36,7 +36,6 @@ export function TuneCard({ title, composer, unlocked, preview, prerequisites = [
       </span>}
       <span className="block space-y-1">
         <span className="block font-display text-[21px] font-semibold leading-7 break-words">{title}</span>
-        {isSystem && <span className="block w-fit rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[.1em] text-secondary-foreground">Noodlyn</span>}
         {composer?.trim() && <span className="block text-[13px] leading-[18px] text-muted-foreground break-words">{composer}</span>}
       </span>
       <button type="button" onClick={onPreview} disabled={!onPreview}
