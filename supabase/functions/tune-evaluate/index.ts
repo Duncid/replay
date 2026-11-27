@@ -1,6 +1,9 @@
-import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
+import { requireUser, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+import { withTuneAiFallback } from "../_shared/tune-ai.ts";
+import { evaluateFallback, parseEvaluation, readNotes } from "./fallback.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -135,6 +138,21 @@ serve(async (req) => {
     }
 
     const targetSequence = targetItem.noteSequence;
+    // Malformed input/assets are real errors, not AI outages or failed performances.
+    try {
+      readNotes(userSequence);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid recorded note sequence" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    try {
+      if (!readNotes(targetSequence).length) throw new Error("Empty score");
+    } catch {
+      return new Response(JSON.stringify({ error: "Practice item has no valid target notes" }), {
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const teacherHints = targetItem.teacherHints || {};
     const assemblyTier = isAssembly ? (targetItem.tier || 1) : null;
     
@@ -428,44 +446,19 @@ Your final evaluation MUST be consistent with this analysis.`,
       );
     }
 
-    // 4. Call LLM
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
-    const llmResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(debugRequest),
+    const evalResult = await withTuneAiFallback({
+      apiKey: Deno.env.get("LOVABLE_API_KEY"),
+      request: debugRequest,
+      toolName: "submit_evaluation",
+      parse: parseEvaluation,
+      fallback: () => evaluateFallback({
+        targetSequence: sanitizedTargetSequence,
+        userSequence: sanitizedUserSequence,
+        language, currentStreak,
+        isFullTune: nuggetId === "FULL_TUNE",
+        alreadyAcquired,
+      }),
     });
-
-    if (!llmResponse.ok) {
-      const errorText = await llmResponse.text();
-      console.error("LLM error:", llmResponse.status, errorText);
-      throw new Error(`LLM call failed: ${llmResponse.status}`);
-    }
-
-    const llmData = await llmResponse.json();
-    console.log("[tune-evaluate] LLM response received");
-
-    const toolCall = llmData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function.name !== "submit_evaluation") {
-      throw new Error("Invalid LLM response structure");
-    }
-
-    const evalResult = JSON.parse(toolCall.function.arguments) as {
-      reasoning: string;
-      evaluation: "pass" | "close" | "fail";
-      feedbackText: string;
-      successCount: number;
-      replayDemo: boolean;
-      markTuneAcquired?: boolean;
-      awardSkills?: boolean;
-    };
 
     // 5. Update nugget state
     const normalizedSuccessCount =
@@ -519,13 +512,13 @@ Your final evaluation MUST be consistent with this analysis.`,
     // 7. Determine if should suggest new nugget
     const suggestNewNugget = newStreak >= STREAK_THRESHOLD_FOR_NEW_NUGGET;
 
-    // 8. Process LLM decision for tune acquisition and skill unlocking
+    // 8. Process the evaluation decision for tune acquisition and skill unlocking
     let tuneAcquired = false;
     const awardedSkills: string[] = [];
 
-    // Only process acquisition if LLM decided to acquire AND idempotency checks pass
+    // Only process acquisition when the evaluator requests it and idempotency checks pass
     if (evalResult.markTuneAcquired === true && !alreadyAcquired && isTier3OrFullTune && localUserId) {
-      console.log(`[tune-evaluate] LLM decided to acquire tune ${tuneKey} for user ${localUserId}`);
+      console.log(`[tune-evaluate] Evaluator decided to acquire tune ${tuneKey} for user ${localUserId}`);
       
       // Mark tune as acquired
       const { error: acquisitionError } = await supabase
@@ -543,14 +536,14 @@ Your final evaluation MUST be consistent with this analysis.`,
         console.error("[tune-evaluate] Error inserting tune acquisition:", acquisitionError);
       }
     } else if (evalResult.markTuneAcquired === true && alreadyAcquired) {
-      console.log(`[tune-evaluate] LLM attempted to acquire already-acquired tune ${tuneKey} - ignoring (idempotency)`);
+      console.log(`[tune-evaluate] Evaluator attempted to acquire already-acquired tune ${tuneKey} - ignoring (idempotency)`);
     } else if (evalResult.markTuneAcquired === true && !isTier3OrFullTune) {
-      console.log(`[tune-evaluate] LLM attempted to acquire tune ${tuneKey} while not practicing Tier 3/Full Tune - ignoring`);
+      console.log(`[tune-evaluate] Evaluator attempted to acquire tune ${tuneKey} while not practicing Tier 3/Full Tune - ignoring`);
     }
 
-    // Process skill unlocking if LLM decided to award skills AND tune is being acquired or already acquired
+    // Process skill unlocking when requested and the tune is being acquired or already acquired.
     if (evalResult.awardSkills === true && (tuneAcquired || alreadyAcquired) && localUserId) {
-      console.log(`[tune-evaluate] LLM decided to award skills for tune ${tuneKey}`);
+      console.log(`[tune-evaluate] Evaluator decided to award skills for tune ${tuneKey}`);
       
       // Only unlock skills that aren't already unlocked (idempotency per skill)
       for (const skillKey of skillsToAward) {

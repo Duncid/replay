@@ -1,6 +1,9 @@
-import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
+import { requireUser, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+import { withTuneAiFallback } from "../_shared/tune-ai.ts";
+import { buildFallbackPlan, parsePracticePlan } from "./fallback.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,13 +79,6 @@ interface NuggetState {
   last_practiced_at: string | null;
 }
 
-interface PracticePlanItem {
-  itemId: string;
-  itemType: "nugget" | "assembly" | "full_tune";
-  instruction: string;
-  motifs: string[];
-}
-
 // Helper to extract measure range from nugget location
 function getMeasureRange(n: TuneNugget): string {
   if (n.location?.startMeasure !== undefined) {
@@ -133,7 +129,7 @@ serve(async (req) => {
 
     // 1. Fetch tune asset from the latest PUBLISHED curriculum version
     // This ensures we use assets from a successfully published version, not failed/partial publishes
-    const { data: tuneAsset, error: tuneError } = await supabase
+    const { data: publishedAsset, error: tuneError } = await supabase
       .from("tune_assets")
       .select(
         `
@@ -150,6 +146,7 @@ serve(async (req) => {
       .order("curriculum_versions(published_at)", { ascending: false })
       .limit(1)
       .maybeSingle();
+    let tuneAsset = publishedAsset;
 
     if (tuneError || !tuneAsset) {
       console.error("Error fetching tune asset:", tuneError);
@@ -168,12 +165,13 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      tuneAsset = fallbackAsset;
       console.warn(
         `[tune-coach] Using fallback query for ${tuneKey} - no published version found`,
       );
     }
 
-    const briefing = tuneAsset.briefing as TuneBriefing;
+    const briefing = (tuneAsset.briefing || { title: tuneKey }) as TuneBriefing;
     const nuggets = (tuneAsset.nuggets || []) as TuneNugget[];
     const assemblies = (tuneAsset.assemblies || []) as TuneAssembly[];
     const fullTune: TuneFullTune = {
@@ -497,43 +495,21 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
       );
     }
 
-    // 5. Call LLM
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
-    const llmResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(debugRequest),
-      },
-    );
-
-    if (!llmResponse.ok) {
-      const errorText = await llmResponse.text();
-      console.error("LLM error:", llmResponse.status, errorText);
-      throw new Error(`LLM call failed: ${llmResponse.status}`);
-    }
-
-    const llmData = await llmResponse.json();
-    console.log("[tune-coach] LLM response received");
-
-    // Parse tool call response
-    const toolCall = llmData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function.name !== "submit_practice_plan") {
-      throw new Error("Invalid LLM response structure");
-    }
-
-    const planResult = JSON.parse(toolCall.function.arguments) as {
-      practicePlan: PracticePlanItem[];
-      encouragement: string;
+    const planContext = {
+      nuggets, assemblies,
+      teachingOrder: briefing.teachingOrder,
+      assemblyOrder: briefing.assemblyOrder,
+      states: [...statesMap.values()],
+      hasFullTune: !!(tuneAsset.note_sequence?.notes?.length),
+      language,
     };
+    const planResult = await withTuneAiFallback({
+      apiKey: Deno.env.get("LOVABLE_API_KEY"),
+      request: debugRequest,
+      toolName: "submit_practice_plan",
+      parse: value => parsePracticePlan(value, planContext),
+      fallback: () => buildFallbackPlan(planContext),
+    });
 
     // Enrich practice plan with full nugget/assembly data
     const enrichedPlan = planResult.practicePlan
