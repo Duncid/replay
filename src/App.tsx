@@ -9,7 +9,6 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { isNativeApp } from "./lib/nativeAuth";
 
 const Index = lazy(() => import("./pages/Index"));
 
@@ -19,8 +18,8 @@ function PublicEntry() {
   const { user, loading } = useAuth();
   const { pathname } = useLocation();
   if (loading) return <Loading />;
-  if (pathname === "/play" && (user || isNativeApp())) return <Navigate to="/" replace />;
-  if (!user) return isNativeApp() ? <Auth /> : <GuestEntry />;
+  if (pathname === "/play" && user) return <Navigate to="/" replace />;
+  if (!user) return <GuestEntry />;
   return <div key={user.id} className="contents"><Suspense fallback={<Loading />}><Index /></Suspense></div>;
 }
 
@@ -30,7 +29,7 @@ function Login() {
   if (loading) return <Loading />;
   if (user) return <Navigate to="/" replace />;
   return <>
-    {!isNativeApp() && <Link to="/" className="absolute left-6 top-6 z-10 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">Back to Noodlyn</Link>}
+    <Link to="/" className="absolute left-6 top-6 z-10 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">Back to Noodlyn</Link>
     <Auth initialMode={params.get("mode") === "signup" ? "signup" : "signin"} />
   </>;
 }

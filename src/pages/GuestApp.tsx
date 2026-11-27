@@ -3,7 +3,6 @@ import { Link, Navigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { isNativeApp } from "@/lib/nativeAuth";
 import { HighwayProvider } from "@/components/highway/HighwayContext";
 import { PianoDock } from "@/components/highway/PianoDock";
 import Piano, { type PianoHandle } from "@/components/Piano";
@@ -29,7 +28,7 @@ interface GuestAppProps { interactive?: boolean; onReady?: () => void }
 export default function GuestApp({ interactive = true, onReady }: GuestAppProps) {
   const { user, loading } = useAuth();
   if (loading) return <p className="p-8 text-center">Loading music…</p>;
-  if (user || isNativeApp()) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/" replace />;
   return <HighwayProvider fullKeyboard={false}><GuestWorkspace interactive={interactive} onReady={onReady} /></HighwayProvider>;
 }
 

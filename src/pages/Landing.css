@@ -1,6 +1,7 @@
 .noodlyn-landing {
   color-scheme: dark;
   min-height: 100svh;
+  padding: var(--safe-area-inset-top, 0px) var(--safe-area-inset-right, 0px) var(--safe-area-inset-bottom, 0px) var(--safe-area-inset-left, 0px);
   overflow: clip;
   background: #08090b;
   color: #f4f5ef;
