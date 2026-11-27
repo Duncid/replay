@@ -35,6 +35,7 @@ import {
   useSheetPlaybackEngine,
   type InputNoteEvent,
 } from "@/hooks/useSheetPlaybackEngine";
+import { tuneDisplayTitle } from "@/utils/tunePreview";
 import { usePublishedTuneKeys, useTuneAssets } from "@/hooks/useTuneQueries";
 import { supabase } from "@/integrations/supabase/client";
 import type { NoteSequence } from "@/types/noteSequence";
@@ -356,8 +357,12 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     const keys = Array.from(publishedTuneKeys);
     if (!publishedFilter.trim()) return keys;
     const lower = publishedFilter.toLowerCase();
-    return keys.filter((key) => key.toLowerCase().includes(lower));
-  }, [publishedTuneKeys, publishedFilter]);
+    return keys.filter((key) => {
+      const t = tuneList?.find((x) => x.tune_key === key);
+      const name = t?.briefing?.title?.trim() || tuneDisplayTitle(key);
+      return name.toLowerCase().includes(lower);
+    });
+  }, [publishedTuneKeys, publishedFilter, tuneList]);
 
   const filteredUnpublishedKeys = useMemo(() => {
     if (!unpublishedFilter.trim()) return unpublishedTuneKeys;
@@ -890,8 +895,9 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
 
   const selectionLabel = useMemo(() => {
     if (!selectedTune) return "Select tune...";
-    return selectedTune;
-  }, [selectedTune]);
+    const t = tuneList?.find((x) => x.tune_key === selectedTune);
+    return t?.briefing?.title?.trim() || tuneDisplayTitle(selectedTune);
+  }, [selectedTune, tuneList]);
 
   const targetLabel = useMemo(() => {
     if (showOverview) return "Overview";
@@ -1733,38 +1739,53 @@ export function TuneSelectionSubmenus({
     onSelected?.();
   };
 
+  const { data: tunes = [] } = usePublishedTuneKeys();
+  const nameOf = (key: string) => {
+    const t = tunes.find((x) => x.tune_key === key);
+    return t?.briefing?.title?.trim() || tuneDisplayTitle(key);
+  };
+  const visible = new Set(filteredPublishedKeys);
+  const groups = [
+    { label: "Account", keys: tunes.filter((t) => !t.is_global && visible.has(t.tune_key)) },
+    { label: "System", keys: tunes.filter((t) => t.is_global && visible.has(t.tune_key)) },
+  ].map((g) => ({
+    label: g.label,
+    keys: g.keys.map((t) => t.tune_key).sort((a, b) => nameOf(a).localeCompare(nameOf(b))),
+  }));
+
   return (
     <>
-      {/* Published Section */}
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>Published</DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="bg-popover w-56 max-h-80 overflow-y-auto">
-          <div className="px-2 py-1.5 sticky top-0 bg-popover">
-            <Input
-              placeholder="Filter..."
-              value={publishedFilter}
-              onChange={(e) => setPublishedFilter(e.target.value)}
-              className="h-8"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            />
-          </div>
-          <DropdownMenuSeparator />
-          {filteredPublishedKeys.length > 0 ? (
-            filteredPublishedKeys.map((tune) => (
-              <DropdownMenuItem key={tune} onClick={() => choose("published", tune)}>
-                <span className="flex-1">{tune}</span>
-                {selectedTune === tune && selectedSource === "published" && (
-                  <Check className="h-4 w-4 ml-2" />
-                )}
-              </DropdownMenuItem>
-            ))
-          ) : (
-            <DropdownMenuItem disabled>No matches</DropdownMenuItem>
-          )}
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-
+      {groups.map((group) => (
+        <DropdownMenuSub key={group.label}>
+          <DropdownMenuSubTrigger>{group.label}</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="bg-popover w-64 p-0 flex flex-col max-h-80 overflow-hidden">
+            <div className="p-2 border-b shrink-0">
+              <Input
+                placeholder="Filter..."
+                value={publishedFilter}
+                onChange={(e) => setPublishedFilter(e.target.value)}
+                className="h-8"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <div className="overflow-y-auto p-1 min-h-0">
+              {group.keys.length > 0 ? (
+                group.keys.map((tune) => (
+                  <DropdownMenuItem key={tune} onClick={() => choose("published", tune)} title={nameOf(tune)}>
+                    <span className="flex-1 min-w-0 truncate">{nameOf(tune)}</span>
+                    {selectedTune === tune && selectedSource === "published" && (
+                      <Check className="h-4 w-4 ml-2 shrink-0" />
+                    )}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+              )}
+            </div>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      ))}
     </>
   );
 }
