@@ -72,11 +72,14 @@ for (const changeTune of [false, true]) {
     const visible = arrival.findIndex(frame => frame.opacity > .99);
     expect(visible).toBeGreaterThanOrEqual(0);
     for (const frame of arrival.slice(visible)) {
-      expect(frame.opacity).toBeGreaterThan(.99);
+      // WebKit can sample the last composited frames slightly out of order
+      // (e.g. .992 → .980 → 1). Still reject a visible handoff flash.
+      expect(frame.opacity).toBeGreaterThan(.95);
       for (const dimension of ["x", "y", "width", "height"]) {
         expect(Math.abs(frame[dimension] - arrival[visible][dimension])).toBeLessThan(1);
       }
     }
+    expect(arrival.at(-1).opacity).toBe(1);
     const frames = await page.evaluate(() => window["entryFrames"]);
     expect(frames.length).toBeGreaterThan(2);
     expect(frames.every(frame => frame.canvasRetained && !frame.inputEnabled)).toBe(true);
@@ -171,10 +174,24 @@ test("leaving during entry cancels pending navigation and removes the flight", a
   await page.goto("/login");
   await page.getByRole("link", { name: "Back to Noodlyn", exact: true }).click();
   await expect(page.locator('.noodlyn-landing[data-preview-state="ready"]')).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => {
+    // Trigger Back inside the page: a slow driver round trip can outlast the
+    // animation and accidentally test navigation after arrival instead.
+    const observer = new MutationObserver(() => {
+      const phase = document.querySelector<HTMLElement>(".guest-entry")?.dataset.entryPhase;
+      if (phase !== "animating" || !document.querySelector(".guest-entry-key-flight")) return;
+      observer.disconnect();
+      window["entryCancelledAt"] = {
+        path: location.pathname,
+        phase,
+      };
+      history.back();
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-entry-phase"] });
+  });
   await page.getByRole("link", { name: "Start playing", exact: true }).click();
-  await page.locator(".guest-entry-key-flight").waitFor({ state: "attached" });
-  await page.goBack();
   await expect(page).toHaveURL(/\/login$/);
+  expect(await page.evaluate(() => window["entryCancelledAt"])).toEqual({ path: "/", phase: "animating" });
   // Outlast the safety deadline to catch a stale callback navigating to /play.
   await page.waitForTimeout(1300);
   await expect(page).toHaveURL(/\/login$/);

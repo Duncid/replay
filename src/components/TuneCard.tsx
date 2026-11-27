@@ -1,6 +1,7 @@
 import { LockKeyhole, Play, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TuneThumbnail } from "@/components/TuneThumbnail";
+import { Button } from "@/components/ui/button";
 import type { TunePreview } from "@/utils/tunePreview";
 
 export interface TuneCardProps {
@@ -10,12 +11,13 @@ export interface TuneCardProps {
   preview?: TunePreview;
   prerequisites?: string[];
   onSelect: () => void;
+  onSignUp?: () => void;
   onPreview?: () => void;
   isPreviewPlaying?: boolean;
 }
 
 /** The same visual hierarchy as Noodlyn Learn, using the web theme's tokens. */
-export function TuneCard({ title, composer, unlocked, preview, prerequisites = [], onSelect, onPreview, isPreviewPlaying = false }: TuneCardProps) {
+export function TuneCard({ title, composer, unlocked, preview, prerequisites = [], onSelect, onSignUp, onPreview, isPreviewPlaying = false }: TuneCardProps) {
   return <div className={cn("group relative flex h-full min-h-[280px] w-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-border bg-card text-left text-card-foreground transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none",
       unlocked && "border-primary/50 hover:border-primary hover:shadow-[var(--glow-user)] focus-within:border-primary focus-within:shadow-[var(--glow-user)]")}>
     <button type="button" disabled={!unlocked} onClick={onSelect}
@@ -41,5 +43,8 @@ export function TuneCard({ title, composer, unlocked, preview, prerequisites = [
       {!unlocked && prerequisites.length > 0 && <span className="block text-[13px] leading-[18px] text-muted-foreground break-words">Complete {prerequisites.join(", ")} first</span>}
       {preview && <span className="mt-auto block text-[13px] leading-[18px] text-muted-foreground">{preview.noteCount} {preview.noteCount === 1 ? "note" : "notes"} · {Math.round(preview.duration)} sec</span>}
     </span>
+    {!unlocked && onSignUp && <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-card/60">
+      <Button type="button" onClick={event => { event.currentTarget.focus(); onSignUp(); }} className="pointer-events-auto shadow-lg">Sign up for free</Button>
+    </div>}
   </div>;
 }

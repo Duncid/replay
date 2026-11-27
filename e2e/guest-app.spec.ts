@@ -21,7 +21,7 @@ test("guests get the app with only Intro playable, without account or coach requ
   await page.getByRole("button", { name: "Practice: Intro", exact: true }).click();
   await expect(page.locator('.note-highway[data-render-ready="true"]')).toBeVisible();
   await expect(page.locator(".tune-practice")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Sign up", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign up", exact: true })).toBeVisible();
   for (const note of intro.notes) {
     const name = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"][note.pitch % 12] + (Math.floor(note.pitch / 12) - 1);
     const key = page.locator(`.piano-surface button[data-note="${name}"]`);
@@ -35,21 +35,49 @@ test("guests get the app with only Intro playable, without account or coach requ
   await page.reload();
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
   expect(requests).toEqual([]);
+  await page.getByRole("button", { name: "Sign up for free", exact: true }).click();
+  await expect(page).toHaveURL(/\/play$/);
+  const signup = page.getByRole("dialog", { name: "Create account", exact: true });
+  await expect(signup.getByText("Create your account", { exact: true })).toBeVisible();
+  await signup.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(signup).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const signin = page.getByRole("dialog", { name: "Sign in", exact: true });
+  await expect(signin.getByText("Sign in to play", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/play$/);
+  await signin.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(signin).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await expect(signup.getByText("Create your account", { exact: true })).toBeVisible();
 });
 
-test("guest previews and Replay use the existing player; sign-up opens the existing auth screen", async ({ page }) => {
+test("sign-up overlays the guest app, stops playback, and preserves Intro when dismissed", async ({ page }) => {
   await page.route("**/*.supabase.co/**", route => route.abort());
   await page.goto("/play");
   await page.getByRole("button", { name: "Preview: Intro", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop preview: Intro", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  const signup = page.getByRole("dialog", { name: "Create account", exact: true });
+  await expect(signup).toBeVisible();
+  await expect(page.locator('[aria-label="Stop preview: Intro"]')).toHaveCount(0);
+  await signup.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Practice: Intro", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop preview: Intro", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Replay", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(signup.getByText("Create your account", { exact: true })).toBeVisible();
+  await expect(signup.getByRole("button", { name: "Continue with Apple", exact: true })).toBeVisible();
+  await expect(page.locator(".tune-practice")).toBeVisible();
+  await expect(page.locator('.piano-surface button[data-note="C4"]')).toBeDisabled();
+  await signup.getByLabel("Email", { exact: true }).fill("guest@example.test");
+  await page.keyboard.press("Escape");
+  await expect(signup).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign up", exact: true })).toBeFocused();
+  await expect(page.locator(".tune-practice")).toBeVisible();
   await expect(page.getByRole("button", { name: "Replay", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Sign up", exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?mode=signup$/);
-  await expect(page.getByText("Create your account", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue with Apple", exact: true })).toBeVisible();
+  await expect(page.locator('.piano-surface button[data-note="C4"]')).toBeEnabled();
 });

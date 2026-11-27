@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { useEffect } from "react";
 import { TuneCard } from "@/components/TuneCard";
 import { BuildingTuneCard } from "@/components/BuildingTuneCard";
 import type { TuneBuild } from "@/hooks/useActiveTuneBuilds";
@@ -18,6 +19,10 @@ export interface TuneCarouselItem {
 export interface TuneCarouselProps {
   tunes: TuneCarouselItem[];
   onSelectTune: (key: string) => void;
+  /** Guests can sign up from locked tunes. */
+  onSignUp?: () => void;
+  /** Pause the preview while an overlay covers the library. */
+  previewPaused?: boolean;
   /** Signed-in users can upload a tune; the CTA sits last, smaller and muted. */
   onAddTune?: () => void;
   /** Uploads still building, shown after the tunes. */
@@ -27,8 +32,9 @@ export interface TuneCarouselProps {
 }
 
 /** Native horizontal scrolling and centered snap points; selection uses asset keys. */
-export function TuneCarousel({ tunes, onSelectTune, onAddTune, builds = [], onRetryBuild, onDismissBuild }: TuneCarouselProps) {
+export function TuneCarousel({ tunes, onSelectTune, onSignUp, previewPaused = false, onAddTune, builds = [], onRetryBuild, onDismissBuild }: TuneCarouselProps) {
   const { playingKey, toggle, stop } = useTunePreviewPlayback();
+  useEffect(() => { if (previewPaused) stop(); }, [previewPaused, stop]);
   return <ul aria-label="Tunes" tabIndex={0}
     className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 px-[calc(50%-8rem)] sm:px-[calc(50%-9rem)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-1 focus-visible:outline-ring focus-visible:outline-offset-[-1px]">
     {tunes.map(tune => (
@@ -36,6 +42,7 @@ export function TuneCarousel({ tunes, onSelectTune, onAddTune, builds = [], onRe
         <TuneCard title={tune.title?.trim() || tuneDisplayTitle(tune.tune_key)} composer={tune.composer} unlocked={tune.unlocked}
           preview={tune.preview} prerequisites={tune.prerequisites.map(tuneDisplayTitle)}
           isPreviewPlaying={playingKey === tune.tune_key}
+          onSignUp={onSignUp ? () => { stop(); onSignUp(); } : undefined}
           onPreview={tune.playback ? () => void toggle(tune.tune_key, tune.playback!) : undefined}
           onSelect={() => { stop(); onSelectTune(tune.tune_key); }} />
       </li>

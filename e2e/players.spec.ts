@@ -39,7 +39,9 @@ async function mockPlayers(page: Page) {
     return route.abort();
   });
   await page.goto('/');
-  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), selectedKey)).toBe(firstId);
+  // Cold WebKit startup can spend most of the default five seconds loading
+  // the app before the mocked account-owned player request even begins.
+  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), selectedKey), { timeout: 15_000 }).toBe(firstId);
   return { writes, failures };
 }
 

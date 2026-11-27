@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { sessionFixture, sessionKey } from './fixtures';
 import { nativeAuthRequest, nativeAuthCallback } from '../src/utils/nativeAuthCallback';
 import { accountStorageKey, setStorageAccount } from '../src/utils/accountStorage';
+import { demoWav } from './fixtures/demoAudio';
 
 const accountA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const accountB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -128,10 +129,13 @@ test('hosted handoff asks the user to confirm the account and rejects arbitrary 
 });
 
 test('packaged app uses the native browser bridge and secure session storage', async ({ page }) => {
-  await mockAccounts(page);
+  const profileRequests = await mockAccounts(page);
+  await page.route('**/tonejs-instruments/samples/**', route => route.fulfill({ body: demoWav(), contentType: 'audio/wav' }));
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.addInitScript(session => {
     const saved: Record<string, string> = {};
     window['nativeAuthCalls'] = [];
+    window['cancelNativeSignIn'] = true;
     window['webkit'] = { messageHandlers: { bridge: { postMessage: () => {} } } };
     window['Capacitor'] = {
       getPlatform: () => 'ios', isNativePlatform: () => true,
@@ -141,19 +145,47 @@ test('packaged app uses the native browser bridge and secure session storage', a
         if (method === 'getSession') return { value: saved[args.key] ?? null };
         if (method === 'saveSession') saved[args.key] = args.value ?? "";
         if (method === 'removeSession') delete saved[args.key];
-        if (method === 'signIn') return { accessToken: session.access_token, refreshToken: session.refresh_token };
+        if (method === 'signIn') {
+          if (window['cancelNativeSignIn']) { window['cancelNativeSignIn'] = false; throw new Error('Sign-in cancelled'); }
+          return { accessToken: session.access_token, refreshToken: session.refresh_token };
+        }
         return {};
       },
     };
   }, sessionFixture(accountA, 'a@example.test'));
   await page.goto('/');
+  await expect(page.locator('.noodlyn-landing[data-preview-state="ready"]')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.landing-ipad')).toBeVisible();
+  expect(await page.evaluate(() => window['nativeAuthCalls'])).not.toContain('signIn');
+  await page.getByRole('link', { name: 'Start playing', exact: true }).click();
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Locked: St Louis Blues', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Practice: Intro', exact: true }).click();
+  await expect(page.locator('.note-highway[data-render-ready="true"]')).toBeVisible();
+  await expect(page.locator('.piano-surface button[data-note="C4"]')).toBeEnabled();
+  expect(profileRequests).toEqual([]);
+  await page.getByRole('link', { name: 'Back to home', exact: true }).click();
+  await expect(page.locator('.guest-entry')).toHaveAttribute('data-entry-phase', 'idle');
+  await page.goto('/play'); // Direct native guest entry and reload stay signed out.
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Sign up for free', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true }).click();
+  await expect(page.getByText('Sign-in cancelled', { exact: true })).toBeVisible();
+  await page.getByRole('dialog', { name: 'Create account', exact: true }).getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeEnabled();
+  expect(profileRequests).toEqual([]);
+  await page.getByRole('button', { name: 'Sign up', exact: true }).click();
   await page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window['nativeAuthCalls'])).toContain('saveSession');
   expect(await page.evaluate(key => localStorage.getItem(key), sessionKey)).toBeNull();
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Start playing', exact: true })).toBeVisible();
+  await expect(page.locator('[data-guest-workspace]')).toHaveCount(0);
   expect(await page.evaluate(() => window['nativeAuthCalls'])).toContain('removeSession');
 });
 

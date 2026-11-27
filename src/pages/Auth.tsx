@@ -14,7 +14,9 @@ const GoogleLogo = () => (
 
 type Mode = "signin" | "signup" | "forgot";
 
-export default function Auth({ redirectTo = window.location.origin, initialMode = "signin" }: { redirectTo?: string; initialMode?: "signin" | "signup" }) {
+export default function Auth({ redirectTo = window.location.origin, initialMode = "signin", embedded = false }: { redirectTo?: string; initialMode?: "signin" | "signup"; embedded?: boolean }) {
+  const Surface = embedded ? "div" : "main";
+  const surfaceClass = embedded ? "flex justify-center text-foreground" : "min-h-dvh flex items-center justify-center bg-background text-foreground p-6";
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,7 +60,7 @@ export default function Auth({ redirectTo = window.location.origin, initialMode 
     finally { setBusy(false); }
   };
 
-  if (isNativeApp()) return <main className="min-h-dvh flex items-center justify-center bg-background text-foreground p-6">
+  if (isNativeApp()) return <Surface className={surfaceClass}>
     <div className="w-full max-w-sm space-y-6 text-center">
       <h1 className="text-3xl font-bold">Noodlyn</h1>
       <p className="text-muted-foreground">Sign in with Apple, Google, Lovable, or email to open your music and practice profiles.</p>
@@ -70,10 +72,10 @@ export default function Auth({ redirectTo = window.location.origin, initialMode 
       }}>{busy ? 'Signing in…' : 'Sign in to Noodlyn'}</Button>
       <p className="text-sm text-muted-foreground">Sign-in opens in a secure browser. You can also create an account or reset your password there.</p>
     </div>
-  </main>;
+  </Surface>;
 
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-background text-foreground p-6">
+    <Surface className={surfaceClass}>
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
           <h1 className="text-3xl font-bold">Noodlyn</h1>
@@ -132,6 +134,6 @@ export default function Auth({ redirectTo = window.location.origin, initialMode 
           )}
         </div>
       </div>
-    </main>
+    </Surface>
   );
 }

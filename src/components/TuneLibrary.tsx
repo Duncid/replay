@@ -13,10 +13,12 @@ interface TuneLibraryProps {
   localUserId?: string | null;
   profileLoading?: boolean;
   onSelectTune: (tuneKey: string) => void;
+  onSignUp?: () => void;
+  previewPaused?: boolean;
 }
-export function TuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneLibraryProps) {
+export function TuneLibrary({ localUserId, profileLoading, onSelectTune, onSignUp, previewPaused }: TuneLibraryProps) {
   const { user } = useAuth();
-  if (!user) return <Suspense fallback={<LoadingSpinner message="Loading music…" />}><GuestTuneLibrary onSelectTune={onSelectTune} /></Suspense>;
+  if (!user) return <Suspense fallback={<LoadingSpinner message="Loading music…" />}><GuestTuneLibrary onSelectTune={onSelectTune} onSignUp={onSignUp} previewPaused={previewPaused} /></Suspense>;
   return <AccountTuneLibrary localUserId={localUserId} profileLoading={profileLoading} onSelectTune={onSelectTune} />;
 }
 
