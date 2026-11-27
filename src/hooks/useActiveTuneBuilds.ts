@@ -29,7 +29,7 @@ export function startTuneUpload(qc: QueryClient, input: { file: File; tuneKey: s
     // A new tune takes the last place in this account's list; an update keeps its place.
     // Save the order currently on screen first, so tunes that never got a saved place cannot jump behind the new one.
     const { data: saved } = await supabase.from("tune_list_positions").select("tune_key, position");
-    const shown = (qc.getQueryData<{ tune_key: string }[]>(["published-tune-keys", "previews"]) ?? []).filter(t => t.tune_key !== input.tuneKey);
+    const shown = (qc.getQueryData<{ list: { tune_key: string }[] }>(["published-tune-keys", "previews"])?.list ?? []).filter(t => t.tune_key !== input.tuneKey);
     const { missing } = orderTunesByPosition(shown, new Map((saved ?? []).map(p => [p.tune_key, p.position])));
     const last = Math.max(0, ...(saved ?? []).filter(p => p.tune_key !== input.tuneKey).map(p => p.position), ...missing.map(m => m.position));
     const rows = [...missing, { tune_key: input.tuneKey, position: last + 1 }];

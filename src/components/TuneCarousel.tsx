@@ -14,6 +14,8 @@ export interface TuneCarouselItem {
   prerequisites: string[];
   preview?: TunePreview;
   playback?: TunePlayback;
+  isSystem?: boolean;
+  isOwn?: boolean;
 }
 
 export interface TuneCarouselProps {
@@ -29,10 +31,12 @@ export interface TuneCarouselProps {
   builds?: TuneBuild[];
   onRetryBuild?: (id: string) => void;
   onDismissBuild?: (id: string) => void;
+  /** Hide a Noodlyn tune or delete an account tune. */
+  onRemoveTune?: (tune: TuneCarouselItem) => void;
 }
 
 /** Native horizontal scrolling and centered snap points; selection uses asset keys. */
-export function TuneCarousel({ tunes, onSelectTune, onSignUp, previewPaused = false, onAddTune, builds = [], onRetryBuild, onDismissBuild }: TuneCarouselProps) {
+export function TuneCarousel({ tunes, onSelectTune, onSignUp, previewPaused = false, onAddTune, builds = [], onRetryBuild, onDismissBuild, onRemoveTune }: TuneCarouselProps) {
   const { playingKey, toggle, stop } = useTunePreviewPlayback();
   useEffect(() => { if (previewPaused) stop(); }, [previewPaused, stop]);
   return <ul aria-label="Tunes" tabIndex={0}
@@ -41,7 +45,8 @@ export function TuneCarousel({ tunes, onSelectTune, onSignUp, previewPaused = fa
       <li key={tune.tune_key} className="snap-center shrink-0 w-64 sm:w-72">
         <TuneCard title={tune.title?.trim() || tuneDisplayTitle(tune.tune_key)} composer={tune.composer} unlocked={tune.unlocked}
           preview={tune.preview} prerequisites={tune.prerequisites.map(tuneDisplayTitle)}
-          isPreviewPlaying={playingKey === tune.tune_key}
+          isPreviewPlaying={playingKey === tune.tune_key} isSystem={tune.isSystem}
+          onRemove={onRemoveTune && (tune.isSystem || tune.isOwn) ? () => { stop(); onRemoveTune(tune); } : undefined}
           onSignUp={onSignUp ? () => { stop(); onSignUp(); } : undefined}
           onPreview={tune.playback ? () => void toggle(tune.tune_key, tune.playback!) : undefined}
           onSelect={() => { stop(); onSelectTune(tune.tune_key); }} />

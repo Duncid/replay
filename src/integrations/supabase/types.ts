@@ -187,6 +187,24 @@ export type Database = {
           },
         ]
       }
+      hidden_system_tunes: {
+        Row: {
+          auth_user_id: string
+          created_at: string
+          tune_key: string
+        }
+        Insert: {
+          auth_user_id?: string
+          created_at?: string
+          tune_key: string
+        }
+        Update: {
+          auth_user_id?: string
+          created_at?: string
+          tune_key?: string
+        }
+        Relationships: []
+      }
       lesson_runs: {
         Row: {
           ai_feedback: string | null

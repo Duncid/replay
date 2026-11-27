@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getTunePlayback, getTunePreview } from "@/utils/tunePreview";
 import { getTuneAvailability, orderTunesByPosition, publishedTunesInListOrder, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
@@ -16,16 +16,25 @@ export function useTuneLibrary(localUserId?: string | null) {
       if (error) throw new Error(error.message);
       // Admins can read every tune; the list only shows global tunes and this account's own.
       const { data: { user } } = await supabase.auth.getUser();
-      const mine = (data ?? []).filter(tune => tune.is_global || tune.owner_user_id === user?.id);
+      const visible = (data ?? []).filter(tune => tune.is_global || tune.owner_user_id === user?.id);
+      // Noodlyn tunes an account removed are only hidden for it, and can be added back.
+      const { data: hiddenRows } = user ? await supabase.from("hidden_system_tunes").select("tune_key") : { data: [] };
+      const hiddenKeys = new Set((hiddenRows ?? []).map(h => h.tune_key));
+      const mine = visible.filter(tune => !(tune.is_global && hiddenKeys.has(tune.tune_key)));
+      const hidden = publishedTunesInListOrder(visible.filter(tune => tune.is_global && hiddenKeys.has(tune.tune_key)))
+        .map(tune => ({ tune_key: tune.tune_key, title: (tune.briefing as { title?: string } | null)?.title, composer: tune.composer }));
       const { data: saved } = user ? await supabase.from("tune_list_positions").select("tune_key, position") : { data: [] };
       const { ordered, missing } = orderTunesByPosition(publishedTunesInListOrder(mine), new Map((saved ?? []).map(p => [p.tune_key, p.position])));
       // Remember where new tunes landed, so rebuilding or republishing never moves them.
       if (user && missing.length) void supabase.from("tune_list_positions").upsert(missing, { onConflict: "auth_user_id,tune_key", ignoreDuplicates: true });
-      return ordered.map(tune => ({ tune_key: tune.tune_key,
+      const maxPosition = Math.max(0, ...(saved ?? []).map(p => p.position), ...missing.map(m => m.position));
+      return { maxPosition, hidden, list: ordered.map(tune => ({ tune_key: tune.tune_key,
+        isSystem: tune.is_global,
+        isOwn: !tune.is_global && tune.owner_user_id === user?.id,
         title: (tune.briefing as { title?: string } | null)?.title,
         composer: tune.composer,
         playback: getTunePlayback(tune.note_sequence),
-        preview: getTunePreview(tune.note_sequence) }));
+        preview: getTunePreview(tune.note_sequence) })) };
     },
   });
   const progress = useQuery({
@@ -50,8 +59,29 @@ export function useTuneLibrary(localUserId?: string | null) {
     staleTime: 0,
   });
 
+  const queryClient = useQueryClient();
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+  const hideTune = async (tuneKey: string) => {
+    const { error } = await supabase.from("hidden_system_tunes").insert({ tune_key: tuneKey });
+    if (error) throw new Error(error.message);
+    await refresh();
+  };
+  const showTune = async (tuneKey: string) => {
+    const { error } = await supabase.from("hidden_system_tunes").delete().eq("tune_key", tuneKey);
+    if (error) throw new Error(error.message);
+    // An added-back tune joins the end of the list.
+    await supabase.from("tune_list_positions").upsert({ tune_key: tuneKey, position: (tunes.data?.maxPosition ?? 0) + 1 }, { onConflict: "auth_user_id,tune_key" });
+    await refresh();
+  };
+  const deleteTune = async (tuneKey: string) => {
+    const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "delete", tuneKey } });
+    if (error || !data?.success) throw new Error(data?.error ?? error?.message ?? "Delete failed");
+    await refresh();
+  };
   return {
-    tunes: (tunes.data ?? []).map(tune => ({
+    hiddenTunes: tunes.data?.hidden ?? [],
+    hideTune, showTune, deleteTune,
+    tunes: (tunes.data?.list ?? []).map(tune => ({
       ...tune,
       ...getTuneAvailability(tune.tune_key, progress.data?.snapshot ?? null, progress.data?.acquired ?? new Set()),
     })),

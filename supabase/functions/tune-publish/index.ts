@@ -198,6 +198,13 @@ serve(async (req) => {
       .eq("tune_key", finalTuneKey)
       .maybeSingle();
 
+    // Noodlyn (system) tunes are admin-only in every version, not just this one.
+    const { data: systemRow } = await supabase.from("tune_assets").select("id").eq("tune_key", finalTuneKey).eq("is_global", true).limit(1);
+    if (!callerIsAdmin && systemRow?.length) {
+      return new Response(JSON.stringify({ success: false, error: "Only admins can change Noodlyn tunes" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (!callerIsAdmin && existingTune && existingTune.owner_user_id !== userId) {
       return new Response(JSON.stringify({ success: false, error: "This tune belongs to another account" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -232,7 +239,7 @@ serve(async (req) => {
       assembly_dsp_xmls: tuneAssets.assemblyDspXmls || null,
       // Updates keep the tune's owner/visibility; new tunes belong to the publisher's account.
       owner_user_id: existingTune ? existingTune.owner_user_id : userId,
-      is_global: isGlobal ?? (existingTune ? existingTune.is_global : true),
+      is_global: isGlobal ?? (existingTune ? existingTune.is_global : false),
     };
 
     if (existingTune) {

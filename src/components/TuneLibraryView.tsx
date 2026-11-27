@@ -7,7 +7,7 @@ export interface TuneLibraryViewProps extends TuneCarouselProps {
   error?: Error | null;
   refetch: () => unknown;
 }
-export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune, onSignUp, previewPaused, onAddTune, builds, onRetryBuild, onDismissBuild }: TuneLibraryViewProps) {
+export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune, onSignUp, previewPaused, onAddTune, builds, onRetryBuild, onDismissBuild, onRemoveTune }: TuneLibraryViewProps) {
   if (isLoading) return <LoadingSpinner message="Loading tunes…" />;
   return (
     <section className="w-full flex-1 self-stretch flex flex-col justify-center py-8">
@@ -17,10 +17,10 @@ export function TuneLibraryView({ tunes, isLoading, error, refetch, onSelectTune
           <p className="text-destructive">Unable to load tunes.</p>
           <Button variant="outline" onClick={() => void refetch()}>Try again</Button>
         </div>
-      ) : tunes.length === 0 ? (
+      ) : tunes.length === 0 && !onAddTune && !builds?.length ? (
         <p className="text-center text-muted-foreground">No published tunes yet.</p>
       ) : (
-        <TuneCarousel tunes={tunes} onSelectTune={onSelectTune} onSignUp={onSignUp} previewPaused={previewPaused} onAddTune={onAddTune} builds={builds} onRetryBuild={onRetryBuild} onDismissBuild={onDismissBuild} />
+        <TuneCarousel tunes={tunes} onSelectTune={onSelectTune} onSignUp={onSignUp} previewPaused={previewPaused} onAddTune={onAddTune} builds={builds} onRetryBuild={onRetryBuild} onDismissBuild={onDismissBuild} onRemoveTune={onRemoveTune} />
       )}
     </section>
   );

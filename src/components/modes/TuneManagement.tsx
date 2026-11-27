@@ -75,7 +75,7 @@ import {
   type TuneMenuAssemblyItem,
   type TuneMenuNuggetItem,
 } from "@/utils/tuneAssetBundler";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { buildTuneOverview, type OverviewItem, type OverviewNote, type OverviewSource } from "@/utils/tuneOverview";
 import { TuneThumbnail } from "@/components/TuneThumbnail";
 import {
@@ -2220,22 +2220,44 @@ export function TuneManagementTabContent({
   );
 }
 
-/** Admin choice: a global tune is listed for every account; otherwise only for its owner. */
+/** Admin choice: System (Noodlyn) tunes are listed for every account; account tunes only for their owner. */
 function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
   const queryClient = useQueryClient();
   const { data: tunes = [] } = usePublishedTuneKeys();
-  const isGlobal = tunes.find((t) => t.tune_key === tuneKey)?.is_global ?? true;
-  const toggle = async () => {
-    const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "set-global", tuneKey, isGlobal: !isGlobal } });
+  const { data: userId } = useQuery({ queryKey: ["auth-user-id"], queryFn: async () => (await supabase.auth.getUser()).data.user?.id ?? null });
+  const isGlobal = tunes.find((t) => t.tune_key === tuneKey)?.is_global ?? false;
+  const myAccountTunes = tunes.filter((t) => !t.is_global && t.owner_user_id === userId && t.tune_key !== tuneKey);
+  const call = async (body: Record<string, unknown>, done: string) => {
+    const { data, error } = await supabase.functions.invoke("tune-manage", { body });
     if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? "Update failed"); return; }
-    sonnerToast.success(isGlobal ? `"${tuneKey}" is now only in its owner's tunes` : `"${tuneKey}" is now global`);
+    sonnerToast.success(done);
     queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
+    queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
   };
+  const titleOf = (t: { tune_key: string; briefing?: unknown }) => (t.briefing as { title?: string } | null)?.title || t.tune_key;
   return (
-    <DropdownMenuItem onClick={toggle}>
-      {isGlobal ? <Lock /> : <Globe />}
-      {isGlobal ? "Make account-only" : "Make global"}
-    </DropdownMenuItem>
+    <>
+      <DropdownMenuItem onClick={() => call({ action: isGlobal ? "demote" : "promote", tuneKey },
+        isGlobal ? `"${tuneKey}" moved back to your account tunes` : `"${tuneKey}" is now a Noodlyn tune`)}>
+        {isGlobal ? <Lock /> : <Globe />}
+        {isGlobal ? "Move back to my account" : "Promote to Noodlyn tune"}
+      </DropdownMenuItem>
+      {isGlobal && (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger><Upload />Replace with…</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="bg-popover max-h-80 overflow-y-auto">
+            {myAccountTunes.length === 0 && <DropdownMenuItem disabled>No account tunes</DropdownMenuItem>}
+            {myAccountTunes.map((t) => (
+              <DropdownMenuItem key={t.tune_key} onClick={() => {
+                if (confirm(`Replace the music of "${tuneKey}" with "${titleOf(t)}"? Its name and place in lists stay the same.`)) {
+                  void call({ action: "replace-system", tuneKey, sourceTuneKey: t.tune_key }, `"${tuneKey}" now plays "${titleOf(t)}"`);
+                }
+              }}>{titleOf(t)}</DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      )}
+    </>
   );
 }
 
@@ -2256,7 +2278,7 @@ function TuneOverview() {
   const publish = async () => {
     if (selectedSource === "local") { setShowPublishDialog(true); return; }
     setPublishing(true);
-    const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "set-global", tuneKey: selectedTune, isGlobal: true } });
+    const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "promote", tuneKey: selectedTune } });
     setPublishing(false);
     if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? "Publish failed"); return; }
     sonnerToast.success(`"${selectedTune}" is now published for everyone`);

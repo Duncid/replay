@@ -1,179 +1,86 @@
-import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { requireUser, authErrorResponse } from "../_shared/auth.ts";
+import { canManageTune, canReplaceSystemTune, type TuneAction } from "../_shared/tune-rules.ts";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "npm:zod@3";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const Body = z.object({
+  action: z.enum(["rename", "delete", "promote", "demote", "replace-system"]),
+  tuneKey: z.string().min(1).max(200),
+  newTitle: z.string().trim().min(1).max(200).optional(),
+  sourceTuneKey: z.string().min(1).max(200).optional(),
+});
 
-interface TuneManageRequest {
-  action: "rename" | "delete" | "set-global";
-  isGlobal?: boolean;
-  tuneKey: string;
-  newTitle?: string; // For rename action
-}
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+const COPY_FIELDS = ["note_sequence", "left_hand_sequence", "right_hand_sequence", "nuggets", "assemblies", "tune_xml",
+  "tune_dsp_xml", "nugget_xmls", "nugget_dsp_xmls", "assembly_xmls", "assembly_dsp_xmls"] as const;
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    await requireAdmin(req);
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const { userId, admin: db } = await requireUser(req);
+    const parsed = Body.safeParse(await req.json());
+    if (!parsed.success) return json({ success: false, error: parsed.error.flatten().fieldErrors }, 400);
+    const { action, tuneKey, newTitle, sourceTuneKey } = parsed.data;
+    const { data: role } = await db.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+    const isAdmin = !!role;
 
-    const { action, tuneKey, newTitle, isGlobal } = (await req.json()) as TuneManageRequest;
-
-    console.log(`[tune-manage] Action: ${action}, tuneKey: ${tuneKey}`);
-
-    if (!tuneKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: "tuneKey is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    const { data: rows, error: fetchError } = await db.from("tune_assets")
+      .select("*, curriculum_versions(published_at)").eq("tune_key", tuneKey);
+    if (fetchError) throw fetchError;
+    if (!rows?.length) return json({ success: false, error: `Tune not found: ${tuneKey}` }, 404);
+    // Every version of a tune shares owner and visibility.
+    const tune = { owner_user_id: rows[0].owner_user_id, is_global: rows.some((r) => r.is_global) };
+    if (!canManageTune(action as TuneAction, tune, userId, isAdmin)) {
+      return json({ success: false, error: tune.is_global ? "Only admins can change Noodlyn tunes" : "This tune belongs to another account" }, 403);
     }
 
     if (action === "delete") {
-      // Delete all tune_assets with this tune_key
-      const { error, count } = await supabase
-        .from("tune_assets")
-        .delete()
-        .eq("tune_key", tuneKey);
-
-      if (error) {
-        console.error("[tune-manage] Delete error:", error);
-        throw error;
-      }
-
-      console.log(`[tune-manage] Deleted ${count ?? "?"} records for tuneKey: ${tuneKey}`);
-
-      return new Response(
-        JSON.stringify({ success: true, deleted: count }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      const { error } = await db.from("tune_assets").delete().eq("tune_key", tuneKey);
+      if (error) throw error;
+      await db.from("tune_list_positions").delete().eq("tune_key", tuneKey);
+      await db.from("hidden_system_tunes").delete().eq("tune_key", tuneKey);
+      return json({ success: true, deleted: rows.length });
     }
 
-    if (action === "set-global") {
-      const { error } = await supabase.from("tune_assets").update({ is_global: !!isGlobal }).eq("tune_key", tuneKey);
+    if (action === "promote" || action === "demote") {
+      const { error } = await db.from("tune_assets").update({ is_global: action === "promote" }).eq("tune_key", tuneKey);
       if (error) throw error;
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return json({ success: true });
     }
 
     if (action === "rename") {
-      if (!newTitle?.trim()) {
-        return new Response(
-          JSON.stringify({ success: false, error: "newTitle is required for rename" }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
+      if (!newTitle) return json({ success: false, error: "newTitle is required for rename" }, 400);
+      for (const row of rows) {
+        const { error } = await db.from("tune_assets")
+          .update({ briefing: { ...(row.briefing as object ?? {}), title: newTitle } }).eq("id", row.id);
+        if (error) throw error;
       }
-
-      // Get ALL tune records with this tune_key (there may be multiple versions)
-      const { data: existingRecords, error: fetchError } = await supabase
-        .from("tune_assets")
-        .select("*")
-        .eq("tune_key", tuneKey);
-
-      if (fetchError) {
-        console.error("[tune-manage] Fetch error:", fetchError);
-        throw new Error(`Tune not found: ${tuneKey}`);
-      }
-
-      if (!existingRecords || existingRecords.length === 0) {
-        throw new Error(`Tune not found: ${tuneKey}`);
-      }
-
-      console.log(`[tune-manage] Found ${existingRecords.length} records for tuneKey: ${tuneKey}`);
-
-      // Since there's no UPDATE RLS policy, we delete and re-insert ALL records
-      // Delete all records with this tune_key
-      const { error: deleteError } = await supabase
-        .from("tune_assets")
-        .delete()
-        .eq("tune_key", tuneKey);
-
-      if (deleteError) {
-        console.error("[tune-manage] Delete for rename error:", deleteError);
-        throw deleteError;
-      }
-
-      // Re-insert all records with updated briefing title
-      const recordsToInsert = existingRecords.map(existing => {
-        const updatedBriefing = {
-          ...(existing.briefing as object || {}),
-          title: newTitle.trim(),
-        };
-        return {
-          version_id: existing.version_id,
-          tune_key: existing.tune_key,
-          composer: existing.composer,
-          briefing: updatedBriefing,
-          note_sequence: existing.note_sequence,
-          left_hand_sequence: existing.left_hand_sequence,
-          right_hand_sequence: existing.right_hand_sequence,
-          nuggets: existing.nuggets,
-          assemblies: existing.assemblies,
-          tune_xml: existing.tune_xml,
-          tune_dsp_xml: existing.tune_dsp_xml,
-          nugget_xmls: existing.nugget_xmls,
-          nugget_dsp_xmls: existing.nugget_dsp_xmls,
-          assembly_xmls: existing.assembly_xmls,
-          assembly_dsp_xmls: existing.assembly_dsp_xmls,
-          owner_user_id: existing.owner_user_id,
-          is_global: existing.is_global,
-        };
-      });
-
-      const { error: insertError } = await supabase
-        .from("tune_assets")
-        .insert(recordsToInsert);
-
-      if (insertError) {
-        console.error("[tune-manage] Insert for rename error:", insertError);
-        throw insertError;
-      }
-
-      console.log(`[tune-manage] Renamed ${existingRecords.length} records for tuneKey: ${tuneKey} to title: ${newTitle.trim()}`);
-
-      return new Response(
-        JSON.stringify({ success: true, updatedCount: existingRecords.length }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return json({ success: true, updatedCount: rows.length });
     }
 
-    return new Response(
-      JSON.stringify({ success: false, error: `Unknown action: ${action}` }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    // replace-system: the System tune keeps its key, title, composer and list places but plays the source's music.
+    if (!sourceTuneKey) return json({ success: false, error: "sourceTuneKey is required" }, 400);
+    const { data: sources, error: sourceError } = await db.from("tune_assets")
+      .select("*, curriculum_versions(published_at)").eq("tune_key", sourceTuneKey);
+    if (sourceError) throw sourceError;
+    if (!sources?.length) return json({ success: false, error: `Tune not found: ${sourceTuneKey}` }, 404);
+    if (!canReplaceSystemTune(tune, { owner_user_id: sources[0].owner_user_id, is_global: sources.some((s) => s.is_global) }, userId, isAdmin)) {
+      return json({ success: false, error: "Pick a Noodlyn tune and a tune from your own library" }, 403);
+    }
+    const newest = <T extends { curriculum_versions: { published_at: string | null } | null }>(list: T[]) =>
+      [...list].sort((a, b) => (b.curriculum_versions?.published_at ?? "").localeCompare(a.curriculum_versions?.published_at ?? ""))[0];
+    const source = newest(sources), target = newest(rows);
+    const update: Record<string, unknown> = {};
+    for (const f of COPY_FIELDS) update[f] = source[f];
+    const { error } = await db.from("tune_assets").update(update).eq("id", target.id);
+    if (error) throw error;
+    return json({ success: true });
   } catch (error) {
-    const __authRes = authErrorResponse(error, corsHeaders);
-    if (__authRes) return __authRes;
+    const authRes = authErrorResponse(error, corsHeaders);
+    if (authRes) return authRes;
     console.error("[tune-manage] Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });

@@ -55,6 +55,7 @@ actor APIClient {
     }
 
     private struct TunePosition: Decodable { let tune_key: String; let position: Double }
+    private struct HiddenTune: Decodable { let tune_key: String }
 
     func fetchTuneLibrary() async throws -> [TuneLibraryItem] {
         async let tunes: [PublishedTune] = read("tune_assets", query: [
@@ -74,7 +75,13 @@ actor APIClient {
         async let positions: [TunePosition] = read("tune_list_positions", query: [
             URLQueryItem(name: "select", value: "tune_key,position")
         ])
-        let (published, curriculum, progress) = try await (tunes, exports, acquisitions)
+        async let hiddenRows: [HiddenTune] = read("hidden_system_tunes", query: [
+            URLQueryItem(name: "select", value: "tune_key")
+        ])
+        let (allPublished, curriculum, progress) = try await (tunes, exports, acquisitions)
+        // Noodlyn tunes this account removed stay hidden here too (shared with the web list).
+        let hidden = Set((try? await hiddenRows)?.map { $0.tune_key } ?? [])
+        let published = allPublished.filter { !hidden.contains($0.tune_key) }
         let saved = Dictionary((try? await positions)?.map { ($0.tune_key, $0.position) } ?? [], uniquingKeysWith: { a, _ in a })
         let acquired = Set(progress.map { $0.tune_key })
         // A tune keeps the place of its first publication and plays its newest version.

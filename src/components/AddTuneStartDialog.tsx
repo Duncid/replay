@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import musescoreLogo from "@/assets/musescore-logo.svg.asset.json";
 
 interface ScoreSource {
@@ -34,7 +34,12 @@ export const SCORE_SOURCES: ScoreSource[] = [
 ];
 
 /** First screen of the add-a-tune flow: what to upload, where to find it, then the picker. */
-export function AddTuneStartDialog({ open, onOpenChange, onPickFile }: { open: boolean; onOpenChange: (open: boolean) => void; onPickFile: () => void }) {
+export function AddTuneStartDialog({ open, onOpenChange, onPickFile, hiddenTunes = [], onAddBack }: {
+  open: boolean; onOpenChange: (open: boolean) => void; onPickFile: () => void;
+  /** Noodlyn tunes this account removed from its list. */
+  hiddenTunes?: { tune_key: string; title?: string | null; composer?: string | null }[];
+  onAddBack?: (tuneKey: string) => void;
+}) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -52,6 +57,22 @@ export function AddTuneStartDialog({ open, onOpenChange, onPickFile }: { open: b
               Compressed MusicXML, the sheet-music format that keeps every note readable. Piano solos work best.
             </p>
           </div>
+
+          {hiddenTunes.length > 0 && onAddBack && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Hidden Noodlyn tunes</h3>
+              <ul className="flex flex-wrap gap-2">
+                {hiddenTunes.map((t) => (
+                  <li key={t.tune_key}>
+                    <Button variant="outline" size="sm" onClick={() => onAddBack(t.tune_key)} aria-label={`Add back ${t.title || t.tune_key}`}>
+                      <Plus className="size-4" aria-hidden="true" />
+                      {t.title || t.tune_key}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">No file yet?</h3>

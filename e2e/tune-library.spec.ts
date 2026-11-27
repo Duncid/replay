@@ -134,15 +134,34 @@ test("Tune Management in the menu loads the published tune that was picked", asy
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
 });
 
-test("picking an unpublished tune from the menu offers Publish", async ({ page }) => {
-  await page.route("**/rest/v1/**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(accountRows(route.request().url()) ?? []) }));
+test("removing a Noodlyn tune only hides it, and it can be added back", async ({ page }) => {
+  const seq = { notes: [{ pitch: 60, startTime: 0, endTime: 1 }], totalTime: 1 };
+  const published = { status: "published", published_at: "2026-01-01" };
+  const hidden = new Set<string>();
+  const writes: string[] = [];
+  await page.route("**/rest/v1/**", route => {
+    const req = route.request(), url = req.url();
+    if (url.includes("/hidden_system_tunes")) {
+      if (req.method() === "POST") { hidden.add("intro"); writes.push("hide"); }
+      if (req.method() === "DELETE") { hidden.delete("intro"); writes.push("unhide"); }
+      return route.fulfill({ json: [...hidden].map(tune_key => ({ tune_key })) });
+    }
+    if (url.includes("/tune_assets")) return route.fulfill({ json: [
+      { tune_key: "intro", briefing: { title: "Intro" }, composer: null, note_sequence: seq, is_global: true, owner_user_id: "someone", curriculum_versions: published },
+    ] });
+    return route.fulfill({ json: accountRows(url) ?? [] });
+  });
   await page.goto("/");
-  await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Tune Management", exact: true }).hover();
-  await page.getByRole("menuitem", { name: "Un-Published", exact: true }).hover();
-  await page.getByRole("menuitem", { name: "gymnopdie", exact: true }).click();
-  await expect(page.locator("div.sticky").first().getByText("gymnopdie", { exact: true })).toBeVisible();
-  await expect(page.locator("div.sticky").first().getByRole("button", { name: "Publish", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
+  await expect(page.getByText("Noodlyn", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Tune options: Intro", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Remove from my list", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Add a tune", exact: true }).click();
+  await page.getByRole("button", { name: "Add back Intro", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
+  expect(writes).toEqual(["hide", "unhide"]);
 });
 
 test("card completion recognizes both asset and curriculum identifiers", () => {

@@ -1,4 +1,6 @@
 import { lazy, Suspense, useRef, useState } from "react";
+import { toast } from "sonner";
+import { tuneDisplayTitle } from "@/utils/tunePreview";
 import { AddTuneStartDialog } from "@/components/AddTuneStartDialog";
 import { TuneUploadDialog } from "@/components/TuneUploadDialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,12 +44,21 @@ function AccountTuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneL
               e.target.value = "";
               if (f) { setIntroOpen(false); setUploadFile(f); setUploadOpen(true); }
             }} />
-          <AddTuneStartDialog open={introOpen} onOpenChange={setIntroOpen} onPickFile={() => uploadInputRef.current?.click()} />
+          <AddTuneStartDialog open={introOpen} onOpenChange={setIntroOpen} onPickFile={() => uploadInputRef.current?.click()}
+            hiddenTunes={library.hiddenTunes} onAddBack={key => library.showTune(key).catch(e => toast.error(e.message))} />
           <TuneUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} file={uploadFile} onStarted={() => active.refetch()} />
         </>
       )}
       <TuneLibraryView {...library} isLoading={library.isLoading || profileLoading} onSelectTune={onSelectTune}
         onAddTune={user ? () => setIntroOpen(true) : undefined}
+        onRemoveTune={tune => {
+          const name = tune.title?.trim() || tuneDisplayTitle(tune.tune_key);
+          if (tune.isSystem) {
+            void library.hideTune(tune.tune_key).then(() => toast.success(`${name} removed. Add it back from "Add a tune".`), e => toast.error(e.message));
+          } else if (confirm(`Delete "${name}"? This cannot be undone.`)) {
+            void library.deleteTune(tune.tune_key).then(() => toast.success(`${name} deleted`), e => toast.error(e.message));
+          }
+        }}
         builds={active.builds} onRetryBuild={active.retry} onDismissBuild={active.dismiss} />
     </>
   );
