@@ -14,8 +14,16 @@
 .landing-skip { position: absolute; top: -80px; left: 24px; z-index: 10; padding: 12px 20px; background: #25282b; color: #f4f5ef; border-radius: 8px; }
 .landing-skip:focus { top: 20px; }
 .landing-header { height: 96px; padding: 0 clamp(24px, 5vw, 80px); display: flex; align-items: center; justify-content: space-between; }
-.landing-wordmark { color: #f4f5ef; font-family: "Space Grotesk", system-ui, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -1.7px; }
-.landing-wordmark span { color: #c7ff12; }
+.landing-wordmark { color: #fff; font-family: "Space Grotesk", system-ui, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -1.7px; white-space: nowrap; }
+.landing-wordmark-letter { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  .landing-wordmark-letter { animation: landing-wordmark-reveal 700ms ease-out var(--letter-delay) both; }
+}
+@keyframes landing-wordmark-reveal {
+  0% { opacity: 0; color: #000; }
+  30%, 55% { opacity: 1; color: hsl(var(--letter-note)); }
+  100% { opacity: 1; color: #fff; }
+}
 .landing-signin { color: #e0e3dc; font-size: 14px; font-weight: 500; padding: 12px 20px; border: 1px solid #34373a; border-radius: 100px; transition: background .2s, border-color .2s; }
 .landing-signin:hover { background: #191c1f; border-color: #636960; }
 .landing-main { text-align: center; }
@@ -117,7 +125,6 @@
 .landing-demo-highway { position: absolute; inset: 0 12px 240px; }
 .landing-demo-header { position: absolute; inset: 0 0 auto; height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; font-size: 18px; color: hsl(var(--muted-foreground)); }
 .landing-demo-brand { font: 700 30px "Space Grotesk", sans-serif; letter-spacing: -1px; color: hsl(var(--foreground)); }
-.landing-demo-brand > span { color: hsl(var(--primary)); }
 .landing-demo-title { position: absolute; top: 104px; left: 40px; padding: 18px 22px; border: 1px solid hsl(var(--border) / .6); border-radius: 16px; background: hsl(var(--background) / .65); backdrop-filter: blur(12px); }
 .landing-demo-title h2 { margin: 0 0 5px; font: 500 28px "Space Grotesk", sans-serif; }
 .landing-demo-title p { margin: 0; font-size: 14px; color: hsl(var(--muted-foreground)); }

@@ -211,7 +211,7 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
     <div className="landing-demo-app" aria-hidden="true" inert>
       <div className="landing-demo-highway"><NoteHighway notes={highwayNotes} transport={transport.current}
         layout={layout} range={range} pixelsPerBeat={90} beatsPerSecond={beatsPerSecond} onReadinessChange={readiness} /></div>
-      <header className="landing-demo-header"><span className="landing-demo-brand">Noodlyn<span>.</span></span></header>
+      <header className="landing-demo-header"><span className="landing-demo-brand">Noodlyn</span></header>
       <div className="landing-demo-title"><h2>{tune.title}</h2>{tune.composer && <p>{tune.composer}</p>}</div>
       <div className="landing-demo-piano">
         <div className="landing-demo-toolbar"><span>Acoustic piano</span><span>{Math.round(bpm)} BPM <span className="landing-demo-time" ref={timeLabel}>0:00 / {formatDemoTime(duration)}</span></span></div>

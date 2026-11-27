@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import type { DemoSound, LivePracticeHandle } from "@/components/landing/LivePracticePreview";
 import { Link, useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Play, Pause, KeyboardMusic, Mic, Music2 } from "lucide-react";
@@ -8,6 +8,7 @@ import { useGuestEntry } from "@/components/landing/GuestEntryContext";
 import "./Landing.css";
 
 const LivePracticePreview = lazy(() => import("@/components/landing/LivePracticePreview"));
+const wordmarkNotes = ["c", "d", "e", "f", "g", "a", "b"];
 class PreviewBoundary extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -94,7 +95,10 @@ export default function Landing() {
       data-preview-state={liveFailed ? "error" : liveReady ? "ready" : "loading"}>
       <a className="landing-skip" href="#discover">Skip to content</a>
       <header className="landing-header">
-        <Link className="landing-wordmark" to="/" aria-label="Noodlyn home">Noodlyn<span aria-hidden="true">.</span></Link>
+        <Link className="landing-wordmark" to="/" aria-label="Noodlyn home">
+          {Array.from("Noodlyn").map((letter, index) => <span key={index} aria-hidden="true" className="landing-wordmark-letter"
+            style={{ "--letter-note": `var(--note-${wordmarkNotes[index]})`, "--letter-delay": `${index * 120}ms` } as CSSProperties}>{letter}</span>)}
+        </Link>
         <Link className="landing-signin" to="/login">Sign in</Link>
       </header>
 
