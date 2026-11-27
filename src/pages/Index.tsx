@@ -53,6 +53,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useLocalUsers } from "@/hooks/useLocalUsers";
@@ -137,13 +138,16 @@ const normalizeCreativityToVAE = (creativity: number): number => {
 
 const Index = () => {
   const { t, i18n } = useTranslation();
+  const { isAdmin } = useAuth();
   const { currentUserId, isLoading: profileLoading } = useLocalUsers();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState<AppState>("idle");
-  const [activeMode, setActiveMode] = useLocalStorage<ActiveMode>(
+  const [preferredMode, setActiveMode] = useLocalStorage<ActiveMode>(
     STORAGE_KEYS.ACTIVE_MODE,
     "learn",
   );
+  // Resolve before rendering or enabling recording, including restored preferences.
+  const activeMode = preferredMode === "play" && !isAdmin ? "learn" : preferredMode;
   const [isAutoreplyActive, setIsAutoreplyActive] = useLocalStorage<boolean>(
     STORAGE_KEYS.AUTOREPLY,
     false,
@@ -437,6 +441,7 @@ const Index = () => {
   });
 
   const handleModeChange = (newMode: ActiveMode) => {
+    if (newMode === "play" && !isAdmin) return;
     if (newMode === "learn" && magenta.isMagentaModel(selectedModel)) {
       setSelectedModel("google/gemini-3.8-flash");
     } else if (newMode === "play" && !magenta.isMagentaModel(selectedModel)) {
@@ -2079,6 +2084,18 @@ const Index = () => {
     micPressedKeysRef.current.clear();
   }, [isMicEnabled]);
 
+  const userMenu = (
+    <UserMenu
+      debugMode={debugMode}
+      onDebugModeChange={setDebugMode}
+      language={language}
+      onLanguageChange={setLanguage}
+      notationPreference={musicNotation}
+      onNotationChange={setMusicNotation}
+      onOpenManagement={handleModeChange}
+    />
+  );
+
   const actionBars = {
     play: (
       <PlayModeActionBar
@@ -2135,22 +2152,15 @@ const Index = () => {
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
           className="w-full flex-1 min-h-0 flex flex-col"
         >
-          <div className="replay-header sticky top-0 z-30 w-full">
+          {(isAdmin || activeMode !== "learn" || debugMode) && <div className="replay-header sticky top-0 z-30 w-full">
             <div className="flex items-center justify-between p-2">
               <div className="flex items-center gap-2">
-                <UserMenu
-                  debugMode={debugMode}
-                  onDebugModeChange={setDebugMode}
-                  language={language}
-                  onLanguageChange={setLanguage}
-                  notationPreference={musicNotation}
-                  onNotationChange={setMusicNotation}
-                  onOpenManagement={handleModeChange}
-                />
-                <TabsList>
+                {/* Quest has no keyboard toolbar, so keep its menu here. */}
+                {activeMode === "quest" && userMenu}
+                {isAdmin && <TabsList>
                   <TabsTrigger value="learn">Tunes</TabsTrigger>
                   <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
-                </TabsList>
+                </TabsList>}
                 {activeMode === "lab" && <TuneSelectionLabel />}
                 {activeMode === "quest" && questHeaderTitle && (
                   <span className="text-sm text-muted-foreground ml-2">
@@ -2162,9 +2172,7 @@ const Index = () => {
                 {actionBars[activeMode]}
               </div>
             </div>
-          </div>
-
-
+          </div>}
 
           <div
             id="topContainer"
@@ -2199,7 +2207,7 @@ const Index = () => {
               />
             )}
 
-            <PlayModeTabContent playMode={playMode} />
+            {isAdmin && <PlayModeTabContent playMode={playMode} />}
             <LearnModeTabContent
               learnModeType={learnModeType}
               freePracticeProps={freePracticeModeProps}
@@ -2225,6 +2233,7 @@ const Index = () => {
             {/* Piano sound and metronome (left), input settings (right). */}
             <div className="keyboard-toolbar w-full flex flex-wrap items-center justify-between gap-2 p-1.5 shrink-0">
               <div className="flex items-center gap-1">
+                {userMenu}
                 <KeyboardSettings instrument={pianoSoundType} onInstrumentChange={setPianoSoundType}
                   displayNotes={displayNotes} onDisplayNotesChange={setDisplayNotes} />
 

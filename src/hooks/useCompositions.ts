@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate } from '@/integrations/supabase/types';
 import { PlayEntry } from '@/components/modes/PlayMode';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface Composition {
   id: string;
@@ -20,12 +21,14 @@ interface UseCompositionsOptions {
 }
 
 export function useCompositions(options: UseCompositionsOptions = {}) {
+  const { isAdmin } = useAuth();
   const [compositions, setCompositions] = useState<Composition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentComposition, setCurrentComposition] = useState<Composition | null>(null);
   const { toast } = useToast();
 
   const fetchCompositions = useCallback(async () => {
+    if (!isAdmin) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -51,7 +54,7 @@ export function useCompositions(options: UseCompositionsOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [isAdmin, toast]);
 
   const saveComposition = useCallback(async (
     title: string,
@@ -185,10 +188,15 @@ export function useCompositions(options: UseCompositionsOptions = {}) {
     setCurrentComposition(null);
   }, []);
 
-  // Fetch compositions on mount
+  // Only load Compose data once the account's admin role has been confirmed.
   useEffect(() => {
-    fetchCompositions();
-  }, [fetchCompositions]);
+    if (isAdmin) {
+      void fetchCompositions();
+    } else {
+      setCompositions([]);
+      setCurrentComposition(null);
+    }
+  }, [isAdmin, fetchCompositions]);
 
   return {
     compositions,

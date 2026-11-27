@@ -1,4 +1,4 @@
-import { requireUser, requireAdmin, resolveProfile, authErrorResponse } from "../_shared/auth.ts";
+import { requireAdmin, authErrorResponse } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -58,7 +58,7 @@ serve(async (req) => {
   }
 
   try {
-    await requireUser(req);
+    await requireAdmin(req);
     const { userSequence, model = "google/gemini-3.8-flash", metronome, instrument = "classic" } = await req.json();
     console.log("Received user sequence:", JSON.stringify(userSequence), "Model:", model, "Metronome:", metronome, "Instrument:", instrument);
 
