@@ -14,6 +14,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Unlocked: Story = {};
 export const Locked: Story = { args: { title: "St Louis Blues", unlocked: false, prerequisites: ["Intro"] } };
+export const GuestLocked: Story = { args: { title: "St Louis Blues", composer: "W. C. Handy", unlocked: false, onSignUp: () => {} } };
 export const NoPreview: Story = { args: { preview: undefined, onPreview: undefined } };
 export const PlayingPreview: Story = { args: { isPreviewPlaying: true } };
 export const LongTitle: Story = { args: { title: "A longer tune title that wraps comfortably on a smaller screen", unlocked: false, prerequisites: ["Intro", "First steps with both hands"] } };

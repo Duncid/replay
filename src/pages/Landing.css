@@ -15,14 +15,25 @@
 .landing-skip:focus { top: 20px; }
 .landing-header { height: 96px; padding: 0 clamp(24px, 5vw, 80px); display: flex; align-items: center; justify-content: space-between; }
 .landing-wordmark { color: #fff; font-family: "Space Grotesk", system-ui, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -1.7px; white-space: nowrap; }
-.landing-wordmark-letter { display: inline-block; }
+.landing-wordmark-letter { display: inline-block; transform-origin: 50% 75%; }
 @media (prefers-reduced-motion: no-preference) {
-  .landing-wordmark-letter { animation: landing-wordmark-reveal 700ms ease-out var(--letter-delay) both; }
+  .landing-wordmark-letter { animation: landing-wordmark-reveal 800ms cubic-bezier(.22, 1, .36, 1) var(--letter-delay) backwards; }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-wordmark-letter {
+    transition: color 240ms ease-out, transform 380ms cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .landing-wordmark:is(:hover, :focus-visible) .landing-wordmark-letter {
+    color: hsl(var(--letter-note));
+    transform: translateY(-1px) scale(1.12);
+    transition-delay: calc(var(--letter-delay) * .45);
+  }
 }
 @keyframes landing-wordmark-reveal {
-  0% { opacity: 0; color: #000; }
-  30%, 55% { opacity: 1; color: hsl(var(--letter-note)); }
-  100% { opacity: 1; color: #fff; }
+  0% { opacity: 0; color: #000; transform: translateY(2px) scale(.9); }
+  30% { opacity: 1; color: hsl(var(--letter-note)); transform: translateY(-1px) scale(1.14); }
+  55% { opacity: 1; color: hsl(var(--letter-note)); transform: scale(1.02); }
+  100% { opacity: 1; color: #fff; transform: none; }
 }
 .landing-signin { color: #e0e3dc; font-size: 14px; font-weight: 500; padding: 12px 20px; border: 1px solid #34373a; border-radius: 100px; transition: background .2s, border-color .2s; }
 .landing-signin:hover { background: #191c1f; border-color: #636960; }

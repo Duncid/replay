@@ -35,6 +35,9 @@ test("guests get the app with only Intro playable, without account or coach requ
   await page.reload();
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
   expect(requests).toEqual([]);
+  await page.getByRole("button", { name: "Sign-up for free", exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?mode=signup$/);
+  await expect(page.getByText("Create your account", { exact: true })).toBeVisible();
 });
 
 test("guest previews and Replay use the existing player; sign-up opens the existing auth screen", async ({ page }) => {

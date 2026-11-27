@@ -170,7 +170,7 @@ test('packaged app uses the native browser bridge and secure session storage', a
   await page.goto('/play'); // Direct native guest entry and reload stay signed out.
   await page.reload();
   await expect(page.getByRole('button', { name: 'Practice: Intro', exact: true })).toBeEnabled();
-  await page.getByRole('link', { name: 'Sign up', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign-up for free', exact: true }).click();
   await page.getByRole('button', { name: 'Sign in to Noodlyn', exact: true }).click();
   await expect(page.getByText('Sign-in cancelled', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Back to Noodlyn', exact: true }).click();
