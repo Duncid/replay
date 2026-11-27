@@ -23,10 +23,10 @@
   .landing-wordmark-letter {
     transition: color 240ms ease-out, transform 380ms cubic-bezier(.34, 1.56, .64, 1);
   }
-  .landing-wordmark:is(:hover, :focus-visible) .landing-wordmark-letter {
+  .landing-wordmark-letter:hover,
+  .landing-wordmark:focus-visible .landing-wordmark-letter {
     color: hsl(var(--letter-note));
     transform: translateY(-1px) scale(1.12);
-    transition-delay: calc(var(--letter-delay) * .45);
   }
 }
 @keyframes landing-wordmark-reveal {
