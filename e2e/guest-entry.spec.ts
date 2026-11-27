@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 for (const { width, height, changeTune = false } of [
   { width: 744, height: 1133 }, { width: 1133, height: 744 },
   { width: 1024, height: 1366 }, { width: 1366, height: 1024 },
-  { width: 390, height: 844, changeTune: true },
+  { width: 744, height: 1133, changeTune: true },
 ]) {
   test(`the live iPad keyboard meets the guest keyboard at ${width}×${height}${changeTune ? " after changing tunes" : ""}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height });
@@ -173,16 +173,16 @@ test("slow guest loading falls back to navigation and repeated activation create
   await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeFocused();
 });
 
-test("resizing during the flight finishes immediately without an input-blocking overlay", async ({ page }) => {
+test("resizing to a small screen during the flight removes the keyboard and overlay", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator('.noodlyn-landing[data-preview-state="ready"]')).toBeVisible({ timeout: 15_000 });
   await page.getByRole("link", { name: "Start playing", exact: true }).click();
   await page.locator(".guest-entry-key-flight").waitFor({ state: "attached" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page).toHaveURL(/\/play$/);
+  // The restriction can interrupt navigation before the destination commits.
   await expect(page.locator(".guest-entry-key-flight")).toHaveCount(0);
-  await expect(page.locator(".guest-entry-destination")).not.toHaveAttribute("inert");
-  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
+  await expect(page.getByRole("heading", { name: "A little more room to play" })).toBeVisible();
+  await expect(page.locator(".guest-entry-destination, .piano-surface")).toHaveCount(0);
 });
 
 test("leaving during entry cancels pending navigation and removes the flight", async ({ page }) => {

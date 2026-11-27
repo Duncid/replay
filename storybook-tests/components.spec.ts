@@ -1,5 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+test("catalog normalizes directory URLs without losing the selected story", async ({ page }) => {
+  // Match hosting that serves the manager HTML without a directory redirect.
+  await page.route(/\/storybook\?/, async route => {
+    const response = await page.request.get("/storybook/index.html");
+    await route.fulfill({ response });
+  });
+  await page.goto("/storybook?path=/story/foundations-noodlyn--overview#catalog");
+  await expect(page).toHaveURL(/\/storybook\/\?path=\/story\/foundations-noodlyn--overview#catalog$/);
+  await expect(page.frameLocator("#storybook-preview-iframe").getByRole("heading", { name: "Made for practice." })).toBeVisible();
+});
+
 test("catalog uses the app theme and musical colors", async ({ page }) => {
   await page.goto("iframe.html?id=foundations-noodlyn--overview&viewMode=story");
   await expect(page.getByRole("heading", { name: "Made for practice." })).toBeVisible();

@@ -6,7 +6,21 @@ Noodlyn has two independent implementations: React/Radix/Tailwind for the web an
 
 Run `npm ci`, then `npm run storybook`. Open http://localhost:6006. Use `npm run storybook:build` for a static catalog in `storybook-static/`, followed by `npm run storybook:test` for Chromium and iPad WebKit interaction checks at `http://localhost:6007/storybook/`. CI builds and tests the catalog.
 
+The published catalog is at https://noodlyn.com/storybook/ (including the trailing slash). The app's `npm run dev` server does not serve Storybook; use the separate Storybook server above for live component development. To browse the production build locally at `/storybook/`, run `npm run build` and `npm run preview`.
+
 The sidebar covers foundations, button variants, text fields, settings, navigation, dialogs/sheets/popovers, feedback and tune-card states. Stories import production components; they do not create alternative controls or call Cloud. Controls, generated documentation and the accessibility panel are available in Storybook.
+
+**iPad assets** groups **Start screens**, **App icons**, and **Native launch parts** outside Patterns. The catalogs read `design-assets/ipad-release/manifest.json` and its PNGs directly: 22 portrait/landscape screen exports, 29 icon sizes, and nine launch parts at 1×/2×/3×. Previews show pixel dimensions, screen canvases also show logical points, and each asset has a full-resolution download. Native apps use independent adaptive storyboards and sliced assets; the full-screen PNGs are review/export files.
+
+### iPad start-screen pipeline
+
+**Start screens → Live source** is a controlled composition of the production `NoteHighway`, `NoteRail`, `PianoKey` and `createAdaptivePianoLayout`, following the website's iPad demo approach. A small original C-major phrase is frozen at beat 4.25; the same active notes drive the highway, rail and keys. The keyboard adapts its pitch range to the available width and its height to the canvas. The shadowed Space Grotesk wordmark stays centered in the remaining area above the piano. There is no audio, account access, playback timer or remote score dependency.
+
+Start `npm run storybook`, then run `npm run ipad:start-screens`. The exporter renders all manifest canvases at their specified pixel scale, waits for fonts and the first real highway frame, checks logo placement and overflow, and stages every capture before replacing release images. It updates `manifest.json` with the frozen scene parameters. A built Storybook is also supported with `--url http://127.0.0.1:6007/storybook/`.
+
+For a separate review pack: `npm run ipad:start-screens -- --output /tmp/noodlyn-start-screens --beat 5.75 --logo-scale 0.9 --tune-opacity 0.5`. The output contains only screen PNGs and their manifest. Storybook exposes the same three controls. Keep the theme fixed to Acid for release captures.
+
+The full `scripts/export-ipad-assets.mjs` workflow calls this screen pipeline, then exports icons, native parts and the ZIP as before. Its **Native parts source** story preserves the simpler artwork used by both native launch storyboards. Running the screen-only pipeline does not update icons, native projects, social artwork or the combined ZIP; those remain separate release outputs.
 
 **Instruments → Piano keyboard** documents the central practice surface: playable
 C3–C6 keyboard, external chord/sharp highlights, French solfège, player/playback overlap,

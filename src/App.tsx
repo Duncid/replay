@@ -19,11 +19,14 @@ const Loading = () => <div className="h-dvh flex items-center justify-center bg-
 function PublicEntry() {
   const { user, loading } = useAuth();
   const supportedScreen = useSupportedScreen();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   if (loading) return <Loading />;
+  // Signed-in visitors can return to the public homepage without signing out.
+  const homepage = pathname === "/" && (!user || new URLSearchParams(search).has("home"));
+  if (homepage) return <GuestEntry canEnter={supportedScreen && !user} />;
   if (pathname === "/play" && user) return <Navigate to="/" replace />;
-  if (!user) return <GuestEntry />;
   if (!supportedScreen) return <SupportedScreenMessage />;
+  if (!user) return <GuestEntry canEnter={supportedScreen} />;
   return <div key={user.id} className="contents"><Suspense fallback={<Loading />}><Index /></Suspense></div>;
 }
 

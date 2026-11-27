@@ -1,6 +1,7 @@
 // Requires a built Storybook served locally and macOS sips. No image-generation API.
 // Usage: node scripts/export-ipad-assets.mjs [http://127.0.0.1:8082/storybook/]
 import { webkit } from '@playwright/test';
+import { captureIPadStartScreens } from './lib/capture-ipad-start-screens.mjs';
 import { mkdir, readFile, writeFile, copyFile, readdir, cp } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
@@ -9,23 +10,13 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'design-assets/ipad-release');
 const base = process.argv[2] ?? 'http://127.0.0.1:8082/storybook/';
-const story = new URL('iframe.html?id=patterns-ipad-start-screen--minimal&viewMode=story', base).href;
-const screens = [
-  [1536, 2048, '9.7-inch iPad / earlier mini'],
-  [1620, 2160, '10.2-inch iPad'],
-  [1668, 2224, '10.5-inch iPad Air / legacy Pro'],
-  [1640, 2360, '10.9-inch and 11-inch iPad / Air'],
-  [1668, 2388, '11-inch iPad Pro, earlier display'],
-  [1668, 2420, '11-inch iPad Pro OLED'],
-  [2048, 2732, '12.9-inch iPad Pro / 13-inch Air'],
-  [2064, 2752, '13-inch iPad Pro OLED'],
-  [1488, 2266, '8.3-inch iPad mini'],
-  [1512, 2316, '8.5-inch iPad mini'],
-  [2384, 3180, 'Bouba screenshot / approved design preview size'],
-];
+// Parts/social exports retain the simple native launch source.
+const story = new URL('iframe.html?id=ipad-assets-start-screens--native-parts&viewMode=story', base).href;
+const release = JSON.parse(await readFile(resolve(output, 'manifest.json'), 'utf8'));
+const screenMetadata = await captureIPadStartScreens({ base, output, screens: release.screens });
 const iconSizes = [16,20,29,32,36,40,48,57,58,60,70,72,76,80,87,96,114,120,128,144,150,152,167,180,192,256,310,512,1024];
 const manifest = {
-  design: 'Approved simple screen: centered 80px Space Grotesk Noodlyn, production C3–C6 white/black keys, no highway notes.',
+  ...screenMetadata,
   icon: 'Existing blue piano artwork, unchanged; resized from its opaque 1024px original.',
   regenerate: 'npx storybook build -o dist/storybook && node scripts/export-ipad-assets.mjs',
   launch: 'Native applications use independent adaptive storyboards and 1x/2x/3x sliced key assets. Full-screen PNGs are exports, not stretched native launch backgrounds.',
@@ -35,26 +26,11 @@ const manifest = {
     'https://www.apple.com/ipad-air/specs/', 'https://www.apple.com/ipad-pro/specs/',
     'https://www.apple.com/ipad-mini/specs/', 'https://www.apple.com/ipad-11/specs/',
   ],
-  screens: [], icons: iconSizes, parts: [],
+  screens: release.screens, icons: iconSizes, parts: [],
 };
 for (const folder of ['screens', 'icons', 'launch-parts']) await mkdir(resolve(output, folder), {recursive:true});
 const browser = await webkit.launch();
 try {
-  const page = await browser.newPage({ viewport: {width:1024,height:768}, deviceScaleFactor:2 });
-  await page.goto(story);
-  await page.locator('main h1').waitFor();
-  await page.evaluate(() => document.fonts.ready);
-  const background = await page.locator('main').evaluate(el => getComputedStyle(el).backgroundColor);
-  manifest.background = background;
-  for (const [short, long, family] of screens) {
-    for (const [width,height,orientation] of [[short,long,'portrait'],[long,short,'landscape']]) {
-      await page.setViewportSize({width:width/2,height:height/2});
-      const filename = `replay-${width}x${height}.png`;
-      await page.screenshot({path:resolve(output,'screens',filename)});
-      manifest.screens.push({filename,width,height,orientation,family,scale:2});
-    }
-  }
-  await page.close();
   // Public share artwork uses the same typography and piano as the launch screen.
   const social = await browser.newPage({viewport:{width:1200,height:630},deviceScaleFactor:1});
   await social.goto(story);

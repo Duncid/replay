@@ -1,5 +1,5 @@
 {
-  "design": "Approved simple screen: centered 80px Space Grotesk Noodlyn, production C3–C6 white/black keys, no highway notes.",
+  "design": "Controlled production UI: adaptive piano and rail, frozen C-major tune, shadowed Space Grotesk Noodlyn wordmark centered above the piano.",
   "icon": "Existing blue piano artwork, unchanged; resized from its opaque 1024px original.",
   "regenerate": "npx storybook build -o dist/storybook && node scripts/export-ipad-assets.mjs",
   "launch": "Native applications use independent adaptive storyboards and 1x/2x/3x sliced key assets. Full-screen PNGs are exports, not stretched native launch backgrounds.",
@@ -276,5 +276,14 @@
       "height": 471
     }
   ],
-  "background": "rgb(6, 7, 9)"
+  "background": "rgb(6, 7, 9)",
+  "startScreen": {
+    "story": "ipad-assets-start-screens--minimal",
+    "beat": 4.25,
+    "logoScale": 1,
+    "tuneOpacity": 0.65,
+    "theme": "acid",
+    "renderer": "chromium",
+    "regenerate": "npm run ipad:start-screens"
+  }
 }

@@ -207,12 +207,15 @@ test("chevrons browse published public tunes, wrap, and never include private en
 });
 
 
-test("the entire page fits desktop, tablet, phone and short landscape viewports", async ({ page }) => {
+test("the homepage fits desktop, tablet, phone and short landscape viewports", async ({ page }) => {
   await page.route("**/tonejs-instruments/**", route => route.abort());
+  await page.addInitScript(() => {
+    Object.defineProperties(window.screen, { width: { get: () => 1440 }, height: { get: () => 900 } });
+  });
   await page.goto("/");
   for (const [width, height] of [[1440, 900], [1366, 768], [1280, 600], [1024, 768], [768, 1024], [390, 844], [375, 667], [844, 390]]) {
     await page.setViewportSize({ width, height });
-    await expect.poll(() => page.locator(".landing-header, .landing-intro, .landing-ipad, .landing-cta, .landing-product figcaption, .landing-features").evaluateAll(elements => elements.every(element => {
+    await expect.poll(() => page.locator(".landing-header, .landing-intro, .landing-ipad, .landing-cta, .landing-product figcaption, .landing-features").evaluateAll(elements => elements.length > 0 && elements.every(element => {
       const box = element.getBoundingClientRect();
       return box.width > 0 && box.height > 0 && box.top >= -1 && box.bottom <= innerHeight + 1 && box.left >= -1 && box.right <= innerWidth + 1;
     })), { message: `Every section fits at ${width} × ${height}` }).toBe(true);

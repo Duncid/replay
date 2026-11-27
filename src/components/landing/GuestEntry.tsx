@@ -10,7 +10,7 @@ const GuestApp = lazy(loadGuest);
 const preload = () => { void loadGuest().catch(() => {}); };
 
 /** This route layout survives / → /play so the outgoing iPad never remounts. */
-export default function GuestEntry() {
+export default function GuestEntry({ canEnter = true }: { canEnter?: boolean }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [phase, setPhase] = useState<GuestEntryPhase>("idle");
@@ -58,6 +58,7 @@ export default function GuestEntry() {
     navigate("/play");
   }, [stopPending, navigate]);
   const begin = useCallback((element: HTMLElement) => {
+    if (!canEnter) return false;
     if (current.current !== "idle") return true;
     if (location.pathname !== "/") return false;
     source.current = element;
@@ -76,7 +77,7 @@ export default function GuestEntry() {
     preload();
     deadline.current = setTimeout(finish, 1500);
     return true;
-  }, [location.key, location.pathname, finish]);
+  }, [canEnter, location.key, location.pathname, finish]);
 
   const ready = useCallback(() => {
     if (current.current !== "preparing") return;
@@ -136,13 +137,13 @@ export default function GuestEntry() {
     return () => observer.disconnect();
   }, [location.pathname, phase]);
   const entering = phase !== "idle";
-  return <GuestEntryContext.Provider value={{ phase, begin, preload, keyboardWidth, setPreviewPitches }}>
+  return <GuestEntryContext.Provider value={{ phase, begin, preload: canEnter ? preload : () => {}, keyboardWidth, setPreviewPitches }}>
     <div className="guest-entry" data-entry-phase={phase}>
       {/* Measure the eventual workspace keys, not the scaled/tilted model iPad. */}
       <div ref={widthProbe} className="guest-entry-width-probe" aria-hidden="true" />
       {location.pathname === "/" && <div className="guest-entry-source" inert={entering} aria-hidden={entering || undefined}><Landing /></div>}
       <div ref={destination} className="guest-entry-destination" data-entering={entering || undefined} inert={entering} aria-hidden={entering || undefined}>
-        {(location.pathname === "/play" || entering) && <Suspense fallback={<div className="h-dvh flex items-center justify-center">Loading music…</div>}>
+        {canEnter && (location.pathname === "/play" || entering) && <Suspense fallback={<div className="h-dvh flex items-center justify-center">Loading music…</div>}>
           <GuestApp interactive={!entering} onReady={ready} initialKeyboardPitches={entryPitches} />
         </Suspense>}
       </div>

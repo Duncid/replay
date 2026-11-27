@@ -17,7 +17,7 @@ const preview: Preview = {
     backgrounds: { disable: true },
     docs: { theme: { ...themes.dark, appBg: "#000", appContentBg: "#000", appPreviewBg: "#000", barBg: "#000" } },
     controls: { expanded: true },
-    options: { storySort: { order: ["Foundations", "Instruments", "Actions", "Inputs", "Navigation", "Overlays", "Feedback", "Components", "Patterns"] } },
+    options: { storySort: { order: ["Foundations", "iPad assets", ["Start screens", "App icons", "Native launch parts"], "Instruments", "Actions", "Inputs", "Navigation", "Overlays", "Feedback", "Components", "Patterns"] } },
   },
   initialGlobals: { theme: "acid" },
 };

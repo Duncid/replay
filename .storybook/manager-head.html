@@ -1,1 +1,8 @@
+<script>
+  // Static hosts can serve this page without redirecting directory URLs.
+  // Keep relative manager assets and iframe URLs inside /storybook/.
+  if (window.location.pathname === '/storybook') {
+    window.location.replace('/storybook/' + window.location.search + window.location.hash);
+  }
+</script>
 <style>body, .sb-bar, #storybook-explorer-tree, nav, aside { background: #000 !important; }</style>

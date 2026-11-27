@@ -1,14 +1,14 @@
-import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { DemoSound, LivePracticeHandle } from "@/components/landing/LivePracticePreview";
 import { Link, useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Play, Pause, KeyboardMusic, Mic, Music2 } from "lucide-react";
 import { initialDemoTune } from "@/components/landing/demoScore";
 import { useDemoLibrary } from "@/components/landing/useDemoLibrary";
 import { useGuestEntry } from "@/components/landing/GuestEntryContext";
+import NoodlynWordmark from "@/components/landing/NoodlynWordmark";
 import "./Landing.css";
 
 const LivePracticePreview = lazy(() => import("@/components/landing/LivePracticePreview"));
-const wordmarkNotes = ["c", "d", "e", "f", "g", "a", "b"];
 class PreviewBoundary extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -24,11 +24,12 @@ function subscribeToReducedMotion(onChange: () => void) {
 }
 
 export default function Landing() {
+  const location = useLocation();
   const entry = useGuestEntry();
   const departing = entry.phase !== "idle";
   const departingRef = useRef(departing);
   departingRef.current = departing;
-  const videoMode = new URLSearchParams(useLocation().search).get("preview") === "video";
+  const videoMode = new URLSearchParams(location.search).get("preview") === "video";
   const tunes = useDemoLibrary();
   const [tune, setTune] = useState(initialDemoTune);
   const [liveStarted, setLiveStarted] = useState(false);
@@ -95,10 +96,7 @@ export default function Landing() {
       data-preview-state={liveFailed ? "error" : liveReady ? "ready" : "loading"}>
       <a className="landing-skip" href="#discover">Skip to content</a>
       <header className="landing-header">
-        <Link className="landing-wordmark" to="/" aria-label="Noodlyn home">
-          {Array.from("Noodlyn").map((letter, index) => <span key={index} aria-hidden="true" className="landing-wordmark-letter"
-            style={{ "--letter-note": `var(--note-${wordmarkNotes[index]})`, "--letter-delay": `${index * 120}ms` } as CSSProperties}>{letter}</span>)}
-        </Link>
+        <NoodlynWordmark to={new URLSearchParams(location.search).has("home") ? "/?home" : "/"} />
         <Link className="landing-signin" to="/login">Sign in</Link>
       </header>
 
