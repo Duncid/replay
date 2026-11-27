@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Application, Container, Graphics, Text } from "pixi.js";
 import { createPianoLayout, pianoKeyGeometry, pianoBreaks, pianoBreakGeometry, pianoLayoutKey, type PianoLayout } from "../pianoLayout";
 import { highwayState, nextHighwayNotes, type HighwayNote, type HighwayTransport } from "./model";
+import { useHighway } from "./HighwayContext";
 
 /** Raise the hit line above the keyboard so notes visibly cross it. */
 const HIT_LINE_INSET = 40;
@@ -22,21 +23,26 @@ export interface NoteHighwayProps {
 }
 /** Musical state is supplied by the engine. Pixi owns the animation, never React. */
 export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboard = false, layout: suppliedLayout, range, pixelsPerBeat = 72, beatsPerSecond = 2, onArmedChange, onReadinessChange }: NoteHighwayProps) {
-  const fallbackLayout = useMemo(() => createPianoLayout(fullKeyboard), [fullKeyboard]);
+  const { keyboardWidth } = useHighway();
+  const fallbackLayout = useMemo(() => createPianoLayout(fullKeyboard, keyboardWidth), [fullKeyboard, keyboardWidth]);
   const layout = suppliedLayout ?? fallbackLayout;
+  const layoutKey = pianoLayoutKey(layout);
   const rangeLow = range?.[0], rangeHigh = range?.[1];
   const host = useRef<HTMLDivElement>(null);
   const announcement = useRef<HTMLSpanElement>(null);
-  const live = useRef({ transport, onArmedChange, onReadinessChange });
-  live.current = { transport, onArmedChange, onReadinessChange };
+  const live = useRef({ transport, onArmedChange, onReadinessChange, layout });
+  live.current = { transport, onArmedChange, onReadinessChange, layout };
   useLayoutEffect(() => {
     if (host.current) host.current.dataset.renderReady = "false";
     live.current.onReadinessChange?.("loading");
     return () => live.current.onReadinessChange?.("loading");
-  }, [notes, layout, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
+  }, [notes, layoutKey, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
   useEffect(() => {
     const element = host.current;
     if (!element) return;
+    // Ranges define the musical geometry. A new equivalent layout object on
+    // resize must not tear down the renderer; ResizeObserver handles its pixels.
+    const { layout } = live.current;
     let disposed = false, frameId = 0, readyFrameId = 0;
     const app = new Application();
     const destroy = () => {
@@ -220,6 +226,6 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       if (!disposed) { console.error("Note Highway renderer failed", error); live.current.onReadinessChange?.("error"); if (announcement.current) announcement.current.textContent = "Note Highway could not load. The piano remains available."; }
     });
     return () => { disposed = true; cancelAnimationFrame(frameId); cancelAnimationFrame(readyFrameId); observer?.disconnect(); motionCleanup?.(); themeObserver?.disconnect(); destroy(); };
-  }, [notes, layout, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
+  }, [notes, layoutKey, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
   return <div ref={host} className="note-highway" data-piano-ranges={pianoLayoutKey(layout)} role="group" aria-label="Note Highway"><span ref={announcement} className="sr-only" aria-live="polite" aria-atomic="true" /></div>;
 }

@@ -3,6 +3,39 @@ import { demoWav } from "./fixtures/demoAudio";
 
 const previewSelector = ".landing-live-preview";
 
+test("resizing never swaps the live keyboard for the differently sized fallback image", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.route("**/tonejs-instruments/**", route => route.abort());
+  await page.goto("/");
+  const preview = page.locator(previewSelector);
+  await expect(preview).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
+  await page.evaluate(() => {
+    const preview = document.querySelector<HTMLElement>(".landing-live-preview")!;
+    window["resizeHiddenFrames"] = 0;
+    window["resizeCanvas"] = preview.querySelector("canvas");
+    const observer = new MutationObserver(() => {
+      if (getComputedStyle(preview).opacity !== "1") window["resizeHiddenFrames"]++;
+    });
+    observer.observe(preview, { attributes: true, attributeFilter: ["data-ready", "style"] });
+  });
+  for (const width of [1190, 1180, 1170]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(preview).toHaveAttribute("data-ready", "true");
+    await expect(page.locator('.landing-live-preview .note-highway[data-render-ready="true"]')).toBeVisible();
+  }
+  expect(await page.evaluate(() => window["resizeHiddenFrames"])).toBe(0);
+  expect(await page.evaluate(() => window["resizeCanvas"] === document.querySelector(".landing-live-preview canvas"))).toBe(true);
+  // Cross every keyboard breakpoint in both directions; key length in the scene
+  // stays fixed, while the entire tilted iPad can still scale naturally.
+  for (const width of [1150, 1000, 900, 820, 744, 730, 744, 820, 1000, 1180]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.locator('.landing-live-preview .note-highway[data-render-ready="true"]')).toBeVisible();
+    await expect(page.locator("[data-preview-keys] .piano-key:not(.piano-key--black)").first()).toHaveCSS("height", "156px");
+    await expect(preview).toHaveCSS("opacity", "1");
+  }
+  expect(await page.evaluate(() => window["resizeHiddenFrames"])).toBe(0);
+});
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/*.supabase.co/**", route => route.fulfill({ json: [] }));
   await page.addInitScript(() => {

@@ -25,15 +25,16 @@ import { midiToNoteName } from "@/utils/noteSequenceUtils";
 import type { MagentaNoteSequence } from "@/types/magenta";
 
 // The student UI with local music only. Account/management hooks never mount here.
-interface GuestAppProps { interactive?: boolean; onReady?: () => void }
-export default function GuestApp({ interactive = true, onReady }: GuestAppProps) {
+interface GuestAppProps { interactive?: boolean; onReady?: () => void; initialKeyboardPitches?: readonly number[] }
+export default function GuestApp({ interactive = true, onReady, initialKeyboardPitches }: GuestAppProps) {
   const { user, loading } = useAuth();
   if (loading) return <p className="p-8 text-center">Loading music…</p>;
   if (user) return <Navigate to="/" replace />;
-  return <HighwayProvider fullKeyboard={false}><GuestWorkspace interactive={interactive} onReady={onReady} /></HighwayProvider>;
+  return <HighwayProvider fullKeyboard={false}><GuestWorkspace interactive={interactive} onReady={onReady} initialKeyboardPitches={initialKeyboardPitches} /></HighwayProvider>;
 }
 
-function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
+function GuestWorkspace({ interactive, onReady, initialKeyboardPitches }: GuestAppProps) {
+  const [entryPitches, setEntryPitches] = useState(initialKeyboardPitches);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!onReady || !root.current) return;
@@ -158,7 +159,7 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
           {activeTune === "intro" ? <TuneMode tuneKey="intro" onLeave={leave} onPlaySample={play} onStopSample={stop}
             isPlayingSample={isPlaying} language="en" notationPreference="abc"
             onRegisterNoteHandler={registerOn} onRegisterNoteOffHandler={registerOff} onRegisterExpectedNotesProvider={registerExpected} />
-            : <TuneLibrary onSignUp={() => openAuth("signup")} previewPaused={authOpen} onSelectTune={key => { if (key === "intro") { stop(); releaseInputs(); setActiveTune(key); } }} />}
+            : <TuneLibrary onSignUp={() => openAuth("signup")} previewPaused={authOpen} onSelectTune={key => { if (key === "intro") { stop(); releaseInputs(); setEntryPitches(undefined); setActiveTune(key); } }} />}
         </div>
       </div>
     </div>
@@ -182,7 +183,7 @@ function GuestWorkspace({ interactive, onReady }: GuestAppProps) {
           canPlayOnKeyboard={midiSound.canPlayOnKeyboard} />
       </div>}>
       <div className="keyboard-panel w-full flex flex-col"><Piano ref={piano} className="flex-1 min-h-0" activeKeys={activeKeys}
-        allowInput={interactive && !authOpen} soundType={pianoSoundType} language="en" notationPreference="abc" showNoteRail={showNoteRail}
+        allowInput={interactive && !authOpen} soundType={pianoSoundType} language="en" notationPreference="abc" showNoteRail={showNoteRail} idlePitches={entryPitches}
         onNoteStart={onNoteStart} onNoteEnd={onNoteEnd} /></div>
     </PianoDock>
     <GuestAuthDialog open={authOpen} mode={authMode} onOpenChange={setAuthOpen} />

@@ -20,8 +20,8 @@ const TUNE: Array<[number, number, number, "user" | "ai"]> = [
 type Props = { adaptivePitches?: number[]; playing: boolean; beat: number; fullKeyboard: boolean; waiting: boolean; width: number; height: number; gated?: boolean; midiConnected?: boolean; behindTopUI?: boolean };
 function Instrument({ adaptivePitches, playing, beat, fullKeyboard, waiting, height, gated = false, midiConnected = false, behindTopUI = false }: Props) {
   const { stageRef, topBleed } = useHighwayTopBleed(behindTopUI);
-  const { setPracticeLayout, setGuidance, registerScroll, syncScroll, bottomOcclusion } = useHighway();
-  const layout = useMemo(() => adaptivePitches ? createAdaptivePianoLayout(adaptivePitches) : undefined, [adaptivePitches]);
+  const { setPracticeLayout, setGuidance, registerScroll, syncScroll, bottomOcclusion, keyboardWidth } = useHighway();
+  const layout = useMemo(() => fullKeyboard ? undefined : createAdaptivePianoLayout(adaptivePitches ?? TUNE.map(n => n[0]), keyboardWidth), [adaptivePitches, fullKeyboard, keyboardWidth]);
   const range = useMemo<[number, number]>(() => adaptivePitches ? [Math.min(...adaptivePitches), Math.max(...adaptivePitches)] : [48, 69], [adaptivePitches]);
   useEffect(() => { setPracticeLayout(layout ?? null); return () => setPracticeLayout(null); }, [layout, setPracticeLayout]);
   const clock = useRef(beat);

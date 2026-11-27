@@ -592,6 +592,17 @@ const Index = () => {
     setIsPlayingAll(false);
   }, []);
 
+  // Entry can unmount on sign-out or when a window becomes too narrow. Cancel
+  // both scheduled playback and delayed callbacks from the previous app instance.
+  const playbackMounted = useRef(true);
+  useEffect(() => {
+    playbackMounted.current = true;
+    return () => {
+      playbackMounted.current = false;
+      stopAiPlayback();
+    };
+  }, [stopAiPlayback]);
+
   const playSequence = useCallback(
     async (
       sequence: NoteSequence,
@@ -599,6 +610,7 @@ const Index = () => {
       isReplay: boolean = false,
       segments?: PlaybackSegment[],
     ) => {
+      if (!playbackMounted.current) return;
       const generation = ++playbackGeneration.current;
       setIsReplaying(isReplay);
       const playbackId = Math.random().toString(36).substring(7);

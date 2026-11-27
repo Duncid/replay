@@ -1,13 +1,11 @@
 import score from "@/music/st-louis-blues/tune.inst1.ns.json";
 import type { HighwayNote } from "@/components/highway/model";
 import { getTunePlayback } from "@/utils/tunePreview";
-import { createAdaptivePianoLayout } from "@/components/pianoLayout";
 
 export interface DemoTune {
   key: string; title: string; composer: string; bpm: number; beatsPerSecond: number; duration: number;
   notes: { id: string; midi: number; start: number; end: number; name: string }[];
   highwayNotes: HighwayNote[];
-  layout: ReturnType<typeof createAdaptivePianoLayout>;
   range: [number, number];
 }
 export const formatDemoTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
@@ -34,6 +32,6 @@ export function makeDemoTune(key: string, title: string, composer: string, seque
   })));
   const pitches = notes.map(note => note.midi);
   return { key, title, composer, bpm, beatsPerSecond, duration, notes, highwayNotes,
-    layout: createAdaptivePianoLayout(pitches), range: [Math.min(...pitches), Math.max(...pitches)] };
+    range: [Math.min(...pitches), Math.max(...pitches)] };
 }
 export const initialDemoTune = makeDemoTune("st-louis-blues", "St Louis Blues", "W. C. Handy", score)!;

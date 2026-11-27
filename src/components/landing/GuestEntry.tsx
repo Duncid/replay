@@ -14,6 +14,20 @@ export default function GuestEntry() {
   const location = useLocation();
   const navigate = useNavigate();
   const [phase, setPhase] = useState<GuestEntryPhase>("idle");
+  const widthProbe = useRef<HTMLDivElement>(null);
+  const [keyboardWidth, setKeyboardWidth] = useState<number>();
+  const previewPitches = useRef<readonly number[]>([]);
+  const setPreviewPitches = useCallback((pitches: readonly number[]) => { previewPitches.current = pitches; }, []);
+  const [entryPitches, setEntryPitches] = useState<readonly number[]>();
+  useLayoutEffect(() => {
+    const probe = widthProbe.current;
+    if (!probe) return;
+    const measure = () => { if (probe.clientWidth > 0) setKeyboardWidth(probe.clientWidth); };
+    const observer = new ResizeObserver(measure);
+    observer.observe(probe);
+    measure();
+    return () => observer.disconnect();
+  }, []);
   const current = useRef<GuestEntryPhase>("idle");
   const source = useRef<HTMLElement | null>(null);
   const destination = useRef<HTMLDivElement>(null);
@@ -47,6 +61,7 @@ export default function GuestEntry() {
     if (current.current !== "idle") return true;
     if (location.pathname !== "/") return false;
     source.current = element;
+    setEntryPitches(previewPitches.current);
     origin.current = location.key;
     const ipad = element.querySelector<HTMLElement>(".landing-ipad");
     if (ipad) {
@@ -121,12 +136,14 @@ export default function GuestEntry() {
     return () => observer.disconnect();
   }, [location.pathname, phase]);
   const entering = phase !== "idle";
-  return <GuestEntryContext.Provider value={{ phase, begin, preload }}>
+  return <GuestEntryContext.Provider value={{ phase, begin, preload, keyboardWidth, setPreviewPitches }}>
     <div className="guest-entry" data-entry-phase={phase}>
+      {/* Measure the eventual workspace keys, not the scaled/tilted model iPad. */}
+      <div ref={widthProbe} className="guest-entry-width-probe" aria-hidden="true" />
       {location.pathname === "/" && <div className="guest-entry-source" inert={entering} aria-hidden={entering || undefined}><Landing /></div>}
       <div ref={destination} className="guest-entry-destination" data-entering={entering || undefined} inert={entering} aria-hidden={entering || undefined}>
         {(location.pathname === "/play" || entering) && <Suspense fallback={<div className="h-dvh flex items-center justify-center">Loading music…</div>}>
-          <GuestApp interactive={!entering} onReady={ready} />
+          <GuestApp interactive={!entering} onReady={ready} initialKeyboardPitches={entryPitches} />
         </Suspense>}
       </div>
     </div>

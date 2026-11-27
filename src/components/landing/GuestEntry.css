@@ -1,3 +1,8 @@
+.guest-entry-width-probe {
+  position: fixed; top: 0; height: 0; visibility: hidden; pointer-events: none;
+  left: calc(var(--safe-area-inset-left, 0px) + 4px);
+  right: calc(var(--safe-area-inset-right, 0px) + 4px);
+}
 .guest-entry[data-entry-phase="preparing"] > .guest-entry-source,
 .guest-entry[data-entry-phase="animating"] > .guest-entry-source {
   position: fixed; inset: 0; z-index: 50; overflow: hidden; pointer-events: none;

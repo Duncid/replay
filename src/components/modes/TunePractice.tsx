@@ -389,8 +389,8 @@ export function TunePractice({
     onReachedEnd: onPlayheadReachedEnd,
   });
 
-  const { fullKeyboard, setPracticeLayout, setGuidance, registerScroll, syncScroll, bottomOcclusion } = useHighway();
-  const pianoLayout = useMemo(() => createAdaptivePianoLayout(notes.map(n => n.midi)), [notes]);
+  const { fullKeyboard, setPracticeLayout, setGuidance, registerScroll, syncScroll, bottomOcclusion, keyboardWidth } = useHighway();
+  const pianoLayout = useMemo(() => createAdaptivePianoLayout(notes.map(n => n.midi), keyboardWidth), [notes, keyboardWidth]);
   useLayoutEffect(() => {
     setPracticeLayout(pianoLayout);
     return () => setPracticeLayout(null);

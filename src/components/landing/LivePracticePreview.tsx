@@ -1,11 +1,12 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NoteHighway } from "@/components/highway/NoteHighway";
 import type { HighwayTransport } from "@/components/highway/model";
 import { PianoKey } from "@/components/PianoKey";
 import { NoteRail, type RailNoteState } from "@/components/NoteRail";
-import { pianoKeyStyle, pianoBreaks, pianoBreakStyle } from "@/components/pianoLayout";
+import { createAdaptivePianoLayout, pianoLayoutKey, pianoKeyStyle, pianoBreaks, pianoBreakStyle } from "@/components/pianoLayout";
 import { useTonePiano } from "@/hooks/useTonePiano";
 import { formatDemoTime, type DemoTune } from "./demoScore";
+import { useGuestEntry } from "./GuestEntryContext";
 
 export type DemoSound = "silent" | "loading" | "playing" | "blocked" | "error";
 export interface LivePracticeHandle { play: () => void }
@@ -15,7 +16,14 @@ const ignoreInput = () => {};
 const LivePracticePreview = forwardRef<LivePracticeHandle, {
   tune: DemoTune; paused: boolean; departing?: boolean; onReady: () => void; onError: () => void; onSoundChange: (state: DemoSound) => void;
 }>(function LivePracticePreview({ tune, paused, departing = false, onReady, onError, onSoundChange }, ref) {
-  const { layout, notes: demoNotes, highwayNotes, duration, beatsPerSecond, bpm, range } = tune;
+  const { notes: demoNotes, highwayNotes, duration, beatsPerSecond, bpm, range } = tune;
+  const { keyboardWidth, setPreviewPitches } = useGuestEntry();
+  const pitches = useMemo(() => demoNotes.map(note => note.midi), [demoNotes]);
+  const layout = useMemo(() => createAdaptivePianoLayout(pitches, keyboardWidth), [pitches, keyboardWidth]);
+  useLayoutEffect(() => {
+    setPreviewPitches(pitches);
+    return () => setPreviewPitches([]);
+  }, [pitches, setPreviewPitches]);
   const host = useRef<HTMLDivElement>(null);
   const timeLabel = useRef<HTMLSpanElement>(null);
   const progress = useRef<HTMLDivElement>(null);
@@ -196,7 +204,8 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
   }, [playing, sounding, tune, demoNotes, duration]);
 
   const readiness = useCallback((state: "loading" | "ready" | "error") => {
-    if (state === "loading") setReady(false);
+    // Once revealed, keep the DOM keyboard visible while the highway changes
+    // ranges. Hiding it exposes the old screenshot's differently sized keys.
     if (state === "ready") { setReady(true); onReady(); }
     if (state === "error") onError();
   }, [onReady, onError]);
@@ -215,7 +224,7 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
       <div className="landing-demo-title"><h2>{tune.title}</h2>{tune.composer && <p>{tune.composer}</p>}</div>
       <div className="landing-demo-piano">
         <div className="landing-demo-toolbar"><span>Acoustic piano</span><span>{Math.round(bpm)} BPM <span className="landing-demo-time" ref={timeLabel}>0:00 / {formatDemoTime(duration)}</span></span></div>
-        <div className="landing-demo-keys piano-surface"><NoteRail layout={layout} states={states} />
+        <div className="landing-demo-keys piano-surface" data-piano-ranges={pianoLayoutKey(layout)}><NoteRail layout={layout} states={states} />
           <div data-preview-keys className="relative flex-1 min-h-0">{pianoBreaks(layout).map(note => <div key={note.midi} className="piano-range-break" style={pianoBreakStyle(layout, note)} />)}{[...layout.whiteKeys, ...layout.blackKeys].map(note => {
             const name = `${note.note}${note.octave}`;
             return <PianoKey key={name} note={name} style={pianoKeyStyle(layout, note)} isBlack={note.isBlack}

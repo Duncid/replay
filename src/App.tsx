@@ -9,6 +9,8 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { useSupportedScreen } from "./hooks/useSupportedScreen";
+import SupportedScreenMessage from "./components/SupportedScreenMessage";
 
 const Index = lazy(() => import("./pages/Index"));
 
@@ -16,10 +18,12 @@ const Loading = () => <div className="h-dvh flex items-center justify-center bg-
 
 function PublicEntry() {
   const { user, loading } = useAuth();
+  const supportedScreen = useSupportedScreen();
   const { pathname } = useLocation();
   if (loading) return <Loading />;
   if (pathname === "/play" && user) return <Navigate to="/" replace />;
   if (!user) return <GuestEntry />;
+  if (!supportedScreen) return <SupportedScreenMessage />;
   return <div key={user.id} className="contents"><Suspense fallback={<Loading />}><Index /></Suspense></div>;
 }
 

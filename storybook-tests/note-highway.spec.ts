@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { highwayState, nextHighwayNotes, type HighwayNote } from "../src/components/highway/model";
+import { createAdaptivePianoLayout, createPianoLayout, pianoLayoutKey } from "../src/components/pianoLayout";
 
 // Software WebGL on headless Chromium can need extra time for its first shader compilation.
 test.setTimeout(60000);
@@ -25,12 +26,16 @@ for (const story of ["perfect-and-bot", "miss-and-next", "waiting-for-chord", "f
     await expect.poll(async () => (await page.locator('.note-rail__cell[data-armed="true"]').evaluateAll(cells => cells.map(c => c.getAttribute("data-note")))).sort(), { timeout: 30000 }).toEqual(expected);
     for (const width of [600, 1024, 1366]) {
       await page.setViewportSize({ width, height: 1000 });
-      const drift = await page.locator(".piano-key").evaluateAll(keys => Math.max(...keys.map(key => {
-        const cell = document.querySelector(`.note-rail__cell[data-note="${key.getAttribute("data-note")}"]`)!;
+      const available = await page.locator(".piano-surface > div").evaluate(el => el.clientWidth);
+      const layout = story === "full-keyboard" ? createPianoLayout(true) : createAdaptivePianoLayout([48, 69], available);
+      await expect(page.locator(".piano-surface [data-piano-ranges]")).toHaveAttribute("data-piano-ranges", pianoLayoutKey(layout));
+      await expect(page.locator('.note-highway[data-render-ready="true"]')).toHaveAttribute("data-piano-ranges", pianoLayoutKey(layout));
+      await expect.poll(() => page.locator(".piano-key").evaluateAll(keys => Math.max(...keys.map(key => {
+        const cell = document.querySelector(`.note-rail__cell[data-note="${key.getAttribute("data-note")}"]`);
+        if (!cell) return Infinity;
         const a = key.getBoundingClientRect(), b = cell.getBoundingClientRect();
         return Math.max(Math.abs(a.x-b.x), Math.abs(a.width-b.width));
-      })));
-      expect(drift).toBeLessThan(1);
+      })))).toBeLessThan(1);
       // The canvas must actually extend beneath both bars, not stop at their edge.
       await expect.poll(async () => page.locator(".piano-dock").evaluate(dock => {
         const toolbar = dock.querySelector(".keyboard-toolbar")!.getBoundingClientRect();
@@ -41,7 +46,8 @@ for (const story of ["perfect-and-bot", "miss-and-next", "waiting-for-chord", "f
       })).toBeLessThan(1);
       await expect(page.locator(".piano-key").first()).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     }
-    await expect(page.getByRole("button", { name: "C6", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "C3", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "A4", exact: true })).toBeEnabled();
     if (story === "full-keyboard") {
       await page.getByRole("button", { name: "C8", exact: true }).scrollIntoViewIfNeeded();
       await expect.poll(() => page.locator('.note-highway-viewport').evaluate(el => el.scrollLeft)).toBeGreaterThan(0);

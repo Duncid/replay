@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createAdaptivePianoLayout, pianoLayoutKey } from "../src/components/pianoLayout";
 import { demoWav } from "./fixtures/demoAudio";
 
 test.beforeEach(async ({ page }) => {
@@ -7,10 +8,14 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
 });
 
-for (const changeTune of [false, true]) {
-  test(`the live iPad keyboard meets the guest keyboard${changeTune ? " after changing tunes" : ""}`, async ({ page }, testInfo) => {
+for (const { width, height, changeTune = false } of [
+  { width: 744, height: 1133 }, { width: 1133, height: 744 },
+  { width: 1024, height: 1366 }, { width: 1366, height: 1024 },
+  { width: 390, height: 844, changeTune: true },
+]) {
+  test(`the live iPad keyboard meets the guest keyboard at ${width}×${height}${changeTune ? " after changing tunes" : ""}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height });
     if (changeTune) {
-      await page.setViewportSize({ width: 390, height: 844 });
       await page.addInitScript(() => localStorage.setItem("replay-display-notes", JSON.stringify("always")));
     }
     const accountRequests: string[] = [];
@@ -25,7 +30,14 @@ for (const changeTune of [false, true]) {
       await expect(page.locator(".landing-tune-title")).not.toHaveText(previous!);
       await expect(page.locator('.noodlyn-landing[data-preview-state="ready"]')).toBeVisible({ timeout: 15_000 });
     }
+    const previewKeys = await page.locator("[data-preview-keys] .piano-key").evaluateAll(keys => keys.map(key => key.getAttribute("data-note")).join("|"));
+    const previewRange = await page.locator(".landing-demo-keys").getAttribute("data-piano-ranges");
+    if (!changeTune) {
+      const destinationWidth = await page.locator(".guest-entry-width-probe").evaluate(el => el.clientWidth);
+      await expect(page.locator(".landing-demo-keys")).toHaveAttribute("data-piano-ranges", pianoLayoutKey(createAdaptivePianoLayout([60, 74], destinationWidth)));
+    }
     await page.evaluate(() => {
+      const keyNames = (parent: Element | null) => [...(parent?.querySelectorAll(".piano-key") ?? [])].map(key => key.getAttribute("data-note")).join("|");
       const canvas = document.querySelector(".landing-live-preview canvas");
       const frames = [];
       window["entryFrames"] = frames;
@@ -38,7 +50,7 @@ for (const changeTune of [false, true]) {
         const targetKeys = document.querySelector("[data-guest-workspace] [data-piano-keys]");
         if (destination && targetKeys && (phase !== "idle" || location.pathname === "/play")) {
           const { x, y, width, height } = targetKeys.getBoundingClientRect();
-          arrival.push({ opacity: Number(getComputedStyle(destination).opacity), x, y, width, height });
+          arrival.push({ opacity: Number(getComputedStyle(destination).opacity), x, y, width, height, keys: keyNames(targetKeys) });
         }
         if (location.pathname === "/play" && ++arrivalCount === 12) {
           window["arrivalComplete"] = true;
@@ -53,7 +65,7 @@ for (const changeTune of [false, true]) {
             return { x, y, width, height };
           };
           frames.push({ phase, canvasRetained: canvas === document.querySelector(".landing-live-preview canvas"),
-            flight: box(flight), target: box(target),
+            flight: box(flight), target: box(target), flightKeys: keyNames(flight), targetKeys: keyNames(target),
             inputEnabled: !!document.querySelector("[data-guest-workspace] .piano-key:not(:disabled)"),
             volume: document.querySelector<HTMLElement>(".landing-live-preview")?.dataset.volume,
             playing: document.querySelector<HTMLElement>(".landing-live-preview")?.dataset.playing });
@@ -75,6 +87,7 @@ for (const changeTune of [false, true]) {
       // WebKit can sample the last composited frames slightly out of order
       // (e.g. .992 → .980 → 1). Still reject a visible handoff flash.
       expect(frame.opacity).toBeGreaterThan(.95);
+      expect(frame.keys).toBe(previewKeys);
       for (const dimension of ["x", "y", "width", "height"]) {
         expect(Math.abs(frame[dimension] - arrival[visible][dimension])).toBeLessThan(1);
       }
@@ -85,6 +98,8 @@ for (const changeTune of [false, true]) {
     expect(frames.every(frame => frame.canvasRetained && !frame.inputEnabled)).toBe(true);
     const flightFrames = frames.filter(frame => frame.flight && frame.target);
     expect(flightFrames.length).toBeGreaterThan(2);
+    expect(flightFrames.every(frame => frame.flightKeys === previewKeys && frame.targetKeys === previewKeys)).toBe(true);
+    await expect(page.locator("[data-guest-workspace] [data-piano-ranges]")).toHaveAttribute("data-piano-ranges", previewRange!);
     const last = flightFrames.at(-1);
     for (const dimension of ["x", "y", "width", "height"]) {
       expect(Math.abs(last.flight[dimension] - last.target[dimension])).toBeLessThan(4);
