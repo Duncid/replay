@@ -205,6 +205,56 @@ export type Database = {
         }
         Relationships: []
       }
+      language_settings: {
+        Row: {
+          date_order: string
+          hour_cycle: string
+          locale: string
+          notation: string
+        }
+        Insert: {
+          date_order?: string
+          hour_cycle?: string
+          locale: string
+          notation?: string
+        }
+        Update: {
+          date_order?: string
+          hour_cycle?: string
+          locale?: string
+          notation?: string
+        }
+        Relationships: []
+      }
+      language_strings: {
+        Row: {
+          key: string
+          kind: string
+          locale: string
+          value: string
+        }
+        Insert: {
+          key: string
+          kind: string
+          locale: string
+          value: string
+        }
+        Update: {
+          key?: string
+          kind?: string
+          locale?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "language_strings_locale_fkey"
+            columns: ["locale"]
+            isOneToOne: false
+            referencedRelation: "language_settings"
+            referencedColumns: ["locale"]
+          },
+        ]
+      }
       lesson_runs: {
         Row: {
           ai_feedback: string | null

@@ -1,5 +1,7 @@
 # Tune-first Replay
 
+- [x] Apply language-management migration and verify API access to both language tables.
+
 - [x] Prefill editable upload Title and Composer from original MusicXML/.mxl; retain confirmed credits in jobs and send them to publishing on builds/retries.
 
 - [x] Add a composer field and automatic MusicXML extraction; populate Chopin/Satie and verify published credits.

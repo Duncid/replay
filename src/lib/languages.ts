@@ -2,7 +2,16 @@ import type { Tables } from "@/integrations/supabase/types";
 import en from "@/locales/en/common.json" with { type: "json" };
 import fr from "@/locales/fr/common.json" with { type: "json" };
 
-export type LanguageSettings = Tables<"language_settings">;
+export type LanguageSettings = Omit<Tables<"language_settings">, "notation" | "date_order" | "hour_cycle"> & {
+  notation: "abc" | "solfege";
+  date_order: "MDY" | "DMY" | "YMD";
+  hour_cycle: "h12" | "h23";
+};
+export function isLanguageSettings(row: Tables<"language_settings">): row is LanguageSettings {
+  return (row.notation === "abc" || row.notation === "solfege")
+    && (row.date_order === "MDY" || row.date_order === "DMY" || row.date_order === "YMD")
+    && (row.hour_cycle === "h12" || row.hour_cycle === "h23");
+}
 export type Translation = Tables<"language_strings">;
 export const US = "en-US";
 export const initialLanguages: LanguageSettings[] = [

@@ -1,5 +1,12 @@
 import { test, expect } from "./fixtures";
-import { initialLanguages, type LanguageSettings, type Translation } from "../src/lib/languages";
+import { initialLanguages, isLanguageSettings, type LanguageSettings, type Translation } from "../src/lib/languages";
+
+test("language settings accept constrained database values and reject invalid formatting modes", () => {
+  for (const language of initialLanguages) expect(isLanguageSettings(language)).toBe(true);
+  expect(isLanguageSettings({ ...initialLanguages[0], notation: "invalid" })).toBe(false);
+  expect(isLanguageSettings({ ...initialLanguages[0], date_order: "invalid" })).toBe(false);
+  expect(isLanguageSettings({ ...initialLanguages[0], hour_cycle: "invalid" })).toBe(false);
+});
 
 test("French admin navigation and the quest editor use the selected language", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("replay-language", JSON.stringify("fr-FR")));

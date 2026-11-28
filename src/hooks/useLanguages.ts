@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { initialLanguages, type Translation } from "@/lib/languages";
+import { initialLanguages, isLanguageSettings, type Translation } from "@/lib/languages";
 
 export function useLanguages() {
   return useQuery({
@@ -9,7 +9,10 @@ export function useLanguages() {
       const { data, error } = await supabase.from("language_settings").select("*").order("locale");
       if (error) throw error;
       const settings = new Map(initialLanguages.map(row => [row.locale, row]));
-      for (const row of data) settings.set(row.locale, row);
+      for (const row of data) {
+        if (!isLanguageSettings(row)) throw new Error("Invalid language settings");
+        settings.set(row.locale, row);
+      }
       return [...settings.values()];
     },
   });
