@@ -9,7 +9,7 @@ export function updateLocalizedMetadata(locale: string, description: string, ima
   const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   if (!link) return;
   if (bundledStrings[locale]?.["landing.description"] === description) {
-    link.href = locale === US ? "/manifest.json" : "/manifest.fr-FR.json";
+    link.href = locale === US ? "/manifest.json" : `/manifest.${locale}.json`;
     return;
   }
   // Additional languages and live admin edits can differ from the shipped manifests.

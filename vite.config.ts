@@ -7,12 +7,14 @@ import path from "path";
 import manifestBase from "./src/lib/manifestBase.json" with { type: "json" };
 import en from "./src/locales/en/common.json" with { type: "json" };
 import fr from "./src/locales/fr/common.json" with { type: "json" };
+import it from "./src/locales/it/common.json" with { type: "json" };
 
 // Supply real US metadata before JavaScript runs, including to social crawlers.
 function localizedMetadata(): Plugin {
   const manifests = new Map([
     ["manifest.json", { ...manifestBase, lang: "en-US", description: en.landing.description }],
     ["manifest.fr-FR.json", { ...manifestBase, lang: "fr-FR", description: fr.landing.description }],
+    ["manifest.it-IT.json", { ...manifestBase, lang: "it-IT", description: it.landing.description }],
   ]);
   const escapeAttribute = (text: string) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
   return {

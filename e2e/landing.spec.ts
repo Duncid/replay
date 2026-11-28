@@ -1,5 +1,22 @@
 import { expect, test } from "@playwright/test";
 
+test("Italian visitors see the bundled homepage, manifest and guest tune", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("replay-language", JSON.stringify("it-IT")));
+  await page.route("**/*.supabase.co/**", route => route.fulfill({ json: [] }));
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "it-IT");
+  await expect(page.getByRole("heading", { name: "Trova il tuo ritmo." })).toBeVisible();
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.it-IT.json");
+  const manifest = await page.request.get("/manifest.it-IT.json");
+  expect(await manifest.json()).toMatchObject({
+    lang: "it-IT",
+    description: "App interattiva per lo studio del pianoforte e l’improvvisazione musicale",
+  });
+  await page.getByRole("link", { name: "Inizia a suonare" }).click();
+  await expect(page.getByRole("heading", { name: "Che cosa vuoi suonare oggi?" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Suona: Introduzione" })).toBeVisible();
+});
+
 test("visitors see the practice preview and can enter the existing sign-in flow", async ({ page }) => {
   const accountRequests: string[] = [];
   await page.route("**/*.supabase.co/**", route => {

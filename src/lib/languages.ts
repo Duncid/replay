@@ -1,6 +1,8 @@
 import type { Tables } from "@/integrations/supabase/types";
 import en from "@/locales/en/common.json" with { type: "json" };
 import fr from "@/locales/fr/common.json" with { type: "json" };
+import it from "@/locales/it/common.json" with { type: "json" };
+import itTunes from "@/locales/it/tunes.json" with { type: "json" };
 
 export type LanguageSettings = Omit<Tables<"language_settings">, "notation" | "date_order" | "hour_cycle"> & {
   notation: "abc" | "solfege";
@@ -14,10 +16,18 @@ export function isLanguageSettings(row: Tables<"language_settings">): row is Lan
 }
 export type Translation = Tables<"language_strings">;
 export const US = "en-US";
+export const FR = "fr-FR";
+export const sourceLocales = [US, FR] as const;
+export const defaultTranslationLocale = "it-IT";
+export const translationLocales = [
+  defaultTranslationLocale, "es-419", "pt-BR", "de-DE", "nl-NL", "sv-SE",
+  "pl-PL", "cs-CZ", "hu-HU", "ro-RO",
+] as const;
 export const initialLanguages: LanguageSettings[] = [
   { locale: US, notation: "abc", date_order: "MDY", hour_cycle: "h12" },
   { locale: "en-GB", notation: "abc", date_order: "DMY", hour_cycle: "h23" },
-  { locale: "fr-FR", notation: "solfege", date_order: "DMY", hour_cycle: "h23" },
+  { locale: FR, notation: "solfege", date_order: "DMY", hour_cycle: "h23" },
+  { locale: defaultTranslationLocale, notation: "solfege", date_order: "DMY", hour_cycle: "h23" },
 ];
 
 export function normalizeLocale(code: string) {
@@ -36,11 +46,33 @@ function flatten(group: object, prefix = ""): [string, string][] {
     return typeof value === "string" ? [[path, value] as [string, string]] : flatten(value, path);
   });
 }
-export const bundledStrings: Record<string, Record<string, string>> = {
-  [US]: Object.fromEntries(flatten(en)),
-  "fr-FR": Object.fromEntries(flatten(fr)),
+export const bundledResources: Record<string, object> = {
+  [US]: en,
+  [FR]: fr,
+  [defaultTranslationLocale]: it,
 };
-export const stringKeys = [...new Set(Object.values(bundledStrings).flatMap(Object.keys))].sort();
+export const bundledTuneTitles: Record<string, Record<string, string>> = {
+  [defaultTranslationLocale]: itTunes,
+};
+export const bundledStrings: Record<string, Record<string, string>> = Object.fromEntries(
+  Object.entries(bundledResources).map(([locale, common]) => [locale, Object.fromEntries(flatten(common))]),
+);
+const stringKeys = [...new Set(sourceLocales.flatMap(locale => Object.keys(bundledStrings[locale])))].sort();
+const sourceKeys = new Set(stringKeys);
+const extraPlural = /_(zero|two|few|many)$/;
+
+export function sourceKeyFor(key: string) {
+  if (sourceKeys.has(key)) return key;
+  const pluralSource = key.replace(extraPlural, "_other");
+  return sourceKeys.has(pluralSource) ? pluralSource : undefined;
+}
+
+export function translationKeys(locale: string) {
+  const categories = new Intl.PluralRules(locale).resolvedOptions().pluralCategories;
+  return stringKeys.flatMap(key => key.endsWith("_other")
+    ? [...new Set([key, ...categories.filter(category => category !== "one").map(category => key.replace(/_other$/, "_" + category))])]
+    : [key]);
+}
 
 export function formatDateTime(date: Date, settings: LanguageSettings) {
   const parts = new Intl.DateTimeFormat(settings.locale, { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);

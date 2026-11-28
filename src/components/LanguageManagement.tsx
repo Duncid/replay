@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { translationsQuery, useLanguages } from "@/hooks/useLanguages";
 import { usePublishedTuneKeys } from "@/hooks/useTuneQueries";
-import { bundledStrings, formatDateTime, initialLanguages, languageName, normalizeLocale, stringKeys, US, type LanguageSettings, type Translation } from "@/lib/languages";
+import { bundledStrings, bundledTuneTitles, defaultTranslationLocale, formatDateTime, FR, initialLanguages, languageName, normalizeLocale,
+  sourceKeyFor, sourceLocales, translationKeys, translationLocales, US, type LanguageSettings, type Translation } from "@/lib/languages";
 import { supabase } from "@/integrations/supabase/client";
 import { tuneDisplayTitle } from "@/utils/tunePreview";
 
@@ -56,15 +57,22 @@ function LocaleDefaults({ language }: { language: LanguageSettings }) {
 type Cell = Pick<Translation, "locale" | "key" | "kind">;
 const id = (cell: Cell) => JSON.stringify([cell.locale, cell.kind, cell.key]);
 const tokens = (s: string) => (s.match(/{{[^}]+}}/g) ?? []).sort().join("|");
+const isSource = (locale: string) => locale === US || locale === FR;
 
 export function LanguageManagement() {
   const { t } = useTranslation();
   const client = useQueryClient();
   const settings = useLanguages();
   const languages = settings.data ?? initialLanguages;
-  const [locale, setLocale] = useState(US);
-  const selected = languages.find(row => row.locale === locale) ?? languages[0];
-  const columns = [...new Set([...initialLanguages.map(row => row.locale), selected.locale])];
+  const [targetLocale, setTargetLocale] = useState<string>(defaultTranslationLocale);
+  const [defaultsLocale, setDefaultsLocale] = useState<string>(defaultTranslationLocale);
+  const selected = languages.find(row => row.locale === defaultsLocale) ?? languages[0];
+  const configured = new Set(languages.map(row => row.locale));
+  const targets = [...new Set([defaultTranslationLocale,
+    ...translationLocales.filter(locale => configured.has(locale)),
+    ...languages.map(row => row.locale).filter(locale => !isSource(locale)),
+  ])];
+  const columns = [...sourceLocales, targetLocale];
   const queries = useQueries({ queries: columns.map(translationsQuery) });
   const values = new Map(queries.flatMap(query => (query.data ?? []).map(row => [id(row), row.value] as const)));
   const published = usePublishedTuneKeys();
@@ -78,19 +86,29 @@ export function LanguageManagement() {
   const [error, setError] = useState("");
   const tunes = useMemo(() => new Map((published.data ?? []).filter(tune => tune.is_global)
     .map(tune => [tune.tune_key, tune.briefing?.title?.trim() || tuneDisplayTitle(tune.tune_key)])), [published.data]);
-  const keys = kind === "ui" ? stringKeys : [...tunes.keys()].sort();
-  const base = (code: string, key: string) => kind === "ui" ? bundledStrings[code]?.[key] : code === US ? tunes.get(key) : undefined;
+  const keys = kind === "ui" ? translationKeys(targetLocale) : [...tunes.keys()].sort();
+  const base = (code: string, key: string) => kind === "ui"
+    ? bundledStrings[code]?.[key]
+    : bundledTuneTitles[code]?.[key] ?? (code === US ? tunes.get(key) : undefined);
   const direct = (code: string, key: string) => values.get(id({ locale: code, kind, key })) ?? base(code, key);
+  const reference = (code: string, key: string) => direct(code, kind === "ui" ? sourceKeyFor(key) ?? key : key);
   const term = search.trim().toLocaleLowerCase();
-  const visible = keys.filter(key => !term || [key, ...columns.map(code => direct(code, key) ?? "")].some(s => s.toLocaleLowerCase().includes(term)));
+  const visible = keys.filter(key => !term || [key, reference(US, key), reference(FR, key), direct(targetLocale, key)]
+    .some(text => text?.toLocaleLowerCase().includes(term)));
   const loading = settings.isPending || queries.some(query => query.isPending) || (kind === "tune" && published.isPending);
   const loadError = settings.error || queries.find(query => query.error)?.error || (kind === "tune" && published.error);
+  function selectTarget(locale: string) {
+    setTargetLocale(locale);
+    setDefaultsLocale(locale);
+    setError("");
+  }
 
   async function saveCell(event: FormEvent) {
     event.preventDefault();
     if (!editing) return;
     const trimmed = value.trim();
-    if (editing.kind === "ui" && trimmed && tokens(trimmed) !== tokens(bundledStrings[US][editing.key] ?? bundledStrings["fr-FR"][editing.key] ?? "")) {
+    const sourceKey = sourceKeyFor(editing.key);
+    if (editing.kind === "ui" && trimmed && sourceKey && tokens(trimmed) !== tokens(bundledStrings[US][sourceKey] ?? bundledStrings[FR][sourceKey] ?? "")) {
       setError(t("languageManager.placeholders")); return;
     }
     setError(""); setBusy(true);
@@ -118,7 +136,9 @@ export function LanguageManagement() {
         if (error) throw error;
         await client.invalidateQueries({ queryKey: ["language-settings"] });
       }
-      setLocale(code); setNewLocale(""); setAdding(false);
+      if (isSource(code)) setDefaultsLocale(code);
+      else selectTarget(code);
+      setNewLocale(""); setAdding(false);
     } catch (err) { setError(err instanceof RangeError ? t("languageManager.invalidLocale") : errorText(err)); }
     finally { setBusy(false); }
   }
@@ -128,15 +148,15 @@ export function LanguageManagement() {
       <h1 className="font-display text-3xl font-semibold">{t("languageManager.title")}</h1>
       <div className="rounded-lg border border-border p-4 space-y-4">
         <div className="flex flex-wrap gap-3 items-end">
-          <label className={fieldClass}>{t("language.label")}
-            <select className={selectClass} value={selected.locale} disabled={busy || !!editing} onChange={e => setLocale(e.target.value)}>
+          <label className={fieldClass}>{t("languageManager.defaultsLanguage")}
+            <select className={selectClass} value={selected.locale} disabled={busy || !!editing} onChange={e => setDefaultsLocale(e.target.value)}>
               {languages.map(row => <option key={row.locale} value={row.locale}>{languageName(row.locale)}</option>)}
             </select></label>
           <Button variant="ghost" disabled={busy || !!editing} onClick={() => { setAdding(!adding); setError(""); }}>{t("languageManager.add")}</Button>
         </div>
         {adding && <form onSubmit={addLocale} className="flex flex-wrap gap-3 items-end">
           <label className={fieldClass}>{t("languageManager.code")}<Input required placeholder="de-DE" list="locale-suggestions" value={newLocale} onChange={e => setNewLocale(e.target.value)} /></label>
-          <datalist id="locale-suggestions">{["de-DE","es-ES","it-IT","ja-JP","pt-BR"].map(code => <option key={code} value={code}>{languageName(code)}</option>)}</datalist>
+          <datalist id="locale-suggestions">{translationLocales.filter(code => !configured.has(code)).map(code => <option key={code} value={code}>{languageName(code)}</option>)}</datalist>
           <Button disabled={busy}>{t("languageManager.add")}</Button></form>}
         <LocaleDefaults key={[selected.locale, selected.notation, selected.date_order, selected.hour_cycle].join("/")} language={selected} />
       </div>
@@ -149,20 +169,29 @@ export function LanguageManagement() {
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full text-left text-sm"><thead className="bg-muted"><tr>
           <th scope="col" className="p-3">{t("languageManager.key")}</th>
-          {columns.map(code => <th scope="col" className="p-3" key={code} lang={code}>{languageName(code)} <small className="block font-normal">{code}</small></th>)}
+          {sourceLocales.map(code => <th scope="col" className="p-3" key={code} lang={code}>{languageName(code)} <small className="block font-normal">{code}</small></th>)}
+          <th scope="col" className="p-3">
+            <select aria-label={t("languageManager.targetLanguage")} className={selectClass} value={targetLocale}
+              disabled={busy || !!editing} onChange={e => selectTarget(e.target.value)}>
+              {targets.map(code => <option key={code} value={code} lang={code}>{languageName(code)}</option>)}
+            </select>
+            <small className="block font-normal">{targetLocale}</small>
+          </th>
         </tr></thead><tbody>
         {visible.map(key => <tr key={key} className="border-t align-top">
           <th scope="row" className="max-w-56 break-words p-3 font-mono text-xs font-normal text-muted-foreground">{key}</th>
           {columns.map(code => {
             const cell = { locale: code, kind, key };
             const directValue = direct(code, key);
-            const fallback = direct(US, key) ?? "";
+            const fallback = reference(US, key) ?? "";
+            const extraPlural = kind === "ui" && sourceKeyFor(key) !== key;
             return <td className="min-w-40 p-1" key={code}>
-              {editing && id(editing) === id(cell) ? <form onSubmit={saveCell} className="p-1 space-y-1">
+              {extraPlural && isSource(code) ? <span className="block p-2 text-muted-foreground">{reference(code, key) ?? "—"}</span>
+              : editing && id(editing) === id(cell) ? <form onSubmit={saveCell} className="p-1 space-y-1">
                 <Textarea autoFocus maxLength={8000} aria-label={key + " " + code} placeholder={base(code, key) ?? fallback} value={value} onChange={e => setValue(e.target.value)} />
                 <Button size="xs" disabled={busy}>{t("menus.save")}</Button>
                 <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => { setEditing(null); setError(""); }}>{t("menus.cancel")}</Button>
-              </form> : <button type="button" disabled={!!editing || loading || !!loadError} lang={code} aria-label={key + " " + code}
+              </form> : <button type="button" disabled={!!editing || loading || !!loadError || !configured.has(code)} lang={code} aria-label={key + " " + code}
                 className="block w-full rounded p-2 text-left hover:bg-muted focus-visible:outline-ring disabled:cursor-default"
                 onClick={() => { setEditing(cell); setValue(directValue ?? ""); setError(""); }}>
                   {directValue ?? <span className="text-muted-foreground italic" title={t("languageManager.fallback")}>{fallback || "—"}</span>}

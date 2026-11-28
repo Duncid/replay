@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { initialLanguages, isLanguageSettings, type LanguageSettings, type Translation } from "../src/lib/languages";
+import { initialLanguages, isLanguageSettings, translationLocales, type LanguageSettings, type Translation } from "../src/lib/languages";
 
 test("language settings accept constrained database values and reject invalid formatting modes", () => {
   for (const language of initialLanguages) expect(isLanguageSettings(language)).toBe(true);
@@ -21,7 +21,11 @@ test("French admin navigation and the quest editor use the selected language", a
 });
 
 test("an admin manages regional defaults and translations, and readers use US fallback", async ({ page }) => {
-  const languages: LanguageSettings[] = structuredClone(initialLanguages);
+  const languages: LanguageSettings[] = [
+    ...structuredClone(initialLanguages),
+    ...translationLocales.filter(locale => !initialLanguages.some(language => language.locale === locale))
+      .map(locale => ({ ...initialLanguages[0], locale })),
+  ];
   const strings: Translation[] = [];
   await page.route("**/rest/v1/language_settings**", route => {
     const request = route.request();
@@ -52,7 +56,15 @@ test("an admin manages regional defaults and translations, and readers use US fa
   const menu = page.getByRole("button", { name: "Menu", exact: true });
   await menu.click();
   await page.getByRole("menuitem", { name: "Language Management" }).click();
-  for (const code of ["en-US","en-GB","fr-FR"]) await expect(page.getByRole("columnheader").filter({ hasText: code })).toBeVisible();
+  for (const code of ["en-US", "fr-FR", "it-IT"]) await expect(page.getByRole("columnheader").filter({ hasText: code })).toBeVisible();
+  const target = page.getByRole("combobox", { name: "Translation language" });
+  await expect(target).toHaveValue("it-IT");
+  for (const code of translationLocales) await expect(target.locator(`option[value="${code}"]`)).toHaveCount(1);
+  await page.getByLabel("Search keys or translations").fill("tune.libraryHeading");
+  await expect(page.getByRole("button", { name: "tune.libraryHeading it-IT", exact: true })).toHaveText("Che cosa vuoi suonare oggi?");
+  await target.selectOption("pl-PL");
+  await page.getByLabel("Search keys or translations").fill("library.summary_few");
+  await expect(page.getByRole("button", { name: "library.summary_few pl-PL", exact: true })).toBeVisible();
   const saveCell = async (key: string, locale: string, value: string) => {
     await page.getByRole("button", { name: key + " " + locale, exact: true }).click();
     await page.getByRole("textbox", { name: key + " " + locale, exact: true }).fill(value);
@@ -65,21 +77,21 @@ test("an admin manages regional defaults and translations, and readers use US fa
   await expect(page.getByRole("rowheader", { name: "private", exact: true })).toHaveCount(0);
   await saveCell("intro","en-US","First steps");
   await page.getByRole("button", { name: "Add language", exact: true }).click();
-  await page.getByLabel("Language code").fill("de-DE");
+  await page.getByLabel("Language code").fill("de-AT");
   await page.getByRole("button", { name: "Add language", exact: true }).last().click();
-  await expect(page.getByRole("columnheader").filter({ hasText: "de-DE" })).toBeVisible();
+  await expect(target).toHaveValue("de-AT");
   await page.getByLabel("Time format").selectOption("h23");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect.poll(() => languages.find(row => row.locale === "de-DE")?.hour_cycle).toBe("h23");
-  await saveCell("intro","de-DE","Erste Schritte");
+  await expect.poll(() => languages.find(row => row.locale === "de-AT")?.hour_cycle).toBe("h23");
+  await saveCell("intro","de-AT","Erste Schritte");
   await page.getByRole("button", { name: "Back to tunes" }).click();
   await expect(page.getByRole("heading", { name: "Pick a piece" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Practice: First steps" })).toBeVisible();
   await menu.click();
   await page.getByRole("menuitem", { name: "Language", exact: true }).click();
-  await page.getByRole("menuitem", { name: new Intl.DisplayNames(["de-DE"], { type: "language" }).of("de-DE")!, exact: true }).click();
+  await page.getByRole("menuitem", { name: new Intl.DisplayNames(["de-AT"], { type: "language" }).of("de-AT")!, exact: true }).click();
   await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("lang", "de-DE");
+  await expect(page.locator("html")).toHaveAttribute("lang", "de-AT");
   await expect(page.getByRole("heading", { name: "Pick a piece" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Practice: Erste Schritte" })).toBeVisible();
 });

@@ -5,8 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { translationsQuery, useLanguages } from "@/hooks/useLanguages";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
-import { US, initialLanguages, normalizeLocale, stringKeys, type LanguageSettings, type Translation } from "@/lib/languages";
-import i18n, { bundledResources } from "@/lib/i18n";
+import { US, bundledResources, bundledTuneTitles, initialLanguages, normalizeLocale, sourceKeyFor, type LanguageSettings, type Translation } from "@/lib/languages";
+import i18n from "@/lib/i18n";
 
 const context = createContext({
   settings: initialLanguages[0], languages: initialLanguages,
@@ -20,7 +20,7 @@ function installStrings(locale: string, rows?: Translation[]) {
   i18n.removeResourceBundle(locale, "common");
   i18n.addResourceBundle(locale, "common", structuredClone(bundledResources[locale] ?? {}));
   for (const row of rows ?? []) {
-    if (row.kind === "ui" && stringKeys.includes(row.key)) i18n.addResource(locale, "common", row.key, row.value);
+    if (row.kind === "ui" && sourceKeyFor(row.key)) i18n.addResource(locale, "common", row.key, row.value);
   }
 }
 
@@ -49,10 +49,14 @@ function ActiveLanguage({ children }: { children: ReactNode }) {
 
   const systemTitle = useMemo(() => {
     const titles = new Map<string, string>();
-    for (const rows of [us, current]) for (const row of rows ?? []) {
+    for (const row of us ?? []) {
+      if (row.kind === "tune") titles.set(row.key, row.value);
+    }
+    for (const [key, value] of Object.entries(bundledTuneTitles[locale] ?? {})) titles.set(key, value);
+    for (const row of current ?? []) {
       if (row.kind === "tune") titles.set(row.key, row.value);
     }
     return (key: string, original: string) => titles.get(key) ?? original;
-  }, [us, current]);
+  }, [locale, us, current]);
   return <context.Provider value={{ languages, settings, setLanguage, systemTitle }}>{children}</context.Provider>;
 }
