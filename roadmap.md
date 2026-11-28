@@ -1,5 +1,7 @@
 # Tune-first Replay
 
+- [x] Apply selected translation locales and verify all ten formatting defaults through the live API.
+
 - [x] Apply language-management migration and verify API access to both language tables.
 
 - [x] Prefill editable upload Title and Composer from original MusicXML/.mxl; retain confirmed credits in jobs and send them to publishing on builds/retries.

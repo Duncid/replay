@@ -141,6 +141,13 @@
       "when": 1795899900000,
       "tag": "0019_translation_target_locales",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795899900001,
+      "tag": "0020_apply_translation_target_locales",
+      "breakpoints": true
     }
   ]
 }
