@@ -187,18 +187,6 @@ export type Database = {
           },
         ]
       }
-      language_settings: {
-        Row: { locale: string; notation: "abc" | "solfege"; date_order: "MDY" | "DMY" | "YMD"; hour_cycle: "h12" | "h23" }
-        Insert: { locale: string; notation?: "abc" | "solfege"; date_order?: "MDY" | "DMY" | "YMD"; hour_cycle?: "h12" | "h23" }
-        Update: { notation?: "abc" | "solfege"; date_order?: "MDY" | "DMY" | "YMD"; hour_cycle?: "h12" | "h23" }
-        Relationships: []
-      }
-      language_strings: {
-        Row: { locale: string; kind: "ui" | "tune"; key: string; value: string }
-        Insert: { locale: string; kind: "ui" | "tune"; key: string; value: string }
-        Update: { value?: string }
-        Relationships: []
-      }
       hidden_system_tunes: {
         Row: {
           auth_user_id: string
