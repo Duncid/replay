@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { withTuneAiFallback } from "../_shared/tune-ai.ts";
-import { buildFallbackPlan, parsePracticePlan } from "./fallback.ts";
+import { buildFallbackPlan, equivalentPracticeItems, parsePracticePlan } from "./fallback.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,6 +208,17 @@ serve(async (req) => {
       statesMap.set(state.nugget_id, state);
     }
 
+    const planContext = {
+      nuggets, assemblies,
+      teachingOrder: briefing.teachingOrder,
+      assemblyOrder: briefing.assemblyOrder,
+      states: [...statesMap.values()],
+      hasFullTune: !!(tuneAsset.note_sequence?.notes?.length),
+      fullTuneSequence: tuneAsset.note_sequence,
+      language,
+    };
+    const equivalentGroups = equivalentPracticeItems(planContext);
+
     // ============================================
     // BUILD PRACTICE HISTORY (raw data for LLM to reason about)
     // ============================================
@@ -300,10 +311,20 @@ serve(async (req) => {
 GOAL: Plan a growth path that moves this student from their current state (point A) toward playing the full tune (point B). The full tune is the ultimate destination - it's fine if the plan doesn't reach it, just plan in that direction.
 
 PLAN LENGTH:
-- For beginners (far from full tune): plan up to ~16 activities
+- For beginners (far from full tune): plan at most 16 activities
 - As the student approaches mastery: use fewer activities
 - Near full tune: just a few focused activities
 - The closer to the goal, the shorter the plan should be
+
+STRICT UNIQUENESS — applies to the entire plan, not just consecutive entries:
+- Each item is an exercise the student repeats until they get it right before pressing Next.
+- Include each itemId at most once. Never duplicate an item for reinforcement, review, different instructions, or to reach a target length.
+- Different IDs with identical notes and rhythm are the same exercise: choose at most one from each equivalent group below, across nuggets, assemblies, and the full tune.
+- Larger assemblies containing an earlier nugget are allowed only when the complete exercise is musically different.
+- A shorter unique plan is preferable. Repetition happens within an exercise, never through duplicate plan entries.
+
+MUSICALLY EQUIVALENT IDS (choose at most one per group):
+${equivalentGroups.length ? equivalentGroups.map(group => `- ${group.join(", ")}`).join("\n") : "None"}
 
 ---
 
@@ -384,7 +405,7 @@ Use the submit_practice_plan function to return a structured practice plan.`;
 ${userName ? `Address the student by name (${userName}) in your encouragement for a warm, personalized greeting.` : ""}
 
 Plan length guidance:
-- For beginners: plan up to ~16 activities
+- For beginners: plan at most 16 unique activities; never pad the plan with repetitions
 - As they approach mastery: fewer activities
 - The closer to full tune, the shorter the plan
 
@@ -434,7 +455,7 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
                   required: ["itemId", "itemType", "instruction", "motifs"],
                 },
                 description:
-                  "Ordered list of practice items - target about 16 items early in learning, fewer if full tune is included or learner is near mastery",
+                  "Ordered list of at most 16 practice items, unique by itemId and complete musical content across the entire list. Students repeat each exercise before moving on. Never repeat items for review or to fill the list; shorter unique plans are preferred.",
               },
               encouragement: {
                 type: "string",
@@ -495,14 +516,6 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
       );
     }
 
-    const planContext = {
-      nuggets, assemblies,
-      teachingOrder: briefing.teachingOrder,
-      assemblyOrder: briefing.assemblyOrder,
-      states: [...statesMap.values()],
-      hasFullTune: !!(tuneAsset.note_sequence?.notes?.length),
-      language,
-    };
     const planResult = await withTuneAiFallback({
       apiKey: Deno.env.get("LOVABLE_API_KEY"),
       request: debugRequest,
@@ -510,6 +523,9 @@ Use itemType "full_tune" with itemId "FULL_TUNE" when proposing full-tune practi
       parse: value => parsePracticePlan(value, planContext),
       fallback: () => buildFallbackPlan(planContext),
     });
+
+    // Both AI and heuristic output must satisfy the same contract before enrichment.
+    parsePracticePlan(planResult, planContext);
 
     // Enrich practice plan with full nugget/assembly data
     const enrichedPlan = planResult.practicePlan

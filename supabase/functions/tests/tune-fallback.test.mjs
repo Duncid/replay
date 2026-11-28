@@ -3,23 +3,24 @@ import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import ts from "typescript";
-import { buildFallbackPlan, parsePracticePlan } from "../tune-coach/fallback.ts";
+import { buildFallbackPlan, equivalentPracticeItems, parsePracticePlan, practiceMusicSignature } from "../tune-coach/fallback.ts";
 import { evaluateFallback, parseEvaluation } from "../tune-evaluate/fallback.ts";
 import { withTuneAiFallback } from "../_shared/tune-ai.ts";
 
 const sequence = (pitches = [60, 62, 64, 65], offset = 0, pace = 0.5) => ({
   notes: pitches.map((pitch, i) => ({ pitch, startTime: offset + i * pace, endTime: offset + i * pace + 0.4 })),
 });
-const nugget = (id, measure) => ({ id, location: { startMeasure: measure }, dependsOn: [], noteSequence: sequence() });
+const nugget = (id, measure) => ({ id, location: { startMeasure: measure }, dependsOn: [],
+  noteSequence: sequence([60, 62, 64, 65].map(pitch => pitch + measure - 1)) });
 const nuggets = [nugget("N1", 1), nugget("N2", 3), nugget("N3", 5), nugget("N4", 7)];
 const assemblies = [
-  { id: "A1", tier: 1, nuggetIds: ["N1", "N2"], noteSequence: sequence() },
-  { id: "A2", tier: 1, nuggetIds: ["N3", "N4"], noteSequence: sequence() },
-  { id: "A3", tier: 2, nuggetIds: ["N1", "N2", "N3", "N4"], noteSequence: sequence() },
+  { id: "A1", tier: 1, nuggetIds: ["N1", "N2"], noteSequence: sequence([48, 50, 52, 53]) },
+  { id: "A2", tier: 1, nuggetIds: ["N3", "N4"], noteSequence: sequence([50, 52, 54, 55]) },
+  { id: "A3", tier: 2, nuggetIds: ["N1", "N2", "N3", "N4"], noteSequence: sequence([48, 50, 52, 53, 50, 52, 54, 55]) },
 ];
 const state = (id, streak = 2) => ({ nugget_id: id, attempt_count: 3, current_streak: streak,
   best_streak: 2, pass_count: 2, last_practiced_at: "2026-11-20T12:00:00Z" });
-const context = (extra = {}) => ({ nuggets, assemblies, states: [], hasFullTune: true, ...extra });
+const context = (extra = {}) => ({ nuggets, assemblies, states: [], hasFullTune: true, fullTuneSequence: sequence(), ...extra });
 const ids = plan => plan.practicePlan.map(p => p.itemId);
 const evaluate = (userSequence, extra = {}) => evaluateFallback({ targetSequence: sequence(), userSequence,
   currentStreak: 0, isFullTune: false, alreadyAcquired: false, ...extra });
@@ -63,6 +64,105 @@ test("AI plans with missing items, empty output or malformed fields are rejected
   assert.throws(() => parsePracticePlan({ practicePlan: [], encouragement: "" }, context()));
   assert.throws(() => parsePracticePlan({ practicePlan: [{ itemId: "N999", itemType: "nugget", instruction: "", motifs: [] }], encouragement: "" }, context()));
   assert.deepEqual(parsePracticePlan(buildFallbackPlan(context()), context()), buildFallbackPlan(context()));
+});
+
+const planItem = (itemId, itemType = "nugget", instruction = "Practice this phrase.") =>
+  ({ itemId, itemType, instruction, motifs: [] });
+const planOf = (...items) => ({ practicePlan: items, encouragement: "Keep going." });
+function assertUnique(plan, ctx) {
+  assert.equal(new Set(ids(plan)).size, plan.practicePlan.length);
+  const signatures = plan.practicePlan.map(item => practiceMusicSignature(item.itemType === "full_tune"
+    ? ctx.fullTuneSequence : (item.itemType === "nugget" ? ctx.nuggets : ctx.assemblies).find(n => n.id === item.itemId).noteSequence));
+  assert.ok(signatures.every(Boolean));
+  assert.equal(new Set(signatures).size, signatures.length);
+}
+
+test("AI rejects repeated IDs anywhere, even with different instructions", () => {
+  for (const middle of [[], [planItem("N2")]]) {
+    assert.throws(() => parsePracticePlan(planOf(planItem("N1"), ...middle, planItem("N1", "nugget", "Review it.")), context()), /Duplicate practice item ID/);
+  }
+  const ctx = context({ assemblies: [{ ...assemblies[0], id: "N1" }] });
+  assert.throws(() => parsePracticePlan(planOf(planItem("N1"), planItem("N1", "assembly")), ctx), /Duplicate practice item ID/);
+});
+
+test("musical signatures ignore export ordering, silence, metadata and doubled unisons", () => {
+  const original = sequence();
+  const shifted = sequence(undefined, 12);
+  shifted.notes = [...shifted.notes.reverse(), { ...shifted.notes[0] }].map(n => ({ ...n, instrument: 4, velocity: 12 }));
+  shifted.totalTime = 100;
+  assert.equal(practiceMusicSignature(original), practiceMusicSignature(shifted));
+  const noise = { notes: original.notes.map(n => ({ ...n, startTime: n.startTime + 1e-9, endTime: n.endTime + 2e-9 })) };
+  assert.equal(practiceMusicSignature(original), practiceMusicSignature(noise));
+  for (const changed of [sequence([60, 62, 63, 65]), sequence(undefined, 0, 0.6),
+    { notes: original.notes.map(n => ({ ...n, endTime: n.endTime + 0.1 })) }]) {
+    assert.notEqual(practiceMusicSignature(original), practiceMusicSignature(changed));
+  }
+});
+
+test("AI rejects identical content across IDs and types, including separated duplicates", () => {
+  const ctx = context({ nuggets: [nuggets[0], { ...nuggets[1], noteSequence: sequence(undefined, 9) }, nuggets[2]],
+    assemblies: [{ ...assemblies[0], noteSequence: sequence() }] });
+  for (const duplicate of [planItem("N2"), planItem("A1", "assembly"), planItem("FULL_TUNE", "full_tune")]) {
+    for (const middle of [[], [planItem("N3")]]) {
+      assert.throws(() => parsePracticePlan(planOf(planItem("N1"), ...middle, duplicate), ctx), /Duplicate practice music/);
+    }
+  }
+  assert.deepEqual(equivalentPracticeItems(ctx), [["N1", "N2", "A1", "FULL_TUNE"]]);
+});
+
+test("larger assemblies containing an earlier nugget remain distinct", () => {
+  const ctx = context({ assemblies: [{ ...assemblies[0], noteSequence: {
+    notes: [...sequence().notes, ...sequence([67, 69], 3).notes],
+  } }] });
+  const plan = planOf(planItem("N1"), planItem("A1", "assembly"));
+  assert.deepEqual(parsePracticePlan(plan, ctx), plan);
+});
+
+test("heuristic skips duplicate IDs and music without consuming learning slots", () => {
+  const ctx = context({ nuggets: [nuggets[0], nuggets[0], { ...nuggets[1], noteSequence: sequence() }, nuggets[2], nuggets[3]] });
+  assert.deepEqual(ids(buildFallbackPlan(ctx)), ["N1", "N3"]);
+  const reviewCtx = { ...ctx, states: [state("N1", 0)] };
+  const plan = buildFallbackPlan(reviewCtx);
+  assert.deepEqual(ids(plan), ["N1", "N3", "N4"]);
+  assertUnique(plan, reviewCtx);
+});
+
+test("heuristic skips duplicate assemblies and duplicates shared with review", () => {
+  const ctx = context({ states: [state("N1", 0), state("N2"), state("N3"), state("N4")],
+    assemblies: [
+      { ...assemblies[0], nuggetIds: ["N2", "N3"], noteSequence: sequence() },
+      { ...assemblies[1], noteSequence: sequence([48, 50]) },
+      { ...assemblies[1], id: "A4", noteSequence: sequence([48, 50]) },
+      { ...assemblies[1], id: "A5", noteSequence: sequence([51, 53]) },
+    ] });
+  const plan = buildFallbackPlan(ctx);
+  assert.deepEqual(ids(plan), ["N1", "A2", "A5"]);
+  assertUnique(plan, ctx);
+});
+
+test("full tune replacement clears prior signatures and all-identical candidates yield one item", () => {
+  const ctx = context({ nuggets: nuggets.map(n => ({ ...n, noteSequence: sequence() })), assemblies: [] });
+  assert.deepEqual(ids(buildFallbackPlan(ctx)), ["N1"]);
+  const ready = context({ states: [...nuggets.map(n => state(n.id)), state("A3")],
+    fullTuneSequence: assemblies[0].noteSequence });
+  assert.deepEqual(ids(buildFallbackPlan(ready)), ["FULL_TUNE"]);
+  assertUnique(buildFallbackPlan(ready), ready);
+});
+
+test("invalid music is rejected by AI validation and excluded from heuristic candidates", () => {
+  for (const invalid of [undefined, null, {}, { notes: [] }, { notes: [null] },
+    { notes: [{ pitch: 60, startTime: NaN, endTime: 1 }] },
+    { notes: [{ pitch: 60, startTime: 1, endTime: 0 }] }]) {
+    assert.equal(practiceMusicSignature(invalid), null);
+    const ctx = context({ nuggets: [{ ...nuggets[0], noteSequence: invalid }, nuggets[1]],
+      assemblies: [], fullTuneSequence: invalid });
+    assert.throws(() => parsePracticePlan(planOf(planItem("N1")), ctx), /no valid playable music/);
+    assert.throws(() => parsePracticePlan(planOf(planItem("FULL_TUNE", "full_tune")), ctx), /no valid playable music/);
+    assert.deepEqual(ids(buildFallbackPlan(ctx)), ["N2"]);
+    assert.throws(() => buildFallbackPlan({ ...ctx, nuggets: [ctx.nuggets[0]] }), /no playable practice items/);
+    const withInvalidAssembly = context({ states: nuggets.map(n => state(n.id)), assemblies: [{ ...assemblies[0], noteSequence: invalid }], fullTuneSequence: invalid });
+    assertUnique(buildFallbackPlan(withInvalidAssembly), withInvalidAssembly);
+  }
 });
 
 test("matching tolerates leading silence and unrelated warm-up and trailing notes", () => {
@@ -149,7 +249,7 @@ test("French evaluation and semantic AI validation", () => {
 async function handler(name, options = {}) {
   const writes = [];
   let assetReads = 0;
-  const asset = { briefing: { title: "Example", motifs: [], teachingOrder: nuggets.map(n => n.id) },
+  const asset = options.asset ?? { briefing: { title: "Example", motifs: [], teachingOrder: nuggets.map(n => n.id) },
     nuggets, assemblies, note_sequence: sequence() };
   const db = { from(table) {
     let operation = "select", payload, single = false;
@@ -221,6 +321,51 @@ test("coach handler without AI returns enriched practice items and profile-scope
   assert.equal(data.tuneTitle, "Example");
   assert.equal(data.practicePlan[0].nugget.id, "N1");
   assert.equal(data.practicePlan[0].assembly, null);
+  assert.equal(app.aiCalls(), 0);
+  assertUnique(data, context());
+});
+
+const aiPlanResponse = plan => Response.json({ choices: [{ message: { tool_calls: [{ function: {
+  name: "submit_practice_plan", arguments: JSON.stringify(plan),
+} }] } }] });
+
+for (const [label, invalidPlan] of [
+  ["repeated ID", planOf(planItem("N1"), planItem("N3"), planItem("N1", "nugget", "Review"))],
+  ["identical music", planOf(planItem("N1"), planItem("N3"), planItem("N2"))],
+  ["full tune duplicate", planOf(planItem("N1"), planItem("FULL_TUNE", "full_tune"))],
+]) test(`coach handler replaces AI ${label} with a unique heuristic plan`, async () => {
+  const ctx = context({ nuggets: [nuggets[0], { ...nuggets[1], noteSequence: sequence(undefined, 10) }, nuggets[2]] });
+  const app = await handler("tune-coach", { apiKey: "test", fetch: async () => aiPlanResponse(invalidPlan),
+    asset: { briefing: { title: "Example" }, nuggets: ctx.nuggets, assemblies: ctx.assemblies, note_sequence: ctx.fullTuneSequence } });
+  const { response, data } = await app.invoke();
+  assert.equal(response.status, 200);
+  assert.equal(app.aiCalls(), 1);
+  assert.deepEqual(ids(data), ["N1", "N3"]);
+  assertUnique(data, ctx);
+});
+
+test("coach handler keeps a valid AI plan unchanged", async () => {
+  const plan = planOf(planItem("N4"), planItem("N2"));
+  const app = await handler("tune-coach", { apiKey: "test", fetch: async () => aiPlanResponse(plan) });
+  const { response, data } = await app.invoke();
+  assert.equal(response.status, 200);
+  assert.deepEqual(ids(data), ["N4", "N2"]);
+  assertUnique(data, context());
+});
+
+test("coach without AI deduplicates music and explains equivalent IDs in its prompt", async () => {
+  const ctx = context({ nuggets: nuggets.map(n => ({ ...n, noteSequence: sequence() })), assemblies: [] });
+  const app = await handler("tune-coach", { asset: { briefing: { title: "Example" },
+    nuggets: ctx.nuggets, assemblies: [], note_sequence: ctx.fullTuneSequence } });
+  const { response, data } = await app.invoke();
+  assert.equal(response.status, 200);
+  assert.deepEqual(ids(data), ["N1"]);
+  assertUnique(data, ctx);
+  const debug = (await app.invoke({ debug: true })).data;
+  assert.match(debug.prompt, /student repeats until they get it right before pressing Next/);
+  assert.match(debug.prompt, /entire plan, not just consecutive entries/);
+  assert.match(debug.prompt, /N1, N2, N3, N4, FULL_TUNE/);
+  assert.doesNotMatch(debug.prompt, /target about 16/);
   assert.equal(app.aiCalls(), 0);
 });
 test("coach handles a legacy asset when the published-version lookup has no result", async () => {

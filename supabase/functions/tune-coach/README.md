@@ -24,6 +24,26 @@ return the existing response shape used by the web and native apps.
 Instructions and feedback have English and French templates; other languages
 fall back to English.
 
+### Unique exercises
+
+Students repeat each exercise before pressing Next. Every plan is strictly unique
+by item ID and complete musical content, across nuggets, assemblies and full tune.
+The prompt explains this and lists equivalent IDs; 16 is a maximum, never a quota.
+AI plans with duplicates anywhere in the list are rejected and use the heuristic
+fallback. The heuristic keeps the first eligible unique exercise in scheduling
+order, skips duplicates without consuming selection slots, and uses the same
+final validator as AI output.
+
+Content comparison uses pitch, onset relative to the first note, and duration,
+rounded to microseconds. Note order, leading/trailing silence, velocity, track
+metadata and exact doubled unisons do not distinguish exercises. Different notes
+or timing do; a larger assembly may contain an earlier nugget. Missing, malformed
+or empty music is not eligible. No playable items produces an error.
+
+Uniqueness is per plan: it does not merge saved progress or prevent review in a
+later session. Deploy `tune-coach` to activate these planning changes; no worker,
+database or client update is needed.
+
 ## Evaluation
 
 `../tune-evaluate/fallback.ts` uses weighted edit distance to find the best
