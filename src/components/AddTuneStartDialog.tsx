@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Upload } from "lucide-react";
@@ -8,7 +9,7 @@ interface ScoreSource {
   home: string;
   logo: string;
   /** What the source is good for, in one line. */
-  description: string;
+  descriptionKey: string;
 }
 
 /** Where students go looking for a score to bring in. */
@@ -17,19 +18,19 @@ export const SCORE_SOURCES: ScoreSource[] = [
     name: "Noctave",
     home: "https://noctavepiano.com/en/",
     logo: "/logos/noctave.jpg",
-    description: "Best for an initial curated catalogue: free downloads, difficulty ratings, simplified arrangements and explicit licensing information.",
+    descriptionKey: "upload.noctave",
   },
   {
     name: "MuseScore",
     home: "https://musescore.com/",
     logo: musescoreLogo.url,
-    description: "Best for musical diversity. Add the “To modify commercially” licence filter: the licence and free-download availability are separate things.",
+    descriptionKey: "upload.musescore",
   },
   {
     name: "OpenSongs",
     home: "https://be.creativeranges.org/library/sheets",
     logo: "/logos/opensongs.jpg",
-    description: "Interesting for traditional, folk and gospel music: public-domain sheets, each downloadable as MusicXML.",
+    descriptionKey: "upload.opensongs",
   },
 ];
 
@@ -40,33 +41,34 @@ export function AddTuneStartDialog({ open, onOpenChange, onPickFile, hiddenTunes
   hiddenTunes?: { tune_key: string; title?: string | null; composer?: string | null }[];
   onAddBack?: (tuneKey: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Add a tune</DialogTitle>
-          <DialogDescription>Bring a piano score and we&rsquo;ll turn it into a practice tune.</DialogDescription>
+          <DialogTitle>{t("library.add")}</DialogTitle>
+          <DialogDescription>{t("upload.intro")}</DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 space-y-4 overflow-y-auto">
           <div className="space-y-1">
             <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Upload a .mxl file
+              {t("upload.formatTitle")}
             </h3>
             <p className="text-sm">
-              Compressed MusicXML, the sheet-music format that keeps every note readable. Piano solos work best.
+              {t("upload.formatHelp")}
             </p>
           </div>
 
           {hiddenTunes.length > 0 && onAddBack && (
             <div className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Hidden Noodlyn tunes</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t("upload.hidden")}</h3>
               <ul className="flex flex-wrap gap-2">
-                {hiddenTunes.map((t) => (
-                  <li key={t.tune_key}>
-                    <Button variant="outline" size="sm" onClick={() => onAddBack(t.tune_key)} aria-label={`Add back ${t.title || t.tune_key}`}>
+                {hiddenTunes.map((tune) => (
+                  <li key={tune.tune_key}>
+                    <Button variant="outline" size="sm" onClick={() => onAddBack(tune.tune_key)} aria-label={t("upload.addBack", { title: tune.title || tune.tune_key })}>
                       <Plus className="size-4" aria-hidden="true" />
-                      {t.title || t.tune_key}
+                      {tune.title || tune.tune_key}
                     </Button>
                   </li>
                 ))}
@@ -75,7 +77,7 @@ export function AddTuneStartDialog({ open, onOpenChange, onPickFile, hiddenTunes
           )}
 
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">No file yet?</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t("upload.sources")}</h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {SCORE_SOURCES.map((source) => (
                 <a
@@ -87,7 +89,7 @@ export function AddTuneStartDialog({ open, onOpenChange, onPickFile, hiddenTunes
                 >
                   <img src={source.logo} alt="" className="size-12 shrink-0 rounded-lg object-cover" />
                   <span className="block text-sm font-semibold">{source.name}</span>
-                  <span className="block text-xs leading-snug text-muted-foreground">{source.description}</span>
+                  <span className="block text-xs leading-snug text-muted-foreground">{t(source.descriptionKey)}</span>
                 </a>
               ))}
             </div>
@@ -97,7 +99,7 @@ export function AddTuneStartDialog({ open, onOpenChange, onPickFile, hiddenTunes
         <DialogFooter>
           <Button onClick={onPickFile}>
             <Upload className="size-4" aria-hidden="true" />
-            Choose a .mxl file
+            {t("upload.choose")}
           </Button>
         </DialogFooter>
       </DialogContent>

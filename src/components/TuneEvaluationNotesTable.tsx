@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { TuneEvaluationDebugData } from "@/types/tunePractice";
 
 interface TuneEvaluationNotesTableProps {
@@ -7,6 +8,7 @@ interface TuneEvaluationNotesTableProps {
 export function TuneEvaluationNotesTable({
   debugData,
 }: TuneEvaluationNotesTableProps) {
+  const { t } = useTranslation();
   const targetNotes =
     (debugData?.targetSequence as { notes?: unknown[] })?.notes || [];
   const userNotes =
@@ -21,35 +23,35 @@ export function TuneEvaluationNotesTable({
 
   return (
     <div>
-      <h4 className="text-sm font-medium mb-1">Target vs User</h4>
+      <h4 className="text-sm font-medium mb-1">{t("notesTable.heading")}</h4>
       <div className="border border-border rounded overflow-auto max-h-48">
         <table className="w-full text-xs">
           <thead className="bg-muted/50 text-muted-foreground sticky top-0">
             <tr>
               <th className="text-left font-medium px-2 py-1 w-10">#</th>
               <th className="text-left font-medium px-2 py-1 text-blue-500">
-                T.Pitch
+                {t("notesTable.targetPitch")}
               </th>
               <th className="text-left font-medium px-2 py-1 text-accent-foreground">
-                U.Pitch
+                {t("notesTable.userPitch")}
               </th>
               <th className="text-left font-medium px-2 py-1 text-blue-500">
-                T.Start
+                {t("notesTable.targetStart")}
               </th>
               <th className="text-left font-medium px-2 py-1 text-accent-foreground">
-                U.Start
+                {t("notesTable.userStart")}
               </th>
               <th className="text-left font-medium px-2 py-1 text-blue-500">
-                T.End
+                {t("notesTable.targetEnd")}
               </th>
               <th className="text-left font-medium px-2 py-1 text-accent-foreground">
-                U.End
+                {t("notesTable.userEnd")}
               </th>
               <th className="text-left font-medium px-2 py-1 text-blue-500">
-                T.Vel
+                {t("notesTable.targetVelocity")}
               </th>
               <th className="text-left font-medium px-2 py-1 text-accent-foreground">
-                U.Vel
+                {t("notesTable.userVelocity")}
               </th>
             </tr>
           </thead>
@@ -57,7 +59,7 @@ export function TuneEvaluationNotesTable({
             {rowCount === 0 && (
               <tr>
                 <td className="px-2 py-2 text-muted-foreground" colSpan={9}>
-                  No notes
+                  {t("notesTable.empty")}
                 </td>
               </tr>
             )}

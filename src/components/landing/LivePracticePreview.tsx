@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NoteHighway } from "@/components/highway/NoteHighway";
 import type { HighwayTransport } from "@/components/highway/model";
@@ -14,8 +15,9 @@ const ignoreInput = () => {};
 
 /** Read-only performance: production renderer, keys and samples, without practice/account services. */
 const LivePracticePreview = forwardRef<LivePracticeHandle, {
-  tune: DemoTune; paused: boolean; departing?: boolean; onReady: () => void; onError: () => void; onSoundChange: (state: DemoSound) => void;
-}>(function LivePracticePreview({ tune, paused, departing = false, onReady, onError, onSoundChange }, ref) {
+  tune: DemoTune; displayTitle: string; paused: boolean; departing?: boolean; onReady: () => void; onError: () => void; onSoundChange: (state: DemoSound) => void;
+}>(function LivePracticePreview({ tune, displayTitle, paused, departing = false, onReady, onError, onSoundChange }, ref) {
+  const { t } = useTranslation();
   const { notes: demoNotes, highwayNotes, duration, beatsPerSecond, bpm, range } = tune;
   const { keyboardWidth, setPreviewPitches } = useGuestEntry();
   const pitches = useMemo(() => demoNotes.map(note => note.midi), [demoNotes]);
@@ -216,14 +218,14 @@ const LivePracticePreview = forwardRef<LivePracticeHandle, {
   }));
   return <div ref={host} className="landing-live-preview" data-ready={ready} data-playing={playing}
     data-note-count={demoNotes.length} data-duration={duration} data-tune={tune.key} data-audio-policy={audioUnlocked ? "unlocked" : autoplayBlocked ? "blocked" : "pending"} data-sound={sounding && playing ? "acoustic-piano" : "silent"}
-    role="img" aria-label={`Live ${tune.title} performance, full tune in player mode`}>
+    role="img" aria-label={t("landing.live", { title: displayTitle })}>
     <div className="landing-demo-app" aria-hidden="true" inert>
       <div className="landing-demo-highway"><NoteHighway notes={highwayNotes} transport={transport.current}
         layout={layout} range={range} pixelsPerBeat={90} beatsPerSecond={beatsPerSecond} onReadinessChange={readiness} /></div>
       <header className="landing-demo-header"><span className="landing-demo-brand">Noodlyn</span></header>
-      <div className="landing-demo-title"><h2>{tune.title}</h2>{tune.composer && <p>{tune.composer}</p>}</div>
+      <div className="landing-demo-title"><h2>{displayTitle}</h2>{tune.composer && <p>{tune.composer}</p>}</div>
       <div className="landing-demo-piano">
-        <div className="landing-demo-toolbar"><span>Acoustic piano</span><span>{Math.round(bpm)} BPM <span className="landing-demo-time" ref={timeLabel}>0:00 / {formatDemoTime(duration)}</span></span></div>
+        <div className="landing-demo-toolbar"><span>{t("landing.instrument")}</span><span>{t("landing.tempo", { bpm: Math.round(bpm) })} <span className="landing-demo-time" ref={timeLabel}>0:00 / {formatDemoTime(duration)}</span></span></div>
         <div className="landing-demo-keys piano-surface" data-piano-ranges={pianoLayoutKey(layout)}><NoteRail layout={layout} states={states} />
           <div data-preview-keys className="relative flex-1 min-h-0">{pianoBreaks(layout).map(note => <div key={note.midi} className="piano-range-break" style={pianoBreakStyle(layout, note)} />)}{[...layout.whiteKeys, ...layout.blackKeys].map(note => {
             const name = `${note.note}${note.octave}`;

@@ -1,9 +1,13 @@
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getTunePlayback, getTunePreview } from "@/utils/tunePreview";
+import { getTunePlayback, getTunePreview, tuneDisplayTitle } from "@/utils/tunePreview";
 import { getTuneAvailability, orderTunesByPosition, publishedTunesInListOrder, type TuneLibrarySnapshot } from "@/utils/tuneLibrary";
 
 export function useTuneLibrary(localUserId?: string | null) {
+  const { t } = useTranslation();
+  const { systemTitle } = useLanguage();
   const tunes = useQuery({
     queryKey: ["published-tune-keys", "previews"],
     queryFn: async () => {
@@ -75,14 +79,15 @@ export function useTuneLibrary(localUserId?: string | null) {
   };
   const deleteTune = async (tuneKey: string) => {
     const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "delete", tuneKey } });
-    if (error || !data?.success) throw new Error(data?.error ?? error?.message ?? "Delete failed");
+    if (error || !data?.success) throw new Error(data?.error ?? error?.message ?? t("library.deleteFailed"));
     await refresh();
   };
   return {
-    hiddenTunes: tunes.data?.hidden ?? [],
+    hiddenTunes: (tunes.data?.hidden ?? []).map(tune => ({ ...tune, title: systemTitle(tune.tune_key, tune.title || tuneDisplayTitle(tune.tune_key)) })),
     hideTune, showTune, deleteTune,
     tunes: (tunes.data?.list ?? []).map(tune => ({
       ...tune,
+      title: tune.isSystem ? systemTitle(tune.tune_key, tune.title || tuneDisplayTitle(tune.tune_key)) : tune.title,
       ...getTuneAvailability(tune.tune_key, progress.data?.snapshot ?? null, progress.data?.acquired ?? new Set()),
     })),
     isLoading: tunes.isPending || progress.isPending,

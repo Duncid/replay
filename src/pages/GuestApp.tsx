@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -27,13 +29,16 @@ import type { MagentaNoteSequence } from "@/types/magenta";
 // The student UI with local music only. Account/management hooks never mount here.
 interface GuestAppProps { interactive?: boolean; onReady?: () => void; initialKeyboardPitches?: readonly number[] }
 export default function GuestApp({ interactive = true, onReady, initialKeyboardPitches }: GuestAppProps) {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
-  if (loading) return <p className="p-8 text-center">Loading music…</p>;
+  if (loading) return <p className="p-8 text-center">{t("library.loadingMusic")}</p>;
   if (user) return <Navigate to="/" replace />;
   return <HighwayProvider fullKeyboard={false}><GuestWorkspace interactive={interactive} onReady={onReady} initialKeyboardPitches={initialKeyboardPitches} /></HighwayProvider>;
 }
 
 function GuestWorkspace({ interactive, onReady, initialKeyboardPitches }: GuestAppProps) {
+  const { t } = useTranslation();
+  const { settings } = useLanguage();
   const [entryPitches, setEntryPitches] = useState(initialKeyboardPitches);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -130,8 +135,8 @@ function GuestWorkspace({ interactive, onReady, initialKeyboardPitches }: GuestA
       startDemoTimeline(notes, total, 0,
         (note, at) => piano.current?.playNote(440 * Math.pow(2, (note.pitch - 69) / 12), note.endTime - note.startTime, at),
         pitches => setActiveKeys(new Set([...pitches].map(midiToNoteName))), stop);
-    } catch { stop(); toast.error("Piano playback couldn’t start. Please try Replay again."); }
-  }, [stop, releaseInputs]);
+    } catch { stop(); toast.error(t("library.playbackError")); }
+  }, [stop, releaseInputs, t]);
   const leave = () => { stop(); releaseInputs(); setMicEnabled(false); setMetronomeIsPlaying(false); setActiveTune(null); };
   const openAuth = (mode: "signin" | "signup") => {
     stop(); releaseInputs(); setMicEnabled(false); setMetronomeIsPlaying(false);
@@ -144,20 +149,20 @@ function GuestWorkspace({ interactive, onReady, initialKeyboardPitches }: GuestA
         <div className="flex items-center justify-between gap-2 p-2">
           <div className="flex items-center gap-1">
             <Button asChild variant="ghost" size="icon">
-              <Link to="/" aria-label="Back to home"><ArrowLeft className="size-5" aria-hidden="true" /></Link>
+              <Link to="/" aria-label={t("supportedScreen.backHome")}><ArrowLeft className="size-5" aria-hidden="true" /></Link>
             </Button>
             <Link to="/" className="px-2 font-display text-2xl font-semibold tracking-tight">Noodlyn</Link>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={event => { event.currentTarget.focus(); openAuth("signin"); }}>Sign in</Button>
-            <Button size="sm" onClick={event => { event.currentTarget.focus(); openAuth("signup"); }}>Sign up</Button>
+            <Button size="sm" variant="ghost" onClick={event => { event.currentTarget.focus(); openAuth("signin"); }}>{t("auth.signIn")}</Button>
+            <Button size="sm" onClick={event => { event.currentTarget.focus(); openAuth("signup"); }}>{t("auth.signUp")}</Button>
           </div>
         </div>
       </div>
       <div id="topContainer" className="w-full flex flex-col items-stretch justify-start relative flex-1 min-h-0 overflow-hidden">
         <div className="w-full h-full flex-1 min-h-0 flex items-start justify-center overflow-auto">
           {activeTune === "intro" ? <TuneMode tuneKey="intro" onLeave={leave} onPlaySample={play} onStopSample={stop}
-            isPlayingSample={isPlaying} language="en" notationPreference="abc"
+            isPlayingSample={isPlaying} language={settings.locale} notationPreference={settings.notation}
             onRegisterNoteHandler={registerOn} onRegisterNoteOffHandler={registerOff} onRegisterExpectedNotesProvider={registerExpected} />
             : <TuneLibrary onSignUp={() => openAuth("signup")} previewPaused={authOpen} onSelectTune={key => { if (key === "intro") { stop(); releaseInputs(); setEntryPitches(undefined); setActiveTune(key); } }} />}
         </div>
@@ -183,7 +188,7 @@ function GuestWorkspace({ interactive, onReady, initialKeyboardPitches }: GuestA
           canPlayOnKeyboard={midiSound.canPlayOnKeyboard} />
       </div>}>
       <div className="keyboard-panel w-full flex flex-col"><Piano ref={piano} className="flex-1 min-h-0" activeKeys={activeKeys}
-        allowInput={interactive && !authOpen} soundType={pianoSoundType} language="en" notationPreference="abc" showNoteRail={showNoteRail} idlePitches={entryPitches}
+        allowInput={interactive && !authOpen} soundType={pianoSoundType} language={settings.locale} notationPreference={settings.notation} showNoteRail={showNoteRail} idlePitches={entryPitches}
         onNoteStart={onNoteStart} onNoteEnd={onNoteEnd} /></div>
     </PianoDock>
     <GuestAuthDialog open={authOpen} mode={authMode} onOpenChange={setAuthOpen} />

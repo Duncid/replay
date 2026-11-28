@@ -10,7 +10,7 @@ test("highway covers the top UI while controls, dock alignment remain usable wit
     tuneTitle: "Intro", practicePlan: [{ itemId: "background", itemType: "nugget", instruction: "Follow the notes through the highway.", nugget: { noteSequence: sequence } }],
   }) }));
   await page.goto("/");
-  const headerColor = await page.locator(".replay-header").evaluate(el => getComputedStyle(el).backgroundColor);
+  const workspaceColor = await page.locator("[data-highway-surface]").evaluate(el => getComputedStyle(el).backgroundColor);
   await page.getByRole("button", { name: "Practice: Intro", exact: true }).click();
   const highway = page.locator('.note-highway[data-render-ready="true"]');
   await expect(highway).toBeVisible();
@@ -33,7 +33,7 @@ test("highway covers the top UI while controls, dock alignment remain usable wit
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await expect(page.getByRole("menu").first()).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.setViewportSize({ width: 600, height: 900 });
+  await page.setViewportSize({ width: 700, height: 900 });
   await expect(highway).toBeVisible();
   await expect.poll(alignment).toEqual({ top: 0, hit: 0, rail: 0 });
   await page.getByRole("button", { name: "Keyboard settings", exact: true }).click();
@@ -50,7 +50,7 @@ test("highway covers the top UI while controls, dock alignment remain usable wit
   await expect.poll(alignment).toEqual({ top: 0, hit: 0, rail: 0 });
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Leave", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What would you like to play today?" })).toBeVisible();
   await expect(page.locator(".note-highway")).toHaveCount(0);
-  expect(await page.locator(".replay-header").evaluate(el => getComputedStyle(el).backgroundColor)).toBe(headerColor);
+  expect(await page.locator("[data-highway-surface]").evaluate(el => getComputedStyle(el).backgroundColor)).toBe(workspaceColor);
 });

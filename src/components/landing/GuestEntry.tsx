@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Landing from "@/pages/Landing";
@@ -11,6 +12,7 @@ const preload = () => { void loadGuest().catch(() => {}); };
 
 /** This route layout survives / → /play so the outgoing iPad never remounts. */
 export default function GuestEntry({ canEnter = true }: { canEnter?: boolean }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [phase, setPhase] = useState<GuestEntryPhase>("idle");
@@ -143,7 +145,7 @@ export default function GuestEntry({ canEnter = true }: { canEnter?: boolean }) 
       <div ref={widthProbe} className="guest-entry-width-probe" aria-hidden="true" />
       {location.pathname === "/" && <div className="guest-entry-source" inert={entering} aria-hidden={entering || undefined}><Landing /></div>}
       <div ref={destination} className="guest-entry-destination" data-entering={entering || undefined} inert={entering} aria-hidden={entering || undefined}>
-        {canEnter && (location.pathname === "/play" || entering) && <Suspense fallback={<div className="h-dvh flex items-center justify-center">Loading music…</div>}>
+        {canEnter && (location.pathname === "/play" || entering) && <Suspense fallback={<div className="h-dvh flex items-center justify-center">{t("library.loadingMusic")}</div>}>
           <GuestApp interactive={!entering} onReady={ready} initialKeyboardPitches={entryPitches} />
         </Suspense>}
       </div>

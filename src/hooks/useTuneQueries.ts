@@ -1,3 +1,6 @@
+import { useCallback } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { tuneDisplayTitle } from "@/utils/tunePreview";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { TuneCoachResponse, TuneEvaluationResponse } from "@/types/tunePractice";
@@ -112,7 +115,13 @@ interface PublishedTuneInfo {
 }
 
 export function usePublishedTuneKeys() {
+  const { systemTitle } = useLanguage();
+  const select = useCallback((rows: PublishedTuneInfo[]) => rows.map(row => {
+    const original = row.briefing?.title?.trim() || tuneDisplayTitle(row.tune_key);
+    return { ...row, displayTitle: row.is_global ? systemTitle(row.tune_key, original) : original };
+  }), [systemTitle]);
   return useQuery({
+    select,
     queryKey: ["published-tune-keys"],
     queryFn: async (): Promise<PublishedTuneInfo[]> => {
       const { data, error } = await supabase

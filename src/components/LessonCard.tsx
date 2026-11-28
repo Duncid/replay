@@ -67,7 +67,7 @@ export function LessonCard({
               aria-label={t("learnMode.leaveButton")}
             >
               <ArrowLeft className="h-4 w-4" />
-              Leave
+              {t("evaluation.finishLesson")}
             </Button>
           ) : (
             /* Evaluation mode: Back button */
@@ -143,11 +143,11 @@ export function LessonCard({
         <div className="rounded-lg mt-12 px-4 py-2 bg-amber-500">
           <div className="flex items-center justify-center gap-4 text-xs text-amber-950">
             {typeof difficulty === "number" && (
-              <span>Difficulty: {difficulty}</span>
+              <span>{t("evaluation.difficulty", { value: difficulty })}</span>
             )}
             {skillToUnlock && (
               <span>
-                Skill: {skillToUnlock.skillKey}
+                {t("evaluation.skill", { value: skillToUnlock.skillKey })}
                 {skillToUnlock.title && ` (${skillToUnlock.title})`}
               </span>
             )}

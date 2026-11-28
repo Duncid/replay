@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from 'react';
 import {
   Dialog,
@@ -25,6 +26,7 @@ export function SaveCompositionModal({
   isLoading = false,
   defaultTitle = '',
 }: SaveCompositionModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(defaultTitle);
 
   const handleSave = async () => {
@@ -51,15 +53,15 @@ export function SaveCompositionModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>Save Composition</DialogTitle>
+          <DialogTitle>{t("compose.saveTitle")}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <Label htmlFor="title">Title</Label>
+          <Label htmlFor="title">{t("upload.title")}</Label>
           <Input
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="My composition"
+            placeholder={t("compose.placeholder")}
             className="mt-2"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && title.trim()) {
@@ -71,10 +73,10 @@ export function SaveCompositionModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
-            Cancel
+            {t("menus.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!title.trim() || isLoading}>
-            {isLoading ? 'Saving...' : 'Save'}
+            {isLoading ? t("compose.saving") : t("menus.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

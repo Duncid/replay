@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +16,10 @@ import SupportedScreenMessage from "./components/SupportedScreenMessage";
 
 const Index = lazy(() => import("./pages/Index"));
 
-const Loading = () => <div className="h-dvh flex items-center justify-center bg-background text-foreground">Loading music...</div>;
+function Loading() {
+  const { t } = useTranslation();
+  return <div className="h-dvh flex items-center justify-center bg-background text-foreground">{t("library.loadingMusic")}</div>;
+}
 
 function PublicEntry() {
   const { user, loading } = useAuth();
@@ -31,12 +36,13 @@ function PublicEntry() {
 }
 
 function Login() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const { user, loading } = useAuth();
   if (loading) return <Loading />;
   if (user) return <Navigate to="/" replace />;
   return <>
-    <Link to="/" className="absolute left-6 top-6 z-10 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">Back to Noodlyn</Link>
+    <Link to="/" className="absolute left-6 top-6 z-10 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{t("auth.home")}</Link>
     <Auth initialMode={params.get("mode") === "signup" ? "signup" : "signin"} />
   </>;
 }
@@ -46,9 +52,8 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-    <TooltipProvider>
+    <BrowserRouter><LanguageProvider><TooltipProvider>
       <Sonner />
-      <BrowserRouter>
         <Routes>
           <Route element={<PublicEntry />}>
             <Route path="/" element={<></>} />
@@ -60,8 +65,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    </TooltipProvider></LanguageProvider></BrowserRouter>
     </AuthProvider>
   </QueryClientProvider>
 );

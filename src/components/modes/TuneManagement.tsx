@@ -1,3 +1,5 @@
+import i18n from "@/lib/i18n";
+import { useTranslation } from "react-i18next";
 import { toast as sonnerToast } from "sonner";
 import { Globe, Lock } from "lucide-react";
 import { getRecommendedBaseUnit } from "@/components/PianoSheetPixiLayout";
@@ -292,6 +294,7 @@ function useTuneManagementContext() {
 }
 
 function useTuneManagementState(active: boolean): TuneManagementContextValue {
+  const { t: translate } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -359,7 +362,7 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     const lower = publishedFilter.toLowerCase();
     return keys.filter((key) => {
       const t = tuneList?.find((x) => x.tune_key === key);
-      const name = t?.briefing?.title?.trim() || tuneDisplayTitle(key);
+      const name = t?.displayTitle || tuneDisplayTitle(key);
       return name.toLowerCase().includes(lower);
     });
   }, [publishedTuneKeys, publishedFilter, tuneList]);
@@ -894,17 +897,17 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
   ]);
 
   const selectionLabel = useMemo(() => {
-    if (!selectedTune) return "Select tune...";
+    if (!selectedTune) return translate("editing.selectTune");
     const t = tuneList?.find((x) => x.tune_key === selectedTune);
-    return t?.briefing?.title?.trim() || tuneDisplayTitle(selectedTune);
-  }, [selectedTune, tuneList]);
+    return t?.displayTitle || tuneDisplayTitle(selectedTune);
+  }, [selectedTune, tuneList, translate]);
 
   const targetLabel = useMemo(() => {
-    if (showOverview) return "Overview";
+    if (showOverview) return translate("tuneManager.overview");
     if (!selectedItemId && selectedTarget !== "full") {
-      return selectedTarget.charAt(0).toUpperCase() + selectedTarget.slice(1);
+      return translate("tuneManager." + selectedTarget);
     }
-    let baseLabel = selectedTarget === "full" ? "Full" : selectedItemId;
+    let baseLabel = selectedTarget === "full" ? translate("tuneManager.full") : selectedItemId;
     if (selectedTarget === "nuggets") {
       const row = nuggetMenuItems.find((item) => item.id === selectedItemId);
       if (row) baseLabel = row.label;
@@ -917,13 +920,13 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
       selectedHand === "full"
         ? ""
         : selectedHand === "left"
-          ? ", Left hand"
-          : ", Right hand";
+          ? ", " + translate("tuneManager.left")
+          : ", " + translate("tuneManager.right");
     const instSuffix =
       selectedHand === "full" && selectedInstParts === "inst1"
-        ? ", Inst 1"
+        ? ", " + translate("tuneManager.leftInstrument")
         : selectedHand === "full" && selectedInstParts === "inst2"
-          ? ", Inst 2"
+          ? ", " + translate("tuneManager.rightInstrument")
           : "";
     return `${baseLabel}${handSuffix}${instSuffix}`;
   }, [
@@ -934,6 +937,7 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     selectedItemId,
     selectedTarget,
     showOverview,
+    translate,
   ]);
 
   // Selection handler
@@ -967,10 +971,10 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
         },
       });
       if (error) throw error;
-      if (!data.success) throw new Error(data.error || "Rename failed");
+      if (!data.success) throw new Error(data.error || i18n.t("notices.renameFailed"));
       toast({
-        title: "Renamed",
-        description: `Tune renamed to "${newName.trim()}"`,
+        title: i18n.t("notices.renamed"),
+        description: i18n.t("notices.renamedTune", { title: newName.trim() }),
       });
       setShowRenameDialog(false);
       queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
@@ -978,8 +982,8 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     } catch (err) {
       console.error("[TuneManagement] Rename failed:", err);
       toast({
-        title: "Rename failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: i18n.t("notices.renameFailed"),
+        description: err instanceof Error ? err.message : i18n.t("notices.unknown"),
         variant: "destructive",
       });
     } finally {
@@ -1004,10 +1008,10 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
         },
       });
       if (error) throw error;
-      if (!data.success) throw new Error(data.error || "Delete failed");
+      if (!data.success) throw new Error(data.error || i18n.t("notices.deleteFailed"));
       toast({
-        title: "Deleted",
-        description: `Tune "${deleteTarget}" deleted.`,
+        title: i18n.t("notices.deleted"),
+        description: i18n.t("notices.deletedTune", { title: deleteTarget }),
       });
       setShowDeleteDialog(false);
       if (selectedTune === deleteTarget) {
@@ -1017,8 +1021,8 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
     } catch (err) {
       console.error("[TuneManagement] Delete failed:", err);
       toast({
-        title: "Delete failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: i18n.t("notices.deleteFailed"),
+        description: err instanceof Error ? err.message : i18n.t("notices.unknown"),
         variant: "destructive",
       });
     } finally {
@@ -1056,8 +1060,8 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
 
       if (data.success) {
         toast({
-          title: "Published successfully",
-          description: `Tune "${finalTuneKey}" published.`,
+          title: i18n.t("notices.published"),
+          description: i18n.t("notices.publishedTune", { title: finalTuneKey }),
         });
         setShowPublishDialog(false);
         setNewTuneTitle("");
@@ -1072,13 +1076,13 @@ function useTuneManagementState(active: boolean): TuneManagementContextValue {
         setSelectedTune(finalTuneKey);
         setSelectedInstParts("both");
       } else {
-        throw new Error(data.error || "Unknown error");
+        throw new Error(data.error || i18n.t("notices.unknown"));
       }
     } catch (error) {
       console.error("[TuneManagement] Publish failed:", error);
       toast({
-        title: "Publish failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        title: i18n.t("editing.publishFailed"),
+        description: error instanceof Error ? error.message : i18n.t("notices.unknown"),
         variant: "destructive",
       });
     } finally {
@@ -1184,6 +1188,7 @@ export const TuneManagement = ({
   onRegisterExpectedNotesProvider,
   expectedNotesRegistrationActive = true,
 }: TuneManagementProps) => {
+  const { t: translate } = useTranslation();
   const {
     showOverview,
     selectedSource,
@@ -1489,7 +1494,7 @@ export const TuneManagement = ({
   if (isLoadingList) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <p className="text-muted-foreground">Loading tunes...</p>
+        <p className="text-muted-foreground">{translate("tuneManager.loadingTunes")}</p>
       </div>
     );
   }
@@ -1498,7 +1503,7 @@ export const TuneManagement = ({
     return (
       <div className="w-full h-full flex items-center justify-center">
         <p className="text-muted-foreground">
-          No tunes found. Add tunes to src/music/ to get started.
+          {translate("tuneManager.empty")}
         </p>
       </div>
     );
@@ -1529,8 +1534,8 @@ export const TuneManagement = ({
           ) : (
             <div className="p-4 text-sm text-muted-foreground border rounded">
               {selectedSource === "published" && isLoadingAssets
-                ? "Loading XML..."
-                : "No XML available"}
+                ? translate("editing.xmlLoading")
+                : translate("editing.xmlEmpty")}
             </div>
           )}
         </div>
@@ -1600,24 +1605,24 @@ export const TuneManagement = ({
       <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Publish Tune</DialogTitle>
+            <DialogTitle>{translate("tuneManager.publishTune")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Publishing: <strong>{selectedTune}</strong>
+              {translate("editing.publishTarget", { title: selectedTune })}
             </p>
 
             <div className="space-y-2">
-              <Label>Action</Label>
+              <Label>{translate("tuneManager.action")}</Label>
               <Select value={publishMode} onValueChange={setPublishMode}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="create">Create New Tune</SelectItem>
+                  <SelectItem value="create">{translate("tuneManager.create")}</SelectItem>
                   {Array.from(publishedTuneKeys).map((key) => (
                     <SelectItem key={key} value={key}>
-                      Update "{key}"
+                      {translate("editing.updateTarget", { title: key })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1626,11 +1631,11 @@ export const TuneManagement = ({
 
             {publishMode === "create" && (
               <div className="space-y-2">
-                <Label>Title</Label>
+                <Label>{translate("upload.title")}</Label>
                 <Input
                   value={newTuneTitle}
                   onChange={(e) => setNewTuneTitle(e.target.value)}
-                  placeholder={`e.g., ${selectedTune}`}
+                  placeholder={translate("editing.example", { value: selectedTune })}
                 />
               </div>
             )}
@@ -1640,10 +1645,10 @@ export const TuneManagement = ({
               variant="outline"
               onClick={() => setShowPublishDialog(false)}
             >
-              Cancel
+              {translate("menus.cancel")}
             </Button>
             <Button onClick={handlePublish} disabled={isPublishing}>
-              {isPublishing ? "Publishing..." : "Publish"}
+              {translate(isPublishing ? "editing.publishing" : "questEditor.publish")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1653,18 +1658,18 @@ export const TuneManagement = ({
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Tune</DialogTitle>
+            <DialogTitle>{translate("tuneManager.renameTune")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Renaming: <strong>{renameTarget}</strong>
+              {translate("editing.renameTarget", { title: renameTarget })}
             </p>
             <div className="space-y-2">
-              <Label>New Name</Label>
+              <Label>{translate("tuneManager.newName")}</Label>
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Enter new name"
+                placeholder={translate("tuneManager.nameHint")}
               />
             </div>
           </div>
@@ -1673,13 +1678,13 @@ export const TuneManagement = ({
               variant="outline"
               onClick={() => setShowRenameDialog(false)}
             >
-              Cancel
+              {translate("menus.cancel")}
             </Button>
             <Button
               onClick={handleRename}
               disabled={isRenaming || !newName.trim()}
             >
-              {isRenaming ? "Renaming..." : "Rename"}
+              {translate(isRenaming ? "editing.renaming" : "questEditor.rename")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1689,14 +1694,14 @@ export const TuneManagement = ({
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Tune</DialogTitle>
+            <DialogTitle>{translate("tuneManager.deleteTune")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete <strong>{deleteTarget}</strong>?
+              {translate("editing.deleteTarget", { title: deleteTarget })}
             </p>
             <p className="text-sm text-destructive">
-              This action cannot be undone.
+              {translate("tuneManager.irreversible")}
             </p>
           </div>
           <DialogFooter>
@@ -1704,14 +1709,14 @@ export const TuneManagement = ({
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
             >
-              Cancel
+              {translate("menus.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {translate(isDeleting ? "editing.deleting" : "userMenu.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1734,6 +1739,7 @@ export function TuneSelectionSubmenus({
     selectTune,
   } = useTuneManagementContext();
 
+  const { t } = useTranslation();
   const choose = (source: TuneSource, tune: string) => {
     selectTune(source, tune);
     onSelected?.();
@@ -1742,12 +1748,12 @@ export function TuneSelectionSubmenus({
   const { data: tunes = [] } = usePublishedTuneKeys();
   const nameOf = (key: string) => {
     const t = tunes.find((x) => x.tune_key === key);
-    return t?.briefing?.title?.trim() || tuneDisplayTitle(key);
+    return t?.displayTitle || tuneDisplayTitle(key);
   };
   const visible = new Set(filteredPublishedKeys);
   const groups = [
-    { label: "Account", keys: tunes.filter((t) => !t.is_global && visible.has(t.tune_key)) },
-    { label: "System", keys: tunes.filter((t) => t.is_global && visible.has(t.tune_key)) },
+    { label: "management.account", keys: tunes.filter((t) => !t.is_global && visible.has(t.tune_key)) },
+    { label: "management.system", keys: tunes.filter((t) => t.is_global && visible.has(t.tune_key)) },
   ].map((g) => ({
     label: g.label,
     keys: g.keys.map((t) => t.tune_key).sort((a, b) => nameOf(a).localeCompare(nameOf(b))),
@@ -1757,11 +1763,11 @@ export function TuneSelectionSubmenus({
     <>
       {groups.map((group) => (
         <DropdownMenuSub key={group.label}>
-          <DropdownMenuSubTrigger>{group.label}</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>{t(group.label)}</DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="bg-popover w-64 p-0 flex flex-col max-h-80 overflow-hidden">
             <div className="p-2 border-b shrink-0">
               <Input
-                placeholder="Filter..."
+                placeholder={t("management.filter")}
                 value={publishedFilter}
                 onChange={(e) => setPublishedFilter(e.target.value)}
                 className="h-8"
@@ -1780,7 +1786,7 @@ export function TuneSelectionSubmenus({
                   </DropdownMenuItem>
                 ))
               ) : (
-                <DropdownMenuItem disabled>No matches</DropdownMenuItem>
+                <DropdownMenuItem disabled>{t("management.noMatches")}</DropdownMenuItem>
               )}
             </div>
           </DropdownMenuSubContent>
@@ -1804,6 +1810,7 @@ export function TuneSelectionLabel() {
 }
 
 export function TuneManagementActionBar() {
+  const { t: translate } = useTranslation();
   const {
     selectedSource,
     selectedTune,
@@ -1846,14 +1853,14 @@ export function TuneManagementActionBar() {
   );
 
   const tracksLabel = useMemo(() => {
-    if (selectedInstParts === "inst1") return "Inst 1";
-    if (selectedInstParts === "inst2") return "Inst 2";
-    return "Both tracks";
-  }, [selectedInstParts]);
+    if (selectedInstParts === "inst1") return translate("tuneManager.leftInstrument");
+    if (selectedInstParts === "inst2") return translate("tuneManager.rightInstrument");
+    return translate("tuneManager.bothTracks");
+  }, [selectedInstParts, translate]);
 
   const handLabel = useCallback((hand: HandType) => {
-    return hand === "left" ? "Left hand" : "Right hand";
-  }, []);
+    return translate(hand === "left" ? "tuneManager.left" : "tuneManager.right");
+  }, [translate]);
 
   const fullHandAvailability = useMemo(
     () => getHandAvailability("full", ""),
@@ -1914,12 +1921,12 @@ export function TuneManagementActionBar() {
         {playbackStatus.isAutoplay ? (
           <>
             <Pause fill="currentColor" stroke="none" />
-            Pause
+            {translate("landing.pause")}
           </>
         ) : (
           <>
             <Play fill="currentColor" stroke="none" />
-            Play
+            {translate("controls.play")}
           </>
         )}
       </Button>
@@ -1932,7 +1939,7 @@ export function TuneManagementActionBar() {
           onClick={() => playbackActionsRef.current?.stop()}
           disabled={!playbackStatus.hasNotes}
         >
-          Restart
+          {translate("tune.buttons.restart")}
         </Button>
       )}
 
@@ -1946,19 +1953,19 @@ export function TuneManagementActionBar() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="bg-popover">
           <DropdownMenuItem onClick={() => setShowOverview(true)}>
-            <span className="flex-1">Overview</span>
+            <span className="flex-1">{translate("tuneManager.overview")}</span>
             {showOverview && <Check className="h-4 w-4 ml-2" />}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => selectTarget("full", "", "full")}>
-            <span className="flex-1">Full</span>
+            <span className="flex-1">{translate("tuneManager.full")}</span>
             {!showOverview && selectedTarget === "full" && selectedHand === "full" && (
               <Check className="h-4 w-4 ml-2" />
             )}
           </DropdownMenuItem>
           {fullHandAvailability.left && (
             <DropdownMenuItem onClick={() => selectTarget("full", "", "left")}>
-              <span className="flex-1">Full, {handLabel("left")}</span>
+              <span className="flex-1">{translate("editing.fullHand", { hand: handLabel("left") })}</span>
               {selectedTarget === "full" && selectedHand === "left" && (
                 <Check className="h-4 w-4 ml-2" />
               )}
@@ -1966,7 +1973,7 @@ export function TuneManagementActionBar() {
           )}
           {fullHandAvailability.right && (
             <DropdownMenuItem onClick={() => selectTarget("full", "", "right")}>
-              <span className="flex-1">Full, {handLabel("right")}</span>
+              <span className="flex-1">{translate("editing.fullHand", { hand: handLabel("right") })}</span>
               {selectedTarget === "full" && selectedHand === "right" && (
                 <Check className="h-4 w-4 ml-2" />
               )}
@@ -1974,7 +1981,7 @@ export function TuneManagementActionBar() {
           )}
 
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Nuggets</DropdownMenuSubTrigger>
+            <DropdownMenuSubTrigger>{translate("tuneManager.nuggets")}</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
               {nuggetMenuItems.length > 0 ? (
                 nuggetMenuItems.map((item) => (
@@ -2031,13 +2038,13 @@ export function TuneManagementActionBar() {
                   </Fragment>
                 ))
               ) : (
-                <DropdownMenuItem disabled>No nuggets</DropdownMenuItem>
+                <DropdownMenuItem disabled>{translate("tuneManager.noNuggets")}</DropdownMenuItem>
               )}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Assemblies</DropdownMenuSubTrigger>
+            <DropdownMenuSubTrigger>{translate("tuneManager.assemblies")}</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-popover max-h-60 overflow-y-auto">
               {assemblyMenuItems.length > 0 ? (
                 assemblyTierGroups.map(([tier, items]) => (
@@ -2109,7 +2116,7 @@ export function TuneManagementActionBar() {
                   </div>
                 ))
               ) : (
-                <DropdownMenuItem disabled>No assemblies</DropdownMenuItem>
+                <DropdownMenuItem disabled>{translate("tuneManager.noAssemblies")}</DropdownMenuItem>
               )}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
@@ -2126,16 +2133,16 @@ export function TuneManagementActionBar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-popover">
             <DropdownMenuItem onClick={() => setSelectedInstParts("both")}>
-              <span className="flex-1">Both tracks</span>
+              <span className="flex-1">{translate("tuneManager.bothTracks")}</span>
               {selectedInstParts === "both" && (
                 <Check className="h-4 w-4 ml-2 shrink-0" />
               )}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSelectedInstParts("inst1")}>
               <span className="flex-1 flex flex-col items-start gap-0 min-w-0">
-                <span>Inst 1</span>
+                <span>{translate("tuneManager.leftInstrument")}</span>
                 <span className="text-xs text-muted-foreground">
-                  Left hand
+                  {translate("tuneManager.left")}
                 </span>
               </span>
               {selectedInstParts === "inst1" && (
@@ -2144,9 +2151,9 @@ export function TuneManagementActionBar() {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSelectedInstParts("inst2")}>
               <span className="flex-1 flex flex-col items-start gap-0 min-w-0">
-                <span>Inst 2</span>
+                <span>{translate("tuneManager.rightInstrument")}</span>
                 <span className="text-xs text-muted-foreground">
-                  Right hand
+                  {translate("tuneManager.right")}
                 </span>
               </span>
               {selectedInstParts === "inst2" && (
@@ -2164,14 +2171,14 @@ export function TuneManagementActionBar() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <Pencil className="h-4 w-4 mr-1" />
-                Edit
+                {translate("questEditor.edit")}
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-popover">
               <DropdownMenuItem onClick={() => openRenameDialog(selectedTune)}>
                 <Pencil />
-                Rename
+                {translate("questEditor.rename")}
               </DropdownMenuItem>
               <GlobalToggleItem tuneKey={selectedTune} />
               <DropdownMenuItem
@@ -2179,7 +2186,7 @@ export function TuneManagementActionBar() {
                 className="text-destructive"
               >
                 <Trash2 />
-                Delete
+                {translate("userMenu.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -2190,7 +2197,7 @@ export function TuneManagementActionBar() {
             onClick={() => setShowPublishDialog(true)}
           >
             <Upload className="h-4 w-4 mr-1" />
-            Publish
+            {translate("questEditor.publish")}
           </Button>
         ))}
     </>
@@ -2218,6 +2225,7 @@ export function TuneManagementTabContent({
   onRegisterExpectedNotesProvider,
   expectedNotesRegistrationActive = true,
 }: TuneManagementTabContentProps) {
+  const { t: translate } = useTranslation();
   const [hasOpened, setHasOpened] = useState(expectedNotesRegistrationActive);
   useEffect(() => {
     if (expectedNotesRegistrationActive) setHasOpened(true);
@@ -2228,7 +2236,7 @@ export function TuneManagementTabContent({
       forceMount
       className="w-full h-full flex-1 min-h-0 flex items-stretch justify-start data-[state=inactive]:hidden"
     >
-      {(hasOpened || expectedNotesRegistrationActive) && <Suspense fallback={<p className="p-4 text-muted-foreground">Loading notation...</p>}>
+      {(hasOpened || expectedNotesRegistrationActive) && <Suspense fallback={<p className="p-4 text-muted-foreground">{translate("practice.notation")}</p>}>
       <TuneManagement
         onPlaybackInputEventRef={onPlaybackInputEventRef}
         onActivePitchesChange={onActivePitchesChange}
@@ -2243,6 +2251,7 @@ export function TuneManagementTabContent({
 
 /** Admin choice: System (Noodlyn) tunes are listed for every account; account tunes only for their owner. */
 function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const { data: tunes = [] } = usePublishedTuneKeys();
   const { data: userId } = useQuery({ queryKey: ["auth-user-id"], queryFn: async () => (await supabase.auth.getUser()).data.user?.id ?? null });
@@ -2250,7 +2259,7 @@ function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
   const myAccountTunes = tunes.filter((t) => !t.is_global && t.owner_user_id === userId && t.tune_key !== tuneKey);
   const call = async (body: Record<string, unknown>, done: string) => {
     const { data, error } = await supabase.functions.invoke("tune-manage", { body });
-    if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? "Update failed"); return; }
+    if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? i18n.t("notices.updateFailed")); return; }
     sonnerToast.success(done);
     queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
     queryClient.invalidateQueries({ queryKey: ["tune-assets"] });
@@ -2259,19 +2268,19 @@ function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
   return (
     <>
       <DropdownMenuItem onClick={() => call({ action: isGlobal ? "demote" : "promote", tuneKey },
-        isGlobal ? `"${tuneKey}" moved back to your account tunes` : `"${tuneKey}" is now a Noodlyn tune`)}>
+        isGlobal ? i18n.t("notices.demoted", { title: tuneKey }) : i18n.t("notices.promoted", { title: tuneKey }))}>
         {isGlobal ? <Lock /> : <Globe />}
-        {isGlobal ? "Move back to my account" : "Promote to Noodlyn tune"}
+        {translate(isGlobal ? "editing.demote" : "editing.promote")}
       </DropdownMenuItem>
       {isGlobal && (
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger><Upload />Replace with…</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger><Upload />{translate("tuneManager.replace")}</DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="bg-popover max-h-80 overflow-y-auto">
-            {myAccountTunes.length === 0 && <DropdownMenuItem disabled>No account tunes</DropdownMenuItem>}
+            {myAccountTunes.length === 0 && <DropdownMenuItem disabled>{translate("tuneManager.noAccountTunes")}</DropdownMenuItem>}
             {myAccountTunes.map((t) => (
               <DropdownMenuItem key={t.tune_key} onClick={() => {
-                if (confirm(`Replace the music of "${tuneKey}" with "${titleOf(t)}"? Its name and place in lists stay the same.`)) {
-                  void call({ action: "replace-system", tuneKey, sourceTuneKey: t.tune_key }, `"${tuneKey}" now plays "${titleOf(t)}"`);
+                if (confirm(i18n.t("notices.replace", { title: tuneKey, source: titleOf(t) }))) {
+                  void call({ action: "replace-system", tuneKey, sourceTuneKey: t.tune_key }, i18n.t("notices.replaced", { title: tuneKey, source: titleOf(t) }));
                 }
               }}>{titleOf(t)}</DropdownMenuItem>
             ))}
@@ -2284,6 +2293,7 @@ function GlobalToggleItem({ tuneKey }: { tuneKey: string }) {
 
 /** Debug review: every nugget, assembly and the full tune in one list, smallest first, with duplicates flagged. */
 function TuneOverview() {
+  const { t: translate } = useTranslation();
   const {
     overviewItems, selectedSource, selectedTune, isLoadingAssets, isGlobalTune,
     setShowOverview, setSelectedTarget, setSelectedItemId, setSelectedHand, setShowPublishDialog,
@@ -2301,8 +2311,8 @@ function TuneOverview() {
     setPublishing(true);
     const { data, error } = await supabase.functions.invoke("tune-manage", { body: { action: "promote", tuneKey: selectedTune } });
     setPublishing(false);
-    if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? "Publish failed"); return; }
-    sonnerToast.success(`"${selectedTune}" is now published for everyone`);
+    if (error || !data?.success) { sonnerToast.error(data?.error ?? error?.message ?? translate("editing.publishFailed")); return; }
+    sonnerToast.success(translate("editing.publicTitle", { title: selectedTune }));
     queryClient.invalidateQueries({ queryKey: ["published-tune-keys"] });
   };
   const alreadyPublished = selectedSource === "published" && isGlobalTune;
@@ -2313,17 +2323,17 @@ function TuneOverview() {
         <div className="min-w-0">
           <h2 className="text-lg font-semibold truncate">{selectedTune}</h2>
           <p className="text-sm text-muted-foreground">
-            {overviewItems.length} items, smallest first{duplicates ? ` · ${duplicates} duplicate${duplicates > 1 ? "s" : ""}` : ""}
+            {translate("editing.item", { count: overviewItems.length })}{duplicates > 0 && ` · ${translate("editing.duplicate", { count: duplicates })}`}
           </p>
         </div>
         <Button onClick={publish} disabled={publishing || alreadyPublished || !selectedTune}>
           <Upload className="h-4 w-4 mr-1" />
-          {alreadyPublished ? "Published" : publishing ? "Publishing..." : "Publish"}
+          {translate(alreadyPublished ? "editing.published" : publishing ? "editing.publishing" : "questEditor.publish")}
         </Button>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6" data-testid="tune-overview">
         {selectedSource === "published" && isLoadingAssets ? (
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{translate("tuneManager.loading")}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {(() => {
@@ -2338,12 +2348,12 @@ function TuneOverview() {
                       <span className="font-medium">{item.label}</span>
                     </span>
                     <span className="shrink-0 text-xs text-muted-foreground">
-                      {[item.bars, `${item.noteCount} notes`, `${item.duration.toFixed(1)}s`].filter(Boolean).join(" · ")}
+                      {[item.bars, translate("editing.notes", { count: item.noteCount }), `${item.duration.toFixed(1)}s`].filter(Boolean).join(" · ")}
                     </span>
                   </span>
                   {(item.duplicateOf || item.sameAs) && (
                     <span className="text-xs text-destructive">
-                      {item.duplicateOf ? `Duplicate of ${item.duplicateOf}` : `Marked as repeat of ${item.sameAs}`}
+                      {item.duplicateOf ? translate("editing.duplicateOf", { id: item.duplicateOf }) : translate("editing.sameAs", { id: item.sameAs })}
                     </span>
                   )}
                   <div style={{ width: `${Math.max(5, (item.duration / maxDuration) * 100)}%` }}>

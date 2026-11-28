@@ -107,8 +107,8 @@ test("Admin navigation opens Quest and returns to student tunes", async ({ page 
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Quest", exact: true }).click();
   await expect(page.getByRole("button", { name: "Add", exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "Tunes", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to tunes", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "What would you like to play today?" })).toBeVisible();
 });
 
 const publishedTuneRoute = async (route: Route) => {

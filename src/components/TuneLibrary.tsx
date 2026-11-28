@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { lazy, Suspense, useRef, useState } from "react";
 import { toast } from "sonner";
 import { tuneDisplayTitle } from "@/utils/tunePreview";
@@ -19,12 +20,14 @@ interface TuneLibraryProps {
   previewPaused?: boolean;
 }
 export function TuneLibrary({ localUserId, profileLoading, onSelectTune, onSignUp, previewPaused }: TuneLibraryProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  if (!user) return <Suspense fallback={<LoadingSpinner message="Loading music…" />}><GuestTuneLibrary onSelectTune={onSelectTune} onSignUp={onSignUp} previewPaused={previewPaused} /></Suspense>;
+  if (!user) return <Suspense fallback={<LoadingSpinner message={t("library.loadingMusic")} />}><GuestTuneLibrary onSelectTune={onSelectTune} onSignUp={onSignUp} previewPaused={previewPaused} /></Suspense>;
   return <AccountTuneLibrary localUserId={localUserId} profileLoading={profileLoading} onSelectTune={onSelectTune} />;
 }
 
 function AccountTuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneLibraryProps) {
+  const { t } = useTranslation();
   const library = useTuneLibrary(localUserId);
   const { user } = useAuth();
   const active = useActiveTuneBuilds();
@@ -32,7 +35,7 @@ function AccountTuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneL
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  if (!profileLoading && !localUserId) return <p role="alert" className="p-8 text-center text-muted-foreground">Choose or create a practice profile from the Menu to play.</p>;
+  if (!profileLoading && !localUserId) return <p role="alert" className="p-8 text-center text-muted-foreground">{t("library.profile")}</p>;
   return (
     <>
       {user && (
@@ -54,9 +57,9 @@ function AccountTuneLibrary({ localUserId, profileLoading, onSelectTune }: TuneL
         onRemoveTune={tune => {
           const name = tune.title?.trim() || tuneDisplayTitle(tune.tune_key);
           if (tune.isSystem) {
-            void library.hideTune(tune.tune_key).then(() => toast.success(`${name} removed. Add it back from "Add a tune".`), e => toast.error(e.message));
-          } else if (confirm(`Delete "${name}"? This cannot be undone.`)) {
-            void library.deleteTune(tune.tune_key).then(() => toast.success(`${name} deleted`), e => toast.error(e.message));
+            void library.hideTune(tune.tune_key).then(() => toast.success(t("library.removed", { title: name })), e => toast.error(e.message));
+          } else if (confirm(t("library.confirmDelete", { title: name }))) {
+            void library.deleteTune(tune.tune_key).then(() => toast.success(t("library.deleted", { title: name })), e => toast.error(e.message));
           }
         }}
         builds={active.builds} onRetryBuild={active.retry} onDismissBuild={active.dismiss} />

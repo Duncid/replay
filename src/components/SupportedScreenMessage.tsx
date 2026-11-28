@@ -2,15 +2,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { STORAGE_KEYS } from "@/utils/storageKeys";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import NoodlynWordmark from "@/components/landing/NoodlynWordmark";
 
 export default function SupportedScreenMessage() {
   const { user, signOut } = useAuth();
-  const [language] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
-  const { t } = useTranslation("common", { lng: language === "fr" ? "fr" : "en" });
+  const { settings } = useLanguage();
+  const { t } = useTranslation("common", { lng: settings.locale });
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
   const home = user ? "/?home" : "/";
@@ -22,7 +21,7 @@ export default function SupportedScreenMessage() {
     finally { setPending(false); }
   };
 
-  return <div className="noodlyn-landing flex min-h-dvh flex-col" data-screen-restriction lang={language === "fr" ? "fr" : "en"}>
+  return <div className="noodlyn-landing flex min-h-dvh flex-col" data-screen-restriction lang={settings.locale}>
     <header className="landing-header shrink-0">
       <NoodlynWordmark to={home} label={t("supportedScreen.homeLabel")} />
       {user && <Button variant="ghost" disabled={pending} onClick={() => void handleSignOut()}>{t("supportedScreen.signOut")}</Button>}

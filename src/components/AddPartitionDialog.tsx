@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ function stripAbcHeaders(abc: string): string {
 }
 
 export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc, mode = 'add', onEdit, instrument = 'acoustic-piano' }: AddPartitionDialogProps) {
+  const { t } = useTranslation();
   const [abcText, setAbcText] = useState(initialAbc ? stripAbcHeaders(initialAbc) : "");
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
@@ -103,23 +105,23 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
 
   const handleSubmit = () => {
     if (!abcText.trim()) {
-      toast({ title: "Please enter ABC notation", variant: "destructive" });
+      toast({ title: t("abcEditor.empty"), variant: "destructive" });
       return;
     }
 
     try {
       const sequence = abcToNoteSequence(abcText, bpm);
       if (sequence.notes.length === 0) {
-        toast({ title: "No valid notes found in ABC notation", variant: "destructive" });
+        toast({ title: t("abcEditor.invalidNotes"), variant: "destructive" });
         return;
       }
 
       if (mode === 'edit' && onEdit) {
         onEdit(sequence);
-        toast({ title: "Recording updated" });
+        toast({ title: t("sequenceEditor.updated") });
       } else {
         onAdd(sequence);
-        toast({ title: "Partition added" });
+        toast({ title: t("abcEditor.added") });
       }
 
       setAbcText("");
@@ -127,8 +129,8 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
     } catch (error) {
       console.error("ABC parsing error:", error);
       toast({
-        title: "Invalid ABC notation",
-        description: error instanceof Error ? error.message : "Unable to parse ABC",
+        title: t("abcEditor.invalid"),
+        description: error instanceof Error ? error.message : t("abcEditor.parseError"),
         variant: "destructive"
       });
     }
@@ -146,7 +148,7 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
       <SheetContent side="right" className="w-full sm:max-w-xl flex flex-col">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            {mode === 'edit' ? 'Edit Recording' : 'Add Partition'}
+            {mode === 'edit' ? t("abcEditor.edit") : t("abcEditor.add")}
           </SheetTitle>
         </SheetHeader>
         <div className="flex-1 flex flex-col space-y-4 py-4 overflow-y-auto min-h-0">
@@ -156,12 +158,12 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
                 {isPlaying ? (
                   <>
                     <Square className="h-4 w-4" fill="currentColor" />
-                    Stop
+                    {t("controls.stop")}
                   </>
                 ) : (
                   <>
                     <Play className="h-4 w-4" fill="currentColor" />
-                    Play
+                    {t("controls.play")}
                   </>
                 )}
               </Button>
@@ -181,9 +183,9 @@ export function AddPartitionDialog({ open, onOpenChange, onAdd, bpm, initialAbc,
         </div>
         <SheetFooter className="gap-2 shrink-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("menus.cancel")}
           </Button>
-          <Button onClick={handleSubmit}>{mode === 'edit' ? 'Save' : 'Add'}</Button>
+          <Button onClick={handleSubmit}>{mode === 'edit' ? t("menus.save") : t("questEditor.add")}</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

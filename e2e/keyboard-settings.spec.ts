@@ -47,11 +47,14 @@ test("keyboard settings remember instruments and note visibility across library,
   await expect(rail).toHaveCount(0);
   await displayNotes(page, "Auto");
   await expect(rail).toBeVisible();
-  await page.getByRole("button", { name: "Leave", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
-  await expect(rail).toHaveCount(0);
-  await page.getByRole("tab", { name: "Compose", exact: true }).click();
+  const back = page.getByRole("button", { name: "Back to tunes", exact: true });
+  await expect(back).toHaveCount(0);
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Compose", exact: true }).click();
   await expect(rail).toHaveCount(0);
   await displayNotes(page, "Always");
   await expect(rail).toBeVisible();
+  await back.click();
+  await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
+  await expect(back).toHaveCount(0);
 });

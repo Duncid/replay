@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ const GoogleLogo = () => (
 type Mode = "signin" | "signup" | "forgot";
 
 export default function Auth({ redirectTo = window.location.origin, initialMode = "signin", embedded = false }: { redirectTo?: string; initialMode?: "signin" | "signup"; embedded?: boolean }) {
+  const { t } = useTranslation();
   const Surface = embedded ? "div" : "main";
   const surfaceClass = embedded ? "flex justify-center text-foreground" : "min-h-dvh flex items-center justify-center bg-background text-foreground p-6";
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -36,16 +38,16 @@ export default function Auth({ redirectTo = window.location.origin, initialMode 
           options: { emailRedirectTo: redirectTo },
         });
         if (error) throw error;
-        toast.success("Check your email to confirm your account.");
+        toast.success(t("auth.checkEmail"));
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password${redirectTo.includes("/auth/native?") ? `?next=${encodeURIComponent(new URL(redirectTo).pathname + new URL(redirectTo).search)}` : ""}`,
         });
         if (error) throw error;
-        toast.success("Check your email for a reset link.");
+        toast.success(t("auth.checkReset"));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(err instanceof Error ? err.message : t("auth.error"));
     } finally {
       setBusy(false);
     }
@@ -56,21 +58,21 @@ export default function Auth({ redirectTo = window.location.origin, initialMode 
     try {
       const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
       if (result.error) throw result.error;
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Sign-in failed"); }
+    } catch (error) { toast.error(error instanceof Error ? error.message : t("auth.failed")); }
     finally { setBusy(false); }
   };
 
   if (isNativeApp()) return <Surface className={surfaceClass}>
     <div className="w-full max-w-sm space-y-6 text-center">
       <h1 className="text-3xl font-bold">Noodlyn</h1>
-      <p className="text-muted-foreground">Sign in with Apple, Google, Lovable, or email to open your music and practice profiles.</p>
+      <p className="text-muted-foreground">{t("auth.nativeIntro")}</p>
       <Button className="w-full" disabled={busy} onClick={async () => {
         setBusy(true);
         try { await signInNative(); }
-        catch (error) { toast.error(error instanceof Error ? error.message : 'Sign-in failed'); }
+        catch (error) { toast.error(error instanceof Error ? error.message : t("auth.failed")); }
         finally { setBusy(false); }
-      }}>{busy ? 'Signing in…' : 'Sign in to Noodlyn'}</Button>
-      <p className="text-sm text-muted-foreground">Sign-in opens in a secure browser. You can also create an account or reset your password there.</p>
+      }}>{busy ? t("auth.signingIn") : t("auth.signInNoodlyn")}</Button>
+      <p className="text-sm text-muted-foreground">{t("auth.secure")}</p>
     </div>
   </Surface>;
 
@@ -80,7 +82,7 @@ export default function Auth({ redirectTo = window.location.origin, initialMode 
         <div className="space-y-1 text-center">
           <h1 className="text-3xl font-bold">Noodlyn</h1>
           <p className="text-muted-foreground">
-            {mode === "signup" ? "Create your account" : mode === "forgot" ? "Reset your password" : "Sign in to play"}
+            {mode === "signup" ? t("auth.createHeading") : mode === "forgot" ? t("auth.resetHeading") : t("auth.playHeading")}
           </p>
         </div>
 
@@ -94,43 +96,43 @@ export default function Auth({ redirectTo = window.location.origin, initialMode 
               style={{ background: "#131314", borderColor: "#8E918F", color: "#E3E3E3" }}
             >
               <GoogleLogo />
-              Continue with Google
+              {t("auth.provider", { provider: "Google" })}
             </button>
             <Button type="button" variant="apple" className="w-full gap-0 py-0 pr-8" disabled={busy} onClick={() => oauth("apple")}>
               <img src={appleLogo.url} alt="" className="h-10 w-auto shrink-0" />
-              Continue with Apple
+              {t("auth.provider", { provider: "Apple" })}
             </Button>
             <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={() => oauth("lovable")}>
-              Continue with Lovable
+              {t("auth.provider", { provider: "Lovable" })}
             </Button>
-            <div className="text-center text-xs text-muted-foreground pt-2">or</div>
+            <div className="text-center text-xs text-muted-foreground pt-2">{t("auth.or")}</div>
           </div>
         )}
 
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("auth.email")}</Label>
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           {mode !== "forgot" && (
             <div className="space-y-1">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password")}</Label>
               <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
           )}
           <Button type="submit" className="w-full" disabled={busy}>
-            {mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
+            {mode === "signin" ? t("auth.signIn") : mode === "signup" ? t("auth.create") : t("auth.sendLink")}
           </Button>
         </form>
 
         <div className="flex justify-between text-sm text-muted-foreground">
           {mode === "signin" ? (
             <>
-              <button type="button" onClick={() => setMode("signup")}>Create account</button>
-              <button type="button" onClick={() => setMode("forgot")}>Forgot password?</button>
+              <button type="button" onClick={() => setMode("signup")}>{t("auth.create")}</button>
+              <button type="button" onClick={() => setMode("forgot")}>{t("auth.forgot")}</button>
             </>
           ) : (
-            <button type="button" onClick={() => setMode("signin")}>Back to sign in</button>
+            <button type="button" onClick={() => setMode("signin")}>{t("auth.back")}</button>
           )}
         </div>
       </div>

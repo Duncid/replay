@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import { DebugLLMSheet } from "@/components/DebugLLMSheet";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useLocalUsers } from "@/hooks/useLocalUsers";
@@ -55,9 +56,10 @@ export interface TuneModeProps {
 }
 
 export function TuneMode(props: TuneModeProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  if (!user) return props.tuneKey === "intro" ? <Suspense fallback={<LoadingSpinner message="Loading music…" />}><GuestTuneMode {...props} /></Suspense>
-    : <div className="p-8 text-center"><p>This tune is locked for guests.</p><button onClick={props.onLeave}>Back to tunes</button></div>;
+  if (!user) return props.tuneKey === "intro" ? <Suspense fallback={<LoadingSpinner message={t("library.loadingMusic")} />}><GuestTuneMode {...props} /></Suspense>
+    : <div className="p-8 text-center"><p>{t("library.guestLocked")}</p><button onClick={props.onLeave}>{t("tune.backToTunes")}</button></div>;
   return <AccountTuneMode {...props} />;
 }
 
@@ -101,6 +103,8 @@ function AccountTuneMode({
   const startPractice = useStartTunePractice();
   const evaluateAttempt = useEvaluateTuneAttempt();
   const { data: tuneAssets } = useTuneAssets(tuneKey);
+  const { systemTitle } = useLanguage();
+  const displayTitle = tuneAssets?.is_global ? systemTitle(tuneKey, state.tuneTitle) : state.tuneTitle;
 
   const [coachDebugCall, setCoachDebugCall] = useState<{
     request?: string;
@@ -319,7 +323,7 @@ function AccountTuneMode({
 
           // Celebratory toast for tune acquisition
           if (response.tuneAcquired) {
-            toast.success(t("tune.tuneAcquired", { title: state.tuneTitle }));
+            toast.success(t("tune.tuneAcquired", { title: displayTitle }));
           }
 
           // Celebratory toast for skill unlocks from tune
@@ -373,7 +377,7 @@ function AccountTuneMode({
 
           // Celebratory toast for tune acquisition
           if (response.tuneAcquired) {
-            toast.success(t("tune.tuneAcquired", { title: state.tuneTitle }));
+            toast.success(t("tune.tuneAcquired", { title: displayTitle }));
           }
 
           // Celebratory toast for skill unlocks from tune
@@ -406,7 +410,7 @@ function AccountTuneMode({
       evaluateAttempt,
       updateEvaluation,
       onClearRecording,
-      state.tuneTitle,
+      displayTitle,
       state.currentIndex,
       state.practicePlan.length,
       t,
@@ -680,7 +684,7 @@ function AccountTuneMode({
         <div className="w-full h-full min-h-0 flex flex-col">
           <TunePractice language={language} notationPreference={notationPreference}
             tuneKey={tuneKey}
-            tuneTitle={state.tuneTitle}
+            tuneTitle={displayTitle}
             currentNugget={currentNugget}
             currentIndex={state.currentIndex}
             totalNuggets={state.practicePlan.length}
@@ -715,7 +719,7 @@ function AccountTuneMode({
         </div>
         {/* Coach LLM Call Sheet (opened from action bar debug dropdown) */}
         <DebugLLMSheet
-          title="Coach LLM Call"
+          title={t("debugMenu.coachCall")}
           open={showCoachPromptSheet}
           onOpenChange={setShowCoachPromptSheet}
           debugCall={coachDebugCall ?? undefined}

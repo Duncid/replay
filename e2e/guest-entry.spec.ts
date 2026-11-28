@@ -20,7 +20,7 @@ for (const { width, height, changeTune = false } of [
     }
     const accountRequests: string[] = [];
     page.on("request", request => {
-      if (request.url().includes(".supabase.co/") && !request.url().includes("/tune_assets?")) accountRequests.push(request.url());
+      if (request.url().includes(".supabase.co/") && !/\/rest\/v1\/(tune_assets|language_settings|language_strings)\?/.test(request.url())) accountRequests.push(request.url());
     });
     await page.goto("/");
     await expect(page.locator('.noodlyn-landing[data-preview-state="ready"]')).toBeVisible({ timeout: 15_000 });
@@ -105,7 +105,7 @@ for (const { width, height, changeTune = false } of [
       expect(Math.abs(last.flight[dimension] - last.target[dimension])).toBeLessThan(4);
     }
     expect(flightFrames.some(frame => frame.volume === "0.000" && frame.playing === "false")).toBe(true);
-    await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeFocused();
+    await expect(page.getByRole("heading", { name: "What would you like to play today?" })).toBeFocused();
     await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Locked: St Louis Blues", exact: true })).toBeDisabled();
     await expect(page.locator(".guest-entry-key-flight")).toHaveCount(0);
@@ -170,7 +170,7 @@ test("slow guest loading falls back to navigation and repeated activation create
   await expect(page.locator(".guest-entry-source")).toHaveCount(0);
   release!();
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
-  await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "What would you like to play today?" })).toBeFocused();
 });
 
 test("resizing to a small screen during the flight removes the keyboard and overlay", async ({ page }) => {

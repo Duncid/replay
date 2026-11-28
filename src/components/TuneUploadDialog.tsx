@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ export const toTuneKey = (title: string) =>
 
 /** Name the tune; pressing Build closes the window and the tune list card shows the progress. */
 export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; onOpenChange: (o: boolean) => void; file: File | null; onStarted?: () => void }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
@@ -46,24 +48,24 @@ export function TuneUploadDialog({ open, onOpenChange, file }: { open: boolean; 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Name your tune</DialogTitle>
+          <DialogTitle>{t("upload.name")}</DialogTitle>
           <DialogDescription>{file?.name}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4" aria-busy={readingMetadata}>
           <div className="space-y-1">
-            <Label htmlFor="tune-title">Title</Label>
+            <Label htmlFor="tune-title">{t("upload.title")}</Label>
             <Input id="tune-title" autoFocus value={title} maxLength={120} disabled={readingMetadata} onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && key) handleBuild(); }} />
-            {exists && <p className="text-xs text-muted-foreground">A published tune already uses this name — it will be updated.</p>}
+            {exists && <p className="text-xs text-muted-foreground">{t("upload.exists")}</p>}
           </div>
           <div className="space-y-1">
-            <Label htmlFor="tune-composer">Composer</Label>
+            <Label htmlFor="tune-composer">{t("upload.composer")}</Label>
             <Input id="tune-composer" value={composer} maxLength={300} disabled={readingMetadata} onChange={(e) => setComposer(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && key) handleBuild(); }} />
           </div>
         </div>
         <DialogFooter className="gap-2">
-          <Button disabled={!file || !key || readingMetadata} onClick={handleBuild}>Build</Button>
+          <Button disabled={!file || !key || readingMetadata} onClick={handleBuild}>{t("upload.build")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

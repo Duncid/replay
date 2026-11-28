@@ -95,13 +95,13 @@ export function LearnMode(props: LearnModeProps) {
     if (!menu) { setDebugMenuState(null); return; }
     const entries: DebugMenuEntry[] = [];
     if (menu.hasCoachPrompt && menu.openCoachPrompt) {
-      entries.push({ id: "tune-coach-prompt", label: "Coach Prompt", icon: <FileText className="size-4" />, openSheet: menu.openCoachPrompt });
+      entries.push({ id: "tune-coach-prompt", label: "debugMenu.coach", icon: <FileText className="size-4" />, openSheet: menu.openCoachPrompt });
     }
     if (menu.hasPracticePlan) {
-      entries.push({ id: "tune-plan", label: "Practice Plan", icon: <List className="size-4" />, openSheet: menu.openPlanSheet });
+      entries.push({ id: "tune-plan", label: "practice.plan", icon: <List className="size-4" />, openSheet: menu.openPlanSheet });
     }
-    entries.push({ id: "tune-eval", label: "Last Evaluation", icon: <Bug className="size-4" />, openSheet: menu.openEvalDebug });
-    setDebugMenuState({ title: "Tune Practice Debug", evalIndex: menu.evalIndex, currentEvalIndex: menu.currentEvalIndex, evalDecision: menu.evalDecision, entries });
+    entries.push({ id: "tune-eval", label: "debugMenu.lastEval", icon: <Bug className="size-4" />, openSheet: menu.openEvalDebug });
+    setDebugMenuState({ title: "debugMenu.practice", evalIndex: menu.evalIndex, currentEvalIndex: menu.currentEvalIndex, evalDecision: menu.evalDecision, entries });
   }, []);
 
   const render = () => activeTuneKey ? (
@@ -155,18 +155,18 @@ interface LearnModeActionBarProps {
   debugMenuState?: DebugMenuState | null;
 }
 
-export function LearnModeActionBar({ selectedModel, setSelectedModel, aiModels, debugMode, debugMenuState }: LearnModeActionBarProps) {
+export function LearnModeActionBar({ t, selectedModel, setSelectedModel, aiModels, debugMode, debugMenuState }: LearnModeActionBarProps) {
   return <>
     {debugMode && <DropdownMenu>
-      <DropdownMenuTrigger asChild><Button variant="outline" size="sm" title="Debug menu"><Bug /><ChevronDown className="opacity-50" /></Button></DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild><Button variant="outline" size="sm" title={t("debugMenu.menu")}><Bug /><ChevronDown className="opacity-50" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Model</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("debugMenu.model")}</DropdownMenuLabel>
         {aiModels.llm.map(model => <DropdownMenuItem key={model.value} onSelect={() => setSelectedModel(model.value)}>{model.value === selectedModel ? "✓ " : ""}{model.label}</DropdownMenuItem>)}
         <DropdownMenuSeparator />
-        <DropdownMenuLabel>{debugMenuState?.title ?? "Tune Practice Debug"}</DropdownMenuLabel>
-        {debugMenuState?.evalIndex !== undefined && <div className="px-2 py-1.5 text-sm text-muted-foreground">Eval index: {debugMenuState.evalIndex} / {debugMenuState.currentEvalIndex ?? "-"}</div>}
+        <DropdownMenuLabel>{t(debugMenuState?.title ?? "debugMenu.practice")}</DropdownMenuLabel>
+        {debugMenuState?.evalIndex !== undefined && <div className="px-2 py-1.5 text-sm text-muted-foreground">{t("debugMenu.index", { index: debugMenuState.evalIndex, current: debugMenuState.currentEvalIndex ?? "-" })}</div>}
         {debugMenuState?.evalDecision && <div className="max-w-xs px-2 text-xs text-muted-foreground break-words">{debugMenuState.evalDecision}</div>}
-        {debugMenuState?.entries.map(entry => <DropdownMenuItem key={entry.id} onSelect={entry.openSheet}>{entry.icon}{entry.label}</DropdownMenuItem>)}
+        {debugMenuState?.entries.map(entry => <DropdownMenuItem key={entry.id} onSelect={entry.openSheet}>{entry.icon}{t(entry.label)}</DropdownMenuItem>)}
       </DropdownMenuContent>
     </DropdownMenu>}
   </>;

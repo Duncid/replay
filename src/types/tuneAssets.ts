@@ -33,6 +33,7 @@ export interface TuneBriefing {
 }
 
 export interface TuneAssetData {
+  is_global?: boolean;
   id: string;
   tune_key: string;
   composer?: string | null;

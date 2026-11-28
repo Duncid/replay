@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { LockKeyhole, MoreHorizontal, Play, Square } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -23,15 +24,16 @@ export interface TuneCardProps {
 
 /** The same visual hierarchy as Noodlyn Learn, using the web theme's tokens. */
 export function TuneCard({ title, composer, unlocked, preview, prerequisites = [], onSelect, onSignUp, onPreview, isPreviewPlaying = false, isSystem = false, onRemove }: TuneCardProps) {
+  const { t } = useTranslation();
   return <div className={cn("group relative flex h-full min-h-[280px] w-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-border bg-card text-left text-card-foreground transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none",
       unlocked && "border-primary/50 hover:border-primary hover:shadow-[var(--glow-user)] focus-within:border-primary focus-within:shadow-[var(--glow-user)]")}>
     <button type="button" disabled={!unlocked} onClick={onSelect}
-      aria-label={`${unlocked ? "Practice" : "Locked"}: ${title}`}
+      aria-label={t(unlocked ? "library.practiceTitle" : "library.lockedTitle", { title })}
       className="absolute inset-0 rounded-[22px] focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-3px] disabled:cursor-not-allowed" />
     <span className={cn("pointer-events-none block w-full shrink-0", !unlocked && "opacity-45")}><TuneThumbnail preview={preview} /></span>
     <span className="pointer-events-none flex w-full flex-1 flex-col gap-3 p-5">
       {!unlocked && <span className="flex items-center justify-between gap-3 font-mono text-[11px] font-semibold uppercase tracking-[.1em] text-muted-foreground">
-        <span>Locked</span>
+        <span>{t("library.locked")}</span>
         <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
       </span>}
       <span className="block space-y-1">
@@ -39,30 +41,30 @@ export function TuneCard({ title, composer, unlocked, preview, prerequisites = [
         {composer?.trim() && <span className="block text-[13px] leading-[18px] text-muted-foreground break-words">{composer}</span>}
       </span>
       <button type="button" onClick={onPreview} disabled={!onPreview}
-        aria-label={`${isPreviewPlaying ? "Stop preview" : "Preview"}: ${title}`}
+        aria-label={t(isPreviewPlaying ? "library.stopPreview" : "library.previewTitle", { title })}
         aria-pressed={isPreviewPlaying}
         className="pointer-events-auto relative flex min-h-9 w-fit items-center gap-1.5 rounded-md px-1 text-[13px] font-medium text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:opacity-45 disabled:cursor-not-allowed">
         {isPreviewPlaying ? <Square aria-hidden="true" className="size-3.5" fill="currentColor" /> : <Play aria-hidden="true" className="size-3.5" fill="currentColor" />}
-        {isPreviewPlaying ? "Stop" : "Preview"}
+        {isPreviewPlaying ? t("controls.stop") : t("library.preview")}
       </button>
-      {!unlocked && prerequisites.length > 0 && <span className="block text-[13px] leading-[18px] text-muted-foreground break-words">Complete {prerequisites.join(", ")} first</span>}
-      {preview && <span className="mt-auto block text-[13px] leading-[18px] text-muted-foreground">{preview.noteCount} {preview.noteCount === 1 ? "note" : "notes"} · {Math.round(preview.duration)} sec</span>}
+      {!unlocked && prerequisites.length > 0 && <span className="block text-[13px] leading-[18px] text-muted-foreground break-words">{t("library.prerequisites", { titles: prerequisites.join(", ") })}</span>}
+      {preview && <span className="mt-auto block text-[13px] leading-[18px] text-muted-foreground">{t("library.summary", { count: preview.noteCount, seconds: Math.round(preview.duration) })}</span>}
     </span>
     {onRemove && <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label={`Tune options: ${title}`}
+        <button type="button" aria-label={t("library.options", { title })}
           className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full bg-card/80 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
           <MoreHorizontal aria-hidden="true" className="size-4" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={onRemove} className={isSystem ? undefined : "text-destructive"}>
-          {isSystem ? "Remove from my list" : "Delete tune"}
+          {isSystem ? t("library.remove") : t("library.delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>}
     {!unlocked && onSignUp && <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-card/60">
-      <Button type="button" onClick={event => { event.currentTarget.focus(); onSignUp(); }} className="pointer-events-auto shadow-lg">Sign up for free</Button>
+      <Button type="button" onClick={event => { event.currentTarget.focus(); onSignUp(); }} className="pointer-events-auto shadow-lg">{t("auth.free")}</Button>
     </div>}
   </div>;
 }

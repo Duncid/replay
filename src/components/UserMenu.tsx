@@ -1,3 +1,5 @@
+import { useLanguage } from "@/contexts/LanguageContext";
+import { languageName } from "@/lib/languages";
 import { NewUserDialog } from "@/components/NewUserDialog";
 import { EditPlayerDialog } from "@/components/EditPlayerDialog";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
@@ -21,7 +23,7 @@ import {
 import { LocalUser, useLocalUsers } from "@/hooks/useLocalUsers";
 import { TuneSelectionSubmenus } from "@/components/modes/TuneManagement";
 import { TuneUploadDialog } from "@/components/TuneUploadDialog";
-import { Check, Globe, UserRound, UserPlus, GitBranch, Music2, LogOut, Upload, Pencil } from "lucide-react";
+import { Check, Globe, UserRound, UserPlus, GitBranch, Music2, LogOut, Upload, Pencil, Music } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useRef, useState } from "react";
@@ -34,13 +36,8 @@ interface UserMenuProps {
   onNotationChange: (notation: "auto" | "abc" | "solfege") => void;
   debugMode: boolean;
   onDebugModeChange: (enabled: boolean) => void;
-  onOpenManagement?: (mode: "quest" | "lab") => void;
+  onOpenMode?: (mode: "quest" | "lab" | "play" | "languages") => void;
 }
-
-const languageOptions = [
-  { value: "en", label: "English", flag: "🇺🇸" },
-  { value: "fr", label: "Français", flag: "🇫🇷" },
-];
 
 const notationOptions = [
   { value: "auto", labelKey: "language.musicNotationAuto" },
@@ -53,10 +50,11 @@ export function UserMenu({
   onLanguageChange,
   notationPreference,
   onNotationChange,
-  onOpenManagement,
+  onOpenMode,
   debugMode,
   onDebugModeChange,
 }: UserMenuProps) {
+  const { languages } = useLanguage();
   const { t } = useTranslation();
   const { users, currentUser, switchUser, createUser, updateUser, deleteUser } =
     useLocalUsers();
@@ -136,41 +134,55 @@ export function UserMenu({
           {user && !isAdmin && (
             <DropdownMenuItem onSelect={() => uploadInputRef.current?.click()}>
               <Upload className="h-4 w-4" />
-              Upload new tune…
+              {t("management.upload")}
             </DropdownMenuItem>
           )}
 
           <DropdownMenuSeparator />
 
-          {onOpenManagement && isAdmin && (
+          {onOpenMode && isAdmin && (
             <>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Admin
+                {t("management.admin")}
               </DropdownMenuLabel>
               <DropdownMenuGroup>
-                <DropdownMenuItem onSelect={() => onOpenManagement("quest")}>
+                <DropdownMenuItem onSelect={() => onOpenMode("quest")}>
                   <GitBranch className="h-4 w-4" />
-                  Quest
+                  {t("management.quest")}
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <Music2 className="h-4 w-4" />
-                    Tune Management
+                    {t("management.tunes")}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover">
                     <TuneSelectionSubmenus
-                      onSelected={() => onOpenManagement?.("lab")}
+                      onSelected={() => onOpenMode?.("lab")}
                     />
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onSelect={() => uploadInputRef.current?.click()}>
                       <Upload className="h-4 w-4" />
-                      Upload new tune…
+                      {t("management.upload")}
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuItem onSelect={() => onOpenMode("languages")}>
+                  <Globe className="h-4 w-4" />
+                  {t("languageManager.title")}
+                </DropdownMenuItem>
                 <DropdownMenuCheckboxItem checked={debugMode} onCheckedChange={onDebugModeChange}>
-                  Debug
+                  {t("management.debug")}
                 </DropdownMenuCheckboxItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {t("userMenu.beta")}
+              </DropdownMenuLabel>
+              <DropdownMenuGroup aria-label={t("userMenu.beta")}>
+                <DropdownMenuItem onSelect={() => onOpenMode("play")}>
+                  <Music className="h-4 w-4" />
+                  {t("tabs.play")}
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
             </>
@@ -203,16 +215,13 @@ export function UserMenu({
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
-              {languageOptions.map((option) => (
+              {languages.map((option) => (
                 <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => onLanguageChange(option.value)}
+                  key={option.locale}
+                  onClick={() => onLanguageChange(option.locale)}
                 >
-                  <span className="mr-2" aria-hidden="true">
-                    {option.flag}
-                  </span>
-                  {option.label}
-                  {language === option.value && (
+                  {languageName(option.locale)}
+                  {language === option.locale && (
                     <Check className="h-4 w-4 ml-auto" />
                   )}
                 </DropdownMenuItem>
@@ -228,7 +237,7 @@ export function UserMenu({
               </DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => { void signOut().catch(error => toast.error(error.message)); }}>
                 <LogOut className="h-4 w-4" />
-                Sign out
+                {t("supportedScreen.signOut")}
               </DropdownMenuItem>
             </>
           )}

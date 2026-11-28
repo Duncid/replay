@@ -1,3 +1,6 @@
+import i18n from "@/lib/i18n";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageManagement } from "@/components/LanguageManagement";
 import { practiceSceneReadiness } from "@/lib/practiceSceneReadiness";
 import { PianoDock } from "@/components/highway/PianoDock";
 import { prepareDemoTimeline, startDemoTimeline, stopDemoTimeline } from "@/lib/highwayAudioClock";
@@ -51,7 +54,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft } from "lucide-react";
+import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Composition, useCompositions } from "@/hooks/useCompositions";
@@ -113,7 +117,7 @@ const AI_MODELS = {
 } as const;
 
 type AppState = "idle" | "user_playing" | "waiting_for_ai" | "ai_playing";
-type ActiveMode = "play" | "learn" | "quest" | "lab";
+type ActiveMode = "play" | "learn" | "quest" | "lab" | "languages";
 
 // Normalize creativity (0-100) to model-specific temperature ranges
 const normalizeCreativityToRNN = (creativity: number): number => {
@@ -137,7 +141,7 @@ const normalizeCreativityToVAE = (creativity: number): number => {
 };
 
 const Index = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { isAdmin } = useAuth();
   const { currentUserId, isLoading: profileLoading } = useLocalUsers();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
@@ -147,7 +151,7 @@ const Index = () => {
     "learn",
   );
   // Resolve before rendering or enabling recording, including restored preferences.
-  const activeMode = preferredMode === "play" && !isAdmin ? "learn" : preferredMode;
+  const activeMode = (preferredMode === "play" || preferredMode === "languages") && !isAdmin ? "learn" : preferredMode;
   const [isAutoreplyActive, setIsAutoreplyActive] = useLocalStorage<boolean>(
     STORAGE_KEYS.AUTOREPLY,
     false,
@@ -188,10 +192,14 @@ const Index = () => {
   const sheetInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
   const labInputEventRef = useRef<((e: InputNoteEvent) => void) | null>(null);
 
-  const [language, setLanguage] = useLocalStorage(STORAGE_KEYS.LANGUAGE, "en");
+  const { settings, setLanguage } = useLanguage();
+  // Coach endpoints accept language codes; the picker and formatting use the full locale.
+  const language = new Intl.Locale(settings.locale).language;
   const [musicNotation, setMusicNotation] = useLocalStorage<
     "auto" | "abc" | "solfege"
   >(STORAGE_KEYS.MUSIC_NOTATION, "auto");
+
+  const effectiveNotation = musicNotation === "auto" ? settings.notation : musicNotation;
 
   // Persisted preferences
   const midiSilentWhilePlayingRef = useRef(false);
@@ -298,9 +306,6 @@ const Index = () => {
   const { toast } = useToast();
   const magenta = useMagenta();
 
-  useEffect(() => {
-    i18n.changeLanguage(language);
-  }, [i18n, language]);
 
   // Language options moved to UserMenu component
 
@@ -441,7 +446,7 @@ const Index = () => {
   });
 
   const handleModeChange = (newMode: ActiveMode) => {
-    if (newMode === "play" && !isAdmin) return;
+    if ((newMode === "play" || newMode === "languages") && !isAdmin) return;
     if (newMode === "learn" && magenta.isMagentaModel(selectedModel)) {
       setSelectedModel("google/gemini-3.8-flash");
     } else if (newMode === "play" && !magenta.isMagentaModel(selectedModel)) {
@@ -453,7 +458,7 @@ const Index = () => {
 
   // Unsupported legacy mode preferences open the tune library instead.
   useEffect(() => {
-    if (activeMode !== "learn" && activeMode !== "play" && activeMode !== "lab" && activeMode !== "quest") {
+    if (activeMode !== "learn" && activeMode !== "play" && activeMode !== "lab" && activeMode !== "quest" && activeMode !== "languages") {
       setActiveMode("learn");
     }
   }, [activeMode, setActiveMode]);
@@ -543,8 +548,8 @@ const Index = () => {
 
   const handleNoMidiDevices = () => {
     toast({
-      title: "No MIDI devices found",
-      description: "Please connect a MIDI device and try again.",
+      title: i18n.t("notices.noMidi"),
+      description: i18n.t("notices.connectMidi"),
       variant: "destructive",
     });
   };
@@ -552,7 +557,7 @@ const Index = () => {
   const handleMidiError = useCallback(
     (errorMessage: string) => {
       toast({
-        title: "MIDI connection error",
+        title: i18n.t("notices.midiConnection"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -836,9 +841,9 @@ const Index = () => {
     try {
       if (!("showOpenFilePicker" in window)) {
         toast({
-          title: "File picker not supported",
+          title: i18n.t("notices.picker"),
           description:
-            "Your browser doesn't support the File System Access API. Please use 'Write ABC' instead.",
+            i18n.t("notices.pickerAbc"),
           variant: "destructive",
         });
         return;
@@ -848,7 +853,7 @@ const Index = () => {
       const fileHandles = await (window as any).showOpenFilePicker({
         types: [
           {
-            description: "Text files",
+            description: i18n.t("notices.textFiles"),
             accept: { "text/plain": [".txt"] },
           },
         ],
@@ -865,9 +870,9 @@ const Index = () => {
         const sequence = abcToNoteSequence(text, metronomeBpm);
         if (sequence.notes.length === 0) {
           toast({
-            title: "Invalid ABC file",
+            title: i18n.t("notices.invalidFileABC"),
             description:
-              "The file contains no valid notes. Please check the ABC format.",
+              i18n.t("notices.invalidAbcNotes"),
             variant: "destructive",
           });
           return;
@@ -876,11 +881,11 @@ const Index = () => {
         // Add to history
         if (activeMode === "play") {
           playModeRef.current?.addEntry(sequence, false);
-          toast({ title: "ABC file uploaded and added" });
+          toast({ title: i18n.t("notices.uploadedABC") });
         }
       } catch (error) {
         toast({
-          title: "Invalid ABC format",
+          title: i18n.t("notices.invalidAbc"),
           description:
             error instanceof Error
               ? error.message
@@ -892,9 +897,9 @@ const Index = () => {
       if ((error as Error).name !== "AbortError") {
         console.error("File upload error:", error);
         toast({
-          title: "Error uploading file",
+          title: i18n.t("notices.uploadError"),
           description:
-            error instanceof Error ? error.message : "Failed to read file",
+            error instanceof Error ? error.message : i18n.t("notices.readError"),
           variant: "destructive",
         });
       }
@@ -983,9 +988,9 @@ const Index = () => {
 
         if (sequence.notes.length === 0) {
           toast({
-            title: "Invalid MusicXML file",
+            title: i18n.t("notices.invalidFileMusicXML"),
             description:
-              "The file contains no valid notes. Please check the MusicXML content.",
+              i18n.t("notices.invalidXmlNotes"),
             variant: "destructive",
           });
           return;
@@ -993,14 +998,14 @@ const Index = () => {
 
         if (activeMode === "play") {
           playModeRef.current?.addEntry(sequence, false);
-          toast({ title: "MusicXML file uploaded and added" });
+          toast({ title: i18n.t("notices.uploadedMusicXML") });
         }
       } catch (error) {
         console.error("MusicXML upload error:", error);
         toast({
-          title: "Error importing MusicXML",
+          title: i18n.t("notices.importFailedMusicXML"),
           description:
-            error instanceof Error ? error.message : "Failed to read file",
+            error instanceof Error ? error.message : i18n.t("notices.readError"),
           variant: "destructive",
         });
       } finally {
@@ -1015,7 +1020,7 @@ const Index = () => {
         const fileHandles = await (window as any).showOpenFilePicker({
           types: [
             {
-              description: "MusicXML files",
+              description: i18n.t("notices.filesMusicXML"),
               accept: {
                 "application/vnd.recordare.musicxml+xml": [".mxl"],
                 "application/vnd.recordare.musicxml": [".mxl"],
@@ -1055,9 +1060,9 @@ const Index = () => {
       if ((error as Error).name !== "AbortError") {
         console.error("MusicXML upload error:", error);
         toast({
-          title: "Error importing MusicXML",
+          title: i18n.t("notices.importFailedMusicXML"),
           description:
-            error instanceof Error ? error.message : "Failed to read file",
+            error instanceof Error ? error.message : i18n.t("notices.readError"),
           variant: "destructive",
         });
       }
@@ -1119,8 +1124,8 @@ const Index = () => {
 
       if (normalized.notes.length === 0) {
         toast({
-          title: "Invalid MIDI file",
-          description: "The file contains no valid notes.",
+          title: i18n.t("notices.invalidFileMIDI"),
+          description: i18n.t("notices.invalidNotes"),
           variant: "destructive",
         });
         return;
@@ -1128,7 +1133,7 @@ const Index = () => {
 
       if (activeMode === "play") {
         playModeRef.current?.addEntry(normalized, false);
-        toast({ title: "MIDI file uploaded and added" });
+        toast({ title: i18n.t("notices.uploadedMIDI") });
       }
     };
 
@@ -1138,7 +1143,7 @@ const Index = () => {
         const fileHandles = await (window as any).showOpenFilePicker({
           types: [
             {
-              description: "MIDI files",
+              description: i18n.t("notices.filesMIDI"),
               accept: {
                 "audio/midi": [".mid", ".midi"],
                 "audio/mid": [".mid", ".midi"],
@@ -1174,9 +1179,9 @@ const Index = () => {
       if ((error as Error).name !== "AbortError") {
         console.error("MIDI upload error:", error);
         toast({
-          title: "Error importing MIDI",
+          title: i18n.t("notices.importFailedMIDI"),
           description:
-            error instanceof Error ? error.message : "Failed to read file",
+            error instanceof Error ? error.message : i18n.t("notices.readError"),
           variant: "destructive",
         });
       }
@@ -1250,9 +1255,9 @@ const Index = () => {
 
         if (!validateNoteSequence(parsed)) {
           toast({
-            title: "Invalid NoteSequence file",
+            title: i18n.t("notices.invalidFileNoteSequence"),
             description:
-              "The file does not contain a valid NoteSequence structure.",
+              i18n.t("notices.sequenceStructure"),
             variant: "destructive",
           });
           return;
@@ -1262,8 +1267,8 @@ const Index = () => {
 
         if (sequence.notes.length === 0) {
           toast({
-            title: "Empty NoteSequence",
-            description: "The file contains no notes.",
+            title: i18n.t("notices.emptySequence"),
+            description: i18n.t("notices.emptyNotes"),
             variant: "destructive",
           });
           return;
@@ -1271,14 +1276,14 @@ const Index = () => {
 
         if (activeMode === "play") {
           playModeRef.current?.addEntry(sequence, false);
-          toast({ title: "NoteSequence file uploaded and added" });
+          toast({ title: i18n.t("notices.uploadedNoteSequence") });
         }
       } catch (error) {
         console.error("NoteSequence upload error:", error);
         toast({
-          title: "Error importing NoteSequence",
+          title: i18n.t("notices.importFailedNoteSequence"),
           description:
-            error instanceof Error ? error.message : "Failed to parse file",
+            error instanceof Error ? error.message : i18n.t("notices.parseError"),
           variant: "destructive",
         });
       }
@@ -1290,7 +1295,7 @@ const Index = () => {
         const fileHandles = await (window as any).showOpenFilePicker({
           types: [
             {
-              description: "NoteSequence JSON files",
+              description: i18n.t("notices.filesNoteSequenceJSON"),
               accept: {
                 "application/json": [".ns.json", ".json"],
               },
@@ -1323,9 +1328,9 @@ const Index = () => {
       if ((error as Error).name !== "AbortError") {
         console.error("NoteSequence upload error:", error);
         toast({
-          title: "Error importing NoteSequence",
+          title: i18n.t("notices.importFailedNoteSequence"),
           description:
-            error instanceof Error ? error.message : "Failed to read file",
+            error instanceof Error ? error.message : i18n.t("notices.readError"),
           variant: "destructive",
         });
       }
@@ -1339,7 +1344,7 @@ const Index = () => {
     onReplay: handleReplaySequence,
     onPlayAll: handlePlayAllSequences,
     onStopPlayback: stopAiPlayback,
-    onClearHistory: () => toast({ title: "History cleared" }),
+    onClearHistory: () => toast({ title: i18n.t("notices.historyCleared") }),
     liveNotes,
     isRecording: appState === "user_playing" && activeMode === "play",
     isPlaying,
@@ -1361,7 +1366,7 @@ const Index = () => {
   const loadCompositionWithToast = useCallback(
     (composition: Composition) => {
       compositions.loadComposition(composition);
-      toast({ title: `Loaded "${composition.title}"` });
+      toast({ title: i18n.t("notices.loaded", { title: composition.title }) });
       setPendingCompositionToLoad(null);
       setSaveBeforeOpenDialogOpen(false);
     },
@@ -1477,7 +1482,7 @@ const Index = () => {
     },
     onCompleteRecordingNow: () => learnRecordingManager.completeNow(),
     language,
-    notationPreference: musicNotation,
+    notationPreference: effectiveNotation,
     model: selectedModel,
     debugMode,
     onReviewTune: (tuneKey: string) => {
@@ -1781,11 +1786,11 @@ const Index = () => {
       console.error("Error getting AI response:", error);
       if (currentRequestIdRef.current === requestId) {
         toast({
-          title: "Error",
+          title: i18n.t("score.error"),
           description:
             error instanceof Error
               ? error.message
-              : "Failed to get AI response",
+              : i18n.t("notices.aiResponse"),
           variant: "destructive",
         });
         setAppState("idle");
@@ -1806,7 +1811,7 @@ const Index = () => {
 
     setAppState("waiting_for_ai");
     setGenerationLabel(
-      modelType === "magenta/music-rnn" ? "Improvising..." : "Arranging...",
+      i18n.t(modelType === "magenta/music-rnn" ? "compose.improvising" : "compose.arranging"),
     );
 
     try {
@@ -1847,9 +1852,9 @@ const Index = () => {
     } catch (error) {
       console.error(`[Manual AI] Failed to ${requestLabel}:`, error);
       toast({
-        title: `Failed to ${requestLabel}`,
+        title: i18n.t(modelType === "magenta/music-rnn" ? "compose.improvFailed" : "compose.variationsFailed"),
         description:
-          error instanceof Error ? error.message : "Unable to generate music",
+          error instanceof Error ? error.message : i18n.t("notices.generateMusic"),
         variant: "destructive",
       });
       setAppState("idle");
@@ -1904,7 +1909,7 @@ const Index = () => {
       await navigator.clipboard.writeText(
         JSON.stringify(seq.sequence, null, 2),
       );
-      toast({ title: "Copied as NoteSequence" });
+      toast({ title: i18n.t("trackEditor.copiedAs") });
     }
   }, [playMode, toast]);
 
@@ -1973,7 +1978,7 @@ const Index = () => {
   });
 
   useEffect(() => {
-    if (activeMode === "quest" && isMicEnabled) {
+    if ((activeMode === "quest" || activeMode === "languages") && isMicEnabled) {
       setIsMicEnabled(false);
     }
   }, [activeMode, isMicEnabled]);
@@ -1984,7 +1989,7 @@ const Index = () => {
       setIsMicEnabled(false);
     }
     toast({
-      title: "Microphone input error",
+      title: i18n.t("notices.microphone"),
       description: micInput.error,
       variant: "destructive",
     });
@@ -2012,9 +2017,9 @@ const Index = () => {
       micContextErrorHandledRef.current = true;
       setIsMicEnabled(false);
       toast({
-        title: "Microphone input error",
+        title: i18n.t("notices.microphone"),
         description:
-          "Audio device failed while using the microphone. Mic has been turned off.",
+          i18n.t("notices.microphoneDevice"),
         variant: "destructive",
       });
       event.preventDefault();
@@ -2053,9 +2058,9 @@ const Index = () => {
             micContextErrorHandledRef.current = true;
             setIsMicEnabled(false);
             toast({
-              title: "Microphone input error",
+              title: i18n.t("notices.microphone"),
               description:
-                "Audio device failed while using the microphone. Mic has been turned off.",
+                i18n.t("notices.microphoneDevice"),
               variant: "destructive",
             });
           }
@@ -2088,11 +2093,11 @@ const Index = () => {
     <UserMenu
       debugMode={debugMode}
       onDebugModeChange={setDebugMode}
-      language={language}
+      language={settings.locale}
       onLanguageChange={setLanguage}
       notationPreference={musicNotation}
       onNotationChange={setMusicNotation}
-      onOpenManagement={handleModeChange}
+      onOpenMode={handleModeChange}
     />
   );
 
@@ -2142,6 +2147,7 @@ const Index = () => {
     ),
     quest: <QuestManagementActionBar headerActions={questHeaderActions} />,
     lab: <TuneManagementActionBar />,
+    languages: null,
   } satisfies Record<ActiveMode, ReactNode>;
 
   return (
@@ -2152,15 +2158,21 @@ const Index = () => {
           onValueChange={(v) => handleModeChange(v as ActiveMode)}
           className="w-full flex-1 min-h-0 flex flex-col"
         >
-          {(isAdmin || activeMode !== "learn" || debugMode) && <div className="replay-header sticky top-0 z-30 w-full">
+          {(activeMode !== "learn" || debugMode) && <div className="replay-header sticky top-0 z-30 w-full">
             <div className="flex items-center justify-between p-2">
               <div className="flex items-center gap-2">
+                {activeMode !== "learn" && (
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    resetLearnToStart();
+                    setLearnModeType("curriculum");
+                    handleModeChange("learn");
+                  }}>
+                    <ArrowLeft aria-hidden="true" />
+                    {t("tune.backToTunes")}
+                  </Button>
+                )}
                 {/* Quest has no keyboard toolbar, so keep its menu here. */}
-                {activeMode === "quest" && userMenu}
-                {isAdmin && <TabsList>
-                  <TabsTrigger value="learn">Tunes</TabsTrigger>
-                  <TabsTrigger value="play">{t("tabs.play")}</TabsTrigger>
-                </TabsList>}
+                {(activeMode === "quest" || activeMode === "languages") && userMenu}
                 {activeMode === "lab" && <TuneSelectionLabel />}
                 {activeMode === "quest" && questHeaderTitle && (
                   <span className="text-sm text-muted-foreground ml-2">
@@ -2207,6 +2219,7 @@ const Index = () => {
               />
             )}
 
+            {isAdmin && activeMode === "languages" && <LanguageManagement />}
             {isAdmin && <PlayModeTabContent playMode={playMode} />}
             <LearnModeTabContent
               learnModeType={learnModeType}
@@ -2228,7 +2241,7 @@ const Index = () => {
           </div>
         </Tabs>
 
-        {activeMode !== "quest" && (
+        {activeMode !== "quest" && activeMode !== "languages" && (
           <PianoDock showNoteRail={showNoteRail} midiConnected={!!connectedDevice} toolbar={<>
             {/* Piano sound and metronome (left), input settings (right). */}
             <div className="keyboard-toolbar w-full flex flex-wrap items-center justify-between gap-2 p-1.5 shrink-0">
@@ -2290,7 +2303,7 @@ const Index = () => {
               allowInput
               soundType={pianoSoundType}
               language={language}
-              notationPreference={musicNotation}
+              notationPreference={effectiveNotation}
               showNoteRail={showNoteRail}
               onNoteStart={handleNoteStart}
               onNoteEnd={handleNoteEnd}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ export const SheetMusic = ({
   hasColor = false,
   scale,
 }: SheetMusicProps) => {
+  const { t } = useTranslation();
   const renderDivRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -90,7 +92,7 @@ export const SheetMusic = ({
 
     const title = noTitle
       ? undefined
-      : label || (isUserNotes ? "You played" : "AI responded");
+      : label || (isUserNotes ? t("score.player") : t("score.reply"));
     const abc = noteSequenceToAbc(sequence, title);
 
     renderDivRef.current.innerHTML = "";
@@ -106,19 +108,19 @@ export const SheetMusic = ({
 
     abcjs.renderAbc(renderDivRef.current, abc, options);
     applyNoteColors();
-  }, [sequence, label, isUserNotes, compact, noTitle, renderScale, hasColor]);
+  }, [sequence, label, isUserNotes, compact, noTitle, renderScale, hasColor, t]);
 
   const handleCopySequence = async () => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
       toast({
-        title: "Copied",
-        description: "NoteSequence copied to clipboard",
+        title: t("score.copied"),
+        description: t("score.copiedDetails"),
       });
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to copy",
+        title: t("score.error"),
+        description: t("score.copyFailed"),
         variant: "destructive",
       });
     }
@@ -172,7 +174,7 @@ export const SheetMusic = ({
               <DropdownMenuContent align="end" className="bg-popover">
                 <DropdownMenuItem onClick={handleCopySequence}>
                   <Copy />
-                  Copy NoteSequence
+                  {t("score.copy")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -186,13 +188,13 @@ export const SheetMusic = ({
     <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-foreground">
-          {label || (isUserNotes ? "You played:" : "AI responded:")}
+          {label || (isUserNotes ? t("score.playerHeading") : t("score.replyHeading"))}
         </h3>
         <div className="flex items-center gap-1">
           {onReplay && (
             <Button variant="outline" size="sm" onClick={onReplay}>
               <Play fill="currentColor" />
-              Replay
+              {t("status.replay")}
             </Button>
           )}
           <DropdownMenu>
@@ -204,7 +206,7 @@ export const SheetMusic = ({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleCopySequence}>
                 <Copy />
-                Copy NoteSequence
+                {t("score.copy")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

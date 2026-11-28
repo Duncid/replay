@@ -1,3 +1,4 @@
+import i18n from "@/lib/i18n";
 import { orderTunesByPosition } from "@/utils/tuneLibrary";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
@@ -25,7 +26,7 @@ export function startTuneUpload(qc: QueryClient, input: { file: File; tuneKey: s
   setPending([...pending, base]);
   void (async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return fail("Please sign in again");
+    if (!user) return fail(i18n.t("upload.signIn"));
     // A new tune takes the last place in this account's list; an update keeps its place.
     // Save the order currently on screen first, so tunes that never got a saved place cannot jump behind the new one.
     const { data: saved } = await supabase.from("tune_list_positions").select("tune_key, position");
@@ -38,7 +39,7 @@ export function startTuneUpload(qc: QueryClient, input: { file: File; tuneKey: s
     const up = await supabase.storage.from("tune-sources").upload(path, input.file);
     if (up.error) return fail(up.error.message);
     const { data, error } = await supabase.functions.invoke("tune-build", { body: { action: "start", sourcePath: path, filename: input.file.name, tuneKey: input.tuneKey, title: input.title, composer: input.composer } });
-    if (error || data?.error) return fail(data?.error ?? error?.message ?? "Could not start the build");
+    if (error || data?.error) return fail(data?.error ?? error?.message ?? i18n.t("upload.startFailed"));
     await qc.invalidateQueries({ queryKey: ["tune-build-jobs"] });
     remove();
   })();

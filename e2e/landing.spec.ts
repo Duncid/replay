@@ -9,6 +9,7 @@ test("visitors see the practice preview and can enter the existing sign-in flow"
       expect(url.searchParams.get("curriculum_versions.status")).toBe("eq.published");
       return route.fulfill({ json: [] });
     }
+    if (["/rest/v1/language_settings", "/rest/v1/language_strings"].includes(url.pathname)) return route.fulfill({ json: [] });
     accountRequests.push(route.request().url());
     return route.abort();
   });
@@ -91,4 +92,29 @@ test("the iPad leans back at center, tilts inversely, and respects reduced motio
   const still = await transform();
   await page.mouse.move(700, 500);
   await expect(ipad).toHaveCSS("transform", still);
+});
+
+test("French visitors see catalogue edits, translated demo titles and localised sign-in", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("replay-language", JSON.stringify("fr-FR")));
+  await page.route("**/*.supabase.co/**", route => {
+    const url = new URL(route.request().url());
+    const isFrench = url.pathname.endsWith("/language_strings") && url.searchParams.get("locale") === "eq.fr-FR";
+    return route.fulfill({ json: isFrench ? [
+      { locale: "fr-FR", kind: "ui", key: "landing.headline", value: "À vous de jouer !" },
+      { locale: "fr-FR", kind: "tune", key: "st-louis-blues", value: "Le blues de Saint-Louis" },
+    ] : [] });
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "À vous de jouer !" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Commencer à jouer" })).toBeVisible();
+  await expect(page.locator(".landing-tune-title")).toHaveText("Le blues de Saint-Louis");
+  await expect(page.locator(".landing-demo-title h2")).toHaveText("Le blues de Saint-Louis");
+  await expect(page.getByRole("img", { name: /En direct : Le blues de Saint-Louis/ })).toHaveCount(1);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Application interactive de piano/);
+  const href = await page.locator('link[rel="manifest"]').getAttribute("href");
+  expect(await (await page.request.get(href!)).json()).toMatchObject({ lang: "fr-FR", description: "Application interactive de piano et d’improvisation musicale" });
+  await page.getByRole("link", { name: "Se connecter", exact: true }).click();
+  await expect(page.getByLabel("Adresse e-mail")).toBeVisible();
+  await page.getByRole("button", { name: "Mot de passe oublié ?" }).click();
+  await expect(page.getByRole("button", { name: "Envoyer le lien de réinitialisation" })).toBeVisible();
 });

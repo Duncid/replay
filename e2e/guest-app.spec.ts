@@ -10,7 +10,7 @@ test("guests get the app with only Intro playable, without account or coach requ
   const requests: string[] = [];
   await page.route("**/*.supabase.co/**", route => { requests.push(route.request().url()); return route.abort(); });
   await page.goto("/play");
-  await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What would you like to play today?" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Locked: St Louis Blues", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Preview: St Louis Blues", exact: true })).toBeDisabled();
@@ -34,7 +34,7 @@ test("guests get the app with only Intro playable, without account or coach requ
   await expect(page.getByRole("button", { name: "Locked: St Louis Blues", exact: true })).toBeDisabled();
   await page.reload();
   await expect(page.getByRole("button", { name: "Practice: Intro", exact: true })).toBeVisible();
-  expect(requests).toEqual([]);
+  expect(requests.filter(url => !/\/rest\/v1\/language_(settings|strings)\?/.test(url))).toEqual([]);
   await page.getByRole("button", { name: "Sign up for free", exact: true }).click();
   await expect(page).toHaveURL(/\/play$/);
   const signup = page.getByRole("dialog", { name: "Create account", exact: true });

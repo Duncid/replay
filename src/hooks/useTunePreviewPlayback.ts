@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Frequency } from "tone";
 import { toast } from "sonner";
@@ -7,6 +8,7 @@ import type { TunePlayback } from "@/utils/tunePreview";
 
 /** One local piano preview at a time; independent of practice and MIDI output. */
 export function useTunePreviewPlayback() {
+  const { t } = useTranslation();
   const { ensureAudioReady, playNote, stopPlayback } = useTonePiano();
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const activeKey = useRef<string | null>(null);
@@ -54,7 +56,7 @@ export function useTunePreviewPlayback() {
             .catch(() => {
               if (generation.current === request) {
                 stop();
-                toast.error("Unable to play this preview. Please try again.");
+                toast.error(t("library.previewError"));
               }
             });
         }
@@ -64,10 +66,10 @@ export function useTunePreviewPlayback() {
     } catch {
       if (generation.current === request) {
         stop();
-        toast.error("Unable to play this preview. Please try again.");
+        toast.error(t("library.previewError"));
       }
     }
-  }, [ensureAudioReady, playNote, stop]);
+  }, [ensureAudioReady, playNote, stop, t]);
 
   return { playingKey, toggle, stop };
 }

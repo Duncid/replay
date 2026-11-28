@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate } from '@/integrations/supabase/types';
@@ -21,6 +22,7 @@ interface UseCompositionsOptions {
 }
 
 export function useCompositions(options: UseCompositionsOptions = {}) {
+  const { t } = useTranslation();
   const { isAdmin } = useAuth();
   const [compositions, setCompositions] = useState<Composition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,13 +50,13 @@ export function useCompositions(options: UseCompositionsOptions = {}) {
     } catch (error) {
       console.error('Error fetching compositions:', error);
       toast({
-        title: 'Failed to load compositions',
+        title: t("compose.loadFailed"),
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
-  }, [isAdmin, toast]);
+  }, [isAdmin, toast, t]);
 
   const saveComposition = useCallback(async (
     title: string,
@@ -87,19 +89,19 @@ export function useCompositions(options: UseCompositionsOptions = {}) {
       setCurrentComposition(composition);
       setCompositions(prev => [composition, ...prev]);
       
-      toast({ title: 'Composition saved' });
+      toast({ title: t("compose.saved") });
       return composition;
     } catch (error) {
       console.error('Error saving composition:', error);
       toast({
-        title: 'Failed to save composition',
+        title: t("compose.saveFailed"),
         variant: 'destructive',
       });
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const updateComposition = useCallback(async (
     id: string,
@@ -136,19 +138,19 @@ export function useCompositions(options: UseCompositionsOptions = {}) {
         prev.map(c => c.id === id ? composition : c)
       );
       
-      toast({ title: 'Composition updated' });
+      toast({ title: t("compose.updated") });
       return true;
     } catch (error) {
       console.error('Error updating composition:', error);
       toast({
-        title: 'Failed to update composition',
+        title: t("compose.updateFailed"),
         variant: 'destructive',
       });
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const deleteComposition = useCallback(async (id: string): Promise<boolean> => {
     setIsLoading(true);
@@ -165,19 +167,19 @@ export function useCompositions(options: UseCompositionsOptions = {}) {
         setCurrentComposition(null);
       }
       
-      toast({ title: 'Composition deleted' });
+      toast({ title: t("compose.deleted") });
       return true;
     } catch (error) {
       console.error('Error deleting composition:', error);
       toast({
-        title: 'Failed to delete composition',
+        title: t("compose.deleteFailed"),
         variant: 'destructive',
       });
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [currentComposition, toast]);
+  }, [currentComposition, toast, t]);
 
   const loadComposition = useCallback((composition: Composition) => {
     setCurrentComposition(composition);

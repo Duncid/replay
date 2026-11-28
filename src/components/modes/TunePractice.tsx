@@ -507,7 +507,7 @@ export function TunePractice({
   };
 
   return (
-    <Suspense fallback={<p className="p-4 text-muted-foreground">Loading notation...</p>}>
+    <Suspense fallback={<p className="p-4 text-muted-foreground">{t("practice.notation")}</p>}>
     <div className="tune-practice relative flex h-full min-h-0 w-full flex-col" data-highway-visible={!showSheetView}>
       {/* A zero-height anchor keeps feedback from shifting the highway or hit line. */}
       <div className="pointer-events-none relative z-20 h-0 w-full shrink-0">
@@ -584,7 +584,7 @@ export function TunePractice({
       >
         <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
           <SheetHeader>
-            <SheetTitle>Practice Plan</SheetTitle>
+            <SheetTitle>{t("practice.plan")}</SheetTitle>
           </SheetHeader>
           <ScrollArea className="h-[calc(100vh-100px)] mt-4">
             <div className="space-y-4 pr-4">
@@ -592,10 +592,10 @@ export function TunePractice({
                 const isCurrent = index === currentIndex;
                 const itemTypeLabel =
                   item.itemType === "nugget"
-                    ? "Nugget"
+                    ? t("practice.nugget")
                     : item.itemType === "assembly"
-                      ? "Assembly"
-                      : "Full Tune";
+                      ? t("practice.assembly")
+                      : t("practice.full");
 
                 return (
                   <div
@@ -623,7 +623,7 @@ export function TunePractice({
                         </Badge>
                         {isCurrent && (
                           <Badge variant="default" className="text-xs">
-                            Current
+                            {t("practice.current")}
                           </Badge>
                         )}
                       </div>
@@ -634,7 +634,7 @@ export function TunePractice({
                     {item.motifs && item.motifs.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         <span className="text-xs text-muted-foreground">
-                          Motifs:
+                          {t("practice.motifs")}
                         </span>
                         {item.motifs.map((motif) => (
                           <Badge
@@ -663,7 +663,7 @@ export function TunePractice({
         <SheetContent side="right" className="w-[520px] sm:max-w-[520px]">
           <SheetHeader>
             <div className="flex items-center justify-between gap-3">
-              <SheetTitle>Eval debug</SheetTitle>
+              <SheetTitle>{t("practice.eval")}</SheetTitle>
             </div>
           </SheetHeader>
           <ScrollArea className="h-[calc(100vh-140px)] mt-4">
@@ -677,25 +677,25 @@ export function TunePractice({
                   variant="outline"
                   onClick={handleCopyEvalDebug}
                 >
-                  Copy
+                  {t("practice.copy")}
                 </Button>
               </div>
             </div>
             <div className="space-y-4 text-sm">
               <div>
                 <div className="text-xs font-semibold text-muted-foreground mb-1">
-                  Prompt
+                  {t("practice.prompt")}
                 </div>
                 <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
-                  {evalPrompt || "No prompt available."}
+                  {evalPrompt || t("practice.noPrompt")}
                 </pre>
               </div>
               <div>
                 <div className="text-xs font-semibold text-muted-foreground mb-1">
-                  Answer
+                  {t("practice.answer")}
                 </div>
                 <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
-                  {evalAnswer || "No answer available."}
+                  {evalAnswer || t("practice.noAnswer")}
                 </pre>
               </div>
             </div>

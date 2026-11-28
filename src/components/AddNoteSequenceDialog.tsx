@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -67,6 +68,7 @@ export function AddNoteSequenceDialog({
   onEdit,
   initialSequence,
 }: AddNoteSequenceDialogProps) {
+  const { t } = useTranslation();
   const [jsonText, setJsonText] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -84,7 +86,7 @@ export function AddNoteSequenceDialog({
 
   const handleSubmit = () => {
     if (!jsonText.trim()) {
-      toast({ title: "Please enter NoteSequence JSON", variant: "destructive" });
+      toast({ title: t("sequenceEditor.empty"), variant: "destructive" });
       return;
     }
 
@@ -92,10 +94,10 @@ export function AddNoteSequenceDialog({
       const parsed = JSON.parse(jsonText);
       
       if (!validateNoteSequence(parsed)) {
-        setValidationError("Invalid NoteSequence structure. Required: notes (array), totalTime (number), and each note must have pitch, startTime, endTime, velocity.");
+        setValidationError(t("sequenceEditor.structure"));
         toast({
-          title: "Invalid NoteSequence",
-          description: "Please check the structure of your NoteSequence JSON",
+          title: t("sequenceEditor.invalid"),
+          description: t("sequenceEditor.check"),
           variant: "destructive",
         });
         return;
@@ -104,7 +106,7 @@ export function AddNoteSequenceDialog({
       const sequence = parsed as NoteSequence;
 
       if (sequence.notes.length === 0) {
-        toast({ title: "No notes found", description: "NoteSequence must contain at least one note", variant: "destructive" });
+        toast({ title: t("sequenceEditor.noNotes"), description: t("sequenceEditor.minNotes"), variant: "destructive" });
         return;
       }
 
@@ -112,19 +114,19 @@ export function AddNoteSequenceDialog({
 
       if (mode === 'edit' && onEdit) {
         onEdit(sequence);
-        toast({ title: "Recording updated" });
+        toast({ title: t("sequenceEditor.updated") });
       } else {
         onAdd(sequence);
-        toast({ title: "NoteSequence added" });
+        toast({ title: t("sequenceEditor.added") });
       }
 
       setJsonText("");
       onOpenChange(false);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Invalid JSON";
+      const errorMessage = error instanceof Error ? error.message : t("sequenceEditor.invalidJson");
       setValidationError(errorMessage);
       toast({
-        title: "Invalid JSON",
+        title: t("sequenceEditor.invalidJson"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -144,7 +146,7 @@ export function AddNoteSequenceDialog({
       <SheetContent side="right" className="w-full sm:max-w-xl flex flex-col">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            {mode === 'edit' ? 'Edit NoteSequence' : 'Add NoteSequence'}
+            {mode === 'edit' ? t("sequenceEditor.edit") : t("sequenceEditor.add")}
           </SheetTitle>
         </SheetHeader>
         <div className="flex-1 flex flex-col space-y-4 py-4 overflow-y-auto min-h-0">
@@ -154,7 +156,7 @@ export function AddNoteSequenceDialog({
             </div>
           )}
           <div className="text-sm text-muted-foreground">
-            Enter a NoteSequence in JSON format. Required fields: <code className="text-xs">notes</code> (array), <code className="text-xs">totalTime</code> (number). Each note must have: <code className="text-xs">pitch</code>, <code className="text-xs">startTime</code>, <code className="text-xs">endTime</code>, <code className="text-xs">velocity</code>.
+            <Trans i18nKey="sequenceEditor.help" components={{ field: <code className="text-xs" /> }} />
           </div>
           <Textarea
             placeholder='{"notes": [{"pitch": 60, "startTime": 0, "endTime": 0.5, "velocity": 0.8}], "totalTime": 0.5}'
@@ -168,9 +170,9 @@ export function AddNoteSequenceDialog({
         </div>
         <SheetFooter className="gap-2 shrink-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("menus.cancel")}
           </Button>
-          <Button onClick={handleSubmit}>{mode === 'edit' ? 'Save' : 'Add'}</Button>
+          <Button onClick={handleSubmit}>{mode === 'edit' ? t("menus.save") : t("questEditor.add")}</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

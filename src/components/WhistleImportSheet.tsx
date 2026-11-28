@@ -46,7 +46,7 @@ function hzToMidi(hz: number): number {
 
 function formatNoteWithSolfegeAndAbc(pitch: number, language: string): string {
   const solfege = midiToSolfege(pitch);
-  if (language === "fr") {
+  if (language.split("-")[0] === "fr") {
     return solfege;
   }
   const abc = pitchToAbcNote(pitch);

@@ -41,7 +41,7 @@ export function FeedbackScreen({
           iconColor: "text-green-500",
           bgColor: "bg-green-500/10",
           borderColor: "border-green-500/20",
-          title: t("evaluation.passTitle", "Great job!"),
+          title: t("evaluation.passTitle"),
         };
       case "close":
         return {
@@ -49,7 +49,7 @@ export function FeedbackScreen({
           iconColor: "text-yellow-500",
           bgColor: "bg-yellow-500/10",
           borderColor: "border-yellow-500/20",
-          title: t("evaluation.closeTitle", "Almost there!"),
+          title: t("evaluation.closeTitle"),
         };
       case "fail":
         return {
@@ -57,7 +57,7 @@ export function FeedbackScreen({
           iconColor: "text-red-500",
           bgColor: "bg-red-500/10",
           borderColor: "border-red-500/20",
-          title: t("evaluation.failTitle", "Keep practicing!"),
+          title: t("evaluation.failTitle"),
         };
     }
   };
@@ -96,12 +96,12 @@ export function FeedbackScreen({
         {debugMode && evaluationOutput && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 space-y-3">
             <div className="font-medium text-sm text-amber-600 dark:text-amber-400 mb-2">
-              Debug Information
+              {t("evaluation.debug")}
             </div>
 
             <div className="space-y-2 text-sm">
               <div>
-                <span className="font-semibold">Skill Awarded:</span>{" "}
+                <span className="font-semibold">{t("evaluation.awarded")}</span>{" "}
                 <span
                   className={
                     skillAwarded
@@ -109,7 +109,7 @@ export function FeedbackScreen({
                       : "text-gray-600 dark:text-gray-400"
                   }
                 >
-                  {skillAwarded ? "Yes" : "No"}
+                  {skillAwarded ? t("evaluation.yes") : t("evaluation.no")}
                 </span>
                 {skillAwarded && awardedSkills && (
                   <span className="ml-2 text-muted-foreground">
@@ -119,7 +119,7 @@ export function FeedbackScreen({
               </div>
 
               <div>
-                <span className="font-semibold">Lesson Acquired:</span>{" "}
+                <span className="font-semibold">{t("evaluation.acquired")}</span>{" "}
                 <span
                   className={
                     lessonAcquired
@@ -127,18 +127,18 @@ export function FeedbackScreen({
                       : "text-gray-600 dark:text-gray-400"
                   }
                 >
-                  {lessonAcquired ? "Yes" : "No"}
+                  {lessonAcquired ? t("evaluation.yes") : t("evaluation.no")}
                 </span>
               </div>
 
               <div>
-                <span className="font-semibold">Evaluation:</span>{" "}
-                <span className="capitalize">{evaluation}</span>
+                <span className="font-semibold">{t("evaluation.result")}</span>{" "}
+                <span className="capitalize">{t(`evaluation.${evaluation}`)}</span>
               </div>
 
               {diagnosis.length > 0 && (
                 <div>
-                  <span className="font-semibold">Diagnosis:</span>{" "}
+                  <span className="font-semibold">{t("evaluation.diagnosis")}</span>{" "}
                   <span className="text-muted-foreground">
                     {diagnosis.join(", ")}
                   </span>
@@ -146,7 +146,7 @@ export function FeedbackScreen({
               )}
 
               <div className="pt-2 border-t border-amber-500/20">
-                <div className="font-semibold mb-1">Coach Evaluation:</div>
+                <div className="font-semibold mb-1">{t("evaluation.coach")}</div>
                 <div className="text-muted-foreground italic">
                   {evaluationExplanation}
                 </div>
@@ -161,7 +161,7 @@ export function FeedbackScreen({
             <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
               <Unlock />
               <span className="font-medium text-sm">
-                {t("evaluation.skillsUnlocked", "Skills Unlocked!")}
+                {t("evaluation.skillsUnlocked")}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -180,23 +180,23 @@ export function FeedbackScreen({
         {/* Action Buttons */}
         <div className="flex justify-between gap-2 mt-4">
           <Button variant="ghost" onClick={onFinishLesson}>
-            {t("evaluation.finishLesson", "Leave")}
+            {t("evaluation.finishLesson")}
           </Button>
 
           <div className="flex gap-2">
             {/* Primary action: Return to Practice */}
             <Button onClick={onReturnToPractice}>
-              {t("evaluation.returnToPractice", "Keep practing")}
+              {t("evaluation.returnToPractice")}
             </Button>
 
             {/* Secondary action: Adjust difficulty */}
             {isPassing ? (
               <Button variant="outline" onClick={onMakeHarder}>
-                {t("evaluation.tryHarder", "Try Harder")}
+                {t("evaluation.tryHarder")}
               </Button>
             ) : (
               <Button variant="outline" onClick={onMakeEasier}>
-                {t("evaluation.lowerDifficulty", "Lower Difficulty")}
+                {t("evaluation.lowerDifficulty")}
               </Button>
             )}
           </div>

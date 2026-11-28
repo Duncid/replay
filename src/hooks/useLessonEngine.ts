@@ -1,3 +1,4 @@
+import i18n from "@/lib/i18n";
 import { accountStorageKey } from "@/utils/accountStorage";
 import { STORAGE_KEYS } from "@/utils/storageKeys";
 import { useCallback } from "react";
@@ -189,8 +190,8 @@ export function useLessonEngine(
       } catch (err) {
         console.error("Failed to regenerate lesson:", err);
         toast({
-          title: "Error",
-          description: "Failed to regenerate lesson with new settings",
+          title: i18n.t("score.error"),
+          description: i18n.t("notices.regenerateLesson"),
           variant: "destructive",
         });
       }
@@ -394,14 +395,8 @@ export function useLessonEngine(
                 : evaluationOutput.evaluation === "close"
                 ? "⚠️"
                 : "❌";
-            const evalLabel =
-              evaluationOutput.evaluation === "pass"
-                ? "Pass"
-                : evaluationOutput.evaluation === "close"
-                ? "Close"
-                : "Fail";
             toast({
-              title: `${evalEmoji} Evaluation: ${evalLabel}`,
+              title: i18n.t("evaluation.debugResult", { emoji: evalEmoji, result: i18n.t(`evaluation.${evaluationOutput.evaluation}`) }),
               description: evaluationOutput.diagnosis?.join(", ") || evaluationOutput.feedbackText,
             });
 
@@ -433,13 +428,13 @@ export function useLessonEngine(
             
           // Celebratory toast for skill unlocks
             const skillNames = awardedSkillsWithTitles.map(s => s.title).join(", ");
-            sonnerToast.success(`Skill Unlocked: ${skillNames}`);
+            sonnerToast.success(i18n.t("notices.unlockedSkills", { names: skillNames }));
           }
 
           // Celebratory toast for lesson acquisition
           if (evaluationOutput.markLessonAcquired) {
-            const lessonTitle = state.lessonState.lesson.trackTitle || state.lessonState.lesson.lessonNodeKey || "this lesson";
-            sonnerToast.success(`Lesson Acquired: ${lessonTitle}`);
+            const lessonTitle = state.lessonState.lesson.trackTitle || state.lessonState.lesson.lessonNodeKey || i18n.t("notices.thisLesson");
+            sonnerToast.success(i18n.t("notices.acquiredLesson", { title: lessonTitle }));
           }
 
           // Determine evaluation result based on evaluation

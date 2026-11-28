@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { SceneReadiness } from "@/lib/practiceSceneReadiness";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Application, Container, Graphics, Text } from "pixi.js";
@@ -28,6 +29,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
   const layout = suppliedLayout ?? fallbackLayout;
   const layoutKey = pianoLayoutKey(layout);
   const rangeLow = range?.[0], rangeHigh = range?.[1];
+  const { t } = useTranslation();
   const host = useRef<HTMLDivElement>(null);
   const announcement = useRef<HTMLSpanElement>(null);
   const live = useRef({ transport, onArmedChange, onReadinessChange, layout });
@@ -36,7 +38,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
     if (host.current) host.current.dataset.renderReady = "false";
     live.current.onReadinessChange?.("loading");
     return () => live.current.onReadinessChange?.("loading");
-  }, [notes, layoutKey, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
+  }, [notes, layoutKey, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion, t]);
   useEffect(() => {
     const element = host.current;
     if (!element) return;
@@ -87,7 +89,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
         const node = new Container(), beam = new Graphics(), ring = new Graphics(), body = new Graphics(), tagBackground = new Graphics();
         const label = new Text({ text: note.label ?? ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"][note.midi % 12] + (Math.floor(note.midi / 12) - 1), style: { fontFamily: "JetBrains Mono, monospace", fontSize: 11, fontWeight: "600", fill: background } });
         label.anchor.set(.5, 1);
-        const tag = new Text({ text: note.judgment?.toUpperCase() ?? "", style: { fontFamily: "JetBrains Mono, monospace", fontSize: 11, fontWeight: "600", fill: note.judgment === "perfect" ? accent : muted } });
+        const tag = new Text({ text: note.judgment ? t(`highway.${note.judgment}`).toUpperCase() : "", style: { fontFamily: "JetBrains Mono, monospace", fontSize: 11, fontWeight: "600", fill: note.judgment === "perfect" ? accent : muted } });
         tag.anchor.set(.5, 1);
         node.addChild(beam, ring, body, label, tagBackground, tag); layer.addChild(node); node.visible = false;
         tagBackground.roundRect(-tag.width/2-6, -tag.height-4, tag.width+12, tag.height+8, 4).fill({ color: background, alpha: .9 }).stroke({ color: note.judgment === "perfect" ? accent : border, width: 1 });
@@ -201,7 +203,7 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
           if (state === "next" && bottom < hitY) for (let step = 0; step < 8; step++) item.beam.rect(0, h + (hitY-bottom)*step/8, w, (hitY-bottom)/8).fill({ color: pitchColors[n.midi % 12], alpha: .26*(step+1)/8 });
           if (n.judgment && !item.tagged && beat >= n.start) { item.tagged = true; item.tagBeat = n.judgmentBeat ?? n.start;
             if (announcement.current && transport.getState() !== "paused" && performance.now()-lastAnnouncement > 1000) {
-              announcement.current.textContent = `${item.label.text}: ${n.judgment}`; lastAnnouncement = performance.now();
+              announcement.current.textContent = t("highway.announcement", { note: item.label.text, result: t(`highway.${n.judgment}`) }); lastAnnouncement = performance.now();
             }
           }
           const age = (beat - item.tagBeat) / beatsPerSecond;
@@ -226,6 +228,6 @@ export function NoteHighway({ bottomOcclusion = 0, notes, transport, fullKeyboar
       if (!disposed) { console.error("Note Highway renderer failed", error); live.current.onReadinessChange?.("error"); if (announcement.current) announcement.current.textContent = "Note Highway could not load. The piano remains available."; }
     });
     return () => { disposed = true; cancelAnimationFrame(frameId); cancelAnimationFrame(readyFrameId); observer?.disconnect(); motionCleanup?.(); themeObserver?.disconnect(); destroy(); };
-  }, [notes, layoutKey, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion]);
-  return <div ref={host} className="note-highway" data-piano-ranges={pianoLayoutKey(layout)} role="group" aria-label="Note Highway"><span ref={announcement} className="sr-only" aria-live="polite" aria-atomic="true" /></div>;
+  }, [notes, layoutKey, rangeLow, rangeHigh, pixelsPerBeat, beatsPerSecond, bottomOcclusion, t]);
+  return <div ref={host} className="note-highway" data-piano-ranges={pianoLayoutKey(layout)} role="group" aria-label={t("highway.label")}><span ref={announcement} className="sr-only" aria-live="polite" aria-atomic="true" /></div>;
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { SheetMusic } from "@/components/SheetMusic";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +58,7 @@ export function TrackItem({
   onRequestImprov,
   onRequestVariations,
 }: TrackItemProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   // Only make sortable if id is provided (not for live recording)
@@ -99,7 +101,7 @@ export function TrackItem({
 
   const handleCopySequence = async () => {
     await navigator.clipboard.writeText(JSON.stringify(sequence, null, 2));
-    toast({ title: "Copied as NoteSequence" });
+    toast({ title: t("trackEditor.copiedAs") });
   };
 
   const containerRef = id ? setNodeRef : undefined;
@@ -166,17 +168,17 @@ export function TrackItem({
               <DropdownMenuContent align="start" className="bg-popover">
                 <DropdownMenuItem disabled={isFirst} onClick={onMergePrevious}>
                   <ArrowLeftToLine />
-                  Merge with previous
+                  {t("trackEditor.mergePrevious")}
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={isLast} onClick={onMergeNext}>
                   <ArrowRightToLine />
-                  Merge with next
+                  {t("trackEditor.mergeNext")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {onRequestImprov && (
                   <DropdownMenuItem onClick={() => onRequestImprov(sequence)}>
                     <Wand2 />
-                    Improvise
+                    {t("trackEditor.improvise")}
                   </DropdownMenuItem>
                 )}
                 {onRequestVariations && (
@@ -184,7 +186,7 @@ export function TrackItem({
                     onClick={() => onRequestVariations(sequence)}
                   >
                     <Shuffle />
-                    Create variations
+                    {t("trackEditor.variations")}
                   </DropdownMenuItem>
                 )}
                 {(onRequestImprov || onRequestVariations) && (
@@ -192,14 +194,14 @@ export function TrackItem({
                 )}
                 <DropdownMenuItem onClick={handleCopySequence}>
                   <Copy />
-                  Copy as NoteSequence
+                  {t("trackEditor.copyAs")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={onRemove}
                   className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
                 >
                   <Trash2 />
-                  Remove
+                  {t("trackEditor.remove")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -207,7 +209,7 @@ export function TrackItem({
         )}
         {isRecording && (
           <span className="text-xs text-muted-foreground px-1">
-            Recording...
+            {t("trackEditor.recording")}
           </span>
         )}
       </div>

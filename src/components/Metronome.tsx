@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,67 +28,67 @@ const accentPresetOptions: Record<
   { id: string; label: string; accents: number[] }[]
 > = {
   "2/4": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "march", label: "Both beats", accents: [1, 2] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "march", label: "accent.march", accents: [1, 2] },
   ],
   "3/4": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "waltz", label: "Strong-weak-weak", accents: [1] },
-    { id: "one-three", label: "1 & 3", accents: [1, 3] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "waltz", label: "accent.waltz", accents: [1] },
+    { id: "one-three", label: "accent.one-three", accents: [1, 3] },
   ],
   "4/4": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "backbeat", label: "Backbeat (1 & 3)", accents: [1, 3] },
-    { id: "all", label: "All beats", accents: [1, 2, 3, 4] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "backbeat", label: "accent.backbeat", accents: [1, 3] },
+    { id: "all", label: "accent.all", accents: [1, 2, 3, 4] },
   ],
   "5/4": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "three-two", label: "3+2 grouping", accents: [1, 4] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "three-two", label: "accent.three-two", accents: [1, 4] },
   ],
   "5/8": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "three-two", label: "3+2 grouping", accents: [1, 4] },
-    { id: "two-three", label: "2+3 grouping", accents: [1, 3] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "three-two", label: "accent.three-two", accents: [1, 4] },
+    { id: "two-three", label: "accent.two-three", accents: [1, 3] },
   ],
   "6/8": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "jig", label: "1 & 4", accents: [1, 4] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "jig", label: "accent.jig", accents: [1, 4] },
   ],
   "7/8": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "223", label: "2+2+3", accents: [1, 3, 5] },
-    { id: "322", label: "3+2+2", accents: [1, 4, 6] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "223", label: "accent.223", accents: [1, 3, 5] },
+    { id: "322", label: "accent.322", accents: [1, 4, 6] },
   ],
   "9/8": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "waltz-triplet", label: "3+3+3", accents: [1, 4, 7] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "waltz-triplet", label: "accent.waltz-triplet", accents: [1, 4, 7] },
   ],
   "12/8": [
-    { id: "downbeat", label: "Downbeat only", accents: [1] },
-    { id: "four-feel", label: "4 feel (1-4-7-10)", accents: [1, 4, 7, 10] },
+    { id: "downbeat", label: "accent.downbeat", accents: [1] },
+    { id: "four-feel", label: "accent.four-feel", accents: [1, 4, 7, 10] },
   ],
 };
 
 const getBpmDescription = (bpm: number): string => {
-  if (bpm <= 50) return "🐢 Largo — Very slow and meditative.";
-  if (bpm <= 60) return "🕯️ Adagio — Slow and expressive.";
-  if (bpm <= 72) return "🚶 Andante — Walking pace.";
-  if (bpm <= 90) return "🌿 Moderato — Moderate and natural.";
-  if (bpm <= 110) return "🎵 Groove tempo — Common pop & R&B.";
-  if (bpm <= 130) return "⚡ Upbeat — Energetic and driving.";
-  if (bpm <= 160) return "🔥 Fast — Intense and lively.";
-  if (bpm <= 200) return "🚀 Very fast — For advanced players.";
+  if (bpm <= 50) return "tempo.largo";
+  if (bpm <= 60) return "tempo.adagio";
+  if (bpm <= 72) return "tempo.andante";
+  if (bpm <= 90) return "tempo.moderato";
+  if (bpm <= 110) return "tempo.groove";
+  if (bpm <= 130) return "tempo.upbeat";
+  if (bpm <= 160) return "tempo.fast";
+  if (bpm <= 200) return "tempo.very";
   if (bpm <= 240)
-    return "🧠 Extreme — Ultra-fast or double-time feel recommended.";
-  return "🎯 Precision drill — Subdivide or half-time feel recommended.";
+    return "tempo.extreme";
+  return "tempo.precision";
 };
 
 const soundTypeLabels: Record<MetronomeSoundType, string> = {
-  classic: "Classic Click",
-  woodblock: "Woodblock",
-  digital: "Digital Tick",
-  hihat: "Hi-Hat",
-  clave: "Clave Bell",
+  classic: "metroSound.classic",
+  woodblock: "metroSound.woodblock",
+  digital: "metroSound.digital",
+  hihat: "metroSound.hihat",
+  clave: "metroSound.clave",
 };
 
 const SCHEDULE_AHEAD_TIME = 0.1;
@@ -108,24 +109,24 @@ export type FeelPreset =
 const feelOptions: { id: FeelPreset; label: string; description: string }[] = [
   {
     id: "straight_beats",
-    label: "Straight (beats)",
-    description: "One click per beat",
+    label: "feel.straight_beats.label",
+    description: "feel.straight_beats.description",
   },
   {
     id: "straight_8ths",
-    label: "Straight 8ths",
-    description: "Even eighth notes",
+    label: "feel.straight_8ths.label",
+    description: "feel.straight_8ths.description",
   },
-  { id: "triplets", label: "Triplets", description: "Three clicks per beat" },
+  { id: "triplets", label: "feel.triplets.label", description: "feel.triplets.description" },
   {
     id: "straight_16ths",
-    label: "Straight 16ths",
-    description: "Even sixteenths",
+    label: "feel.straight_16ths.label",
+    description: "feel.straight_16ths.description",
   },
-  { id: "swing_light", label: "Swing (light)", description: "Gentle shuffle" },
-  { id: "swing_medium", label: "Swing (medium)", description: "Classic swing" },
-  { id: "swing_heavy", label: "Swing (heavy)", description: "Hard shuffle" },
-  { id: "shuffle", label: "Shuffle", description: "Laid-back shuffle" },
+  { id: "swing_light", label: "feel.swing_light.label", description: "feel.swing_light.description" },
+  { id: "swing_medium", label: "feel.swing_medium.label", description: "feel.swing_medium.description" },
+  { id: "swing_heavy", label: "feel.swing_heavy.label", description: "feel.swing_heavy.description" },
+  { id: "shuffle", label: "feel.shuffle.label", description: "feel.shuffle.description" },
 ];
 
 interface FeelConfig {
@@ -326,6 +327,7 @@ export const Metronome = ({
   onSoundTypeChange,
   onMetronomeStartTimeChange,
 }: MetronomeProps) => {
+  const { t } = useTranslation();
   const [volume, setVolume] = useLocalStorage(
     STORAGE_KEYS.METRONOME_VOLUME,
     70,
@@ -684,7 +686,7 @@ export const Metronome = ({
         <Switch
           checked={isPlaying}
           onCheckedChange={setIsPlaying}
-          id="metronome-toggle"
+          id="metronome-toggle" aria-label={t("metro.name")}
         />
 
         {isPlaying && (
@@ -700,7 +702,7 @@ export const Metronome = ({
                 align="start"
                 className="w-72 bg-popover space-y-2"
               >
-                <DropdownMenuLabel>BPM: {bpm}</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("metro.bpm", { bpm })}</DropdownMenuLabel>
                 <div className="px-2 pb-2">
                   <Slider
                     value={[bpm]}
@@ -710,7 +712,7 @@ export const Metronome = ({
                     step={1}
                   />
                   <p className="text-xs text-muted-foreground mt-2">
-                    {getBpmDescription(bpm)}
+                    {t(getBpmDescription(bpm))}
                   </p>
                   <div className="mt-3">
                     <Button
@@ -718,7 +720,7 @@ export const Metronome = ({
                       onClick={handleTapTempo}
                       className="w-full"
                     >
-                      Tap tempo
+                      {t("metro.tap")}
                     </Button>
                   </div>
                 </div>
@@ -726,7 +728,7 @@ export const Metronome = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    Time Signature: {timeSignature}
+                    {t("metro.signature", { value: timeSignature })}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover">
                     <DropdownMenuRadioGroup
@@ -767,7 +769,7 @@ export const Metronome = ({
                 {denominator === 8 && (
                   <div className="px-2 pb-2 text-sm space-y-2">
                     <p className="text-xs text-muted-foreground">
-                      Beat interpretation
+                      {t("metro.beat")}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
@@ -780,7 +782,7 @@ export const Metronome = ({
                         onClick={() => setBeatUnit("dottedQuarter")}
                         disabled={numerator % 3 !== 0}
                       >
-                        Dotted quarter
+                        {t("metro.dotted")}
                       </Button>
                       <Button
                         size="sm"
@@ -791,7 +793,7 @@ export const Metronome = ({
                         }
                         onClick={() => setBeatUnit("eighth")}
                       >
-                        Eighth
+                        {t("metro.eighth")}
                       </Button>
                     </div>
                   </div>
@@ -800,7 +802,7 @@ export const Metronome = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    Feel: {currentFeelOption.label}
+                    {t("metro.feel", { value: t(currentFeelOption.label) })}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover space-y-2">
                     <DropdownMenuRadioGroup
@@ -817,9 +819,9 @@ export const Metronome = ({
                           value={option.id}
                           className="flex flex-col items-start"
                         >
-                          <span>{option.label}</span>
+                          <span>{t(option.label)}</span>
                           <span className="text-xs text-muted-foreground">
-                            {option.description}
+                            {t(option.description)}
                           </span>
                         </DropdownMenuRadioItem>
                       ))}
@@ -827,10 +829,10 @@ export const Metronome = ({
 
                     <DropdownMenuSeparator />
                     <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
+                      <DropdownMenuSubTrigger>{t("metro.advanced")}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-popover space-y-1">
                         <DropdownMenuLabel>
-                          Subdivision override
+                          {t("metro.subdivision")}
                         </DropdownMenuLabel>
                         <div className="grid grid-cols-4 gap-1">
                           {[1, 2, 3, 4].map((value) => (
@@ -857,7 +859,7 @@ export const Metronome = ({
 
                         {subdivision === 2 && (
                           <>
-                            <DropdownMenuLabel>Swing amount</DropdownMenuLabel>
+                            <DropdownMenuLabel>{t("metro.swing")}</DropdownMenuLabel>
                             <div className="flex flex-col items-center justify-between text-sm p-1.5">
                               {isSwingFeel && (
                                 <span className="text-xs text-muted-foreground">
@@ -874,7 +876,7 @@ export const Metronome = ({
                                 step={5}
                               />
                               <p className="text-xs text-muted-foreground mt-2">
-                                Higher values create a longer first eighth.
+                                {t("metro.swingHelp")}
                               </p>
                             </div>
                           </>
@@ -887,7 +889,7 @@ export const Metronome = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    Accent pattern: {currentAccentPreset?.label ?? "Downbeat"}
+                    {t("metro.pattern", { value: t(currentAccentPreset?.label ?? "metro.downbeat") })}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover space-y-2">
                     <DropdownMenuRadioGroup
@@ -899,14 +901,14 @@ export const Metronome = ({
                           key={preset.id}
                           value={preset.id}
                         >
-                          {preset.label}
+                          {t(preset.label)}
                         </DropdownMenuRadioItem>
                       ))}
                     </DropdownMenuRadioGroup>
 
                     <DropdownMenuSeparator />
                     <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Advanced</DropdownMenuSubTrigger>
+                      <DropdownMenuSubTrigger>{t("metro.advanced")}</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-popover space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
@@ -919,7 +921,7 @@ export const Metronome = ({
                               htmlFor="custom-accents"
                               className="cursor-pointer"
                             >
-                              Use custom grid
+                              {t("metro.grid")}
                             </Label>
                           </div>
                           <Button
@@ -930,13 +932,12 @@ export const Metronome = ({
                               setUseCustomAccents(false);
                             }}
                           >
-                            Reset
+                            {t("metro.reset")}
                           </Button>
                         </div>
                         {renderAccentGrid()}
                         <p className="text-xs w-[280px] text-muted-foreground">
-                          Click cells to cycle silence → normal → accent. Grid
-                          length adapts to subdivision.
+                          {t("metro.gridHelp")}
                         </p>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
@@ -946,7 +947,7 @@ export const Metronome = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    Sound: {soundTypeLabels[soundType]}
+                    {t("metro.sound", { value: t(soundTypeLabels[soundType]) })}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-popover">
                     <DropdownMenuRadioGroup
@@ -954,19 +955,19 @@ export const Metronome = ({
                       onValueChange={handleSoundTypeChange}
                     >
                       <DropdownMenuRadioItem value="classic">
-                        Classic Click
+                        {t("metroSound.classic")}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="woodblock">
-                        Woodblock
+                        {t("metroSound.woodblock")}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="digital">
-                        Digital Tick
+                        {t("metroSound.digital")}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="hihat">
-                        Hi-Hat
+                        {t("metroSound.hihat")}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="clave">
-                        Clave Bell
+                        {t("metroSound.clave")}
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                   </DropdownMenuSubContent>
@@ -974,6 +975,7 @@ export const Metronome = ({
               </DropdownMenuContent>
             </DropdownMenu>
             <Slider
+              aria-label={t("metro.volume")}
               value={[volume]}
               onValueChange={(value) => setVolume(value[0])}
               min={0}

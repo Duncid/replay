@@ -77,5 +77,5 @@ export const Menu: Story = { name: "User menu", parameters: { docs: { descriptio
   const [lang, setLang] = useState("en");
   const [notation, setNotation] = useState<"auto" | "abc" | "solfege">("auto");
   const [debug, setDebug] = useState(false);
-  return <UserMenu debugMode={debug} onDebugModeChange={setDebug} language={lang} onLanguageChange={setLang} notationPreference={notation} onNotationChange={setNotation} onOpenManagement={noop} />;
+  return <UserMenu debugMode={debug} onDebugModeChange={setDebug} language={lang} onLanguageChange={setLang} notationPreference={notation} onNotationChange={setNotation} onOpenMode={noop} />;
 } };

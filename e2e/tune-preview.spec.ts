@@ -60,7 +60,7 @@ test("preview plays every note once and returns to Preview at the end", async ({
   await page.getByRole("button", { name: "Preview: Intro", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop preview: Intro", exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("tune-preview.png") });
-  await expect(page.getByRole("heading", { name: "What would you like to play?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What would you like to play today?" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Preview: Intro", exact: true })).toBeVisible({ timeout: 5000 });
   await expect.poll(() => page.evaluate(() => window.previewVoices.length)).toBe(16);
   await page.waitForTimeout(500);
@@ -90,7 +90,7 @@ test("leaving the tune list stops the preview", async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.previewVoices.length)).toBe(1);
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Quest", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "What would you like to play?" })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "What would you like to play today?" })).not.toBeVisible();
   expect(await page.evaluate(() => window.previewVoices[0].stops)).toBeGreaterThan(1);
 });
 

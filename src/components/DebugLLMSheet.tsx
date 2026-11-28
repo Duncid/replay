@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -22,6 +23,7 @@ export function DebugLLMSheet({
   onOpenChange,
   debugCall,
 }: DebugLLMSheetProps) {
+  const { t } = useTranslation();
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -40,7 +42,7 @@ export function DebugLLMSheet({
           {/* Request Section */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">Request</h3>
+              <h3 className="text-sm font-semibold">{t("debugMenu.request")}</h3>
               <Button
                 variant="outline"
                 size="sm"
@@ -49,17 +51,17 @@ export function DebugLLMSheet({
                 }
               >
                 <Copy className="h-3 w-3 mr-1" />
-                Copy
+                {t("practice.copy")}
               </Button>
             </div>
             <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-              {debugCall?.request || "Not captured yet."}
+              {debugCall?.request || t("debugMenu.uncaptured")}
             </pre>
           </div>
           {/* Response Section */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">Response</h3>
+              <h3 className="text-sm font-semibold">{t("debugMenu.response")}</h3>
               <Button
                 variant="outline"
                 size="sm"
@@ -68,11 +70,11 @@ export function DebugLLMSheet({
                 }
               >
                 <Copy className="h-3 w-3 mr-1" />
-                Copy
+                {t("practice.copy")}
               </Button>
             </div>
             <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-4 rounded-md">
-              {debugCall?.response || "Not captured yet."}
+              {debugCall?.response || t("debugMenu.uncaptured")}
             </pre>
           </div>
         </ScrollArea>

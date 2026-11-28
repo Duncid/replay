@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "react-i18next";
 import { TabsContent } from "@/components/ui/tabs";
 import type { Composition } from "@/hooks/useCompositions";
 import { Note, NoteSequence, PlaybackSegment } from "@/types/noteSequence";
@@ -621,16 +622,16 @@ export function PlayModeActionBar({
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm">
-                    Creativity: {magentaTemperature}%
+                    {t("compose.creativityValue", { value: magentaTemperature })}
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80">
                   <div className="space-y-4">
                     <div>
-                      <h4 className="font-medium text-sm mb-1">Creativity</h4>
+                      <h4 className="font-medium text-sm mb-1">{t("compose.creativity")}</h4>
                       <p className="text-xs text-muted-foreground">
-                        0 = predictable, 100 = surprising
+                        {t("compose.creativityHint")}
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -802,7 +803,7 @@ export function PlayModeActionBar({
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuItem onClick={onCopyNoteSequence}>
-                  Note Sequence
+                  {t("compose.noteSequence")}
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
@@ -827,21 +828,20 @@ export function PlayModeActionBar({
                       className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
                     >
                       <Trash2 />
-                      Delete
+                      {t("userMenu.delete")}
                     </DropdownMenuItem>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete composition?</AlertDialogTitle>
+                      <AlertDialogTitle>{t("compose.deleteTitle")}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete "{currentComposition.title}
-                        " from the cloud. This action cannot be undone.
+                        {t("compose.deleteMessage", { title: currentComposition.title })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>{t("menus.cancel")}</AlertDialogCancel>
                       <AlertDialogAction onClick={onDeleteComposition}>
-                        Delete
+                        {t("userMenu.delete")}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -860,9 +860,12 @@ interface PlayModeTabContentProps {
 }
 
 export function PlayModeTabContent({ playMode }: PlayModeTabContentProps) {
+  const { t } = useTranslation();
   return (
     <TabsContent
       value="play"
+      aria-labelledby={undefined}
+      aria-label={t("tabs.play")}
       className="w-full h-full flex-1 min-h-0 flex items-center justify-center overflow-auto"
     >
       {playMode.render()}

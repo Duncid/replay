@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { DemoSound, LivePracticeHandle } from "@/components/landing/LivePracticePreview";
 import { Link, useLocation } from "react-router-dom";
@@ -24,6 +26,7 @@ function subscribeToReducedMotion(onChange: () => void) {
 }
 
 export default function Landing() {
+  const { t } = useTranslation();
   const location = useLocation();
   const entry = useGuestEntry();
   const departing = entry.phase !== "idle";
@@ -31,6 +34,7 @@ export default function Landing() {
   departingRef.current = departing;
   const videoMode = new URLSearchParams(location.search).get("preview") === "video";
   const tunes = useDemoLibrary();
+  const { systemTitle } = useLanguage();
   const [tune, setTune] = useState(initialDemoTune);
   const [liveStarted, setLiveStarted] = useState(false);
   const changeTune = (direction: number) => {
@@ -94,16 +98,16 @@ export default function Landing() {
   return (
     <div className="noodlyn-landing" data-preview-mode={videoMode ? "video" : "live"}
       data-preview-state={liveFailed ? "error" : liveReady ? "ready" : "loading"}>
-      <a className="landing-skip" href="#discover">Skip to content</a>
+      <a className="landing-skip" href="#discover">{t("landing.skip")}</a>
       <header className="landing-header">
         <NoodlynWordmark to={new URLSearchParams(location.search).has("home") ? "/?home" : "/"} />
-        <Link className="landing-signin" to="/login">Sign in</Link>
+        <Link className="landing-signin" to="/login">{t("auth.signIn")}</Link>
       </header>
 
       <main id="discover" className="landing-main">
         <div className="landing-intro">
-          <h1>Find your rhythm.</h1>
-          <p className="landing-description">A little practice. A little progress.</p>
+          <h1>{t("landing.headline")}</h1>
+          <p className="landing-description">{t("landing.tagline")}</p>
         </div>
 
         <div className="landing-product">
@@ -120,14 +124,14 @@ export default function Landing() {
                 <div className="landing-ipad-screen">
                   <img
                     src="/marketing/st-louis-blues-practice.png"
-                    alt="St Louis Blues player practice on Noodlyn, with colorful falling notes and highlighted piano keys."
+                    alt={t("landing.poster", { title: systemTitle("st-louis-blues", "St Louis Blues") })}
                     width="2388"
                     height="1668"
                     fetchPriority="high"
                     draggable={false}
                   />
                   {!videoMode && !reducedMotion && !liveFailed && <PreviewBoundary onError={onLiveError}>
-                    <Suspense fallback={null}><LivePracticePreview ref={liveRef} tune={tune} paused={livePaused} departing={departing}
+                    <Suspense fallback={null}><LivePracticePreview ref={liveRef} tune={tune} displayTitle={systemTitle(tune.key, tune.title)} paused={livePaused} departing={departing}
                       onReady={onLiveReady} onError={onLiveError} onSoundChange={onSoundChange} /></Suspense>
                   </PreviewBoundary>}
                   {videoMode && !reducedMotion && !videoFailed && <video
@@ -135,7 +139,7 @@ export default function Landing() {
                     className="landing-practice-video"
                     src="/marketing/st-louis-blues-loop.mp4"
                     poster="/marketing/st-louis-blues-loop-poster.jpg"
-                    aria-label="St Louis Blues, a 24-second loop of player practice"
+                    aria-label={t("landing.video", { title: systemTitle("st-louis-blues", "St Louis Blues") })}
                     autoPlay loop muted playsInline preload="metadata"
                     onPlaying={() => setPlaying(true)}
                     onPause={() => setPlaying(false)}
@@ -151,28 +155,28 @@ export default function Landing() {
                 if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                 const source = event.currentTarget.closest<HTMLElement>(".noodlyn-landing");
                 if (source && entry.begin(source)) event.preventDefault();
-              }}>Start playing</Link>
+              }}>{t("landing.start")}</Link>
           </div>
           </div>
           <figcaption>
             <span className="landing-tune-switcher">
-              {!videoMode && <button type="button" className="landing-tune-chevron" aria-label="Previous tune"
+              {!videoMode && <button type="button" className="landing-tune-chevron" aria-label={t("landing.previous")}
                 disabled={tunes.length < 2 || reducedMotion || liveFailed} onClick={() => changeTune(-1)}><ChevronLeft size={16} aria-hidden="true" /></button>}
-              <span className="landing-tune-title" aria-live="polite">{videoMode ? "St Louis Blues" : tune.title}</span>
-              {!videoMode && <button type="button" className="landing-tune-chevron" aria-label="Next tune"
+              <span className="landing-tune-title" aria-live="polite">{videoMode ? systemTitle("st-louis-blues", "St Louis Blues") : systemTitle(tune.key, tune.title)}</span>
+              {!videoMode && <button type="button" className="landing-tune-chevron" aria-label={t("landing.next")}
                 disabled={tunes.length < 2 || reducedMotion || liveFailed} onClick={() => changeTune(1)}><ChevronRight size={16} aria-hidden="true" /></button>}
             </span>
             {!videoMode && !reducedMotion && !liveFailed && <>
               <button className="landing-video-toggle landing-play-toggle" type="button" disabled={!liveReady}
-                aria-label={liveStarted ? "Pause" : "Play"} aria-busy={sound === "loading"}
+                aria-label={liveStarted ? t("landing.pause") : t("controls.play")} aria-busy={sound === "loading"}
                 onClick={() => {
                   if (liveStarted) { setLivePaused(true); setLiveStarted(false); }
                   else { liveRef.current?.play(); setLivePaused(false); setLiveStarted(true); }
                 }}>
                 {liveStarted ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
-                {liveStarted ? "Pause" : "Play"}
+                {liveStarted ? t("landing.pause") : t("controls.play")}
               </button>
-              {sound === "error" && <span role="status">Piano samples could not load. Press Play to retry.</span>}
+              {sound === "error" && <span role="status">{t("landing.samplesError")}</span>}
             </>}
             {videoMode && !reducedMotion && !videoFailed && <button className="landing-video-toggle" type="button"
               onClick={() => {
@@ -180,7 +184,7 @@ export default function Landing() {
                 if (!video) return;
                 if (video.paused) void video.play().catch(() => setPlaying(false));
                 else video.pause();
-              }}>{playing ? "Pause preview" : "Play preview"}</button>}
+              }}>{playing ? t("landing.pausePreview") : t("landing.playPreview")}</button>}
           </figcaption>
           </figure>
           <div className="landing-features">
@@ -188,11 +192,11 @@ export default function Landing() {
               <div className="landing-input-icons" aria-hidden="true">
                 <span className="landing-keyboard-icon"><KeyboardMusic /></span><span className="landing-mic-icon"><Mic /></span>
               </div>
-              <p>Play with a MIDI keyboard, or an acoustic piano using your microphone.</p>
+              <p>{t("landing.input")}</p>
             </div>
             <div className="landing-compatibility">
               <div className="landing-input-icons" aria-hidden="true"><span className="landing-music-icon"><Music2 /></span></div>
-              <p>Learn any tune by uploading an MXL file. Your coach prepares your practice.</p>
+              <p>{t("landing.upload")}</p>
             </div>
           </div>
         </div>

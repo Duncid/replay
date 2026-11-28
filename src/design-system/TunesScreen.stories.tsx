@@ -11,7 +11,6 @@ import Piano from "@/components/Piano";
 import { TuneLibraryView } from "@/components/TuneLibraryView";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function TunesScreen({ connected = false, live = false }: { connected?: boolean; live?: boolean }) {
   const [instrument, setInstrument] = useState<PianoSoundType>("classic");
@@ -22,15 +21,11 @@ function TunesScreen({ connected = false, live = false }: { connected?: boolean;
   const [silent, setSilent] = useState(false);
   const [onKeyboard, setOnKeyboard] = useState(false);
   return <HighwayProvider fullKeyboard={false}><main className="h-dvh min-h-[600px] flex flex-col bg-background">
-    <header className="flex items-center justify-between p-2">
-      <div className="flex gap-2 items-center"><Button variant="ghost" size="icon" aria-label="Menu"><Menu /></Button>
-        <Tabs value="tunes"><TabsList><TabsTrigger value="tunes">Tunes</TabsTrigger><TabsTrigger value="compose">Compose</TabsTrigger></TabsList></Tabs></div>
-    </header>
     <div className="flex-1 min-h-0 overflow-auto">
       <TuneLibraryView tunes={tuneCarouselItems} refetch={() => {}} onSelectTune={() => {}} />
     </div>
     <PianoDock showNoteRail={showNoteRail} midiConnected={midi} toolbar={<div className="keyboard-toolbar flex flex-wrap items-center justify-between gap-2 p-1.5 shrink-0">
-        <div className="flex items-center gap-3"><KeyboardSettings instrument={instrument} onInstrumentChange={setInstrument} displayNotes={displayNotes} onDisplayNotesChange={setDisplayNotes} />
+        <div className="flex items-center gap-3"><Button variant="ghost" size="icon" aria-label="Menu"><Menu /></Button><KeyboardSettings instrument={instrument} onInstrumentChange={setInstrument} displayNotes={displayNotes} onDisplayNotesChange={setDisplayNotes} />
           <label className="flex items-center gap-2"><Timer aria-label="Metronome" className="size-4" /><Switch aria-label="Metronome enabled" defaultChecked /></label></div>
         <PianoInput micEnabled={mic} onMicEnabledChange={setMic} micStatus="running" micLevel={.35}
           isConnected={midi} deviceName={midi ? "Digital Piano" : null} attemptedNoDevice={false} isSupported

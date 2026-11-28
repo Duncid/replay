@@ -1,3 +1,5 @@
+import i18n from "@/lib/i18n";
+import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -239,6 +241,7 @@ function QuestNodeBase({
   infoText: string;
   children: ReactNode;
 }) {
+  const { t: translate } = useTranslation();
   const config = nodeVariations[variation];
 
   return (
@@ -252,7 +255,7 @@ function QuestNodeBase({
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs uppercase opacity-60">{config.typeLabel}</span>
         <Button variant="ghost" size="xs" onClick={() => onEdit(id)}>
-          Edit
+          {translate("questEditor.edit")}
         </Button>
       </div>
       <div className="font-semibold text-sm">
@@ -276,6 +279,7 @@ function TrackNode({
   selected?: boolean;
   onEdit: (nodeId: string) => void;
 }) {
+  const { t: translate } = useTranslation();
   return (
     <QuestNodeBase
       variation="track"
@@ -300,10 +304,10 @@ function TrackNode({
         style={{ backgroundColor: "#059669", zIndex: 10 }}
       />
       <span className="absolute right-[-46px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Initial
+        {translate("questEditor.initial")}
       </span>
       <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Is requiring
+        {translate("questEditor.isRequiring")}
       </span>
     </QuestNodeBase>
   );
@@ -320,6 +324,7 @@ function LessonNode({
   selected?: boolean;
   onEdit: (nodeId: string) => void;
 }) {
+  const { t: translate } = useTranslation();
   return (
     <QuestNodeBase
       variation="lesson"
@@ -354,16 +359,16 @@ function LessonNode({
         style={{ backgroundColor: "#059669" }}
       />
       <span className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Prev
+        {translate("questEditor.previous")}
       </span>
       <span className="absolute right-[-42px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Next
+        {translate("questEditor.next")}
       </span>
       <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Unlocking
+        {translate("questEditor.unlocking")}
       </span>
       <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Requires
+        {translate("questEditor.requires")}
       </span>
     </QuestNodeBase>
   );
@@ -380,6 +385,7 @@ function SkillNode({
   selected?: boolean;
   onEdit: (nodeId: string) => void;
 }) {
+  const { t: translate } = useTranslation();
   return (
     <QuestNodeBase
       variation="skill"
@@ -402,10 +408,10 @@ function SkillNode({
         style={{ backgroundColor: "#0284c7" }}
       />
       <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Unlocked by
+        {translate("questEditor.unlockedBy")}
       </span>
       <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Is required by
+        {translate("questEditor.requiredBy")}
       </span>
     </QuestNodeBase>
   );
@@ -422,6 +428,7 @@ function TuneNode({
   selected?: boolean;
   onEdit: (nodeId: string) => void;
 }) {
+  const { t: translate } = useTranslation();
   return (
     <QuestNodeBase
       variation="tune"
@@ -456,16 +463,16 @@ function TuneNode({
         style={{ backgroundColor: "#059669" }}
       />
       <span className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Prev
+        {translate("questEditor.previous")}
       </span>
       <span className="absolute right-[-42px] top-1/2 -translate-y-1/2 text-xs text-sky-600 pointer-events-none whitespace-nowrap">
-        Next
+        {translate("questEditor.next")}
       </span>
       <span className="absolute top-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Requires
+        {translate("questEditor.requires")}
       </span>
       <span className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 text-xs text-emerald-600 pointer-events-none whitespace-nowrap">
-        Unlocking
+        {translate("questEditor.unlocking")}
       </span>
     </QuestNodeBase>
   );
@@ -615,6 +622,7 @@ export function QuestEditor({
   onHeaderActionsChange,
   onHeaderTitleChange,
 }: QuestEditorProps) {
+  const { t: translate } = useTranslation();
   const { toast } = useToast();
   const {
     questGraphs,
@@ -950,8 +958,8 @@ export function QuestEditor({
     if (currentNode.data.type === "track") {
       if (!editingTrackKey || editingTrackKey.trim() === "") {
         toast({
-          title: "Track key required",
-          description: "Track key cannot be empty",
+          title: i18n.t("notices.trackKeyRequired"),
+          description: i18n.t("notices.keyEmptyTrack"),
           variant: "destructive",
         });
         return;
@@ -959,8 +967,8 @@ export function QuestEditor({
 
       if (editingTrackKey.includes(" ")) {
         toast({
-          title: "Invalid track key",
-          description: "Track key cannot contain spaces",
+          title: i18n.t("notices.invalidKeyTrack"),
+          description: i18n.t("notices.keySpacesTrack"),
           variant: "destructive",
         });
         return;
@@ -968,8 +976,8 @@ export function QuestEditor({
 
       if (isTrackKeyInUse(editingTrackKey.trim(), editingNodeId)) {
         toast({
-          title: "Track key already in use",
-          description: "This track key is already assigned to another track",
+          title: i18n.t("notices.keyTakenTrack"),
+          description: i18n.t("notices.keyUsedTrack"),
           variant: "destructive",
         });
         return;
@@ -983,8 +991,8 @@ export function QuestEditor({
         !Number.isInteger(orderValue)
       ) {
         toast({
-          title: "Invalid order",
-          description: "Order must be a positive integer greater than 0",
+          title: i18n.t("notices.invalidOrder"),
+          description: i18n.t("notices.orderValue"),
           variant: "destructive",
         });
         return;
@@ -992,8 +1000,8 @@ export function QuestEditor({
 
       if (isOrderInUse(orderValue, editingNodeId)) {
         toast({
-          title: "Order already in use",
-          description: "This order number is already assigned to another track",
+          title: i18n.t("notices.orderTaken"),
+          description: i18n.t("notices.orderTakenDetail"),
           variant: "destructive",
         });
         return;
@@ -1005,8 +1013,8 @@ export function QuestEditor({
       const trimmedSkillKey = editingSkillKey.trim();
       if (!trimmedSkillKey) {
         toast({
-          title: "Invalid skill key",
-          description: "Skill key cannot be empty",
+          title: i18n.t("notices.invalidKeySkill"),
+          description: i18n.t("notices.keyEmptySkill"),
           variant: "destructive",
         });
         return;
@@ -1014,8 +1022,8 @@ export function QuestEditor({
 
       if (trimmedSkillKey.includes(" ")) {
         toast({
-          title: "Invalid skill key",
-          description: "Skill key cannot contain spaces",
+          title: i18n.t("notices.invalidKeySkill"),
+          description: i18n.t("notices.keySpacesSkill"),
           variant: "destructive",
         });
         return;
@@ -1023,8 +1031,8 @@ export function QuestEditor({
 
       if (isSkillKeyInUse(trimmedSkillKey, editingNodeId)) {
         toast({
-          title: "Skill key already in use",
-          description: "This skill key is already assigned to another skill",
+          title: i18n.t("notices.keyTakenSkill"),
+          description: i18n.t("notices.keyUsedSkill"),
           variant: "destructive",
         });
         return;
@@ -1036,8 +1044,8 @@ export function QuestEditor({
       const trimmedLessonKey = editingLessonKey.trim();
       if (!trimmedLessonKey) {
         toast({
-          title: "Invalid lesson key",
-          description: "Lesson key cannot be empty",
+          title: i18n.t("notices.invalidKeyLesson"),
+          description: i18n.t("notices.keyEmptyLesson"),
           variant: "destructive",
         });
         return;
@@ -1045,8 +1053,8 @@ export function QuestEditor({
 
       if (trimmedLessonKey.includes(" ")) {
         toast({
-          title: "Invalid lesson key",
-          description: "Lesson key cannot contain spaces",
+          title: i18n.t("notices.invalidKeyLesson"),
+          description: i18n.t("notices.keySpacesLesson"),
           variant: "destructive",
         });
         return;
@@ -1054,8 +1062,8 @@ export function QuestEditor({
 
       if (isLessonKeyInUse(trimmedLessonKey, editingNodeId)) {
         toast({
-          title: "Lesson key already in use",
-          description: "This lesson key is already assigned to another lesson",
+          title: i18n.t("notices.keyTakenLesson"),
+          description: i18n.t("notices.keyUsedLesson"),
           variant: "destructive",
         });
         return;
@@ -1067,8 +1075,8 @@ export function QuestEditor({
       const trimmedTuneKey = editingTuneKey.trim();
       if (!trimmedTuneKey) {
         toast({
-          title: "Invalid tune key",
-          description: "Tune key cannot be empty",
+          title: i18n.t("notices.invalidKeyTune"),
+          description: i18n.t("notices.keyEmptyTune"),
           variant: "destructive",
         });
         return;
@@ -1076,8 +1084,8 @@ export function QuestEditor({
 
       if (trimmedTuneKey.includes(" ")) {
         toast({
-          title: "Invalid tune key",
-          description: "Tune key cannot contain spaces",
+          title: i18n.t("notices.invalidKeyTune"),
+          description: i18n.t("notices.keySpacesTune"),
           variant: "destructive",
         });
         return;
@@ -1085,8 +1093,8 @@ export function QuestEditor({
 
       if (isTuneKeyInUse(trimmedTuneKey, editingNodeId)) {
         toast({
-          title: "Tune key already in use",
-          description: "This tune key is already assigned to another tune",
+          title: i18n.t("notices.keyTakenTune"),
+          description: i18n.t("notices.keyUsedTune"),
           variant: "destructive",
         });
         return;
@@ -1094,8 +1102,8 @@ export function QuestEditor({
 
       if (!editingMusicRef || editingMusicRef.trim() === "") {
         toast({
-          title: "Music reference required",
-          description: "Music reference cannot be empty",
+          title: i18n.t("notices.refRequired"),
+          description: i18n.t("notices.refEmpty"),
           variant: "destructive",
         });
         return;
@@ -1233,7 +1241,7 @@ export function QuestEditor({
         if (outgoingCount >= 1) {
           return {
             valid: false,
-            reason: "Track can only have one outgoing connection",
+            reason: i18n.t("questValidation.trackOutgoing"),
           };
         }
         return { valid: true };
@@ -1257,7 +1265,7 @@ export function QuestEditor({
             return {
               valid: false,
               reason:
-                "Lesson can only have one outgoing connection to another lesson",
+                i18n.t("questValidation.nextLesson"),
             };
           }
           // Check if target already has incoming connection
@@ -1267,7 +1275,7 @@ export function QuestEditor({
           if (targetIncoming >= 1) {
             return {
               valid: false,
-              reason: "Lesson can only have one incoming connection",
+              reason: i18n.t("questValidation.lessonIncoming"),
             };
           }
           return { valid: true };
@@ -1279,7 +1287,7 @@ export function QuestEditor({
         ) {
           return { valid: true };
         }
-        return { valid: false, reason: "Invalid lesson-to-lesson connection" };
+        return { valid: false, reason: i18n.t("questValidation.lessonLesson") };
       }
 
       // Lesson → Skill (using lesson-unlockable/required → skill-unlockable/required)
@@ -1292,7 +1300,7 @@ export function QuestEditor({
           return {
             valid: false,
             reason:
-              "Lesson can only have one outgoing connection to another lesson",
+              i18n.t("questValidation.nextLesson"),
           };
         }
         // For unlockable, check if skill already has one "Unlocked by" connection
@@ -1309,7 +1317,7 @@ export function QuestEditor({
           if (existingUnlockable) {
             return {
               valid: false,
-              reason: "Skill can only receive one 'Unlocked by' connection",
+              reason: i18n.t("questValidation.skillUnlock"),
             };
           }
         }
@@ -1324,7 +1332,7 @@ export function QuestEditor({
         if (outgoingCount >= 1) {
           return {
             valid: false,
-            reason: "Track can only have one outgoing connection",
+            reason: i18n.t("questValidation.trackOutgoing"),
           };
         }
         return { valid: true };
@@ -1339,7 +1347,7 @@ export function QuestEditor({
           if (sourceOutgoing >= 1) {
             return {
               valid: false,
-              reason: "Lesson can only have one outgoing connection",
+              reason: i18n.t("questValidation.lessonOutgoing"),
             };
           }
           const targetIncoming = edges.filter(
@@ -1348,12 +1356,12 @@ export function QuestEditor({
           if (targetIncoming >= 1) {
             return {
               valid: false,
-              reason: "Tune can only have one incoming connection",
+              reason: i18n.t("questValidation.tuneIncoming"),
             };
           }
           return { valid: true };
         }
-        return { valid: false, reason: "Invalid lesson-to-tune connection" };
+        return { valid: false, reason: i18n.t("questValidation.lessonTune") };
       }
 
       // Tune → Tune (using tune-out → tune-in)
@@ -1365,7 +1373,7 @@ export function QuestEditor({
           if (sourceOutgoing >= 1) {
             return {
               valid: false,
-              reason: "Tune can only have one outgoing connection",
+              reason: i18n.t("questValidation.tuneOutgoing"),
             };
           }
           const targetIncoming = edges.filter(
@@ -1374,12 +1382,12 @@ export function QuestEditor({
           if (targetIncoming >= 1) {
             return {
               valid: false,
-              reason: "Tune can only have one incoming connection",
+              reason: i18n.t("questValidation.tuneIncoming"),
             };
           }
           return { valid: true };
         }
-        return { valid: false, reason: "Invalid tune-to-tune connection" };
+        return { valid: false, reason: i18n.t("questValidation.tuneTune") };
       }
 
       // Tune → Lesson (using tune-out → lesson-in)
@@ -1391,7 +1399,7 @@ export function QuestEditor({
           if (sourceOutgoing >= 1) {
             return {
               valid: false,
-              reason: "Tune can only have one outgoing connection",
+              reason: i18n.t("questValidation.tuneOutgoing"),
             };
           }
           const targetIncoming = edges.filter(
@@ -1400,12 +1408,12 @@ export function QuestEditor({
           if (targetIncoming >= 1) {
             return {
               valid: false,
-              reason: "Lesson can only have one incoming connection",
+              reason: i18n.t("questValidation.lessonIncoming"),
             };
           }
           return { valid: true };
         }
-        return { valid: false, reason: "Invalid tune-to-lesson connection" };
+        return { valid: false, reason: i18n.t("questValidation.tuneLesson") };
       }
 
       // Tune → Skill (using tune-required/unlockable → skill-required/unlockable)
@@ -1424,14 +1432,14 @@ export function QuestEditor({
           if (existingUnlockable) {
             return {
               valid: false,
-              reason: "Skill can only receive one 'Unlocked by' connection",
+              reason: i18n.t("questValidation.skillUnlock"),
             };
           }
         }
         return { valid: true };
       }
 
-      return { valid: false, reason: "Invalid connection type" };
+      return { valid: false, reason: i18n.t("notices.invalidConnectionType") };
     },
     [edges],
   );
@@ -1479,7 +1487,7 @@ export function QuestEditor({
         if (sourceHandle !== "track-out" || targetHandle !== "lesson-in") {
           return {
             valid: false,
-            reason: "Track must connect to Lesson using correct handles",
+            reason: i18n.t("questValidation.handlesTrackLesson"),
           };
         }
         return { valid: true };
@@ -1499,7 +1507,7 @@ export function QuestEditor({
         return {
           valid: false,
           reason:
-            "Track must connect to Skill using track-required → skill-required (Is requiring → Is required by)",
+            i18n.t("questValidation.handlesTrackSkill"),
         };
       }
 
@@ -1520,7 +1528,7 @@ export function QuestEditor({
         return {
           valid: false,
           reason:
-            "Lesson must connect to Lesson using correct handles (Next→Prev or Requires→Prereq)",
+            i18n.t("questValidation.handlesLessonLesson"),
         };
       }
 
@@ -1546,7 +1554,7 @@ export function QuestEditor({
         return {
           valid: false,
           reason:
-            "Lesson must connect to Skill using matching handles (Unlocking → Unlocked by, or Is requiring → Is required by)",
+            i18n.t("questValidation.handlesLessonSkill"),
         };
       }
 
@@ -1555,7 +1563,7 @@ export function QuestEditor({
         if (sourceHandle !== "track-out" || targetHandle !== "tune-in") {
           return {
             valid: false,
-            reason: "Track must connect to Tune using correct handles",
+            reason: i18n.t("questValidation.handlesTrackTune"),
           };
         }
         return { valid: true };
@@ -1571,7 +1579,7 @@ export function QuestEditor({
         }
         return {
           valid: false,
-          reason: "Lesson must connect to Tune using lesson-out → tune-in",
+          reason: i18n.t("questValidation.handlesLessonTune"),
         };
       }
 
@@ -1582,7 +1590,7 @@ export function QuestEditor({
         }
         return {
           valid: false,
-          reason: "Tune must connect to Tune using tune-out → tune-in",
+          reason: i18n.t("questValidation.handlesTuneTune"),
         };
       }
 
@@ -1596,7 +1604,7 @@ export function QuestEditor({
         }
         return {
           valid: false,
-          reason: "Tune must connect to Lesson using tune-out → lesson-in",
+          reason: i18n.t("questValidation.handlesTuneLesson"),
         };
       }
 
@@ -1619,11 +1627,11 @@ export function QuestEditor({
         return {
           valid: false,
           reason:
-            "Tune must connect to Skill using matching handles (Unlocking → Unlocked by, or Requires → Is required by)",
+            i18n.t("questValidation.handlesTuneSkill"),
         };
       }
 
-      return { valid: false, reason: "Invalid handle combination" };
+      return { valid: false, reason: i18n.t("notices.invalidHandles") };
     },
     [],
   );
@@ -1647,7 +1655,7 @@ export function QuestEditor({
 
       if (!handleValidation.valid) {
         toast({
-          title: "Invalid connection",
+          title: i18n.t("notices.invalidConnection"),
           description: handleValidation.reason,
           variant: "destructive",
         });
@@ -1669,7 +1677,7 @@ export function QuestEditor({
       );
       if (!validation.valid) {
         toast({
-          title: "Invalid connection",
+          title: i18n.t("notices.invalidConnection"),
           description: validation.reason,
           variant: "destructive",
         });
@@ -1725,9 +1733,9 @@ export function QuestEditor({
     try {
       if (!("showSaveFilePicker" in window)) {
         toast({
-          title: "File picker not supported",
+          title: i18n.t("notices.picker"),
           description:
-            "Your browser doesn't support the File System Access API.",
+            i18n.t("notices.pickerDetail"),
           variant: "destructive",
         });
         return;
@@ -1742,7 +1750,7 @@ export function QuestEditor({
         suggestedName: "quest.json",
         types: [
           {
-            description: "JSON files",
+            description: i18n.t("notices.jsonFiles"),
             accept: { "application/json": [".json"] },
           },
         ],
@@ -1753,14 +1761,14 @@ export function QuestEditor({
       await writable.close();
 
       toast({
-        title: "Quest saved",
-        description: "Quest data has been saved to file.",
+        title: i18n.t("notices.questSaved"),
+        description: i18n.t("notices.questFileSaved"),
       });
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         toast({
-          title: "Error saving file",
-          description: error instanceof Error ? error.message : "Unknown error",
+          title: i18n.t("notices.saveFile"),
+          description: error instanceof Error ? error.message : i18n.t("notices.unknown"),
           variant: "destructive",
         });
       }
@@ -1771,9 +1779,9 @@ export function QuestEditor({
     try {
       if (!("showOpenFilePicker" in window)) {
         toast({
-          title: "File picker not supported",
+          title: i18n.t("notices.picker"),
           description:
-            "Your browser doesn't support the File System Access API.",
+            i18n.t("notices.pickerDetail"),
           variant: "destructive",
         });
         return;
@@ -1783,7 +1791,7 @@ export function QuestEditor({
       const fileHandles = await (window as any).showOpenFilePicker({
         types: [
           {
-            description: "JSON files",
+            description: i18n.t("notices.jsonFiles"),
             accept: { "application/json": [".json"] },
           },
         ],
@@ -1809,14 +1817,14 @@ export function QuestEditor({
       updateQuestData(data.nodes, data.edges);
 
       toast({
-        title: "Quest loaded",
-        description: "Quest data has been loaded from file.",
+        title: i18n.t("notices.questLoaded"),
+        description: i18n.t("notices.questFileLoaded"),
       });
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         toast({
-          title: "Error loading file",
-          description: error instanceof Error ? error.message : "Unknown error",
+          title: i18n.t("notices.loadFile"),
+          description: error instanceof Error ? error.message : i18n.t("notices.unknown"),
           variant: "destructive",
         });
       }
@@ -1827,8 +1835,8 @@ export function QuestEditor({
   const handlePublish = useCallback(() => {
     if (!currentGraph) {
       toast({
-        title: "No graph selected",
-        description: "Please save or select a graph first.",
+        title: i18n.t("notices.noGraph"),
+        description: i18n.t("notices.graphFirst"),
         variant: "destructive",
       });
       return;
@@ -1871,7 +1879,7 @@ export function QuestEditor({
       });
     } catch (error) {
       console.error("Validation error:", error);
-      let errorMessage = "Unknown error";
+      let errorMessage = i18n.t("notices.unknown");
 
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -1951,8 +1959,8 @@ export function QuestEditor({
           publishedAt: data.publishedAt,
         });
         toast({
-          title: "Published successfully",
-          description: `Version ${data.versionId?.substring(0, 8)}... published.`,
+          title: i18n.t("notices.published"),
+          description: i18n.t("notices.publishedVersion", { id: data.versionId?.substring(0, 8) }),
         });
       } else {
         // Re-run validation to show the errors
@@ -1963,14 +1971,14 @@ export function QuestEditor({
           counts: data.counts,
         });
         toast({
-          title: "Publish failed",
-          description: data.errors?.join(", ") || "Unknown error",
+          title: i18n.t("editing.publishFailed"),
+          description: data.errors?.join(", ") || i18n.t("notices.unknown"),
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Publish error:", error);
-      let errorMessage = "Unknown error";
+      let errorMessage = i18n.t("notices.unknown");
 
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -2003,7 +2011,7 @@ export function QuestEditor({
                   counts: body.counts,
                 });
                 toast({
-                  title: "Publish error",
+                  title: i18n.t("notices.publishError"),
                   description: body.errors.join(", "),
                   variant: "destructive",
                 });
@@ -2024,7 +2032,7 @@ export function QuestEditor({
         errors: [errorMessage],
       });
       toast({
-        title: "Publish error",
+        title: i18n.t("notices.publishError"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -2044,9 +2052,9 @@ export function QuestEditor({
     try {
       if (!("showSaveFilePicker" in window)) {
         toast({
-          title: "File picker not supported",
+          title: i18n.t("notices.picker"),
           description:
-            "Your browser doesn't support the File System Access API.",
+            i18n.t("notices.pickerDetail"),
           variant: "destructive",
         });
         return;
@@ -2063,7 +2071,7 @@ export function QuestEditor({
         suggestedName: "curriculum.schema.json",
         types: [
           {
-            description: "JSON files",
+            description: i18n.t("notices.jsonFiles"),
             accept: { "application/json": [".json"] },
           },
         ],
@@ -2074,14 +2082,14 @@ export function QuestEditor({
       await writable.close();
 
       toast({
-        title: "Schema exported",
-        description: `Exported ${schemaData.tracks.length} tracks, ${schemaData.lessons.length} lessons, and ${schemaData.skills.length} skills.`,
+        title: i18n.t("notices.schemaExported"),
+        description: i18n.t("notices.exported", { tracks: schemaData.tracks.length, lessons: schemaData.lessons.length, skills: schemaData.skills.length }),
       });
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         toast({
-          title: "Error exporting schema",
-          description: error instanceof Error ? error.message : "Unknown error",
+          title: i18n.t("notices.schemaExportError"),
+          description: error instanceof Error ? error.message : i18n.t("notices.unknown"),
           variant: "destructive",
         });
       }
@@ -2092,9 +2100,9 @@ export function QuestEditor({
     try {
       if (!("showOpenFilePicker" in window)) {
         toast({
-          title: "File picker not supported",
+          title: i18n.t("notices.picker"),
           description:
-            "Your browser doesn't support the File System Access API.",
+            i18n.t("notices.pickerDetail"),
           variant: "destructive",
         });
         return;
@@ -2104,7 +2112,7 @@ export function QuestEditor({
       const fileHandles = await (window as any).showOpenFilePicker({
         types: [
           {
-            description: "JSON files",
+            description: i18n.t("notices.jsonFiles"),
             accept: { "application/json": [".json"] },
           },
         ],
@@ -2138,7 +2146,7 @@ export function QuestEditor({
           .map((w) => w.message)
           .join("\n");
         toast({
-          title: "Import completed with warnings",
+          title: i18n.t("notices.importWarnings"),
           description: warningMessages,
           variant: "default",
         });
@@ -2151,14 +2159,14 @@ export function QuestEditor({
       updateQuestData(mergedNodes, mergedEdges);
 
       toast({
-        title: "Curriculum imported",
-        description: `Imported ${importData.tracks.length} tracks, ${importData.lessons.length} lessons, and ${importData.skills.length} skills. Added to existing graph.`,
+        title: i18n.t("notices.curriculumImported"),
+        description: i18n.t("notices.imported", { tracks: importData.tracks.length, lessons: importData.lessons.length, skills: importData.skills.length }),
       });
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         toast({
-          title: "Error importing curriculum",
-          description: error instanceof Error ? error.message : "Unknown error",
+          title: i18n.t("notices.curriculumError"),
+          description: error instanceof Error ? error.message : i18n.t("notices.unknown"),
           variant: "destructive",
         });
       }
@@ -2203,8 +2211,8 @@ export function QuestEditor({
   const confirmSave = useCallback(async () => {
     if (!saveDialogTitle.trim()) {
       toast({
-        title: "Title required",
-        description: "Please enter a title for the quest graph",
+        title: i18n.t("notices.needTitle"),
+        description: i18n.t("notices.enterTitle"),
         variant: "destructive",
       });
       return;
@@ -2284,8 +2292,8 @@ export function QuestEditor({
 
     if (!renameDialogTitle.trim()) {
       toast({
-        title: "Title required",
-        description: "Please enter a title for the quest graph",
+        title: i18n.t("notices.needTitle"),
+        description: i18n.t("notices.enterTitle"),
         variant: "destructive",
       });
       return;
@@ -2320,23 +2328,23 @@ export function QuestEditor({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
               <Plus className="h-4 w-4" />
-              Add
+              {translate("questEditor.add")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuLabel>Add Node</DropdownMenuLabel>
+            <DropdownMenuLabel>{translate("questEditor.addNode")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => addNode("track")}>
-              Track
+              {translate("questEditor.track")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => addNode("lesson")}>
-              Lesson
+              {translate("questEditor.lesson")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => addNode("skill")}>
-              Skill
+              {translate("questEditor.skill")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => addNode("tune")}>
-              Tune
+              {translate("questEditor.tune")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -2345,17 +2353,17 @@ export function QuestEditor({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
               <Menu className="h-4 w-4" />
-              Manage
+              {translate("questEditor.manage")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48">
             <DropdownMenuItem onClick={handleNew}>
               <FilePlus className="h-4 w-4" />
-              New
+              {translate("menus.new")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSave} disabled={isDbLoading}>
               <Save className="h-4 w-4" />
-              Save
+              {translate("menus.save")}
               {hasUnsavedChanges && (
                 <span className="ml-auto text-xs text-muted-foreground">•</span>
               )}
@@ -2363,11 +2371,11 @@ export function QuestEditor({
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <FolderOpen className="h-4 w-4" />
-                Open
+                {translate("compose.open")}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-56">
                 {questGraphs.length === 0 ? (
-                  <DropdownMenuItem disabled>No saved graphs</DropdownMenuItem>
+                  <DropdownMenuItem disabled>{translate("questEditor.noGraphs")}</DropdownMenuItem>
                 ) : (
                   questGraphs.map((graph) => (
                     <DropdownMenuItem
@@ -2385,7 +2393,7 @@ export function QuestEditor({
               disabled={!currentGraph || isDbLoading}
             >
               <Pencil className="h-4 w-4" />
-              Rename
+              {translate("questEditor.rename")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={handleDelete}
@@ -2393,37 +2401,37 @@ export function QuestEditor({
               className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
             >
               <Trash2 className="h-4 w-4" />
-              Delete
+              {translate("userMenu.delete")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <FileJson className="h-4 w-4" />
-                Export / Import
+                {translate("questEditor.transfer")}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-48">
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Schema
+                  {translate("questEditor.schema")}
                 </DropdownMenuLabel>
                 <DropdownMenuItem onClick={handleExportSchema}>
                   <Download className="h-4 w-4" />
-                  Export Schema
+                  {translate("questEditor.exportSchema")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleImport}>
                   <Upload className="h-4 w-4" />
-                  Import Schema
+                  {translate("questEditor.importSchema")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Graph
+                  {translate("questEditor.graph")}
                 </DropdownMenuLabel>
                 <DropdownMenuItem onClick={handleDownload}>
                   <Download className="h-4 w-4" />
-                  Export JSON
+                  {translate("questEditor.exportJson")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleOpenFile}>
                   <Upload className="h-4 w-4" />
-                  Import JSON
+                  {translate("questEditor.importJson")}
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
@@ -2433,7 +2441,7 @@ export function QuestEditor({
               disabled={!currentGraph || isDbLoading}
             >
               <Rocket className="h-4 w-4" />
-              Publish
+              {translate("questEditor.publish")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -2455,6 +2463,7 @@ export function QuestEditor({
       hasUnsavedChanges,
       isDbLoading,
       questGraphs,
+      translate,
     ],
   );
 
@@ -2470,17 +2479,17 @@ export function QuestEditor({
   }, [headerActions, isActive, isEmbedded, onHeaderActionsChange]);
 
   const editorTitle = useMemo(() => {
-    const baseTitle = "Quest Editor";
+    const baseTitle = translate("questEditor.title");
     if (currentGraph) {
       return `${baseTitle} — ${currentGraph.title}${
-        hasUnsavedChanges ? " (unsaved)" : ""
+        hasUnsavedChanges ? " " + translate("questEditor.unsaved") : ""
       }`;
     }
     if (hasUnsavedChanges) {
-      return `${baseTitle} — (unsaved)`;
+      return `${baseTitle} — ${translate("questEditor.unsaved")}`;
     }
     return baseTitle;
-  }, [currentGraph, hasUnsavedChanges]);
+  }, [currentGraph, hasUnsavedChanges, translate]);
 
   useEffect(() => {
     if (!onHeaderTitleChange) {
@@ -2498,7 +2507,7 @@ export function QuestEditor({
       {!isEmbedded && (
         <div className="p-3 border-b h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <DialogTitle>Quest Editor</DialogTitle>
+            <DialogTitle>{translate("questEditor.title")}</DialogTitle>
             {currentGraph && (
               <span className="text-sm text-muted-foreground">
                 — {currentGraph.title}
@@ -2506,7 +2515,7 @@ export function QuestEditor({
               </span>
             )}
             {!currentGraph && hasUnsavedChanges && (
-              <span className="text-sm text-muted-foreground">(unsaved)</span>
+              <span className="text-sm text-muted-foreground">{translate("questEditor.unsaved")}</span>
             )}
           </div>
           <div className="flex gap-2">
@@ -2550,15 +2559,15 @@ export function QuestEditor({
         <SheetContent>
           <SheetHeader>
             <SheetTitle>
-              Edit{" "}
+              {translate("questEditor.edit")}{" "}
               {editingNodeId &&
                 nodes.find((n) => n.id === editingNodeId)?.data.type}
             </SheetTitle>
-            <SheetDescription>Node ID: {editingNodeId}</SheetDescription>
+            <SheetDescription>{translate("editing.nodeId")} {editingNodeId}</SheetDescription>
           </SheetHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">{translate("upload.title")}</Label>
               <Input
                 id="title"
                 value={editingTitle}
@@ -2578,7 +2587,7 @@ export function QuestEditor({
                 "track" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="trackKey">Track Key</Label>
+                    <Label htmlFor="trackKey">{translate("questEditor.trackKey")}</Label>
                     <Input
                       id="trackKey"
                       type="text"
@@ -2606,7 +2615,7 @@ export function QuestEditor({
                           ? "border-destructive focus-visible:ring-destructive"
                           : ""
                       }
-                      placeholder="e.g., beginner-piano"
+                      placeholder={translate("editing.example", { value: "beginner-piano" })}
                     />
                     {editingTrackKey &&
                       (editingTrackKey.trim() === "" ||
@@ -2617,15 +2626,15 @@ export function QuestEditor({
                         )) && (
                         <p className="text-sm text-destructive">
                           {editingTrackKey.trim() === ""
-                            ? "Track key cannot be empty"
+                            ? i18n.t("notices.keyEmptyTrack")
                             : editingTrackKey.includes(" ")
-                              ? "Track key cannot contain spaces"
+                              ? i18n.t("notices.keySpacesTrack")
                               : "This track key is already in use"}
                         </p>
                       )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="order">Order</Label>
+                    <Label htmlFor="order">{translate("questEditor.order")}</Label>
                     <Input
                       id="order"
                       type="number"
@@ -2671,12 +2680,12 @@ export function QuestEditor({
                             editingNodeId,
                           )
                             ? "This order number is already in use"
-                            : "Order must be a positive integer greater than 0"}
+                            : i18n.t("notices.orderValue")}
                         </p>
                       )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">{translate("questEditor.description")}</Label>
                     <Textarea
                       id="description"
                       value={editingDescription}
@@ -2691,7 +2700,7 @@ export function QuestEditor({
                 "skill" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="skillKey">Skill Key</Label>
+                    <Label htmlFor="skillKey">{translate("questEditor.skillKey")}</Label>
                     <Input
                       id="skillKey"
                       type="text"
@@ -2719,7 +2728,7 @@ export function QuestEditor({
                           ? "border-destructive focus-visible:ring-destructive"
                           : ""
                       }
-                      placeholder="e.g., piano_basics"
+                      placeholder={translate("editing.example", { value: "piano_basics" })}
                     />
                     {editingSkillKey &&
                       (editingSkillKey.trim() === "" ||
@@ -2730,15 +2739,15 @@ export function QuestEditor({
                         )) && (
                         <p className="text-sm text-destructive">
                           {editingSkillKey.trim() === ""
-                            ? "Skill key cannot be empty"
+                            ? i18n.t("notices.keyEmptySkill")
                             : editingSkillKey.includes(" ")
-                              ? "Skill key cannot contain spaces"
+                              ? i18n.t("notices.keySpacesSkill")
                               : "This skill key is already in use"}
                         </p>
                       )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">{translate("questEditor.description")}</Label>
                     <Textarea
                       id="description"
                       value={editingDescription}
@@ -2748,7 +2757,7 @@ export function QuestEditor({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="unlockGuidance">Unlock Guidance</Label>
+                    <Label htmlFor="unlockGuidance">{translate("questEditor.unlockGuidance")}</Label>
                     <Textarea
                       id="unlockGuidance"
                       value={editingUnlockGuidance}
@@ -2764,7 +2773,7 @@ export function QuestEditor({
                 "lesson" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="lessonKey">Lesson Key</Label>
+                    <Label htmlFor="lessonKey">{translate("questEditor.lessonKey")}</Label>
                     <Input
                       id="lessonKey"
                       type="text"
@@ -2792,7 +2801,7 @@ export function QuestEditor({
                           ? "border-destructive focus-visible:ring-destructive"
                           : ""
                       }
-                      placeholder="e.g., A1.1"
+                      placeholder={translate("editing.example", { value: "A1.1" })}
                     />
                     {editingLessonKey &&
                       (editingLessonKey.trim() === "" ||
@@ -2803,25 +2812,25 @@ export function QuestEditor({
                         )) && (
                         <p className="text-sm text-destructive">
                           {editingLessonKey.trim() === ""
-                            ? "Lesson key cannot be empty"
+                            ? i18n.t("notices.keyEmptyLesson")
                             : editingLessonKey.includes(" ")
-                              ? "Lesson key cannot contain spaces"
+                              ? i18n.t("notices.keySpacesLesson")
                               : "This lesson key is already in use"}
                         </p>
                       )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="goal">Goal</Label>
+                    <Label htmlFor="goal">{translate("questEditor.goal")}</Label>
                     <Textarea
                       id="goal"
                       value={editingGoal}
                       onChange={(e) => setEditingGoal(e.target.value)}
-                      placeholder="e.g., Lock steady quarter notes to the metronome"
+                      placeholder={translate("questEditor.exampleGoal")}
                       autoResize
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="level">Level</Label>
+                    <Label htmlFor="level">{translate("questEditor.level")}</Label>
                     <Select
                       value={editingLevel}
                       onValueChange={(value) =>
@@ -2831,19 +2840,19 @@ export function QuestEditor({
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select level" />
+                        <SelectValue placeholder={translate("questEditor.selectLevel")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="beginner">{translate("questEditor.beginner")}</SelectItem>
                         <SelectItem value="intermediate">
-                          Intermediate
+                          {translate("questEditor.intermediate")}
                         </SelectItem>
-                        <SelectItem value="advanced">Advanced</SelectItem>
+                        <SelectItem value="advanced">{translate("questEditor.advanced")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="setupGuidance">Setup Guidance</Label>
+                    <Label htmlFor="setupGuidance">{translate("questEditor.setup")}</Label>
                     <Textarea
                       id="setupGuidance"
                       value={editingSetupGuidance}
@@ -2854,7 +2863,7 @@ export function QuestEditor({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="evaluationGuidance">
-                      Evaluation Guidance
+                      {translate("questEditor.evaluation")}
                     </Label>
                     <Textarea
                       id="evaluationGuidance"
@@ -2868,7 +2877,7 @@ export function QuestEditor({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="difficultyGuidance">
-                      Difficulty Guidance
+                      {translate("questEditor.difficulty")}
                     </Label>
                     <Textarea
                       id="difficultyGuidance"
@@ -2887,17 +2896,17 @@ export function QuestEditor({
                 "tune" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="tuneKey">Tune Key</Label>
+                    <Label htmlFor="tuneKey">{translate("questEditor.tuneKey")}</Label>
                     <Input
                       id="tuneKey"
                       type="text"
                       value={editingTuneKey}
                       onChange={(e) => setEditingTuneKey(e.target.value)}
-                      placeholder="e.g., st-louis-blues"
+                      placeholder={translate("editing.example", { value: "st-louis-blues" })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="musicRef">Music Reference</Label>
+                    <Label htmlFor="musicRef">{translate("questEditor.musicRef")}</Label>
                     <Select
                       value={editingMusicRef}
                       onValueChange={setEditingMusicRef}
@@ -2915,7 +2924,7 @@ export function QuestEditor({
                       <SelectContent>
                         {availablePublishedTunes.length === 0 ? (
                           <SelectItem value="" disabled>
-                            No published tunes available
+                            {translate("questEditor.noTunes")}
                           </SelectItem>
                         ) : (
                           availablePublishedTunes.map((tune) => (
@@ -2927,11 +2936,11 @@ export function QuestEditor({
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Only tunes published via Tune Manager can be selected
+                      {translate("questEditor.publishedOnly")}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="level">Level</Label>
+                    <Label htmlFor="level">{translate("questEditor.level")}</Label>
                     <Select
                       value={editingLevel}
                       onValueChange={(value) =>
@@ -2941,19 +2950,19 @@ export function QuestEditor({
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select level" />
+                        <SelectValue placeholder={translate("questEditor.selectLevel")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="beginner">{translate("questEditor.beginner")}</SelectItem>
                         <SelectItem value="intermediate">
-                          Intermediate
+                          {translate("questEditor.intermediate")}
                         </SelectItem>
-                        <SelectItem value="advanced">Advanced</SelectItem>
+                        <SelectItem value="advanced">{translate("questEditor.advanced")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">{translate("questEditor.description")}</Label>
                     <Textarea
                       id="description"
                       value={editingDescription}
@@ -2964,7 +2973,7 @@ export function QuestEditor({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="evaluationGuidance">
-                      Evaluation Guidance
+                      {translate("questEditor.evaluation")}
                     </Label>
                     <Textarea
                       id="evaluationGuidance"
@@ -2974,11 +2983,10 @@ export function QuestEditor({
                       }
                       rows={4}
                       autoResize
-                      placeholder="Guide the AI on what to focus on when evaluating performances..."
+                      placeholder={translate("questEditor.evaluationHint")}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Optional: Helps the AI understand tune-specific evaluation
-                      criteria
+                      {translate("questEditor.optionalEvaluation")}
                     </p>
                   </div>
                 </>
@@ -2986,9 +2994,9 @@ export function QuestEditor({
           </div>
           <SheetFooter>
             <Button variant="outline" onClick={handleCancelEdit}>
-              Cancel
+              {translate("menus.cancel")}
             </Button>
-            <Button onClick={handleSaveTitle}>Save</Button>
+            <Button onClick={handleSaveTitle}>{translate("menus.save")}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -3013,14 +3021,14 @@ export function QuestEditor({
       <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Save Quest Graph</AlertDialogTitle>
+            <AlertDialogTitle>{translate("questEditor.saveGraph")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Enter a title for your quest graph.
+              {translate("questEditor.graphPrompt")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <Input
-              placeholder="Quest graph title"
+              placeholder={translate("questEditor.graphTitle")}
               value={saveDialogTitle}
               onChange={(e) => setSaveDialogTitle(e.target.value)}
               onKeyDown={(e) => {
@@ -3030,8 +3038,8 @@ export function QuestEditor({
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSave}>Save</AlertDialogAction>
+            <AlertDialogCancel>{translate("menus.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSave}>{translate("menus.save")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -3040,14 +3048,14 @@ export function QuestEditor({
       <AlertDialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Rename Quest Graph</AlertDialogTitle>
+            <AlertDialogTitle>{translate("questEditor.renameGraph")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Enter a new title for your quest graph.
+              {translate("questEditor.newGraphTitle")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <Input
-              placeholder="Quest graph title"
+              placeholder={translate("questEditor.graphTitle")}
               value={renameDialogTitle}
               onChange={(e) => setRenameDialogTitle(e.target.value)}
               onKeyDown={(e) => {
@@ -3057,9 +3065,9 @@ export function QuestEditor({
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{translate("menus.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmRename}>
-              Rename
+              {translate("questEditor.rename")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -3078,17 +3086,17 @@ export function QuestEditor({
       >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Publish Curriculum</DialogTitle>
+            <DialogTitle>{translate("questEditor.publishCurriculum")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Version Title Input */}
             <div>
-              <Label htmlFor="publishTitle">Version Title</Label>
+              <Label htmlFor="publishTitle">{translate("questEditor.versionTitle")}</Label>
               <Input
                 id="publishTitle"
                 value={publishDialogTitle}
                 onChange={(e) => setPublishDialogTitle(e.target.value)}
-                placeholder="Enter version title (optional)"
+                placeholder={translate("questEditor.optionalVersion")}
                 disabled={
                   isValidating || isPublishing || publishResult?.success
                 }
@@ -3100,7 +3108,7 @@ export function QuestEditor({
               <div className="p-4 bg-muted rounded-md flex items-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
                 <span className="text-sm text-muted-foreground">
-                  Validating graph...
+                  {translate("questEditor.validating")}
                 </span>
               </div>
             )}
@@ -3109,11 +3117,11 @@ export function QuestEditor({
             {publishResult?.success && (
               <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
                 <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
-                  ✓ Published Successfully
+                  {translate("questEditor.published")}
                 </h4>
                 {publishResult.versionId && (
                   <p className="text-sm text-green-800 dark:text-green-200">
-                    Version ID: {publishResult.versionId}
+                    {translate("editing.versionId")} {publishResult.versionId}
                   </p>
                 )}
               </div>
@@ -3123,10 +3131,10 @@ export function QuestEditor({
             {!publishResult?.success && hasValidationErrors && (
               <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
                 <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
-                  🔴 Critical Errors ({validationResult?.errors?.length || 0})
+                  {translate("editing.errors", { count: validationResult?.errors?.length || 0 })}
                 </h4>
                 <p className="text-xs text-red-700 dark:text-red-300 mb-2">
-                  These must be fixed before publishing
+                  {translate("questEditor.fixBeforePublish")}
                 </p>
                 <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
                   {validationResult?.errors?.map((error, idx) => (
@@ -3141,10 +3149,10 @@ export function QuestEditor({
               validationResult.warnings.length > 0 && (
                 <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                   <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
-                    ⚠️ Warnings ({validationResult.warnings.length})
+                    {translate("editing.warnings", { count: validationResult.warnings.length })}
                   </h4>
                   <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
-                    Non-blocking issues - you can still publish
+                    {translate("questEditor.nonBlocking")}
                   </p>
                   <ul className="list-disc list-inside text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
                     {validationResult.warnings.map((warning, idx) => (
@@ -3157,12 +3165,8 @@ export function QuestEditor({
             {/* Stats */}
             {validationResult?.counts && !publishResult?.success && (
               <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
-                <span className="font-medium">Stats:</span>{" "}
-                {validationResult.counts.nodes} nodes (
-                {validationResult.counts.tracks} tracks,{" "}
-                {validationResult.counts.lessons} lessons,{" "}
-                {validationResult.counts.skills} skills),{" "}
-                {validationResult.counts.edges} edges
+                <span className="font-medium">{translate("questEditor.stats")}</span>{" "}
+                {translate("editing.counts", { ...validationResult.counts })}
               </div>
             )}
 
@@ -3177,14 +3181,14 @@ export function QuestEditor({
                 }}
                 disabled={isValidating || isPublishing}
               >
-                {publishResult?.success ? "Close" : "Cancel"}
+                {translate(publishResult?.success ? "userMenu.close" : "menus.cancel")}
               </Button>
               {!publishResult?.success && (
                 <Button
                   onClick={confirmPublish}
                   disabled={isValidating || isPublishing || !canPublish}
                 >
-                  {isPublishing ? "Publishing..." : "Publish"}
+                  {translate(isPublishing ? "editing.publishing" : "questEditor.publish")}
                 </Button>
               )}
             </div>
@@ -3199,17 +3203,17 @@ export function QuestEditor({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogTitle>{translate("questEditor.unsavedTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved changes. Do you want to discard them?
+              {translate("questEditor.discardQuestion")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingLoadGraph(null)}>
-              Cancel
+              {translate("menus.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction onClick={confirmLoadPending}>
-              Discard Changes
+              {translate("questEditor.discard")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -3222,19 +3226,18 @@ export function QuestEditor({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Quest Graph</AlertDialogTitle>
+            <AlertDialogTitle>{translate("questEditor.deleteGraph")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{currentGraph?.title}"? This
-              action cannot be undone.
+              {translate("editing.confirmDelete", { title: currentGraph?.title })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{translate("menus.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Delete
+              {translate("userMenu.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

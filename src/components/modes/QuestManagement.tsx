@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 
 import { TabsContent } from "@/components/ui/tabs";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
@@ -24,6 +25,7 @@ export function QuestManagementTabContent({
   onHeaderActionsChange,
   onHeaderTitleChange,
 }: QuestManagementTabContentProps) {
+  const { t: translate } = useTranslation();
   const [hasOpened, setHasOpened] = useState(isActive);
   useEffect(() => { if (isActive) setHasOpened(true); }, [isActive]);
   return (
@@ -32,7 +34,7 @@ export function QuestManagementTabContent({
       forceMount
       className="w-full h-full flex-1 min-h-0 flex items-stretch justify-center"
     >
-      {(hasOpened || isActive) && <Suspense fallback={<p className="p-4 text-muted-foreground">Loading editor...</p>}>
+      {(hasOpened || isActive) && <Suspense fallback={<p className="p-4 text-muted-foreground">{translate("tuneManager.loadingEditor")}</p>}>
       <QuestEditor
         mode="embedded"
         isActive={isActive}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -56,6 +57,7 @@ function MergeContent({
   setGapUnit: (u: GapUnit) => void;
   onMerge: () => void;
 }) {
+  const { t } = useTranslation();
   const effectiveDirection = direction === "previous" && !canMergePrevious 
     ? "next" 
     : direction === "next" && !canMergeNext 
@@ -65,7 +67,7 @@ function MergeContent({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">Direction</Label>
+        <Label className="text-xs text-muted-foreground">{t("merge.direction")}</Label>
         <div className="flex gap-2">
           <Button
             variant={effectiveDirection === "previous" ? "default" : "outline"}
@@ -75,7 +77,7 @@ function MergeContent({
             onClick={() => setDirection("previous")}
           >
             <ChevronLeft className="h-3 w-3" />
-            Previous
+            {t("merge.previous")}
           </Button>
           <Button
             variant={effectiveDirection === "next" ? "default" : "outline"}
@@ -85,13 +87,13 @@ function MergeContent({
             onClick={() => setDirection("next")}
           >
             <ChevronRight className="h-3 w-3" />
-            Next
+            {t("questEditor.next")}
           </Button>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">Gap between sessions</Label>
+        <Label className="text-xs text-muted-foreground">{t("merge.gap")}</Label>
         <div className="flex gap-2">
           <Input
             type="number"
@@ -106,15 +108,15 @@ function MergeContent({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="beats">Beats</SelectItem>
-              <SelectItem value="measures">Measures</SelectItem>
+              <SelectItem value="beats">{t("merge.beats")}</SelectItem>
+              <SelectItem value="measures">{t("merge.measures")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <Button onClick={onMerge} className="w-full" size="sm">
-        Merge
+        {t("merge.action")}
       </Button>
     </div>
   );
@@ -128,6 +130,7 @@ export function MergeSessionDialog({
   onOpenChange,
   initialDirection,
 }: MergeSessionDialogProps) {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
   const [direction, setDirection] = useState<MergeDirection>(initialDirection || "previous");
   const [gapValue, setGapValue] = useState(1);
@@ -159,7 +162,7 @@ export function MergeSessionDialog({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[280px]">
           <DialogHeader>
-            <DialogTitle>Merge Session</DialogTitle>
+            <DialogTitle>{t("merge.title")}</DialogTitle>
           </DialogHeader>
           <MergeContent
             direction={direction}
@@ -184,6 +187,7 @@ export function MergeSessionDialog({
         <Button
           variant="ghost"
           size="icon"
+          aria-label={t("merge.title")}
           className="h-6 w-6"
           disabled={!canMergePrevious && !canMergeNext}
         >
@@ -191,7 +195,7 @@ export function MergeSessionDialog({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 bg-popover" align="end">
-        <h4 className="font-medium text-sm mb-4">Merge Session</h4>
+        <h4 className="font-medium text-sm mb-4">{t("merge.title")}</h4>
         <MergeContent
           direction={direction}
           setDirection={setDirection}
